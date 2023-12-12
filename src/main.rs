@@ -161,7 +161,10 @@ enum LocationCommands {
 #[derive(Subcommand, Debug)]
 enum SampleCommands {
     #[command(about = "List all samples")]
-    List,
+    List {
+        #[arg(short, long)]
+        full: bool,
+    },
     #[command(about = "Add a new sample to the database")]
     Add {
         #[arg(short, long)]
@@ -382,133 +385,135 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
-        Some(Commands::Location { command }) => {
-            match command {
-                LocationCommands::List { full } => {
-                    let locations: Vec<location::Location> = sqlx::query_as("SELECT locid as id, name, description, latitude, longitude FROM seedlocations")
+        Some(Commands::Location { command }) => match command {
+            LocationCommands::List { full } => {
+                let locations: Vec<location::Location> = sqlx::query_as("SELECT locid, name as locname, description, latitude, longitude FROM seedlocations")
                     .fetch_all(&dbpool)
                     .await?;
-                    let mut tbuilder = tabled::builder::Builder::new();
-                    let mut header = vec!["ID", "Name"];
+                let mut tbuilder = tabled::builder::Builder::new();
+                let mut header = vec!["ID", "Name"];
+                if full {
+                    header.push("Description");
+                    header.push("latitude");
+                    header.push("longitude");
+                };
+                tbuilder.set_header(header);
+                for loc in &locations {
+                    let mut vals = vec![loc.id.to_string(), loc.name.clone()];
                     if full {
-                        header.push("Description");
-                        header.push("latitude");
-                        header.push("longitude");
-                    };
-                    tbuilder.set_header(header);
-                    for loc in &locations {
-                        let mut vals = vec![loc.id.to_string(), loc.name.clone()];
-                        if full {
-                            vals.push(loc.description.clone().unwrap_or("".to_string()));
-                            vals.push(
-                                loc.latitude
-                                    .map(|n| n.to_string())
-                                    .unwrap_or("".to_string()),
-                            );
-                            vals.push(
-                                loc.longitude
-                                    .map(|n| n.to_string())
-                                    .unwrap_or("".to_string()),
-                            );
-                        }
-                        tbuilder.push_record(vals);
+                        vals.push(loc.description.clone().unwrap_or("".to_string()));
+                        vals.push(
+                            loc.latitude
+                                .map(|n| n.to_string())
+                                .unwrap_or("".to_string()),
+                        );
+                        vals.push(
+                            loc.longitude
+                                .map(|n| n.to_string())
+                                .unwrap_or("".to_string()),
+                        );
                     }
-                    print_table(tbuilder, locations.len());
-                    Ok(())
+                    tbuilder.push_record(vals);
                 }
-                LocationCommands::Add {
-                    name,
-                    description,
-                    latitude,
-                    longitude,
-                } => {
-                    let newid = sqlx::query!(
-                        r#"INSERT INTO seedlocations (name, description, latitude, longitude)
-                VALUES (?1, ?2, ?3, ?4)"#,
-                        name,
-                        description,
-                        latitude,
-                        longitude
-                    )
-                    .execute(&dbpool)
-                    .await?
-                    .last_insert_rowid();
-                    println!("Added location {newid} to database");
-                    Ok(())
-                }
-                LocationCommands::Remove { id } => {
-                    sqlx::query!(r#"DELETE FROM seedlocations WHERE locid=?1"#, id)
-                        .execute(&dbpool)
-                        .await?;
-                    Ok(())
-                }
-                LocationCommands::Modify {
-                    id,
-                    name,
-                    description,
-                    latitude,
-                    longitude,
-                } => {
-                    if name.is_none()
-                        && description.is_none()
-                        && latitude.is_none()
-                        && longitude.is_none()
-                    {
-                        return Err(anyhow!("Cannot modify location without new values"));
-                    }
-                    let mut builder = sqlx::QueryBuilder::new("UPDATE seedlocations SET ");
-                    let mut sep = builder.separated(", ");
-                    if let Some(name) = name {
-                        sep.push("name = ");
-                        sep.push_bind_unseparated(name);
-                    }
-                    if let Some(description) = description {
-                        sep.push("description = ");
-                        sep.push_bind_unseparated(description);
-                    }
-                    if let Some(latitude) = latitude {
-                        sep.push("latitude = ");
-                        sep.push_bind_unseparated(latitude);
-                    }
-                    if let Some(longitude) = longitude {
-                        sep.push("longitude = ");
-                        sep.push_bind_unseparated(longitude);
-                    }
-                    builder.push(" WHERE locid=");
-                    builder.push_bind(id);
-                    debug!("sql: <<{}>>", builder.sql());
-                    let _res = builder.build().execute(&dbpool).await?;
-                    println!("Modified collection...");
-                    Ok(())
-                }
+                print_table(tbuilder, locations.len());
+                Ok(())
             }
-        }
+            LocationCommands::Add {
+                name,
+                description,
+                latitude,
+                longitude,
+            } => {
+                let newid = sqlx::query!(
+                    r#"INSERT INTO seedlocations (name, description, latitude, longitude)
+                VALUES (?1, ?2, ?3, ?4)"#,
+                    name,
+                    description,
+                    latitude,
+                    longitude
+                )
+                .execute(&dbpool)
+                .await?
+                .last_insert_rowid();
+                println!("Added location {newid} to database");
+                Ok(())
+            }
+            LocationCommands::Remove { id } => {
+                sqlx::query!(r#"DELETE FROM seedlocations WHERE locid=?1"#, id)
+                    .execute(&dbpool)
+                    .await?;
+                Ok(())
+            }
+            LocationCommands::Modify {
+                id,
+                name,
+                description,
+                latitude,
+                longitude,
+            } => {
+                if name.is_none()
+                    && description.is_none()
+                    && latitude.is_none()
+                    && longitude.is_none()
+                {
+                    return Err(anyhow!("Cannot modify location without new values"));
+                }
+                let mut builder = sqlx::QueryBuilder::new("UPDATE seedlocations SET ");
+                let mut sep = builder.separated(", ");
+                if let Some(name) = name {
+                    sep.push("name = ");
+                    sep.push_bind_unseparated(name);
+                }
+                if let Some(description) = description {
+                    sep.push("description = ");
+                    sep.push_bind_unseparated(description);
+                }
+                if let Some(latitude) = latitude {
+                    sep.push("latitude = ");
+                    sep.push_bind_unseparated(latitude);
+                }
+                if let Some(longitude) = longitude {
+                    sep.push("longitude = ");
+                    sep.push_bind_unseparated(longitude);
+                }
+                builder.push(" WHERE locid=");
+                builder.push_bind(id);
+                debug!("sql: <<{}>>", builder.sql());
+                let _res = builder.build().execute(&dbpool).await?;
+                println!("Modified collection...");
+                Ok(())
+            }
+        },
         Some(Commands::Sample { command }) => match command {
-            SampleCommands::List => {
-                let samples : Vec<sample::Sample> = sqlx::query_as(
-                    r#"SELECT S.id, S.tsn, S.collectedlocation, L.name as location_name, T.complete_name
-                                      FROM seedsamples S
-                                      INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-                                      INNER JOIN seedlocations L on L.locid=S.collectedlocation"#,
+            SampleCommands::List { full } => {
+                let samples: Vec<sample::Sample> = sqlx::query_as(
+                    r#"SELECT S.id, T.tsn, L.locid, L.name as locname, T.complete_name,
+                    quantity, month, year, notes
+                    FROM seedsamples S
+                    INNER JOIN taxonomic_units T ON T.tsn=S.tsn
+                    INNER JOIN seedlocations L on L.locid=S.collectedlocation"#,
                 )
                 .fetch_all(&dbpool)
                 .await?;
                 let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.set_header(["ID", "Taxon", "Location"]);
+                let mut headers = vec!["ID", "Taxon", "Location"];
+                if full {
+                    headers.extend_from_slice(&["Month", "Year", "Qty", "Notes"]);
+                }
+                tbuilder.set_header(headers);
                 for sample in &samples {
-                    tbuilder.push_record([
+                    let mut vals = vec![
                         sample.id.to_string(),
-                        sample
-                            .taxon
-                            .as_ref()
-                            .map(|x| x.complete_name.clone())
-                            .unwrap_or("".to_string()),
-                        sample
-                            .location
-                            .as_ref()
-                            .map(|x| x.name.clone())
-                            .unwrap_or("".to_string()),
-                    ]);
+                        sample.taxon.complete_name.clone(),
+                        sample.location.name.clone(),
+                    ];
+                    if full {
+                        vals.push(sample.month.map(|x| x.to_string()).unwrap_or("".to_string()));
+                        vals.push(sample.year.map(|x| x.to_string()).unwrap_or("".to_string()));
+                        vals.push(sample.quantity.map(|x| x.to_string()).unwrap_or("".to_string()));
+                        vals.push(sample.notes.clone().unwrap_or("".to_string()));
+                    }
+                    tbuilder.push_record(vals);
                 }
                 print_table(tbuilder, samples.len());
                 Ok(())

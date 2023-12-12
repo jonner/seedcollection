@@ -1,7 +1,7 @@
 use log::debug;
+use sqlx::error::Error::ColumnDecode;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Row};
-use sqlx::error::Error::ColumnDecode;
 use std::str::FromStr;
 use strum_macros::{Display, EnumString, FromRepr};
 
@@ -45,35 +45,36 @@ pub struct Taxon {
 
 impl FromRow<'_, SqliteRow> for Taxon {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
-        // FIXME: make optional
-        let rankid: usize = row.try_get::<i64, _>("rank_id")?.try_into().map_err(
-            |e: std::num::TryFromIntError| ColumnDecode {
-                index: "rank".to_string(),
-                source: e.into(),
-            },
-        )?;
-        let rank = Rank::from_repr(rankid).ok_or_else(|| ColumnDecode {
-            index: "rank".to_string(),
-            source: Box::new(strum::ParseError::VariantNotFound),
-        })?;
-        let status: String = row.try_get("native_status")?;
-        let status = if status.is_empty() {
-            None
-        } else {
-            Some(
-                NativeStatus::from_str(row.try_get("native_status")?).map_err(|e| {
-                    ColumnDecode {
-                        index: "native_status".to_string(),
-                        source: e.into(),
-                    }
-                })?,
-            )
+        let rank = match row.try_get::<i64, _>("rank_id") {
+            Err(_) => Rank::Unknown,
+            Ok(r) => {
+                let rankid: usize =
+                    r.try_into()
+                        .map_err(|e: std::num::TryFromIntError| ColumnDecode {
+                            index: "rank".to_string(),
+                            source: e.into(),
+                        })?;
+                Rank::from_repr(rankid).ok_or_else(|| ColumnDecode {
+                    index: "rank".to_string(),
+                    source: Box::new(strum::ParseError::VariantNotFound),
+                })?
+            }
         };
-        let splits = row
-            .try_get::<&str, _>("cnames")?
-            .split('@')
-            .map(|x| x.to_string());
-        let vernaculars: Vec<_> = splits.collect();
+        let status = match row.try_get("native_status") {
+            Err(_) => None,
+            Ok("") => None,
+            Ok(val) => Some(NativeStatus::from_str(val).map_err(|e| ColumnDecode {
+                index: "native_status".to_string(),
+                source: e.into(),
+            })?),
+        };
+        let vernaculars = match row.try_get::<&str, _>("cnames") {
+            Err(_) => Vec::new(),
+            Ok(s) => {
+                let splits = s.split('@').map(|x| x.to_string());
+                splits.collect::<Vec<String>>()
+            }
+        };
         Ok(Self {
             id: row.try_get("tsn")?,
             rank,
