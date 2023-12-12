@@ -1,6 +1,7 @@
 use log::debug;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Row};
+use sqlx::error::Error::ColumnDecode;
 use std::str::FromStr;
 use strum_macros::{Display, EnumString, FromRepr};
 
@@ -45,16 +46,13 @@ pub struct Taxon {
 impl FromRow<'_, SqliteRow> for Taxon {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         // FIXME: make optional
-        let rankid: usize =
-            row.try_get::<i64, _>("rank_id")?
-                .try_into()
-                .map_err(
-                    |e: std::num::TryFromIntError| sqlx::error::Error::ColumnDecode {
-                        index: "rank".to_string(),
-                        source: e.into(),
-                    },
-                )?;
-        let rank = Rank::from_repr(rankid).ok_or_else(|| sqlx::error::Error::ColumnDecode {
+        let rankid: usize = row.try_get::<i64, _>("rank_id")?.try_into().map_err(
+            |e: std::num::TryFromIntError| ColumnDecode {
+                index: "rank".to_string(),
+                source: e.into(),
+            },
+        )?;
+        let rank = Rank::from_repr(rankid).ok_or_else(|| ColumnDecode {
             index: "rank".to_string(),
             source: Box::new(strum::ParseError::VariantNotFound),
         })?;
@@ -64,11 +62,11 @@ impl FromRow<'_, SqliteRow> for Taxon {
         } else {
             Some(
                 NativeStatus::from_str(row.try_get("native_status")?).map_err(|e| {
-                    sqlx::error::Error::ColumnDecode {
+                    ColumnDecode {
                         index: "native_status".to_string(),
                         source: e.into(),
                     }
-                })?
+                })?,
             )
         };
         let splits = row

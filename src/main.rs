@@ -7,8 +7,8 @@ use tokio;
 
 mod collection;
 mod location;
-mod taxonomy;
 mod sample;
+mod taxonomy;
 
 pub fn logger() -> env_logger::Builder {
     let env = env_logger::Env::new()
@@ -164,10 +164,18 @@ enum SampleCommands {
     List,
     #[command(about = "Add a new sample to the database")]
     Add {
-        #[arg(long)]
+        #[arg(short, long)]
         taxon: i64,
-        #[arg(long)]
+        #[arg(short, long)]
         location: Option<i64>,
+        #[arg(short, long)]
+        month: Option<u16>,
+        #[arg(short, long)]
+        year: Option<u16>,
+        #[arg(short, long)]
+        quantity: Option<u32>,
+        #[arg(short, long)]
+        notes: Option<String>,
     },
     #[command(about = "Remove an existing sample from the database")]
     Remove { id: i64 },
@@ -176,7 +184,7 @@ enum SampleCommands {
             clap::ArgGroup::new("modify")
                 .required(true)
                 .multiple(true)
-                .args(&["taxon", "location"]),
+                .args(&["taxon", "location", "month", "year", "quantity", "notes"]),
         ),
         about="Modify properties of a sample")]
     Modify {
@@ -186,6 +194,14 @@ enum SampleCommands {
         taxon: Option<i64>,
         #[arg(long)]
         location: Option<i64>,
+        #[arg(short, long)]
+        month: Option<u16>,
+        #[arg(short, long)]
+        year: Option<u16>,
+        #[arg(short, long)]
+        quantity: Option<u32>,
+        #[arg(short, long)]
+        notes: Option<String>,
     },
 }
 
@@ -482,19 +498,38 @@ async fn main() -> Result<()> {
                 for sample in &samples {
                     tbuilder.push_record([
                         sample.id.to_string(),
-                        sample.taxon.as_ref().map(|x| x.complete_name.clone()).unwrap_or("".to_string()),
-                        sample.location.as_ref().map(|x| x.name.clone()).unwrap_or("".to_string()),
+                        sample
+                            .taxon
+                            .as_ref()
+                            .map(|x| x.complete_name.clone())
+                            .unwrap_or("".to_string()),
+                        sample
+                            .location
+                            .as_ref()
+                            .map(|x| x.name.clone())
+                            .unwrap_or("".to_string()),
                     ]);
                 }
                 print_table(tbuilder, samples.len());
                 Ok(())
             }
-            SampleCommands::Add { taxon, location } => {
+            SampleCommands::Add {
+                taxon,
+                location,
+                month,
+                year,
+                quantity,
+                notes,
+            } => {
                 let newid = sqlx::query!(
-                    r#"INSERT INTO seedsamples (tsn, collectedlocation)
-                VALUES (?1, ?2)"#,
+                    r#"INSERT INTO seedsamples (tsn, month, year, collectedlocation, quantity, notes)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#,
                     taxon,
+                    month,
+                    year,
                     location,
+                    quantity,
+                    notes,
                 )
                 .execute(&dbpool)
                 .await?
@@ -513,8 +548,18 @@ async fn main() -> Result<()> {
                 id,
                 taxon,
                 location,
+                month,
+                year,
+                quantity,
+                notes,
             } => {
-                if taxon.is_none() && taxon.is_none() {
+                if taxon.is_none()
+                    && location.is_none()
+                    && month.is_none()
+                    && year.is_none()
+                    && quantity.is_none()
+                    && notes.is_none()
+                {
                     return Err(anyhow!("Cannot modify without new values"));
                 }
                 let mut builder = sqlx::QueryBuilder::new("UPDATE seedsamples SET ");
@@ -526,6 +571,22 @@ async fn main() -> Result<()> {
                 if let Some(location) = location {
                     sep.push("collectedlocation = ");
                     sep.push_bind_unseparated(location);
+                }
+                if let Some(month) = month {
+                    sep.push("month = ");
+                    sep.push_bind_unseparated(month);
+                }
+                if let Some(year) = year {
+                    sep.push("year = ");
+                    sep.push_bind_unseparated(year);
+                }
+                if let Some(notes) = notes {
+                    sep.push("notes = ");
+                    sep.push_bind_unseparated(notes);
+                }
+                if let Some(quantity) = quantity {
+                    sep.push("quantity = ");
+                    sep.push_bind_unseparated(quantity);
                 }
                 builder.push(" WHERE id=");
                 builder.push_bind(id);
