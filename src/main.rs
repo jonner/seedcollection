@@ -1,8 +1,11 @@
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
+use collection::Collection;
 use log::debug;
+use sample::Sample;
 use sqlx::SqlitePool;
 use std::path::PathBuf;
+use taxonomy::Taxon;
 use tokio;
 
 mod collection;
@@ -29,12 +32,9 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
     println!("{} records found", nrecs);
 }
 
-async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: bool) -> Result<()>
-{
+async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: bool) -> Result<()> {
     let mut sqlbuilder = sample::build_query(collectionid);
-    let samples: Vec<sample::Sample> = sqlbuilder.build_query_as()
-        .fetch_all(dbpool)
-        .await?;
+    let samples: Vec<Sample> = sqlbuilder.build_query_as().fetch_all(dbpool).await?;
     let mut tbuilder = tabled::builder::Builder::new();
     let mut headers = vec!["ID", "Taxon", "Location"];
     if full {
@@ -48,9 +48,19 @@ async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: boo
             sample.location.name.clone(),
         ];
         if full {
-            vals.push(sample.month.map(|x| x.to_string()).unwrap_or("".to_string()));
+            vals.push(
+                sample
+                    .month
+                    .map(|x| x.to_string())
+                    .unwrap_or("".to_string()),
+            );
             vals.push(sample.year.map(|x| x.to_string()).unwrap_or("".to_string()));
-            vals.push(sample.quantity.map(|x| x.to_string()).unwrap_or("".to_string()));
+            vals.push(
+                sample
+                    .quantity
+                    .map(|x| x.to_string())
+                    .unwrap_or("".to_string()),
+            );
             vals.push(sample.notes.clone().unwrap_or("".to_string()));
         }
         tbuilder.push_record(vals);
@@ -266,7 +276,7 @@ async fn main() -> Result<()> {
     match args.command {
         Some(Commands::Collection { command }) => match command {
             CollectionCommands::List { full } => {
-                let collections: Vec<collection::Collection> = sqlx::query_as(
+                let collections: Vec<Collection> = sqlx::query_as(
                     r#"SELECT L.id, L.name, L.description
                                       FROM seedcollections L"#,
                 )
@@ -480,9 +490,7 @@ async fn main() -> Result<()> {
             }
         },
         Some(Commands::Sample { command }) => match command {
-            SampleCommands::List { full } => {
-                print_samples(&dbpool, None, full).await
-            }
+            SampleCommands::List { full } => print_samples(&dbpool, None, full).await,
             SampleCommands::Add {
                 taxon,
                 location,
@@ -576,7 +584,7 @@ async fn main() -> Result<()> {
                 minnesota,
             } => {
                 let mut query = taxonomy::build_query(id, rank, genus, species, any, minnesota);
-                let taxa: Vec<taxonomy::Taxon> = query.build_query_as().fetch_all(&dbpool).await?;
+                let taxa: Vec<Taxon> = query.build_query_as().fetch_all(&dbpool).await?;
                 if taxa.is_empty() {
                     return Err(anyhow!("No results found"));
                 }
