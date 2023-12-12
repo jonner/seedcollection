@@ -6,7 +6,6 @@ use sample::Sample;
 use sqlx::SqlitePool;
 use taxonomy::Taxon;
 use cli::{Cli, Commands, CollectionCommands, LocationCommands, SampleCommands, TaxonomyCommands};
-use tokio;
 
 mod collection;
 mod location;
@@ -189,7 +188,7 @@ async fn main() -> Result<()> {
                 if let Some(desc) = &collectioninfo.description {
                     println!("  {}", desc);
                 }
-                println!("");
+                println!();
                 print_samples(&dbpool, Some(id), full).await
             }
         },
