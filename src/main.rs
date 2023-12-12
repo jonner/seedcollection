@@ -29,6 +29,36 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
     println!("{} records found", nrecs);
 }
 
+async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: bool) -> Result<()>
+{
+    let mut sqlbuilder = sample::build_query(collectionid);
+    let samples: Vec<sample::Sample> = sqlbuilder.build_query_as()
+        .fetch_all(dbpool)
+        .await?;
+    let mut tbuilder = tabled::builder::Builder::new();
+    let mut headers = vec!["ID", "Taxon", "Location"];
+    if full {
+        headers.extend_from_slice(&["Month", "Year", "Qty", "Notes"]);
+    }
+    tbuilder.set_header(headers);
+    for sample in &samples {
+        let mut vals = vec![
+            sample.id.to_string(),
+            sample.taxon.complete_name.clone(),
+            sample.location.name.clone(),
+        ];
+        if full {
+            vals.push(sample.month.map(|x| x.to_string()).unwrap_or("".to_string()));
+            vals.push(sample.year.map(|x| x.to_string()).unwrap_or("".to_string()));
+            vals.push(sample.quantity.map(|x| x.to_string()).unwrap_or("".to_string()));
+            vals.push(sample.notes.clone().unwrap_or("".to_string()));
+        }
+        tbuilder.push_record(vals);
+    }
+    print_table(tbuilder, samples.len());
+    Ok(())
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Cli {
@@ -347,42 +377,7 @@ async fn main() -> Result<()> {
                     println!("  {}", desc);
                 }
                 println!("");
-                let res = sqlx::query!(
-                    r#"SELECT CS.id as id, 
-                     V.cnames,
-                    S.id as sampleid, T.complete_name, L.name as location_name
-                    FROM seedcollectionsamples CS
-                    INNER JOIN seedcollections C on C.id=CS.collectionid
-                    INNER JOIN seedsamples S ON S.id=CS.sampleid
-                    LEFT JOIN seedlocations L ON L.locid=S.collectedlocation
-                    INNER JOIN taxonomic_units T on S.tsn=T.tsn
-                    LEFT JOIN (SELECT tsn, GROUP_CONCAT(vernacular_name) as cnames FROM vernaculars WHERE 
-                    (language="English" or language="unspecified") GROUP BY tsn) V on V.tsn=T.tsn
-                    WHERE collectionid=?
-                    "#,
-                    id,
-                )
-                .fetch_all(&dbpool)
-                .await?;
-                let mut tbuilder = tabled::builder::Builder::new();
-                let mut headers = vec!["ID", "Name", "Common Names"];
-                if full {
-                    headers.push("Source")
-                }
-                tbuilder.set_header(headers);
-                for row in &res {
-                    let mut values = vec![
-                        row.sampleid.to_string(),
-                        row.complete_name.clone().unwrap_or("".to_string()),
-                        row.cnames.clone().unwrap_or("".to_string()),
-                    ];
-                    if full {
-                        values.push(row.location_name.clone().unwrap_or("?".to_string()));
-                    }
-                    tbuilder.push_record(values);
-                }
-                print_table(tbuilder, res.len());
-                Ok(())
+                print_samples(&dbpool, Some(id), full).await
             }
         },
         Some(Commands::Location { command }) => match command {
@@ -486,37 +481,7 @@ async fn main() -> Result<()> {
         },
         Some(Commands::Sample { command }) => match command {
             SampleCommands::List { full } => {
-                let samples: Vec<sample::Sample> = sqlx::query_as(
-                    r#"SELECT S.id, T.tsn, L.locid, L.name as locname, T.complete_name,
-                    quantity, month, year, notes
-                    FROM seedsamples S
-                    INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-                    INNER JOIN seedlocations L on L.locid=S.collectedlocation"#,
-                )
-                .fetch_all(&dbpool)
-                .await?;
-                let mut tbuilder = tabled::builder::Builder::new();
-                let mut headers = vec!["ID", "Taxon", "Location"];
-                if full {
-                    headers.extend_from_slice(&["Month", "Year", "Qty", "Notes"]);
-                }
-                tbuilder.set_header(headers);
-                for sample in &samples {
-                    let mut vals = vec![
-                        sample.id.to_string(),
-                        sample.taxon.complete_name.clone(),
-                        sample.location.name.clone(),
-                    ];
-                    if full {
-                        vals.push(sample.month.map(|x| x.to_string()).unwrap_or("".to_string()));
-                        vals.push(sample.year.map(|x| x.to_string()).unwrap_or("".to_string()));
-                        vals.push(sample.quantity.map(|x| x.to_string()).unwrap_or("".to_string()));
-                        vals.push(sample.notes.clone().unwrap_or("".to_string()));
-                    }
-                    tbuilder.push_record(vals);
-                }
-                print_table(tbuilder, samples.len());
-                Ok(())
+                print_samples(&dbpool, None, full).await
             }
             SampleCommands::Add {
                 taxon,

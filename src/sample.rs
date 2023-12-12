@@ -1,7 +1,7 @@
 use crate::location;
 use crate::taxonomy;
-use sqlx::sqlite::SqliteRow;
-use sqlx::{FromRow, Row};
+use sqlx::{Sqlite, sqlite::SqliteRow};
+use sqlx::{FromRow, Row, QueryBuilder};
 
 pub struct Sample {
     pub id: i64,
@@ -11,6 +11,21 @@ pub struct Sample {
     pub month: Option<u32>,
     pub year: Option<u32>,
     pub notes: Option<String>,
+}
+
+pub fn build_query(collectionid: Option<i64>) -> QueryBuilder<'static, Sqlite> {
+    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+                    r#"SELECT S.id, T.tsn, L.locid, L.name as locname, T.complete_name,
+                    quantity, month, year, notes
+                    FROM seedsamples S
+                    INNER JOIN taxonomic_units T ON T.tsn=S.tsn
+                    INNER JOIN seedlocations L on L.locid=S.collectedlocation"#,
+                    );
+    if let Some(id) = collectionid {
+        builder.push(" INNER JOIN seedcollectionsamples CS ON CS.sampleid=S.id WHERE cs.collectionid=");
+        builder.push_bind(id);
+    }
+    builder
 }
 
 impl FromRow<'_, SqliteRow> for Sample {
