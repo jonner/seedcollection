@@ -75,7 +75,7 @@ struct Cli {
     #[arg(short, long, default_value = "seedcollection.sqlite")]
     database: PathBuf,
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
@@ -274,7 +274,7 @@ async fn main() -> Result<()> {
     let dbpool =
         SqlitePool::connect(&format!("sqlite://{}", args.database.to_string_lossy())).await?;
     match args.command {
-        Some(Commands::Collection { command }) => match command {
+        Commands::Collection { command } => match command {
             CollectionCommands::List { full } => {
                 let collections: Vec<Collection> = sqlx::query_as(
                     r#"SELECT L.id, L.name, L.description
@@ -390,7 +390,7 @@ async fn main() -> Result<()> {
                 print_samples(&dbpool, Some(id), full).await
             }
         },
-        Some(Commands::Location { command }) => match command {
+        Commands::Location { command } => match command {
             LocationCommands::List { full } => {
                 let locations: Vec<location::Location> = sqlx::query_as("SELECT locid, name as locname, description, latitude, longitude FROM seedlocations")
                     .fetch_all(&dbpool)
@@ -489,7 +489,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
-        Some(Commands::Sample { command }) => match command {
+        Commands::Sample { command } => match command {
             SampleCommands::List { full } => print_samples(&dbpool, None, full).await,
             SampleCommands::Add {
                 taxon,
@@ -574,7 +574,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
-        Some(Commands::Taxonomy { command }) => match command {
+        Commands::Taxonomy { command } => match command {
             TaxonomyCommands::Find {
                 id,
                 rank,
@@ -607,6 +607,5 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
-        None => Err(anyhow!("Missing command")),
     }
 }
