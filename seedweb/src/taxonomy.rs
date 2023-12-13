@@ -1,6 +1,6 @@
 use crate::{error, state::SharedState};
 use axum::{
-    extract::{Query, State},
+    extract::{Query, State, Path},
     response::{Html, Json},
     routing::get,
     Router,
@@ -13,6 +13,7 @@ pub fn router() -> Router<Arc<SharedState>> {
     Router::new()
         .route("/", get(root_handler))
         .route("/find", get(find_handler))
+        .route("/:id", get(show_handler))
 }
 
 async fn root_handler() -> Html<String> {
@@ -33,7 +34,6 @@ async fn find_handler(
     State(state): State<Arc<SharedState>>,
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
-    // FIXME: share db connections?
     let t = taxonomy::build_query(
         params.id,
         params.rank,
@@ -44,6 +44,24 @@ async fn find_handler(
     )
     .build_query_as::<Taxon>()
     .fetch_all(&state.dbpool)
+    .await?;
+    Ok(Json(t))
+}
+
+async fn show_handler(
+    State(state): State<Arc<SharedState>>,
+    Path(id): Path<i64>,
+) -> Result<Json<Taxon>, error::Error> {
+    let t = taxonomy::build_query(
+        Some(id),
+        None,
+        None,
+        None,
+        None,
+        false,
+    )
+    .build_query_as::<Taxon>()
+    .fetch_one(&state.dbpool)
     .await?;
     Ok(Json(t))
 }
