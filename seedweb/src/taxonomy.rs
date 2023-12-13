@@ -1,5 +1,5 @@
+use crate::db;
 use crate::error;
-use anyhow::Result;
 use axum::{
     extract::Query,
     response::{Html, Json},
@@ -10,7 +10,6 @@ use libseed::taxonomy;
 use libseed::taxonomy::Rank;
 use libseed::taxonomy::Taxon;
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 
 pub fn router() -> Router {
     Router::new()
@@ -32,15 +31,11 @@ struct TaxonomyFindParams {
     minnesota: Option<bool>,
 }
 
-async fn dbpool() -> Result<SqlitePool> {
-    Ok(SqlitePool::connect("sqlite://seedcollection.sqlite").await?)
-}
-
 async fn find_handler(
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
     // FIXME: share db connections?
-    let dbpool = dbpool().await?;
+    let dbpool = db::pool().await?;
     let t = taxonomy::build_query(
         params.id,
         params.rank,

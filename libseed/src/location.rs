@@ -1,4 +1,7 @@
-#[derive(sqlx::FromRow)]
+use serde::Deserialize;
+use serde::Serialize;
+
+#[derive(sqlx::FromRow, Deserialize, Serialize)]
 pub struct Location {
     #[sqlx(rename = "locid")]
     pub id: i64,
