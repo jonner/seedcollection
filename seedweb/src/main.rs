@@ -1,6 +1,7 @@
 use anyhow::Result;
 use axum::{routing::get, Router};
 
+mod collection;
 mod db;
 mod error;
 mod location;
@@ -10,6 +11,7 @@ mod taxonomy;
 async fn main() -> Result<()> {
     let app = Router::new()
         .route("/", get(root))
+        .nest("/collection", collection::router())
         .nest("/location", location::router())
         .nest("/taxonomy", taxonomy::router());
 
