@@ -13,16 +13,16 @@ use sqlx::{QueryBuilder, Sqlite};
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()
-        .route("/", get(root_handler))
-        .route("/list", get(list_handler))
-        .route("/:id", get(show_handler))
+        .route("/", get(root))
+        .route("/list", get(list_collections))
+        .route("/:id", get(show_collection))
 }
 
-async fn root_handler() -> Html<String> {
+async fn root() -> Html<String> {
     Html("Collections".to_string())
 }
 
-async fn list_handler(
+async fn list_collections(
     State(state): State<Arc<SharedState>>,
 ) -> Result<Json<Vec<Collection>>, error::Error> {
     let collections: Vec<Collection> =
@@ -32,7 +32,7 @@ async fn list_handler(
     Ok(Json(collections))
 }
 
-async fn show_handler(
+async fn show_collection(
     State(state): State<Arc<SharedState>>,
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {

@@ -11,12 +11,12 @@ use std::sync::Arc;
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()
-        .route("/", get(root_handler))
-        .route("/find", get(find_handler))
-        .route("/:id", get(show_handler))
+        .route("/", get(root))
+        .route("/find", get(find_taxa))
+        .route("/:id", get(show_taxon))
 }
 
-async fn root_handler() -> Html<String> {
+async fn root() -> Html<String> {
     Html("Taxonomy".to_string())
 }
 
@@ -30,7 +30,7 @@ struct TaxonomyFindParams {
     minnesota: Option<bool>,
 }
 
-async fn find_handler(
+async fn find_taxa(
     State(state): State<Arc<SharedState>>,
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
@@ -48,7 +48,7 @@ async fn find_handler(
     Ok(Json(t))
 }
 
-async fn show_handler(
+async fn show_taxon(
     State(state): State<Arc<SharedState>>,
     Path(id): Path<i64>,
 ) -> Result<Json<Taxon>, error::Error> {

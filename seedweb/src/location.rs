@@ -11,16 +11,16 @@ use std::sync::Arc;
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()
-        .route("/", get(root_handler))
-        .route("/list", get(list_handler))
-        .route("/:id", get(show_handler))
+        .route("/", get(root))
+        .route("/list", get(list_locations))
+        .route("/:id", get(show_location))
 }
 
-async fn root_handler() -> Html<String> {
+async fn root() -> Html<String> {
     Html("Locations".to_string())
 }
 
-async fn list_handler(
+async fn list_locations(
     State(state): State<Arc<SharedState>>,
 ) -> Result<Json<Vec<Location>>, error::Error> {
     let locations: Vec<location::Location> = sqlx::query_as(
@@ -31,7 +31,7 @@ async fn list_handler(
     Ok(Json(locations))
 }
 
-async fn show_handler(
+async fn show_location(
     Path(id): Path<i64>,
     State(state): State<Arc<SharedState>>,
 ) -> Result<Json<Location>, error::Error> {

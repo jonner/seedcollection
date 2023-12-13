@@ -11,16 +11,16 @@ use std::sync::Arc;
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()
-        .route("/", get(root_handler))
-        .route("/list", get(list_handler))
-        .route("/:id", get(show_handler))
+        .route("/", get(root))
+        .route("/list", get(list_samples))
+        .route("/:id", get(show_sample))
 }
 
-async fn root_handler(State(_state): State<Arc<SharedState>>) -> Html<String> {
+async fn root(State(_state): State<Arc<SharedState>>) -> Html<String> {
     Html("Samples".to_string())
 }
 
-async fn list_handler(
+async fn list_samples(
     State(state): State<Arc<SharedState>>,
 ) -> Result<Json<Vec<Sample>>, error::Error> {
     let mut builder = sample::build_query(None, None);
@@ -28,7 +28,7 @@ async fn list_handler(
     Ok(Json(samples))
 }
 
-async fn show_handler(
+async fn show_sample(
     State(state): State<Arc<SharedState>>,
     Path(id): Path<i64>,
 ) -> Result<Json<Sample>, error::Error> {
