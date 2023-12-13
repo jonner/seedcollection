@@ -16,6 +16,10 @@ mod taxonomy;
 pub struct Cli {
     #[arg(short, long, default_value = "seedcollection.sqlite")]
     pub database: String,
+    #[arg(short, long, default_value = "localhost")]
+    pub listen: String,
+    #[arg(short, long, default_value = "3000")]
+    pub port: u32,
 }
 
 #[tokio::main]
@@ -31,8 +35,9 @@ async fn main() -> Result<()> {
         .nest("/taxonomy", taxonomy::router())
         .with_state(shared_state);
 
-    // FIXME: share db pool, etc...
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    let addr = format!("{}:{}", args.listen, args.port);
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    println!("Listening on http://{}", addr);
     axum::serve(listener, app).await?;
     Ok(())
 }
