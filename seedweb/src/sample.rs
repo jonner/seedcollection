@@ -23,6 +23,6 @@ async fn list_handler(
     State(state): State<Arc<SharedState>>,
 ) -> Result<Json<Vec<Sample>>, error::Error> {
     let mut builder = sample::build_query(None);
-    let locations: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
-    Ok(Json(locations))
+    let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
+    Ok(Json(samples))
 }
