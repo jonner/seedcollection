@@ -1,19 +1,15 @@
 use std::sync::Arc;
 
-use crate::error;
-use crate::state::SharedState;
+use crate::{error, state::SharedState};
 use anyhow::Result;
-use axum::extract::State;
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     response::{Html, Json},
     routing::get,
     Router,
 };
-use libseed::collection::Collection;
-use libseed::sample;
-use sqlx::QueryBuilder;
-use sqlx::Sqlite;
+use libseed::{collection::Collection, sample};
+use sqlx::{QueryBuilder, Sqlite};
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()

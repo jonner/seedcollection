@@ -1,18 +1,13 @@
-use std::sync::Arc;
-
-use crate::error;
-use crate::state::SharedState;
-use axum::extract::State;
+use crate::{error, state::SharedState};
 use axum::{
-    extract::Query,
+    extract::{Query, State},
     response::{Html, Json},
     routing::get,
     Router,
 };
-use libseed::taxonomy;
-use libseed::taxonomy::Rank;
-use libseed::taxonomy::Taxon;
+use libseed::taxonomy::{self, Rank, Taxon};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()

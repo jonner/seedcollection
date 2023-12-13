@@ -1,7 +1,6 @@
+use crate::taxonomy;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-
-use crate::taxonomy;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]

@@ -1,15 +1,13 @@
-use std::sync::Arc;
-
 use crate::{error, state::SharedState};
 use anyhow::Result;
-use axum::extract::State;
 use axum::{
+    extract::State,
     response::{Html, Json},
     routing::get,
     Router,
 };
-use libseed::sample;
-use libseed::sample::Sample;
+use libseed::sample::{self, Sample};
+use std::sync::Arc;
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()

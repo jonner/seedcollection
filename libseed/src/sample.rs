@@ -1,5 +1,4 @@
-use crate::location::Location;
-use crate::taxonomy::Taxon;
+use crate::{location::Location, taxonomy::Taxon};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, FromRow, QueryBuilder, Row, Sqlite};
 

@@ -1,8 +1,6 @@
 use log::debug;
 use serde::{Deserialize, Serialize};
-use sqlx::error::Error::ColumnDecode;
-use sqlx::sqlite::SqliteRow;
-use sqlx::{FromRow, Row};
+use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Row};
 use std::str::FromStr;
 use strum_macros::{Display, EnumString, FromRepr};
 
