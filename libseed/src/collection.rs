@@ -7,5 +7,6 @@ pub struct Collection {
     pub name: String,
     pub description: Option<String>,
     #[sqlx(skip)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub samples: Vec<Sample>,
 }
