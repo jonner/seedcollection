@@ -7,6 +7,5 @@ pub struct Collection {
     pub name: String,
     pub description: Option<String>,
     #[sqlx(skip)]
-    #[serde(skip)]
     pub samples: Vec<Sample>,
 }
