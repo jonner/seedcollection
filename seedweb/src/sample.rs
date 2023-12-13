@@ -1,7 +1,7 @@
 use crate::{error, state::SharedState};
 use anyhow::Result;
 use axum::{
-    extract::State,
+    extract::{Path, State},
     response::{Html, Json},
     routing::get,
     Router,
@@ -13,6 +13,7 @@ pub fn router() -> Router<Arc<SharedState>> {
     Router::new()
         .route("/", get(root_handler))
         .route("/list", get(list_handler))
+        .route("/:id", get(show_handler))
 }
 
 async fn root_handler(State(_state): State<Arc<SharedState>>) -> Html<String> {
@@ -22,7 +23,16 @@ async fn root_handler(State(_state): State<Arc<SharedState>>) -> Html<String> {
 async fn list_handler(
     State(state): State<Arc<SharedState>>,
 ) -> Result<Json<Vec<Sample>>, error::Error> {
-    let mut builder = sample::build_query(None);
+    let mut builder = sample::build_query(None, None);
     let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(Json(samples))
+}
+
+async fn show_handler(
+    State(state): State<Arc<SharedState>>,
+    Path(id): Path<i64>,
+) -> Result<Json<Sample>, error::Error> {
+    let mut builder = sample::build_query(None, Some(id));
+    let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
+    Ok(Json(sample))
 }

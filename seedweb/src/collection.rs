@@ -40,7 +40,7 @@ async fn show_handler(
         QueryBuilder::new("SELECT L.id, L.name, L.description FROM seedcollections L WHERE id=");
     builder.push_bind(id);
     let mut collection: Collection = builder.build_query_as().fetch_one(&state.dbpool).await?;
-    let mut builder = sample::build_query(Some(id));
+    let mut builder = sample::build_query(Some(id), None);
     collection.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(Json(collection))
 }

@@ -32,7 +32,7 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
 }
 
 async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: bool) -> Result<()> {
-    let mut sqlbuilder = sample::build_query(collectionid);
+    let mut sqlbuilder = sample::build_query(collectionid, None);
     let samples: Vec<Sample> = sqlbuilder.build_query_as().fetch_all(dbpool).await?;
     let mut tbuilder = tabled::builder::Builder::new();
     let mut headers = vec!["ID", "Taxon", "Location"];

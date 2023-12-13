@@ -13,7 +13,10 @@ pub struct Sample {
     pub notes: Option<String>,
 }
 
-pub fn build_query(collectionid: Option<i64>) -> QueryBuilder<'static, Sqlite> {
+pub fn build_query(
+    collectionid: Option<i64>,
+    sampleid: Option<i64>,
+) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         r#"SELECT S.id, T.tsn, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3,
@@ -26,6 +29,9 @@ pub fn build_query(collectionid: Option<i64>) -> QueryBuilder<'static, Sqlite> {
         builder.push(
             " INNER JOIN seedcollectionsamples CS ON CS.sampleid=S.id WHERE cs.collectionid=",
         );
+        builder.push_bind(id);
+    } else if let Some(id) = sampleid {
+        builder.push(" WHERE S.id=");
         builder.push_bind(id);
     }
     builder
