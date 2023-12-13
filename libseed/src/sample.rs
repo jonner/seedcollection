@@ -1,7 +1,9 @@
 use crate::location::Location;
 use crate::taxonomy::Taxon;
+use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, FromRow, QueryBuilder, Row, Sqlite};
 
+#[derive(Deserialize, Serialize)]
 pub struct Sample {
     pub id: i64,
     pub taxon: Taxon,
@@ -15,6 +17,7 @@ pub struct Sample {
 pub fn build_query(collectionid: Option<i64>) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         r#"SELECT S.id, T.tsn, L.locid, L.name as locname, T.complete_name,
+        T.unit_name1, T.unit_name2, T.unit_name3,
                     quantity, month, year, notes
                     FROM seedsamples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn

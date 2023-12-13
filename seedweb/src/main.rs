@@ -5,6 +5,7 @@ mod collection;
 mod db;
 mod error;
 mod location;
+mod sample;
 mod taxonomy;
 
 #[tokio::main]
@@ -13,6 +14,7 @@ async fn main() -> Result<()> {
         .route("/", get(root))
         .nest("/collection", collection::router())
         .nest("/location", location::router())
+        .nest("/sample", sample::router())
         .nest("/taxonomy", taxonomy::router());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
