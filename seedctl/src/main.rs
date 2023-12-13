@@ -1,16 +1,15 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use collection::Collection;
+use cli::{Cli, CollectionCommands, Commands, LocationCommands, SampleCommands, TaxonomyCommands};
+use libseed::collection::Collection;
+use libseed::sample::Sample;
+use libseed::taxonomy::Taxon;
 use log::debug;
-use sample::Sample;
 use sqlx::SqlitePool;
-use taxonomy::Taxon;
-use cli::{Cli, Commands, CollectionCommands, LocationCommands, SampleCommands, TaxonomyCommands};
 
-mod collection;
-mod location;
-mod sample;
-mod taxonomy;
+use libseed::location;
+use libseed::sample;
+use libseed::taxonomy;
 mod cli;
 
 pub fn logger() -> env_logger::Builder {

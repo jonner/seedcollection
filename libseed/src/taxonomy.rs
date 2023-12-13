@@ -1,4 +1,5 @@
 use log::debug;
+use serde::{Deserialize, Serialize};
 use sqlx::error::Error::ColumnDecode;
 use sqlx::sqlite::SqliteRow;
 use sqlx::{FromRow, Row};
@@ -7,22 +8,41 @@ use strum_macros::{Display, EnumString, FromRepr};
 
 pub const KINGDOM_PLANTAE: i64 = 3;
 
-#[derive(Debug, Clone, Display, EnumString, FromRepr)]
+#[derive(Debug, Clone, Display, EnumString, FromRepr, Deserialize, Serialize)]
 #[strum(ascii_case_insensitive)]
 pub enum Rank {
     Unknown = 0,
     Kingdom = 10,
+    Subkingdom = 20,
+    Infrakingdom = 25,
+    Superdivision = 27,
     Division = 30,
+    Subdivision = 40,
+    Infradivision = 45,
+    Superclass = 50,
     Class = 60,
+    Subclass = 70,
+    Infraclass = 80,
+    Superorder = 90,
     Order = 100,
+    Suborder = 110,
     Family = 140,
+    Subfamily = 150,
+    Tribe = 160,
+    Subtribe = 170,
     Genus = 180,
+    Subgenus = 190,
+    Section = 200,
+    Subsection = 210,
     Species = 220,
     Subspecies = 230,
     Variety = 240,
+    Subvariety = 250,
+    Form = 260,
+    Subform = 270,
 }
 
-#[derive(Debug, Display, EnumString, FromRepr)]
+#[derive(Debug, Display, EnumString, FromRepr, Serialize, Deserialize)]
 pub enum NativeStatus {
     #[strum(serialize = "Native", serialize = "N")]
     Native,
@@ -32,6 +52,7 @@ pub enum NativeStatus {
     Unknown,
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct Taxon {
     pub id: i64,
     pub rank: Rank,
@@ -80,9 +101,9 @@ impl FromRow<'_, SqliteRow> for Taxon {
             rank,
             complete_name: row.try_get("complete_name")?,
             vernaculars,
-            name1: Default::default(),
-            name2: Default::default(),
-            name3: Default::default(),
+            name1: row.try_get("unit_name1")?,
+            name2: row.try_get("unit_name2")?,
+            name3: row.try_get("unit_name3")?,
             native_status: status,
         })
     }
@@ -97,7 +118,7 @@ pub fn build_query(
     minnesota: bool,
 ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
-        r#"SELECT T.tsn, T.complete_name, T.rank_id, M.native_status,
+        r#"SELECT T.tsn, T.unit_name1, T.unit_name2, T.unit_name3, T.complete_name, T.rank_id, M.native_status,
             GROUP_CONCAT(V.vernacular_name, "@") as cnames
             FROM taxonomic_units T
             LEFT JOIN (SELECT * FROM vernaculars WHERE
