@@ -1,6 +1,7 @@
 use anyhow::Result;
 use axum::{routing::get, Router};
 use clap::Parser;
+use log::debug;
 use std::sync::Arc;
 
 mod collection;
@@ -10,6 +11,13 @@ mod location;
 mod sample;
 mod state;
 mod taxonomy;
+
+pub fn logger() -> env_logger::Builder {
+    let env = env_logger::Env::new()
+        .filter_or("SW_LOG", "warn")
+        .write_style("SW_LOG_STYLE");
+    env_logger::Builder::from_env(env)
+}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -24,6 +32,7 @@ pub struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    logger().init();
     let args = Cli::parse();
     let shared_state = Arc::new(state::SharedState::new(args.database).await?);
 
