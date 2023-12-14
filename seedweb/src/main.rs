@@ -4,13 +4,10 @@ use clap::Parser;
 use log::debug;
 use std::sync::Arc;
 
-mod collection;
+mod api;
 mod db;
 mod error;
-mod location;
-mod sample;
 mod state;
-mod taxonomy;
 
 pub fn logger() -> env_logger::Builder {
     let env = env_logger::Env::new()
@@ -34,14 +31,12 @@ pub struct Cli {
 async fn main() -> Result<()> {
     logger().init();
     let args = Cli::parse();
+    debug!("using database '{}'", args.database);
     let shared_state = Arc::new(state::SharedState::new(args.database).await?);
 
     let app = Router::new()
         .route("/", get(root))
-        .nest("/collection", collection::router())
-        .nest("/location", location::router())
-        .nest("/sample", sample::router())
-        .nest("/taxonomy", taxonomy::router())
+        .nest("/api/v1/", api::router())
         .with_state(shared_state);
 
     let addr = format!("{}:{}", args.listen, args.port);
