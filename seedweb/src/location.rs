@@ -1,19 +1,26 @@
 use crate::{error, state::SharedState};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::{Html, Json},
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use libseed::location::{self, Location};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_locations))
-        .route("/:id", get(show_location))
+        .route("/new", post(add_location))
+        .route(
+            "/:id",
+            get(show_location)
+                .put(modify_location)
+                .delete(delete_location),
+        )
 }
 
 async fn root() -> Html<String> {
@@ -41,4 +48,91 @@ async fn show_location(
     .fetch_one(&state.dbpool)
     .await?;
     Ok(Json(location))
+}
+
+#[derive(Deserialize)]
+struct ModifyParams {
+    name: Option<String>,
+    description: Option<String>,
+    latitude: Option<f32>,
+    longitude: Option<f32>,
+}
+
+async fn modify_location(
+    Path(id): Path<i64>,
+    Query(params): Query<ModifyParams>,
+    State(state): State<Arc<SharedState>>,
+) -> Result<(), error::Error> {
+    if params.name.is_none()
+        && params.description.is_none()
+        && params.latitude.is_none()
+        && params.longitude.is_none()
+    {
+        return Err(anyhow!("No parameters given").into());
+    }
+    let mut builder = sqlx::QueryBuilder::<sqlx::Sqlite>::new("UPDATE seedlocations SET ");
+    let mut sep = builder.separated(", ");
+    if let Some(name) = params.name {
+        sep.push(" name=");
+        sep.push_bind_unseparated(name);
+    }
+    if let Some(desc) = params.description {
+        sep.push(" description=");
+        sep.push_bind_unseparated(desc);
+    }
+    if let Some(n) = params.latitude {
+        sep.push(" latitude=");
+        sep.push_bind_unseparated(n);
+    }
+    if let Some(n) = params.longitude {
+        sep.push(" longitude=");
+        sep.push_bind_unseparated(n);
+    }
+    builder.push(" WHERE locid=");
+    builder.push_bind(id);
+    builder.build().execute(&state.dbpool).await?;
+    Ok(())
+}
+
+#[derive(Serialize)]
+struct AddResponse {
+    success: bool,
+    id: i64,
+}
+
+async fn add_location(
+    Query(params): Query<ModifyParams>,
+    State(state): State<Arc<SharedState>>,
+) -> Result<Json<AddResponse>, error::Error> {
+    if params.name.is_none()
+        && params.description.is_none()
+        && params.latitude.is_none()
+        && params.longitude.is_none()
+    {
+        return Err(anyhow!("No parameters given").into());
+    }
+    let id = sqlx::query(
+        r#"INSERT INTO seedlocations
+          (name, description, latitude, longitude)
+          VALUES (?, ?, ?, ?)"#,
+    )
+    .bind(params.name)
+    .bind(params.description)
+    .bind(params.latitude)
+    .bind(params.longitude)
+    .execute(&state.dbpool)
+    .await?
+    .last_insert_rowid();
+    Ok(Json(AddResponse { success: true, id }))
+}
+
+async fn delete_location(
+    Path(id): Path<i64>,
+    State(state): State<Arc<SharedState>>,
+) -> Result<(), error::Error> {
+    sqlx::query("DELETE FROM seedlocations WHERE locid=?")
+        .bind(id)
+        .execute(&state.dbpool)
+        .await?;
+    Ok(())
 }

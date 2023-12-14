@@ -1,6 +1,6 @@
 use crate::{error, state::SharedState};
 use axum::{
-    extract::{Query, State, Path},
+    extract::{Path, Query, State},
     response::{Html, Json},
     routing::get,
     Router,
@@ -52,16 +52,9 @@ async fn show_taxon(
     State(state): State<Arc<SharedState>>,
     Path(id): Path<i64>,
 ) -> Result<Json<Taxon>, error::Error> {
-    let t = taxonomy::build_query(
-        Some(id),
-        None,
-        None,
-        None,
-        None,
-        false,
-    )
-    .build_query_as::<Taxon>()
-    .fetch_one(&state.dbpool)
-    .await?;
+    let t = taxonomy::build_query(Some(id), None, None, None, None, false)
+        .build_query_as::<Taxon>()
+        .fetch_one(&state.dbpool)
+        .await?;
     Ok(Json(t))
 }
