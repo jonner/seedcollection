@@ -8,11 +8,13 @@ use axum::{
 use libseed::taxonomy::{self, Rank, Taxon};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use strum::IntoEnumIterator;
 
 pub fn router() -> Router<Arc<SharedState>> {
     Router::new()
         .route("/", get(root))
         .route("/find", get(find_taxa))
+        .route("/ranks", get(ranks))
         .route("/:id", get(show_taxon))
 }
 
@@ -57,4 +59,17 @@ async fn show_taxon(
         .fetch_one(&state.dbpool)
         .await?;
     Ok(Json(t))
+}
+
+#[derive(Serialize)]
+struct RanksResponse {
+    ranks: Vec<String>,
+}
+
+async fn ranks() -> Result<Json<RanksResponse>, error::Error> {
+    let mut ranks = Vec::new();
+    for val in taxonomy::Rank::iter() {
+        ranks.push(val.to_string());
+    }
+    Ok(Json(RanksResponse { ranks }))
 }

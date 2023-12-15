@@ -2,11 +2,11 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Row};
 use std::str::FromStr;
-use strum_macros::{Display, EnumString, FromRepr};
+use strum_macros::{Display, EnumIter, EnumString, FromRepr};
 
 pub const KINGDOM_PLANTAE: i64 = 3;
 
-#[derive(Debug, Clone, Display, EnumString, FromRepr, Deserialize, Serialize)]
+#[derive(Debug, Clone, Display, EnumString, EnumIter, FromRepr, Deserialize, Serialize)]
 #[strum(ascii_case_insensitive)]
 pub enum Rank {
     Unknown = 0,
