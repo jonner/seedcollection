@@ -5,6 +5,8 @@ use axum::{
     routing::{get, post},
 };
 use libseed::collection::Collection;
+use libseed::sample;
+use sqlx::{QueryBuilder, Sqlite};
 use std::sync::Arc;
 
 use crate::{error, state::SharedState};
@@ -41,23 +43,19 @@ async fn list_collections(
     </head>
     <body>
     <h1>Collections</h1>
-    <div id="update-results"></div>
+    <ul>
     "#.to_string();
-    for collection in &collections {
-        output.push_str(&format!(r#"
-        <form hx-put='/api/1/collection/{0}' hx-trigger='submit' hx-target='#update-results' id='cf-{}'>
-        {0}
-        <input type="text" form="cf-{0}" name="name" value="{}">
-        <input type="text" form="cf-{0}" name="description" value="{}">
-        <input type="submit" form="cf-{0}" value="Update">
-        </form>
+    for c in &collections {
+        output.push_str(&format!(
+            r#"
+        <li>{0}: <a href="{0}">{1}</a></li>
         "#,
-            collection.id,
-            collection.name,
-            collection.description.as_ref().unwrap_or(&"".to_string())
+            c.id, c.name,
         ));
     }
-    output.push_str("
+    output.push_str("</ul>");
+    output.push_str(
+        "
         </body>
         </html>",
     );
@@ -68,8 +66,61 @@ async fn add_collection() -> impl IntoResponse {
     "Add collection"
 }
 
-async fn show_collection(Path(id): Path<i64>) -> impl IntoResponse {
-    format!("Show collection {}", id)
+async fn show_collection(
+    Path(id): Path<i64>,
+    State(state): State<Arc<SharedState>>,
+) -> Result<Html<String>, error::Error> {
+    let mut c: Collection =
+        sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L WHERE id=?")
+            .bind(id)
+            .fetch_one(&state.dbpool)
+            .await?;
+    let mut builder = sample::build_query(Some(id), None);
+    c.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
+
+    let mut output = format!(
+        r#"
+     <!DOCTYPE html>
+    <html>
+    <head>
+    <script src="https://unpkg.com/htmx.org@1.9.9" integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX" crossorigin="anonymous"></script>
+    </head>
+    <body>
+    <h1>Collection Details</h1>
+        <form hx-put="/api/v1/collection/{0}" hx-swap="none">
+        <p>ID: {0}</p>
+        <div><input type="text" name="name" value="{1}"></div>
+        <div><textarea name="description">{2}</textarea></div>
+        <div><input type="submit" value="Update"></div>
+        </form>
+        <table>
+        <tr>
+        <th>ID</th>
+        <th>Taxon</th>
+        <th>Location</th>
+        </tr>
+        "#,
+        c.id,
+        c.name,
+        c.description.unwrap_or("".to_string()),
+    );
+    for s in c.samples {
+        output.push_str(&format!(
+            r#"
+        <tr>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        </tr>"#,
+            s.id, s.taxon.complete_name, s.location.name,
+        ));
+    }
+    output.push_str(
+        "
+        </body>
+        </html>",
+    );
+    Ok(Html(output))
 }
 
 async fn modify_collection() -> impl IntoResponse {
