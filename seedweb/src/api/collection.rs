@@ -2,6 +2,7 @@ use crate::{error, state::SharedState};
 use anyhow::anyhow;
 use anyhow::Result;
 use axum::routing::post;
+use axum::Form;
 use axum::{
     extract::{Path, Query, State},
     response::{Html, Json},
@@ -60,9 +61,9 @@ struct ModifyProps {
 }
 
 async fn modify_collection(
-    Query(params): Query<ModifyProps>,
     State(state): State<Arc<SharedState>>,
     Path(id): Path<i64>,
+    Form(params): Form<ModifyProps>,
 ) -> Result<(), error::Error> {
     if params.name.is_none() && params.description.is_none() {
         return Err(anyhow!("No params to modify").into());
