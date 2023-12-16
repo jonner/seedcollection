@@ -7,6 +7,7 @@ use std::sync::Arc;
 mod api;
 mod db;
 mod error;
+mod html;
 mod state;
 
 pub fn logger() -> env_logger::Builder {
@@ -36,6 +37,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(root))
+        .nest("/app/", html::router())
         .nest("/api/v1/", api::router())
         .with_state(shared_state);
 
