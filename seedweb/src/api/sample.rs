@@ -40,28 +40,12 @@ async fn show_sample(
     Ok(Json(sample))
 }
 
-
-fn empty_string_is_none<'d, D>(deserializer: D) -> Result<Option<String>, error::Error>
-where D: Deserializer<'d>
-{
-    let v = String::deserialize(deserializer)?;
-    let res = if v.is_empty() {
-        None
-    } else {
-        Some(v)
-    };
-    Ok(res)
-}
-
 #[derive(Deserialize)]
 struct ModifyParams {
     taxon: Option<i64>,
     location: Option<i64>,
-        #[serde(desearialize_with="empty_string_is_none")]
     month: Option<u32>,
-        #[serde(desearialize_with="empty_string_is_none")]
     year: Option<u32>,
-        #[serde(desearialize_with="empty_string_is_none")]
     quantity: Option<i64>,
     notes: Option<String>,
 }

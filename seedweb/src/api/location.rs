@@ -4,7 +4,7 @@ use axum::{
     extract::{Path, Query, State},
     response::{Html, Json},
     routing::{get, post},
-    Router,
+    Router, Form,
 };
 use libseed::location::{self, Location};
 use serde::{Deserialize, Serialize};
@@ -60,8 +60,8 @@ struct ModifyParams {
 
 async fn modify_location(
     Path(id): Path<i64>,
-    Query(params): Query<ModifyParams>,
     State(state): State<Arc<SharedState>>,
+    Form(params): Form<ModifyParams>,
 ) -> Result<(), error::Error> {
     if params.name.is_none()
         && params.description.is_none()
