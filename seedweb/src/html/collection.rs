@@ -108,9 +108,9 @@ async fn show_collection(
         output.push_str(&format!(
             r#"
         <tr>
-        <td>{}</td>
-        <td>{}</td>
-        <td>{}</td>
+        <td><a href="/app/sample/{0}">{0}</a></td>
+        <td>{1}</td>
+        <td>{2}</td>
         </tr>"#,
             s.id, s.taxon.complete_name, s.location.name,
         ));
