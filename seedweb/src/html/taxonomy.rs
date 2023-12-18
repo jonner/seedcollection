@@ -21,7 +21,10 @@ async fn root() -> impl IntoResponse {
     "Taxonomy"
 }
 
-async fn list_taxa(CustomKey(key): CustomKey, State(state): State<SharedState>) -> Result<impl IntoResponse, error::Error> {
+async fn list_taxa(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
     let taxa: Vec<Taxon> = taxonomy::build_query(None, None, None, None, None, false)
         .build_query_as()
         .fetch_all(&state.dbpool)

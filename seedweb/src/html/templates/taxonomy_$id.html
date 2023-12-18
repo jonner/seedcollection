@@ -4,25 +4,26 @@
     <h2>Taxon Details</h2>
     <dl>
         <dt>ID</dt>
-        <dd>{{taxon.id }}</dd>
-        <dt>Name</dt>
-        <dd>{{taxon.complete_name }}</dd>
+        <dd>{{ taxon.id }}</dd>
+        <dt>Full Name</dt>
+        <dd>{{ taxon.complete_name }}</dd>
         <dt>name1</dt>
-        <dd>{{taxon.name1 }}</dd>
+        <dd>{{ taxon.name1 }}</dd>
         <dt>name2</dt>
-        <dd>{{taxon.name2 }}</dd>
+        <dd>{{ taxon.name2 }}</dd>
         <dt>name3</dt>
-        <dd>{{taxon.name3 }}</dd>
-        <dt>Vernacular Names</dt>
+        <dd>{{ taxon.name3 }}</dd>
+        <dt>Common Names</dt>
         <dd>
-            {# FIXME: don't output ul if no common names #}
+            {% if taxon.vernaculars|count > 0 %}
             <ul>
                 {% for name in taxon.vernaculars %}
                 <li>{{ name }}</li>
                 {% endfor %}
             </ul>
+            {% endif %}
         </dd>
         <dt>Minnesota Status</dt>
-        <dd>{{taxon.native_status }}</dd>
+        <dd>{{ taxon.native_status }}</dd>
     </dl>
 {% endblock %}
