@@ -1,13 +1,13 @@
 use anyhow::Result;
 use axum::{
     async_trait,
-    extract::{rejection::MatchedPathRejection, FromRequestParts, MatchedPath, State},
+    extract::{rejection::MatchedPathRejection, FromRequestParts, MatchedPath},
     http::request::Parts,
-    response::IntoResponse,
+    response::{IntoResponse, Redirect},
     routing::get,
     RequestPartsExt, Router,
 };
-use axum_template::{engine::Engine, RenderHtml};
+use axum_template::engine::Engine;
 use clap::Parser;
 use log::debug;
 use minijinja::Environment;
@@ -78,7 +78,7 @@ async fn main() -> Result<()> {
 
     let mut jinja = Environment::new();
     jinja.set_loader(minijinja::path_loader("seedweb/src/html/templates"));
-    let shared_state = state::SharedState::new(args.database, Engine::from(jinja)).await?;
+    let shared_state = SharedState::new(args.database, Engine::from(jinja)).await?;
 
     let app = Router::new()
         .route("/", get(root))
@@ -94,6 +94,6 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn root(CustomKey(key): CustomKey, State(state): State<SharedState>) -> impl IntoResponse {
-    RenderHtml(key, state.tmpl, "")
+async fn root() -> impl IntoResponse {
+    Redirect::permanent(APP_PREFIX).into_response()
 }
