@@ -24,3 +24,24 @@ a:link {
 a:visited {
     color: hsl(120, 10%, 40%);
 }
+
+input[type=text], textarea {
+    width: 100%;
+    background-color: hsla(0, 0%, 100%, 50%);
+    border: none;
+    padding: 0.5em;
+    font-size: 1em;
+}
+
+dt {
+    margin-top: 0.5em;
+    font-weight: bold;
+}
+
+dd {
+    margin-left: 0;
+}
+
+th {
+    text-align: left;
+}

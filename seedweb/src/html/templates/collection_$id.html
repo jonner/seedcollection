@@ -3,11 +3,18 @@
 {% block content %}
 <h2>Collection Details</h2>
 <form hx-put="/api/v1/collection/{{ collection.id }}" hx-swap="none">
-<p>ID: {{ collection.id }}</p>
-<div><input type="text" name="name" value="{{ collection.name }}"></div>
-<div><textarea name="description">{{ collection.description }}</textarea></div>
-<div><input type="submit" value="Update"></div>
+    <dl>
+        <dt>ID</dt>
+        <dd>{{ collection.id }}</dd>
+        <dt>Name</dt>
+        <dd><input type="text" name="name" value="{{ collection.name }}"></dd>
+        <dt>Description</dt>
+        <dd><textarea name="description">{{ collection.description }}</textarea></dd>
+    </dl>
+    <input type="submit" value="Update"></dd>
 </form>
+<h3>Samples in this collection</h3>
+{% if collection.samples %}
 <table>
     <tr>
         <th>ID</th>
@@ -18,8 +25,11 @@
     <tr>
         <td><a href="../sample/{{ s.id }}">{{ s.id }}</a></td>
         <td>{{ s.taxon.complete_name }}</td>
-        <td>{{ s.location_name }}</td>
+        <td>{{ s.location.name }}</td>
     </tr>
     {% endfor %}
 </table>
+{% else %}
+<p>No samples found</p>
+{% endif %}
 {% endblock %}
