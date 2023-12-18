@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use axum_template::RenderHtml;
@@ -12,17 +12,8 @@ use crate::{error, state::SharedState, CustomKey};
 
 pub fn router() -> Router<SharedState> {
     Router::new()
-        .route("/", get(root))
         .route("/list", get(list_samples))
-        .route("/new", post(add_sample))
-        .route(
-            "/:id",
-            get(show_sample).put(modify_sample).delete(delete_sample),
-        )
-}
-
-async fn root() -> impl IntoResponse {
-    "Samples"
+        .route("/:id", get(show_sample))
 }
 
 async fn list_samples(
@@ -34,10 +25,6 @@ async fn list_samples(
     Ok(RenderHtml(key, state.tmpl, context!(samples => samples)))
 }
 
-async fn add_sample() -> impl IntoResponse {
-    todo!()
-}
-
 async fn show_sample(
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
@@ -46,12 +33,4 @@ async fn show_sample(
     let mut builder = sample::build_query(None, Some(id));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
     Ok(RenderHtml(key, state.tmpl, context!(sample => sample)))
-}
-
-async fn modify_sample() -> impl IntoResponse {
-    todo!()
-}
-
-async fn delete_sample() -> impl IntoResponse {
-    todo!()
 }
