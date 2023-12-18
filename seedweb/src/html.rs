@@ -1,5 +1,7 @@
-use crate::state::SharedState;
-use axum::{response::Html, routing::get, Router};
+use crate::{error, state::SharedState, CustomKey};
+use axum::{extract::State, response::IntoResponse, routing::get, Router};
+use axum_template::RenderHtml;
+use minijinja::context;
 
 mod collection;
 mod location;
@@ -15,6 +17,9 @@ pub fn router() -> Router<SharedState> {
         .route("/", get(root))
 }
 
-async fn root() -> Html<&'static str> {
-    Html("This is the seedcollection app")
+async fn root(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
+    Ok(RenderHtml(key, state.tmpl, context!()))
 }
