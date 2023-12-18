@@ -42,7 +42,7 @@ async fn list_locations(
     "#
     );
     for l in locations {
-        output.push_str(&format!("<li><a href='../{}'>{}</a></li>", l.id, l.name));
+        output.push_str(&format!("<li><a href='./{}'>{}</a></li>", l.id, l.name));
     }
     output.push_str(
         "</ul>

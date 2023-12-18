@@ -4,7 +4,7 @@ use axum::{
     extract::{Path, Query, State},
     response::{Html, Json},
     routing::{get, post},
-    Router, Form,
+    Form, Router,
 };
 use libseed::location::{self, Location};
 use serde::{Deserialize, Serialize};

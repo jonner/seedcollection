@@ -52,7 +52,7 @@ async fn show_sample(
     <dt>ID</dt>
     <dd>{}</dd>
     <dt>Taxon</dt>
-    <dd><a href="/app/taxon/{}">{}</a></dd>
+    <dd><a href="/app/taxonomy/{}">{}</a></dd>
     <dt>Location</dt>
     <dd><a href="/app/location/{}">{}</a></dd>
     <dt>Month</dt>

@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     response::{Html, IntoResponse},
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use libseed::taxonomy::{self, Taxon};
@@ -20,9 +20,7 @@ async fn root() -> impl IntoResponse {
     "Taxonomy"
 }
 
-async fn list_taxa(
-    State(state): State<Arc<SharedState>>,
-) -> Result<Html<String>, error::Error> {
+async fn list_taxa(State(state): State<Arc<SharedState>>) -> Result<Html<String>, error::Error> {
     let taxa: Vec<Taxon> = taxonomy::build_query(None, None, None, None, None, false)
         .build_query_as()
         .fetch_all(&state.dbpool)
@@ -40,7 +38,10 @@ async fn list_taxa(
     "#
     );
     for t in taxa {
-        output.push_str(&format!("<li><a href='./{}'>{}</a></li>", t.id, t.complete_name));
+        output.push_str(&format!(
+            "<li><a href='./{}'>{}</a></li>",
+            t.id, t.complete_name
+        ));
     }
     output.push_str(
         "</ul>
@@ -50,18 +51,14 @@ async fn list_taxa(
     Ok(Html(output))
 }
 
-async fn add_location() -> impl IntoResponse {
-    todo!()
-}
-
 async fn show_taxon(
     State(state): State<Arc<SharedState>>,
     Path(id): Path<i64>,
 ) -> Result<Html<String>, error::Error> {
     let taxon: Taxon = taxonomy::build_query(Some(id), None, None, None, None, false)
         .build_query_as()
-    .fetch_one(&state.dbpool)
-    .await?;
+        .fetch_one(&state.dbpool)
+        .await?;
     let output = format!(
         r#"
     <!DOCTYPE html>
@@ -94,9 +91,16 @@ async fn show_taxon(
         taxon.name1.unwrap_or("".to_string()),
         taxon.name2.unwrap_or("".to_string()),
         taxon.name3.unwrap_or("".to_string()),
-        taxon.vernaculars.iter().map(|n| format!("<li>{}</li>", n)).collect::<Vec<String>>().join("\n"),
-        taxon.native_status.map(|x| x.to_string()).unwrap_or("".to_string()),
-
+        taxon
+            .vernaculars
+            .iter()
+            .map(|n| format!("<li>{}</li>", n))
+            .collect::<Vec<String>>()
+            .join("\n"),
+        taxon
+            .native_status
+            .map(|x| x.to_string())
+            .unwrap_or("".to_string()),
     );
     Ok(Html(output))
 }

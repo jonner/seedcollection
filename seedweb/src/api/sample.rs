@@ -7,7 +7,7 @@ use axum::{
     Form, Router,
 };
 use libseed::sample::{self, Sample};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
 use std::sync::Arc;

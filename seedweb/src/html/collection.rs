@@ -6,7 +6,6 @@ use axum::{
 };
 use libseed::collection::Collection;
 use libseed::sample;
-use sqlx::{QueryBuilder, Sqlite};
 use std::sync::Arc;
 
 use crate::{error, state::SharedState};
