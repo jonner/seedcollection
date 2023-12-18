@@ -19,6 +19,8 @@ mod error;
 mod html;
 mod state;
 
+const APP_PREFIX: &str = "/app/";
+
 pub fn logger() -> env_logger::Builder {
     let env = env_logger::Env::new()
         .filter_or("SW_LOG", "warn")
@@ -39,18 +41,19 @@ where
     type Rejection = MatchedPathRejection;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        let key = parts
-            // `axum_template::Key` internally uses `axum::extract::MatchedPath`
+        let mut key = parts
             .extract::<MatchedPath>()
             .await?
-            .as_str()
             // Cargo doesn't allow `:` as a file name
+            .as_str()
+            .trim_start_matches(APP_PREFIX)
             .replace(":", "$")
-            .replace("/", "_")
-            .chars()
-            // Add the `.html` suffix
-            .chain(".html".chars())
-            .collect();
+            .replace("/", "_");
+
+        if key.is_empty() {
+            key = "_INDEX".to_string();
+        }
+        key.push_str(".html");
         Ok(CustomKey(key))
     }
 }
