@@ -12,6 +12,7 @@ use clap::Parser;
 use log::debug;
 use minijinja::Environment;
 use state::SharedState;
+use tower_http::services::ServeDir;
 
 mod api;
 mod db;
@@ -81,6 +82,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(root))
+        .nest_service("/static", ServeDir::new("seedweb/src/html/static"))
         .nest("/app/", html::router())
         .nest("/api/v1/", api::router())
         .with_state(shared_state);

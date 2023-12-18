@@ -1,0 +1,26 @@
+body {
+    background-color: hsl(120, 30%, 90%);
+    margin: 0;
+}
+
+#sc-header, #sc-content, #sc-footer {
+    margin: 0;
+    padding: 1em 2em;
+}
+
+#sc-header {
+    background-color: hsl(120, 30%, 50%);
+    color: hsl(0, 100%, 100%);
+}
+
+a {
+    font-weight: bold;
+}
+
+a:link {
+    color: hsl(120, 30%, 20%);
+}
+
+a:visited {
+    color: hsl(120, 10%, 40%);
+}
