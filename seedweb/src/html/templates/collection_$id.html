@@ -1,7 +1,7 @@
 {% extends "root.html" %}
 {% block title %}Collection {{ collection.id }}{% endblock %}
-{% block body %}
-<h1>Collection Details</h1>
+{% block content %}
+<h2>Collection Details</h2>
 <form hx-put="/api/v1/collection/{{ collection.id }}" hx-swap="none">
 <p>ID: {{ collection.id }}</p>
 <div><input type="text" name="name" value="{{ collection.name }}"></div>
@@ -16,7 +16,7 @@
     </tr>
     {% for s in collection.samples %}
     <tr>
-        <td><a href="/app/sample/{{ s.id }}">{{ s.id }}</a></td>
+        <td><a href="../sample/{{ s.id }}">{{ s.id }}</a></td>
         <td>{{ s.taxon.complete_name }}</td>
         <td>{{ s.location_name }}</td>
     </tr>

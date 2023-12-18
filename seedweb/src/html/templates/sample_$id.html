@@ -1,7 +1,7 @@
 {% extends "root.html" %}
 {% block title %}Sample {{ sample.id }}{% endblock %}
-{% block body %}
-    <h1>Sample Details</h1>
+{% block content %}
+    <h2>Sample Details</h2>
     <form hx-put="/api/v1/sample/{}">
     <bdl>
     <dt>ID</dt>

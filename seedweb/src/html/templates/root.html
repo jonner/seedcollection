@@ -4,9 +4,26 @@
     {% block head %}
     <title>{% block title %}seedcollection{% endblock %}</title>
     <script src="https://unpkg.com/htmx.org@1.9.9" integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/static/base.css">
     {% endblock %}
 </head>
 <body>
-    {% block body %}{{ body }}{% endblock %}
+    {% block body %}
+    <div id="sc-header">
+        {% block header %}
+            <h1>seedcollection</h1>
+            {% block menu %}
+            {% endblock %}
+        {% endblock %}
+    {% endblock %}
+    </div>
+    <div id="sc-content">
+    {% block content %}
+    {% endblock %}
+    </div>
+    <div id="sc-footer">
+    {% block footer %}
+    {% endblock %}
+    </div>
 </body>
 </html>
