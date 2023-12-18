@@ -1,12 +1,14 @@
 use axum::{
     extract::{Path, State},
-    response::{Html, IntoResponse},
+    response::IntoResponse,
     routing::{get, post},
     Router,
 };
+use axum_template::RenderHtml;
 use libseed::sample::{self, Sample};
+use minijinja::context;
 
-use crate::{error, state::SharedState};
+use crate::{error, state::SharedState, CustomKey};
 
 pub fn router() -> Router<SharedState> {
     Router::new()
@@ -23,8 +25,13 @@ async fn root() -> impl IntoResponse {
     "Samples"
 }
 
-async fn list_samples() -> impl IntoResponse {
-    todo!()
+async fn list_samples(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
+    let mut builder = sample::build_query(None, None);
+    let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
+    Ok(RenderHtml(key, state.tmpl, context!(samples => samples)))
 }
 
 async fn add_sample() -> impl IntoResponse {
@@ -32,59 +39,13 @@ async fn add_sample() -> impl IntoResponse {
 }
 
 async fn show_sample(
+    CustomKey(key): CustomKey,
     State(state): State<SharedState>,
     Path(id): Path<i64>,
-) -> Result<Html<String>, error::Error> {
+) -> Result<impl IntoResponse, error::Error> {
     let mut builder = sample::build_query(None, Some(id));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
-    let output = format!(
-        r#"
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <script src="https://unpkg.com/htmx.org@1.9.9" integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX" crossorigin="anonymous"></script>
-    </head>
-    <body>
-    <h1>Sample Details</h1>
-    <form hx-put="/api/v1/sample/{}">
-    <bdl>
-    <dt>ID</dt>
-    <dd>{}</dd>
-    <dt>Taxon</dt>
-    <dd><a href="/app/taxonomy/{}">{}</a></dd>
-    <dt>Location</dt>
-    <dd><a href="/app/location/{}">{}</a></dd>
-    <dt>Month</dt>
-    <dd><input type="number" name="month" value="{}"/></dd>
-    <dt>Year</dt>
-    <dd><input type="number" name="year" value="{}"/></dd>
-    <dt>Quantity</dt>
-    <dd><input type="number" name="quantity" value="{}"/></dd>
-    <dt>Notes</dt>
-    <dd><textarea name="notes">{}</textarea></dd>
-    </dl>
-    <input type="submit" value="Update"/>
-    </form>
-    </body>
-    </html>"#,
-        sample.id,
-        sample.id,
-        sample.taxon.id,
-        sample.taxon.complete_name,
-        sample.location.id,
-        sample.location.name,
-        sample
-            .month
-            .map(|x| x.to_string())
-            .unwrap_or("".to_string()),
-        sample.year.map(|x| x.to_string()).unwrap_or("".to_string()),
-        sample
-            .quantity
-            .map(|x| x.to_string())
-            .unwrap_or("".to_string()),
-        sample.notes.unwrap_or("".to_string()),
-    );
-    Ok(Html(output))
+    Ok(RenderHtml(key, state.tmpl, context!(sample => sample)))
 }
 
 async fn modify_sample() -> impl IntoResponse {

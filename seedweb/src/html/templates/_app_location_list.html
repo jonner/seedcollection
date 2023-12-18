@@ -1,0 +1,10 @@
+{% extends "root.html" %}
+{% block title %}Location List{% endblock %}
+{% block body %}
+<h1>Locations</h1>
+<ul>
+    {% for l in locations %}
+    <li><a href='./{{ l.id }}'>{{ l.name }}</a></li>
+    {% endfor %}
+</ul>
+{% endblock %}

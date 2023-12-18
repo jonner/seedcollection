@@ -1,0 +1,13 @@
+{% extends "root.html" %}
+{% block title %}Samples{% endblock %}
+{% block body %}
+    <h1>Samples</h1>
+    <ul>
+        {% for s in samples %}
+        <li><a href="./{{ s.id }}">{{ s.id }}</a> - 
+            <a href="/app/taxonomy/{{ s.taxon.id }}">{{ s.taxon.complete_name }}</a> -
+            <a href="/app/location/{{ s.location.id }}">{{ s.location.name }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

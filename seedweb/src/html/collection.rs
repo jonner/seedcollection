@@ -1,12 +1,15 @@
 use axum::Router;
 use axum::{
     extract::{Path, State},
-    response::{Html, IntoResponse},
+    response::IntoResponse,
     routing::{get, post},
 };
+use axum_template::RenderHtml;
 use libseed::collection::Collection;
 use libseed::sample;
+use minijinja::context;
 
+use crate::CustomKey;
 use crate::{error, state::SharedState};
 
 pub fn router() -> Router<SharedState> {
@@ -27,37 +30,18 @@ async fn root() -> impl IntoResponse {
 }
 
 async fn list_collections(
+    CustomKey(key): CustomKey,
     State(state): State<SharedState>,
-) -> Result<Html<String>, error::Error> {
+) -> Result<impl IntoResponse, error::Error> {
     let collections: Vec<Collection> =
         sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L")
             .fetch_all(&state.dbpool)
             .await?;
-    let mut output = r#"
-     <!DOCTYPE html>
-    <html>
-    <head>
-    <script src="https://unpkg.com/htmx.org@1.9.9" integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX" crossorigin="anonymous"></script>
-    </head>
-    <body>
-    <h1>Collections</h1>
-    <ul>
-    "#.to_string();
-    for c in &collections {
-        output.push_str(&format!(
-            r#"
-        <li>{0}: <a href="{0}">{1}</a></li>
-        "#,
-            c.id, c.name,
-        ));
-    }
-    output.push_str("</ul>");
-    output.push_str(
-        "
-        </body>
-        </html>",
-    );
-    Ok(Html(output))
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(collections => collections),
+    ))
 }
 
 async fn add_collection() -> impl IntoResponse {
@@ -65,9 +49,10 @@ async fn add_collection() -> impl IntoResponse {
 }
 
 async fn show_collection(
+    CustomKey(key): CustomKey,
     Path(id): Path<i64>,
     State(state): State<SharedState>,
-) -> Result<Html<String>, error::Error> {
+) -> Result<impl IntoResponse, error::Error> {
     let mut c: Collection =
         sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L WHERE id=?")
             .bind(id)
@@ -76,49 +61,7 @@ async fn show_collection(
     let mut builder = sample::build_query(Some(id), None);
     c.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
 
-    let mut output = format!(
-        r#"
-     <!DOCTYPE html>
-    <html>
-    <head>
-    <script src="https://unpkg.com/htmx.org@1.9.9" integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX" crossorigin="anonymous"></script>
-    </head>
-    <body>
-    <h1>Collection Details</h1>
-        <form hx-put="/api/v1/collection/{0}" hx-swap="none">
-        <p>ID: {0}</p>
-        <div><input type="text" name="name" value="{1}"></div>
-        <div><textarea name="description">{2}</textarea></div>
-        <div><input type="submit" value="Update"></div>
-        </form>
-        <table>
-        <tr>
-        <th>ID</th>
-        <th>Taxon</th>
-        <th>Location</th>
-        </tr>
-        "#,
-        c.id,
-        c.name,
-        c.description.unwrap_or("".to_string()),
-    );
-    for s in c.samples {
-        output.push_str(&format!(
-            r#"
-        <tr>
-        <td><a href="/app/sample/{0}">{0}</a></td>
-        <td>{1}</td>
-        <td>{2}</td>
-        </tr>"#,
-            s.id, s.taxon.complete_name, s.location.name,
-        ));
-    }
-    output.push_str(
-        "
-        </body>
-        </html>",
-    );
-    Ok(Html(output))
+    Ok(RenderHtml(key, state.tmpl, context!(collection => c)))
 }
 
 async fn modify_collection() -> impl IntoResponse {

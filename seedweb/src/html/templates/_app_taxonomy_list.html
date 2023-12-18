@@ -1,0 +1,10 @@
+{% extends "root.html" %}
+{% block title %}Taxonomy{% endblock %}
+{% block body %}
+    <h1>Taxonomy</h1>
+    <ul>
+        {% for t in taxa %}
+        <li><a href="./{{ t.id }}">{{ t.complete_name }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

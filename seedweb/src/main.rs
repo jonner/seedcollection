@@ -1,7 +1,17 @@
 use anyhow::Result;
-use axum::{routing::get, Router};
+use axum::{
+    async_trait,
+    extract::{rejection::MatchedPathRejection, FromRequestParts, MatchedPath, State},
+    http::request::Parts,
+    response::IntoResponse,
+    routing::get,
+    RequestPartsExt, Router,
+};
+use axum_template::{engine::Engine, RenderHtml};
 use clap::Parser;
 use log::debug;
+use minijinja::Environment;
+use state::SharedState;
 
 mod api;
 mod db;
@@ -14,6 +24,35 @@ pub fn logger() -> env_logger::Builder {
         .filter_or("SW_LOG", "warn")
         .write_style("SW_LOG_STYLE");
     env_logger::Builder::from_env(env)
+}
+
+// Because minijinja loads an entire folder, we need to remove the `/` prefix
+// and add a `.html` suffix. We can implement our own custom key extractor that
+// transform the key
+pub struct CustomKey(pub String);
+
+#[async_trait]
+impl<S> FromRequestParts<S> for CustomKey
+where
+    S: Send + Sync,
+{
+    type Rejection = MatchedPathRejection;
+
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        let key = parts
+            // `axum_template::Key` internally uses `axum::extract::MatchedPath`
+            .extract::<MatchedPath>()
+            .await?
+            .as_str()
+            // Cargo doesn't allow `:` as a file name
+            .replace(":", "$")
+            .replace("/", "_")
+            .chars()
+            // Add the `.html` suffix
+            .chain(".html".chars())
+            .collect();
+        Ok(CustomKey(key))
+    }
 }
 
 #[derive(Parser, Debug)]
@@ -32,7 +71,10 @@ async fn main() -> Result<()> {
     logger().init();
     let args = Cli::parse();
     debug!("using database '{}'", args.database);
-    let shared_state = state::SharedState::new(args.database).await?;
+
+    let mut jinja = Environment::new();
+    jinja.set_loader(minijinja::path_loader("seedweb/src/html/templates"));
+    let shared_state = state::SharedState::new(args.database, Engine::from(jinja)).await?;
 
     let app = Router::new()
         .route("/", get(root))
@@ -47,6 +89,6 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn root() -> &'static str {
-    "Welcome to seedweb"
+async fn root(CustomKey(key): CustomKey, State(state): State<SharedState>) -> impl IntoResponse {
+    RenderHtml(key, state.tmpl, "")
 }

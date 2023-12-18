@@ -1,0 +1,25 @@
+{% extends "root.html" %}
+{% block title %}Collection {{ collection.id }}{% endblock %}
+{% block body %}
+<h1>Collection Details</h1>
+<form hx-put="/api/v1/collection/{{ collection.id }}" hx-swap="none">
+<p>ID: {{ collection.id }}</p>
+<div><input type="text" name="name" value="{{ collection.name }}"></div>
+<div><textarea name="description">{{ collection.description }}</textarea></div>
+<div><input type="submit" value="Update"></div>
+</form>
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Taxon</th>
+        <th>Location</th>
+    </tr>
+    {% for s in collection.samples %}
+    <tr>
+        <td><a href="/app/sample/{{ s.id }}">{{ s.id }}</a></td>
+        <td>{{ s.taxon.complete_name }}</td>
+        <td>{{ s.location_name }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

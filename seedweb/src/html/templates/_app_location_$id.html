@@ -1,0 +1,16 @@
+{% extends "root.html" %}
+{% block title %}{{ location.name }} Details{% endblock %}
+{% block body %}
+<h1>Location Details</h1>
+<form hx-put="/api/v1/location/{}" hx-swap="none">
+<dl>
+<dt>ID</dt>
+<dd>{{ location.id }}</dd>
+<dt>Name</dt>
+<dd><input type="text" value="{{ location.name }}"></dd>
+<dt>Description</dt>
+<dd><textarea name="description">{{ location.description }}</textarea></dd>
+</dl>
+<input type="submit" value="Update"/>
+</form>
+{% endblock %}

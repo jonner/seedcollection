@@ -22,9 +22,7 @@ async fn root(State(_state): State<SharedState>) -> Html<String> {
     Html("Samples".to_string())
 }
 
-async fn list_samples(
-    State(state): State<SharedState>,
-) -> Result<Json<Vec<Sample>>, error::Error> {
+async fn list_samples(State(state): State<SharedState>) -> Result<Json<Vec<Sample>>, error::Error> {
     let mut builder = sample::build_query(None, None);
     let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(Json(samples))
