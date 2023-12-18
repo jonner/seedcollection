@@ -88,11 +88,11 @@ impl FromRow<'_, SqliteRow> for Taxon {
             })?),
         };
         let vernaculars = match row.try_get::<&str, _>("cnames") {
-            Err(_) => Vec::new(),
-            Ok(s) => {
+            Ok(s) if !s.is_empty() => {
                 let splits = s.split('@').map(|x| x.to_string());
                 splits.collect::<Vec<String>>()
             }
+            _ => Vec::new(),
         };
         Ok(Self {
             id: row.try_get("tsn")?,
