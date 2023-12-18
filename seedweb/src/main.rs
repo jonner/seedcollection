@@ -82,6 +82,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(root))
+        .route("/favicon.ico", get(favicon_redirect))
         .nest_service("/static", ServeDir::new("seedweb/src/html/static"))
         .nest("/app/", html::router())
         .nest("/api/v1/", api::router())
@@ -95,5 +96,9 @@ async fn main() -> Result<()> {
 }
 
 async fn root() -> impl IntoResponse {
-    Redirect::permanent(APP_PREFIX).into_response()
+    Redirect::permanent(APP_PREFIX)
+}
+
+async fn favicon_redirect() -> impl IntoResponse {
+    Redirect::permanent("/static/favicon.ico")
 }
