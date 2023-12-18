@@ -2,6 +2,7 @@ use crate::db;
 use anyhow::Result;
 use sqlx::SqlitePool;
 
+#[derive(Clone)]
 pub struct SharedState {
     pub dbpool: SqlitePool,
 }

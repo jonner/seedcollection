@@ -5,11 +5,10 @@ use axum::{
     Router,
 };
 use libseed::location::{self, Location};
-use std::sync::Arc;
 
 use crate::{error, state::SharedState};
 
-pub fn router() -> Router<Arc<SharedState>> {
+pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_locations))
@@ -22,7 +21,7 @@ async fn root() -> impl IntoResponse {
 }
 
 async fn list_locations(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
 ) -> Result<Html<String>, error::Error> {
     let locations: Vec<location::Location> = sqlx::query_as(
         "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations",
@@ -57,7 +56,7 @@ async fn add_location() -> impl IntoResponse {
 }
 
 async fn show_location(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
     Path(id): Path<i64>,
 ) -> Result<Html<String>, error::Error> {
     let loc: Location = sqlx::query_as(

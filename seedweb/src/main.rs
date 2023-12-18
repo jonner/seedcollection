@@ -2,7 +2,6 @@ use anyhow::Result;
 use axum::{routing::get, Router};
 use clap::Parser;
 use log::debug;
-use std::sync::Arc;
 
 mod api;
 mod db;
@@ -33,7 +32,7 @@ async fn main() -> Result<()> {
     logger().init();
     let args = Cli::parse();
     debug!("using database '{}'", args.database);
-    let shared_state = Arc::new(state::SharedState::new(args.database).await?);
+    let shared_state = state::SharedState::new(args.database).await?;
 
     let app = Router::new()
         .route("/", get(root))

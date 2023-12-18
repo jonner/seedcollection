@@ -5,11 +5,10 @@ use axum::{
     Router,
 };
 use libseed::taxonomy::{self, Taxon};
-use std::sync::Arc;
 
 use crate::{error, state::SharedState};
 
-pub fn router() -> Router<Arc<SharedState>> {
+pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_taxa))
@@ -20,7 +19,7 @@ async fn root() -> impl IntoResponse {
     "Taxonomy"
 }
 
-async fn list_taxa(State(state): State<Arc<SharedState>>) -> Result<Html<String>, error::Error> {
+async fn list_taxa(State(state): State<SharedState>) -> Result<Html<String>, error::Error> {
     let taxa: Vec<Taxon> = taxonomy::build_query(None, None, None, None, None, false)
         .build_query_as()
         .fetch_all(&state.dbpool)
@@ -52,7 +51,7 @@ async fn list_taxa(State(state): State<Arc<SharedState>>) -> Result<Html<String>
 }
 
 async fn show_taxon(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
     Path(id): Path<i64>,
 ) -> Result<Html<String>, error::Error> {
     let taxon: Taxon = taxonomy::build_query(Some(id), None, None, None, None, false)

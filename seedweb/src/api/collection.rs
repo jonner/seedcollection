@@ -12,9 +12,8 @@ use axum::{
 use libseed::{collection::Collection, sample};
 use serde::Deserialize;
 use sqlx::{QueryBuilder, Sqlite};
-use std::sync::Arc;
 
-pub fn router() -> Router<Arc<SharedState>> {
+pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_collections))
@@ -32,7 +31,7 @@ async fn root() -> Html<String> {
 }
 
 async fn list_collections(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
 ) -> Result<Json<Vec<Collection>>, error::Error> {
     let collections: Vec<Collection> =
         sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L")
@@ -42,7 +41,7 @@ async fn list_collections(
 }
 
 async fn show_collection(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {
     let mut builder: QueryBuilder<Sqlite> =
@@ -61,7 +60,7 @@ struct ModifyProps {
 }
 
 async fn modify_collection(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
     Path(id): Path<i64>,
     Form(params): Form<ModifyProps>,
 ) -> Result<(), error::Error> {
@@ -85,7 +84,7 @@ async fn modify_collection(
 }
 
 async fn delete_collection(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
     sqlx::query("DELETE FROM seedcollections WHERE id=?")
@@ -103,7 +102,7 @@ struct AddProps {
 
 async fn add_collection(
     Query(params): Query<AddProps>,
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
 ) -> Result<Json<i64>, error::Error> {
     let id = sqlx::query(
         "INSERT INTO seedcollections (name, description) VALUES (?,

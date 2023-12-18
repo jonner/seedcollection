@@ -1,13 +1,12 @@
 use crate::state::SharedState;
 use axum::{response::Html, routing::get, Router};
-use std::sync::Arc;
 
 mod collection;
 mod location;
 mod sample;
 mod taxonomy;
 
-pub fn router() -> Router<Arc<SharedState>> {
+pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .nest("/collection/", collection::router())

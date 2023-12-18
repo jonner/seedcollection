@@ -7,10 +7,9 @@ use axum::{
 };
 use libseed::taxonomy::{self, Rank, Taxon};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use strum::IntoEnumIterator;
 
-pub fn router() -> Router<Arc<SharedState>> {
+pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/find", get(find_taxa))
@@ -33,7 +32,7 @@ struct TaxonomyFindParams {
 }
 
 async fn find_taxa(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
     let t = taxonomy::build_query(
@@ -51,7 +50,7 @@ async fn find_taxa(
 }
 
 async fn show_taxon(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Taxon>, error::Error> {
     let t = taxonomy::build_query(Some(id), None, None, None, None, false)

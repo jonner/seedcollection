@@ -6,11 +6,10 @@ use axum::{
 };
 use libseed::collection::Collection;
 use libseed::sample;
-use std::sync::Arc;
 
 use crate::{error, state::SharedState};
 
-pub fn router() -> Router<Arc<SharedState>> {
+pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_collections))
@@ -28,7 +27,7 @@ async fn root() -> impl IntoResponse {
 }
 
 async fn list_collections(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
 ) -> Result<Html<String>, error::Error> {
     let collections: Vec<Collection> =
         sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L")
@@ -67,7 +66,7 @@ async fn add_collection() -> impl IntoResponse {
 
 async fn show_collection(
     Path(id): Path<i64>,
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
 ) -> Result<Html<String>, error::Error> {
     let mut c: Collection =
         sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L WHERE id=?")

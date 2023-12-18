@@ -5,11 +5,10 @@ use axum::{
     Router,
 };
 use libseed::sample::{self, Sample};
-use std::sync::Arc;
 
 use crate::{error, state::SharedState};
 
-pub fn router() -> Router<Arc<SharedState>> {
+pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_samples))
@@ -33,7 +32,7 @@ async fn add_sample() -> impl IntoResponse {
 }
 
 async fn show_sample(
-    State(state): State<Arc<SharedState>>,
+    State(state): State<SharedState>,
     Path(id): Path<i64>,
 ) -> Result<Html<String>, error::Error> {
     let mut builder = sample::build_query(None, Some(id));
