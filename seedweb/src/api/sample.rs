@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
     response::{Html, Json},
-    routing::get,
+    routing::{get, post},
     Form, Router,
 };
 use libseed::sample::{self, Sample};
@@ -16,6 +16,7 @@ pub fn router() -> Router<SharedState> {
         .route("/", get(root))
         .route("/list", get(list_samples))
         .route("/:id", get(show_sample).put(modify_sample))
+        .route("/new", post(new_sample))
 }
 
 async fn root(State(_state): State<SharedState>) -> Html<String> {
@@ -38,7 +39,7 @@ async fn show_sample(
 }
 
 #[derive(Deserialize)]
-struct ModifyParams {
+struct SampleParams {
     taxon: Option<i64>,
     location: Option<i64>,
     month: Option<u32>,
@@ -50,7 +51,7 @@ struct ModifyParams {
 async fn modify_sample(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
-    Form(params): Form<ModifyParams>,
+    Form(params): Form<SampleParams>,
 ) -> Result<(), error::Error> {
     if params.taxon.is_none()
         && params.location.is_none()
@@ -61,7 +62,7 @@ async fn modify_sample(
     {
         return Err(anyhow!("No params specified").into());
     }
-    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE_seedsamles SET ");
+    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE seedsamples SET ");
     let mut sep = builder.separated(", ");
     if let Some(id) = params.taxon {
         sep.push_bind("tsn=");
@@ -85,6 +86,43 @@ async fn modify_sample(
     }
     builder.push(" WHERE id=");
     builder.push_bind(id);
+    builder.build().execute(&state.dbpool).await?;
+    Ok(())
+}
+
+async fn new_sample(
+    State(state): State<SharedState>,
+    Form(params): Form<SampleParams>,
+) -> Result<(), error::Error> {
+    if params.taxon.is_none()
+        && params.location.is_none()
+        && params.quantity.is_none()
+        && params.month.is_none()
+        && params.year.is_none()
+        && params.notes.is_none()
+    {
+        return Err(anyhow!("No params specified").into());
+    }
+    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+        "INSERT INTO seedsamples (tsn, collectedlocation, month, year, notes) values (",
+    );
+    let mut sep = builder.separated(", ");
+    if let Some(id) = params.taxon {
+        sep.push_bind(id);
+    }
+    if let Some(id) = params.location {
+        sep.push_bind(id);
+    }
+    if let Some(m) = params.month {
+        sep.push_bind(m);
+    }
+    if let Some(y) = params.year {
+        sep.push_bind(y);
+    }
+    if let Some(notes) = params.notes {
+        sep.push_bind(notes);
+    }
+    builder.push(")");
     builder.build().execute(&state.dbpool).await?;
     Ok(())
 }
