@@ -2,12 +2,12 @@
 {% block title %}{{ location.name }} Details{% endblock %}
 {% block content %}
 <h2>Location Details</h2>
-<form hx-put="/api/v1/location/{}" hx-swap="none">
+<form hx-put="/api/v1/location/{{ location.id }}" hx-swap="none">
 <dl>
 <dt>ID</dt>
 <dd>{{ location.id }}</dd>
 <dt>Name</dt>
-<dd><input type="text" value="{{ location.name }}"></dd>
+<dd><input type="text" name="name" value="{{ location.name }}"></dd>
 <dt>Description</dt>
 <dd><textarea name="description">{{ location.description }}</textarea></dd>
 </dl>
