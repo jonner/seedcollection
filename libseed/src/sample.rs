@@ -18,7 +18,7 @@ pub fn build_query(
     sampleid: Option<i64>,
 ) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-        r#"SELECT S.id, T.tsn, L.locid, L.name as locname, T.complete_name,
+        r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3,
                     quantity, month, year, notes
                     FROM seedsamples S

@@ -12,3 +12,4 @@ sqlx = { version = "0.7.3", features = [ "sqlite", "runtime-tokio" ] }
 tokio = { version = "1.34.0", features = [ "full" ] }
 log = "0.4.20"
 serde = { version = "1.0.193", features = ["serde_derive"] }
+anyhow = "1.0.75"

@@ -37,9 +37,10 @@ async fn show_taxon(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let taxon: Taxon = taxonomy::build_query(Some(id), None, None, None, None, false)
-        .build_query_as()
-        .fetch_one(&state.dbpool)
-        .await?;
-    Ok(RenderHtml(key, state.tmpl, context!(taxon => taxon)))
+    let hierarchy = taxonomy::fetch_taxon_hierarchy(id, &state.dbpool).await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(taxon => hierarchy[0], hierarchy => hierarchy),
+    ))
 }

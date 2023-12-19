@@ -1,6 +1,7 @@
+use anyhow::Result;
 use log::debug;
 use serde::{Deserialize, Serialize};
-use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Row};
+use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Pool, Row, Sqlite};
 use std::str::FromStr;
 use strum_macros::{Display, EnumIter, EnumString, FromRepr};
 
@@ -60,6 +61,7 @@ pub struct Taxon {
     pub complete_name: String,
     pub vernaculars: Vec<String>,
     pub native_status: Option<NativeStatus>,
+    pub parentid: Option<i64>,
 }
 
 impl FromRow<'_, SqliteRow> for Taxon {
@@ -103,6 +105,7 @@ impl FromRow<'_, SqliteRow> for Taxon {
             name2: row.try_get("unit_name2")?,
             name3: row.try_get("unit_name3")?,
             native_status: status,
+            parentid: row.try_get("parentid")?,
         })
     }
 }
@@ -116,7 +119,7 @@ pub fn build_query(
     minnesota: bool,
 ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
-        r#"SELECT T.tsn, T.unit_name1, T.unit_name2, T.unit_name3, T.complete_name, T.rank_id, M.native_status,
+        r#"SELECT T.tsn, T.parent_tsn as parentid, T.unit_name1, T.unit_name2, T.unit_name3, T.complete_name, T.rank_id, M.native_status,
             GROUP_CONCAT(V.vernacular_name, "@") as cnames
             FROM taxonomic_units T
             LEFT JOIN (SELECT * FROM vernaculars WHERE
@@ -172,4 +175,30 @@ pub fn build_query(
     builder.push(" GROUP BY T.tsn");
     debug!("generated sql: <<{}>>", builder.sql());
     builder
+}
+
+pub async fn fetch_taxon(id: i64, pool: &Pool<Sqlite>) -> Result<Taxon> {
+    Ok(build_query(Some(id), None, None, None, None, false)
+        .build_query_as()
+        .fetch_one(pool)
+        .await?)
+}
+
+pub async fn fetch_taxon_hierarchy(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<Taxon>> {
+    let mut hierarchy = Vec::new();
+    let mut taxon = fetch_taxon(id, pool).await?;
+    debug!("Got taxon {}", taxon.complete_name);
+    loop {
+        let parentid = taxon.parentid;
+        hierarchy.push(taxon);
+        match parentid {
+            Some(id) if id > 0 => {
+                taxon = fetch_taxon(id, pool).await?;
+                debug!("Got taxon {}", taxon.complete_name);
+            }
+            _ => break,
+        }
+    }
+
+    Ok(hierarchy)
 }

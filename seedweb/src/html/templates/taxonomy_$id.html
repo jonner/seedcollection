@@ -25,5 +25,15 @@
         </dd>
         <dt>Minnesota Status</dt>
         <dd>{{ taxon.native_status }}</dd>
+        <dt>Type Hierarchy</dt>
+        <dd>
+            <ul>
+            {% for t in hierarchy|reverse %}
+            <li><a href="{{ t.id }}">{{ t.complete_name }}</a> ({{ t.rank }})<ul>
+            {% endfor %}
+            {% for t in hierarchy|reverse %}
+                </ul></li>
+            {% endfor %}
+        </dd>
     </dl>
 {% endblock %}
