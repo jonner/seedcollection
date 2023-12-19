@@ -9,7 +9,13 @@
     <dt>Taxon</dt>
     <dd><a href="/app/taxonomy/{{ sample.taxon.id }}">{{ sample.taxon.complete_name }}</a></dd>
     <dt>Location</dt>
-    <dd><a href="/app/location/{{ sample.location.id }}">{{ sample.location.name }}</a></dd>
+    <dd>
+        <select name="location">
+            {% for l in locations %}
+            <option value="{{ l.id }}"{% if l.id == sample.location.id %} selected{% endif %}>{{ l.name }}</option>
+            {% endfor %}
+        </select>
+    </dd>
     <dt>Month</dt>
     <dd><input type="number" name="month" value="{{ sample.month }}"/></dd>
     <dt>Year</dt>
