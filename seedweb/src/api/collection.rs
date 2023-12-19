@@ -1,13 +1,10 @@
 use crate::{error, state::SharedState};
-use anyhow::anyhow;
-use anyhow::Result;
-use axum::routing::post;
-use axum::Form;
+use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, Query, State},
     response::{Html, Json},
-    routing::get,
-    Router,
+    routing::{delete, get, post},
+    Form, Router,
 };
 use libseed::{collection::Collection, sample};
 use serde::Deserialize;
@@ -18,6 +15,7 @@ pub fn router() -> Router<SharedState> {
         .route("/", get(root))
         .route("/list", get(list_collections))
         .route("/new", post(add_collection))
+        .route("/:id/sample/:sampleid", delete(remove_sample))
         .route(
             "/:id",
             get(show_collection)
@@ -114,4 +112,22 @@ async fn add_collection(
     .await?
     .last_insert_rowid();
     Ok(Json(id))
+}
+
+#[derive(Deserialize)]
+struct RemoveSampleParams {
+    id: i64,
+    sampleid: i64,
+}
+
+async fn remove_sample(
+    State(state): State<SharedState>,
+    Path(RemoveSampleParams { id, sampleid }): Path<RemoveSampleParams>,
+) -> Result<(), error::Error> {
+    sqlx::query("DELETE FROM seedcollectionsamples WHERE collectionid=? AND sampleid=?")
+        .bind(id)
+        .bind(sampleid)
+        .execute(&state.dbpool)
+        .await?;
+    Ok(())
 }
