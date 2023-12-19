@@ -17,6 +17,7 @@ pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/list", get(list_samples))
         .route("/:id", get(show_sample))
+        .route("/new", get(new_sample))
 }
 
 async fn list_samples(
@@ -44,5 +45,21 @@ async fn show_sample(
         key,
         state.tmpl,
         context!(sample => sample, locations => locations),
+    ))
+}
+
+async fn new_sample(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
+    let locations: Vec<Location> = sqlx::query_as(
+        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations",
+    )
+    .fetch_all(&state.dbpool)
+    .await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(locations => locations),
     ))
 }

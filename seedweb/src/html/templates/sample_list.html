@@ -2,6 +2,7 @@
 {% block title %}Samples{% endblock %}
 {% block content %}
     <h2>Samples</h2>
+    <p><a href="./new">Add a new sample</a></p>
     <ul>
         {% for s in samples %}
         <li><a href="./{{ s.id }}">{{ s.id }}</a> - 

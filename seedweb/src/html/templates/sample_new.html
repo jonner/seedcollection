@@ -1,0 +1,28 @@
+{% extends "root.html" %}
+{% block title %}New Sample{% endblock %}
+{% block content %}
+    <h2>New sample</h2>
+    <form hx-post="/api/v1/sample/new" hx-swap="none">
+    <bdl>
+    <dt>Taxon</dt>
+    <dd><input type="text" name="taxon"></dd>
+    <dt>Location</dt>
+    <dd>
+        <select name="location">
+            {% for l in locations %}
+            <option value="{{ l.id }}">{{ l.name }}</option>
+            {% endfor %}
+        </select>
+    </dd>
+    <dt>Month</dt>
+    <dd><input type="month" name="month"/></dd>
+    <dt>Year</dt>
+    <dd><input type="number" name="year"/></dd>
+    <dt>Quantity</dt>
+    <dd><input type="number" name="quantity"/></dd>
+    <dt>Notes</dt>
+    <dd><textarea name="notes"></textarea></dd>
+    </dl>
+    <input type="submit" value="Update"/>
+    </form>
+{% endblock %}
