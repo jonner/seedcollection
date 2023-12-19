@@ -5,7 +5,7 @@ use libseed::{
     collection::Collection,
     location,
     sample::{self, Sample},
-    taxonomy::{self, Taxon},
+    taxonomy::{self, filter_by, Taxon},
 };
 use log::debug;
 use sqlx::SqlitePool;
@@ -384,7 +384,12 @@ async fn main() -> Result<()> {
                 any,
                 minnesota,
             } => {
-                let mut query = taxonomy::build_query(id, rank, genus, species, any, minnesota);
+                let minnesota = match minnesota {
+                    true => Some(true),
+                    false => None,
+                };
+                let mut query =
+                    taxonomy::build_query(filter_by(id, rank, genus, species, any, minnesota));
                 let taxa: Vec<Taxon> = query.build_query_as().fetch_all(&dbpool).await?;
                 if taxa.is_empty() {
                     return Err(anyhow!("No results found"));

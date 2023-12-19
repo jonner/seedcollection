@@ -25,7 +25,7 @@ async fn list_taxa(
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let taxa: Vec<Taxon> = taxonomy::build_query(None, None, None, None, None, false)
+    let taxa: Vec<Taxon> = taxonomy::build_query(None)
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;
@@ -38,9 +38,10 @@ async fn show_taxon(
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let hierarchy = taxonomy::fetch_taxon_hierarchy(id, &state.dbpool).await?;
+    let children = taxonomy::fetch_children(id, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl,
-        context!(taxon => hierarchy[0], hierarchy => hierarchy),
+        context!(taxon => hierarchy[0], parents => hierarchy, children => children),
     ))
 }

@@ -1,5 +1,6 @@
 body {
     background-color: hsl(120, 30%, 90%);
+    color: hsl(0, 0%, 0%);
     margin: 0;
 }
 
@@ -44,4 +45,30 @@ dd {
 
 th {
     text-align: left;
+}
+
+td, th {
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+#taxa-hierarchy ul {
+    padding-left: 1em;
+    list-style-type: disc;
+}
+#taxa-hierarchy li.highlighted {
+    background-color: hsla(0, 0%, 100%, 30%);
+}
+
+#taxa-hierarchy li.highlighted ul{
+    background-color: transparent;
+}
+
+#taxa-hierarchy .vernacular,.rank {
+    font-style: italic;
+}
+
+#taxa-hierarchy .rank {
+    color: hsl(0, 0%, 50%);
+    font-size: 80%;
 }

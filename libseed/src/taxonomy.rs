@@ -110,66 +110,157 @@ impl FromRow<'_, SqliteRow> for Taxon {
     }
 }
 
-pub fn build_query(
-    tsn: Option<i64>,
+#[derive(Deserialize, Clone)]
+pub enum FilterField {
+    Id(i64),
+    Rank(Rank),
+    Genus(String),
+    Species(String),
+    Name1(String),
+    Name2(String),
+    Name3(String),
+    Vernacular(String),
+    Minnesota(bool),
+    ParentId(i64),
+}
+
+pub enum FilterOperation {
+    Or,
+    And,
+}
+
+pub struct CompoundFilterCondition {
+    conditions: Vec<Box<dyn FilterQueryBuilder>>,
+    op: FilterOperation,
+}
+
+impl CompoundFilterCondition {
+    pub fn new(op: FilterOperation, fields: Vec<Box<dyn FilterQueryBuilder>>) -> Self {
+        Self {
+            conditions: fields,
+            op,
+        }
+    }
+
+    pub fn add_field(&mut self, field: FilterField) {
+        self.conditions.push(Box::new(field))
+    }
+}
+
+pub trait FilterQueryBuilder: Send {
+    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<'static, sqlx::Sqlite>);
+}
+
+impl FilterQueryBuilder for FilterField {
+    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<'static, sqlx::Sqlite>) {
+        match self {
+            Self::Id(n) => builder.push("T.tsn=").push_bind(n.clone()),
+            Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(n.clone()),
+            Self::Genus(s) => builder.push("T.unit_name1=").push_bind(s.clone()),
+            Self::Species(s) => builder.push("T.unit_name2=").push_bind(s.clone()),
+            Self::Rank(rank) => builder.push("T.rank_id=").push_bind(rank.clone() as i64),
+            Self::Name1(s) => builder
+                .push("T.unit_name1 LIKE ")
+                .push_bind(format!("%{s}%")),
+            Self::Name2(s) => builder
+                .push("T.unit_name2 LIKE ")
+                .push_bind(format!("%{s}%")),
+            Self::Name3(s) => builder
+                .push("T.unit_name3 LIKE ")
+                .push_bind(format!("%{s}%")),
+            Self::Vernacular(s) => builder.push("V.vernacular_name LIKE ").push_bind(s.clone()),
+            Self::Minnesota(val) => match val {
+                true => builder.push("M.tsn IS NOT NULL"),
+                false => builder.push("M.tsn IS NULL"),
+            },
+        };
+    }
+}
+
+pub fn filter_by(
+    id: Option<i64>,
     rank: Option<Rank>,
     genus: Option<String>,
     species: Option<String>,
     any: Option<String>,
-    minnesota: bool,
+    minnesota: Option<bool>,
+) -> Option<Box<dyn FilterQueryBuilder>> {
+    let mut fields: Vec<Box<dyn FilterQueryBuilder>> = Vec::new();
+    if let Some(id) = id {
+        fields.push(Box::new(FilterField::Id(id)));
+    }
+    if let Some(rank) = rank {
+        fields.push(Box::new(FilterField::Rank(rank)));
+    }
+    if let Some(genus) = genus {
+        fields.push(Box::new(FilterField::Genus(genus)));
+    }
+    if let Some(species) = species {
+        fields.push(Box::new(FilterField::Species(species)));
+    }
+    if let Some(s) = any {
+        fields.push(Box::new(any_filter(&s)));
+    }
+    if let Some(val) = minnesota {
+        fields.push(Box::new(FilterField::Minnesota(val)));
+    }
+
+    if fields.is_empty() {
+        None
+    } else {
+        Some(Box::new(CompoundFilterCondition::new(
+            FilterOperation::And,
+            fields,
+        )))
+    }
+}
+
+fn any_filter(s: &str) -> CompoundFilterCondition {
+    let mut fields: Vec<Box<dyn FilterQueryBuilder>> = Vec::new();
+    fields.push(Box::new(FilterField::Name1(s.to_string())));
+    fields.push(Box::new(FilterField::Name2(s.to_string())));
+    fields.push(Box::new(FilterField::Name3(s.to_string())));
+    CompoundFilterCondition::new(FilterOperation::Or, fields)
+}
+
+impl FilterQueryBuilder for CompoundFilterCondition {
+    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<'static, sqlx::Sqlite>) {
+        let mut first = true;
+        builder.push(" (");
+        let separator = match self.op {
+            FilterOperation::And => " AND ",
+            FilterOperation::Or => " OR ",
+        };
+
+        for cond in &self.conditions {
+            if first {
+                first = false;
+            } else {
+                builder.push(separator);
+            }
+            cond.add_to_query(builder);
+        }
+        builder.push(")");
+    }
+}
+
+pub fn build_query(
+    filter: Option<Box<dyn FilterQueryBuilder>>,
 ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
         r#"SELECT T.tsn, T.parent_tsn as parentid, T.unit_name1, T.unit_name2, T.unit_name3, T.complete_name, T.rank_id, M.native_status,
             GROUP_CONCAT(V.vernacular_name, "@") as cnames
             FROM taxonomic_units T
             LEFT JOIN (SELECT * FROM vernaculars WHERE
-                       (language="English" or language="unspecified")) V on V.tsn=T.tsn"#,
+                       (language="English" or language="unspecified")) V on V.tsn=T.tsn
+     LEFT JOIN mntaxa M on T.tsn=M.tsn 
+      WHERE name_usage="accepted" AND kingdom_id="#,
     );
-
-    if minnesota {
-        builder.push(" INNER JOIN mntaxa M on T.tsn=M.tsn ");
-    } else {
-        builder.push(" LEFT JOIN mntaxa M on T.tsn=M.tsn ");
-    }
-
-    builder.push(r#" WHERE name_usage="accepted" AND kingdom_id="#);
     builder.push_bind(KINGDOM_PLANTAE);
-    if let Some(id) = tsn {
-        builder.push(" AND T.tsn=");
-        builder.push_bind(id);
-    }
-    if let Some(rank) = rank {
-        builder.push(" AND rank_id=");
-        builder.push_bind(rank as i64);
-    }
-    if let Some(genus) = genus {
-        builder.push(" AND unit_name1 LIKE ");
-        builder.push_bind(genus);
-    }
-    if let Some(species) = species {
-        builder.push(" AND unit_name2 LIKE ");
-        builder.push_bind(species);
-    }
 
-    if let Some(any) = any {
-        builder.push(" AND (");
-        let any = format!("%{any}%");
-        let fields = [
-            "unit_name1",
-            "unit_name2",
-            "unit_name3",
-            "V.vernacular_name",
-        ];
-        let mut first = true;
-        for field in fields {
-            if !first {
-                builder.push(" OR");
-            }
-            first = false;
-            builder.push(format!(" {field} LIKE "));
-            builder.push_bind(any.clone());
-        }
-        builder.push(" )");
+    if let Some(filter) = filter {
+        builder.push(" AND ");
+        filter.add_to_query(&mut builder);
     }
 
     builder.push(" GROUP BY T.tsn");
@@ -178,27 +269,29 @@ pub fn build_query(
 }
 
 pub async fn fetch_taxon(id: i64, pool: &Pool<Sqlite>) -> Result<Taxon> {
-    Ok(build_query(Some(id), None, None, None, None, false)
-        .build_query_as()
-        .fetch_one(pool)
-        .await?)
+    let mut query = build_query(Some(Box::new(FilterField::Id(id.clone()))));
+    Ok(query.build_query_as().fetch_one(pool).await?)
 }
 
 pub async fn fetch_taxon_hierarchy(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<Taxon>> {
     let mut hierarchy = Vec::new();
     let mut taxon = fetch_taxon(id, pool).await?;
-    debug!("Got taxon {}", taxon.complete_name);
     loop {
         let parentid = taxon.parentid;
         hierarchy.push(taxon);
         match parentid {
             Some(id) if id > 0 => {
                 taxon = fetch_taxon(id, pool).await?;
-                debug!("Got taxon {}", taxon.complete_name);
             }
             _ => break,
         }
     }
 
     Ok(hierarchy)
+}
+
+pub async fn fetch_children(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<Taxon>> {
+    let filter: Option<Box<dyn FilterQueryBuilder>> = Some(Box::new(FilterField::ParentId(id)));
+    let mut query = build_query(filter);
+    Ok(query.build_query_as().fetch_all(pool).await?)
 }

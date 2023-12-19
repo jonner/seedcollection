@@ -2,7 +2,7 @@
 <html>
 <head>
     {% block head %}
-    <title>{% block title %}seedcollection{% endblock %}</title>
+    <title>{% block title %}SeedCollection{% endblock %}</title>
     <script src="https://unpkg.com/htmx.org@1.9.9" integrity="sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/static/base.css">
     {% endblock %}
@@ -11,9 +11,9 @@
     {% block body %}
     <div id="sc-header">
         {% block header %}
-            <h1>seedcollection</h1>
-            {% block menu %}
-            {% endblock %}
+        <h1>{{ self.title() }}</h1>
+        {% block menu %}
+        {% endblock %}
         {% endblock %}
     {% endblock %}
     </div>

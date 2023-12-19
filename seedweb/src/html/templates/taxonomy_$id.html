@@ -26,12 +26,34 @@
         <dt>Minnesota Status</dt>
         <dd>{{ taxon.native_status }}</dd>
         <dt>Type Hierarchy</dt>
-        <dd>
+        <dd id="taxa-hierarchy">
             <ul>
-            {% for t in hierarchy|reverse %}
-            <li><a href="{{ t.id }}">{{ t.complete_name }}</a> ({{ t.rank }})<ul>
+            {% for t in parents|reverse %}
+            <li
+            {% if t.native_status is not none and t.native_status == "Native" %}
+                class="highlighted"
+            {% endif %}
+            >
+            <a href="{{ t.id }}">{{ t.complete_name }}</a>
+            {% if t.vernaculars %}
+            - <span class="vernacular">{{ t.vernaculars[0] }}</span>
+            {% endif %}
+            <span class="rank">({{ t.rank }})</span>
+            <ul>
             {% endfor %}
-            {% for t in hierarchy|reverse %}
+            {% for c in children %}
+            <li
+            {% if c.native_status is not none and c.native_status == "Native" %}
+                class="highlighted"
+            {% endif %}
+                ><a href="{{ c.id }}">{{ c.complete_name }}</a>
+            {% if c.vernaculars %}
+            - <span class="vernacular">{{ c.vernaculars[0] }}</span>
+            {% endif %}
+            <span class="rank">({{ c.rank }})</span>
+            </li>
+            {% endfor %}
+            {% for t in parents|reverse %}
                 </ul></li>
             {% endfor %}
         </dd>

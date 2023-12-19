@@ -5,7 +5,7 @@ use axum::{
     routing::get,
     Router,
 };
-use libseed::taxonomy::{self, Rank, Taxon};
+use libseed::taxonomy::{self, filter_by, Rank, Taxon};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
@@ -35,17 +35,15 @@ async fn find_taxa(
     State(state): State<SharedState>,
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
-    let t = taxonomy::build_query(
+    let mut q = taxonomy::build_query(filter_by(
         params.id,
         params.rank,
         params.genus,
         params.species,
         params.any,
-        params.minnesota.unwrap_or(false),
-    )
-    .build_query_as::<Taxon>()
-    .fetch_all(&state.dbpool)
-    .await?;
+        params.minnesota,
+    ));
+    let t = q.build_query_as::<Taxon>().fetch_all(&state.dbpool).await?;
     Ok(Json(t))
 }
 
@@ -53,10 +51,7 @@ async fn show_taxon(
     State(state): State<SharedState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Taxon>, error::Error> {
-    let t = taxonomy::build_query(Some(id), None, None, None, None, false)
-        .build_query_as::<Taxon>()
-        .fetch_one(&state.dbpool)
-        .await?;
+    let t = taxonomy::fetch_taxon(id, &state.dbpool).await?;
     Ok(Json(t))
 }
 
