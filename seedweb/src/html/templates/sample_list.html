@@ -6,8 +6,8 @@
     <ul>
         {% for s in samples %}
         <li><a href="./{{ s.id }}">{{ s.id }}</a> - 
-            <a href="/app/taxonomy/{{ s.taxon.id }}">{{ s.taxon.complete_name }}</a> -
-            <a href="/app/location/{{ s.location.id }}">{{ s.location.name }}</a>
+            <a href="../taxonomy/{{ s.taxon.id }}">{{ s.taxon.complete_name }}</a> -
+            <a href="../location/{{ s.location.id }}">{{ s.location.name }}</a>
         </li>
         {% endfor %}
     </ul>
