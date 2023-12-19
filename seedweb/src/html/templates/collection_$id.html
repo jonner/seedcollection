@@ -26,6 +26,7 @@
         <td><a href="../sample/{{ s.id }}">{{ s.id }}</a></td>
         <td>{{ s.taxon.complete_name }}</td>
         <td>{{ s.location.name }}</td>
+        <td><a href="{{ collection.id }}/sample/{{ s.id }}/remove">X</a></td>
     </tr>
     {% endfor %}
 </table>
