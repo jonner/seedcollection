@@ -80,6 +80,7 @@ if (m) {
     // update teh delete action url
     const removeButton = m.querySelector('#remove-button')
     removeButton.setAttribute("hx-delete", deleteUrl)
+    htmx.process(removeButton)
   })
 }
 </script>
