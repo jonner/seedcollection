@@ -1,7 +1,7 @@
 use crate::{error, state::SharedState};
 use anyhow::{anyhow, Result};
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     response::{Html, Json},
     routing::{get, post},
     Form, Router,
@@ -100,8 +100,8 @@ struct AddResponse {
 }
 
 async fn add_location(
-    Query(params): Query<ModifyParams>,
     State(state): State<SharedState>,
+    Form(params): Form<ModifyParams>,
 ) -> Result<Json<AddResponse>, error::Error> {
     if params.name.is_none()
         && params.description.is_none()

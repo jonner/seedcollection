@@ -18,7 +18,7 @@ pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_locations))
-        .route("/new", post(add_location))
+        .route("/new", get(add_location))
         .route("/:id", get(show_location))
 }
 
@@ -42,8 +42,11 @@ async fn list_locations(
     ))
 }
 
-async fn add_location() -> impl IntoResponse {
-    todo!()
+async fn add_location(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
+    Ok(RenderHtml(key, state.tmpl, ()))
 }
 
 async fn show_location(
