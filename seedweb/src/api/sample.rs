@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{error, state::SharedState};
 use anyhow::{anyhow, Result};
 use axum::{
@@ -7,7 +9,7 @@ use axum::{
     Form, Router,
 };
 use libseed::sample::{self, Filter, Sample};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
 
@@ -15,7 +17,10 @@ pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_samples))
-        .route("/:id", get(show_sample).put(modify_sample))
+        .route(
+            "/:id",
+            get(show_sample).put(modify_sample).delete(delete_sample),
+        )
         .route("/new", post(new_sample))
 }
 
@@ -38,12 +43,30 @@ async fn show_sample(
     Ok(Json(sample))
 }
 
+fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: FromStr,
+    T::Err: std::fmt::Display,
+{
+    let opt = Option::<String>::deserialize(de)?;
+    match opt.as_deref() {
+        None | Some("") => Ok(None),
+        Some(s) => FromStr::from_str(s)
+            .map_err(serde::de::Error::custom)
+            .map(Some),
+    }
+}
+
 #[derive(Deserialize)]
 struct SampleParams {
     taxon: Option<i64>,
     location: Option<i64>,
+    #[serde(deserialize_with = "empty_string_as_none")]
     month: Option<u32>,
+    #[serde(deserialize_with = "empty_string_as_none")]
     year: Option<u32>,
+    #[serde(deserialize_with = "empty_string_as_none")]
     quantity: Option<i64>,
     notes: Option<String>,
 }
@@ -94,35 +117,30 @@ async fn new_sample(
     State(state): State<SharedState>,
     Form(params): Form<SampleParams>,
 ) -> Result<(), error::Error> {
-    if params.taxon.is_none()
-        && params.location.is_none()
-        && params.quantity.is_none()
-        && params.month.is_none()
-        && params.year.is_none()
-        && params.notes.is_none()
-    {
-        return Err(anyhow!("No params specified").into());
+    if params.taxon.is_none() && params.location.is_none() {
+        return Err(anyhow!("Taxon and Location are required").into());
     }
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         "INSERT INTO seedsamples (tsn, collectedlocation, month, year, notes) values (",
     );
     let mut sep = builder.separated(", ");
-    if let Some(id) = params.taxon {
-        sep.push_bind(id);
-    }
-    if let Some(id) = params.location {
-        sep.push_bind(id);
-    }
-    if let Some(m) = params.month {
-        sep.push_bind(m);
-    }
-    if let Some(y) = params.year {
-        sep.push_bind(y);
-    }
-    if let Some(notes) = params.notes {
-        sep.push_bind(notes);
-    }
+    sep.push_bind(params.taxon);
+    sep.push_bind(params.location);
+    sep.push_bind(params.month);
+    sep.push_bind(params.year);
+    sep.push_bind(params.notes);
     builder.push(")");
     builder.build().execute(&state.dbpool).await?;
+    Ok(())
+}
+
+async fn delete_sample(
+    State(state): State<SharedState>,
+    Path(id): Path<i64>,
+) -> Result<(), error::Error> {
+    sqlx::query("DELETE FROM seedsamples WHERE id=?")
+        .bind(id)
+        .execute(&state.dbpool)
+        .await?;
     Ok(())
 }
