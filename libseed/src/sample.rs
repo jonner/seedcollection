@@ -11,6 +11,7 @@ pub struct Sample {
     pub month: Option<u32>,
     pub year: Option<u32>,
     pub notes: Option<String>,
+    pub collection: Option<i64>,
 }
 
 pub enum Filter {
@@ -24,21 +25,19 @@ pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3,
-                    quantity, month, year, notes
+                    quantity, month, year, notes, CS.collectionid
                     FROM seedsamples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-                    INNER JOIN seedlocations L on L.locid=S.collectedlocation"#,
+                    INNER JOIN seedlocations L on L.locid=S.collectedlocation
+                    LEFT JOIN seedcollectionsamples CS ON CS.sampleid=S.id "#,
     );
     match filter {
         Some(f) => match f {
             Filter::Collection(id) => {
-                builder.push(
-                    " INNER JOIN seedcollectionsamples CS ON CS.sampleid=S.id WHERE cs.collectionid=",
-                    );
+                builder.push(" WHERE cs.collectionid=");
                 builder.push_bind(id);
             }
             Filter::NoCollection => {
-                builder.push(" LEFT JOIN seedcollectionsamples CS ON CS.sampleid=S.id ");
                 builder.push(" WHERE cs.collectionid IS NULL");
             }
             Filter::Sample(id) => {
@@ -65,6 +64,7 @@ impl FromRow<'_, SqliteRow> for Sample {
             month: row.try_get("month").unwrap_or(None),
             year: row.try_get("year").unwrap_or(None),
             notes: row.try_get("notes").unwrap_or(None),
+            collection: row.try_get("collectionid").unwrap_or(None),
         })
     }
 }

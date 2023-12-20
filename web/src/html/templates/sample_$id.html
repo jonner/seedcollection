@@ -27,4 +27,7 @@
     </dl>
     <input type="submit" value="Update"/>
     </form>
+    {% if collection %}
+    <p>This sample is a part of collection <a href="../collection/{{ collection.id }}">{{ collection.name }}</a></p>
+    {% endif %}
 {% endblock %}

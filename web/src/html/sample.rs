@@ -6,6 +6,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
+    collection::Collection,
     location::Location,
     sample::{self, Filter, Sample},
 };
@@ -36,6 +37,17 @@ async fn show_sample(
 ) -> Result<impl IntoResponse, error::Error> {
     let mut builder = sample::build_query(Some(Filter::Sample(id)));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
+    let collection = match sample.collection {
+        Some(cid) => {
+            let c: Collection =
+                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
+                    .bind(cid)
+                    .fetch_one(&state.dbpool)
+                    .await?;
+            Some(c)
+        }
+        None => None,
+    };
     let locations: Vec<Location> = sqlx::query_as(
         "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations",
     )
@@ -44,7 +56,7 @@ async fn show_sample(
     Ok(RenderHtml(
         key,
         state.tmpl,
-        context!(sample => sample, locations => locations),
+        context!(sample => sample, locations => locations, collection => collection),
     ))
 }
 
