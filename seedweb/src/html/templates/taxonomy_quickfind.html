@@ -1,0 +1,10 @@
+{% if taxa %}
+<h3>Search Results</h3>
+<ul>
+    {% for taxon in taxa %}
+    <li>{{ taxon.id }} - <span class="scientific">{{ taxon.complete_name }}</span>
+        {% if taxon.vernaculars %}- <span class="vernacular">{{ taxon.vernaculars|join(",") }}</span>{% endif %}
+        <span class='rank'>({{ taxon.rank }})</span></li>
+    {% endfor %}
+</ul>
+{% endif %}

@@ -215,7 +215,7 @@ pub fn filter_by(
     }
 }
 
-fn any_filter(s: &str) -> CompoundFilterCondition {
+pub fn any_filter(s: &str) -> CompoundFilterCondition {
     let mut fields: Vec<Box<dyn FilterQueryBuilder>> = Vec::new();
     fields.push(Box::new(FilterField::Name1(s.to_string())));
     fields.push(Box::new(FilterField::Name2(s.to_string())));
@@ -246,6 +246,7 @@ impl FilterQueryBuilder for CompoundFilterCondition {
 
 pub fn build_query(
     filter: Option<Box<dyn FilterQueryBuilder>>,
+    limit: Option<i64>,
 ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
         r#"SELECT T.tsn, T.parent_tsn as parentid, T.unit_name1, T.unit_name2, T.unit_name3, T.complete_name, T.rank_id, M.native_status,
@@ -264,12 +265,16 @@ pub fn build_query(
     }
 
     builder.push(" GROUP BY T.tsn");
+    if let Some(n) = limit {
+        builder.push(" LIMIT ");
+        builder.push_bind(n);
+    }
     debug!("generated sql: <<{}>>", builder.sql());
     builder
 }
 
 pub async fn fetch_taxon(id: i64, pool: &Pool<Sqlite>) -> Result<Taxon> {
-    let mut query = build_query(Some(Box::new(FilterField::Id(id.clone()))));
+    let mut query = build_query(Some(Box::new(FilterField::Id(id.clone()))), None);
     Ok(query.build_query_as().fetch_one(pool).await?)
 }
 
@@ -292,6 +297,6 @@ pub async fn fetch_taxon_hierarchy(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<T
 
 pub async fn fetch_children(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<Taxon>> {
     let filter: Option<Box<dyn FilterQueryBuilder>> = Some(Box::new(FilterField::ParentId(id)));
-    let mut query = build_query(filter);
+    let mut query = build_query(filter, None);
     Ok(query.build_query_as().fetch_all(pool).await?)
 }

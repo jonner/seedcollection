@@ -2,10 +2,15 @@
 {% block title %}New Sample{% endblock %}
 {% block content %}
     <h2>New sample</h2>
-    <form hx-post="/api/v1/sample/new" hx-swap="none">
+    <form hx-post="/api/v1/sample/new">
     <bdl>
     <dt>Taxon</dt>
-    <dd><input type="text" name="taxon"></dd>
+    <dd><input type="text" name="taxon"
+        hx-get="../taxonomy/quickfind"
+        hx-trigger="input changed delay:500ms"
+        hx-target="#taxon-suggestions">
+        <div id="taxon-suggestions"></div>
+    </dd>
     <dt>Location</dt>
     <dd>
         <select name="location">

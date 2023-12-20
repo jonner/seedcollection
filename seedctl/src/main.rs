@@ -388,8 +388,10 @@ async fn main() -> Result<()> {
                     true => Some(true),
                     false => None,
                 };
-                let mut query =
-                    taxonomy::build_query(filter_by(id, rank, genus, species, any, minnesota));
+                let mut query = taxonomy::build_query(
+                    filter_by(id, rank, genus, species, any, minnesota),
+                    None,
+                );
                 let taxa: Vec<Taxon> = query.build_query_as().fetch_all(&dbpool).await?;
                 if taxa.is_empty() {
                     return Err(anyhow!("No results found"));

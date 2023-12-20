@@ -72,3 +72,10 @@ td, th {
     color: hsl(0, 0%, 50%);
     font-size: 80%;
 }
+
+#taxon-suggestions {
+    max-height: 20em;
+    padding: 1em;
+    background-color: hsla(0, 0%, 100%, 30%);
+    overflow: scroll;
+}
