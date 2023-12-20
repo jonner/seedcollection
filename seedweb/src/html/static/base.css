@@ -79,3 +79,9 @@ td, th {
     background-color: hsla(0, 0%, 100%, 30%);
     overflow: scroll;
 }
+
+button.delete {
+    background-color: hsl(10, 100%, 40%);
+    color: hsl(0, 0%, 100%);
+    font-weight: bold;
+}

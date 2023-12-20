@@ -11,7 +11,8 @@
 <dt>Description</dt>
 <dd><textarea name="description">{{ location.description }}</textarea></dd>
 </dl>
-<input type="submit" value="Update"/>
+<input type="submit" name="submit" value="Update"/>
+<button class="delete" type="button" hx-delete="/api/v1/location/{{ location.id }}" hx-swap="none" name="delete">Delete this location</button>
 </form>
 <h3>{{ samples|count }} samples from this location</h3>
 {% if samples %}
