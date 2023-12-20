@@ -1,0 +1,21 @@
+<div class="modal-dialog modal-dialog-centered">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">New Location</h5>
+    </div>
+    <div class="modal-body">
+        <form hx-post="/api/v1/location/new" hx-swap="none" id="new-location-modal-form">
+            <dl>
+                <dt>Name</dt>
+                <dd><input type="text" name="name"></dd>
+                <dt>Description</dt>
+                <dd><textarea name="description"></textarea></dd>
+            </dl>
+        </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      <input type="submit" class="btn btn-primary" form="new-location-modal-form" value="Add">
+    </div>
+  </div>
+</div>

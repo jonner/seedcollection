@@ -19,6 +19,7 @@ pub fn router() -> Router<SharedState> {
         .route("/", get(root))
         .route("/list", get(list_locations))
         .route("/new", get(add_location))
+        .route("/new/modal", get(add_location))
         .route("/:id", get(show_location))
 }
 

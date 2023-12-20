@@ -3,7 +3,7 @@
 {% block content %}
     <h2>New sample</h2>
     <form hx-post="/api/v1/sample/new">
-    <bdl>
+    <dl>
     <dt>Taxon</dt>
     <dd><input type="text" name="taxon"
         hx-get="../taxonomy/quickfind"
@@ -18,6 +18,13 @@
             <option value="{{ l.id }}">{{ l.name }}</option>
             {% endfor %}
         </select>
+        <a href="../location/new"
+            hx-get="../location/new/modal"
+            hx-target="#modals-here"
+            hx-trigger="click"
+            data-bs-toggle="modal"
+            data-bs-target="#modals-here">
+            Add new location</a>
     </dd>
     <dt>Month</dt>
     <dd><input type="month" name="month"/></dd>
@@ -28,6 +35,13 @@
     <dt>Notes</dt>
     <dd><textarea name="notes"></textarea></dd>
     </dl>
-    <input type="submit" value="Update"/>
+    <input type="submit" value="Update">
     </form>
+    <div id="modals-here"
+         class="modal"
+         tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content"></div>
+        </div>
+    </div>
 {% endblock %}
