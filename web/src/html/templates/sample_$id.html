@@ -3,29 +3,51 @@
 {% block content %}
     <h2>Sample Details</h2>
     <form hx-put="/api/v1/sample/{{ sample.id }}">
-    <bdl>
-    <dt>ID</dt>
-    <dd>{{ sample.id }}</dd>
-    <dt>Taxon</dt>
-    <dd><a href="/app/taxonomy/{{ sample.taxon.id }}">{{ sample.taxon.complete_name }}</a></dd>
-    <dt>Location</dt>
-    <dd>
-        <select name="location">
-            {% for l in locations %}
-            <option value="{{ l.id }}"{% if l.id == sample.location.id %} selected{% endif %}>{{ l.name }}</option>
-            {% endfor %}
-        </select>
-    </dd>
-    <dt>Month</dt>
-    <dd><input type="number" name="month" value="{{ sample.month }}"/></dd>
-    <dt>Year</dt>
-    <dd><input type="number" name="year" value="{{ sample.year }}"/></dd>
-    <dt>Quantity</dt>
-    <dd><input type="number" name="quantity" value="{{ sample.quantity }}"/></dd>
-    <dt>Notes</dt>
-    <dd><textarea name="notes">{% if sample.notes %}{{ sample.notes }}{% endif %}</textarea></dd>
-    </dl>
-    <input type="submit" value="Update"/>
+        <div class="row g-6">
+            <div class="col">
+                <div class="mb-3">
+                    <label for="SampleIdInput" class="form-label">ID</label>
+                    <input id="SampleIdInput" class="form-control" value="{{ sample.id }}" disabled readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="SampleTaxonInput" class="form-label">Taxon</label>
+                    <input id="SampleTaxonInput" class="form-control" value="{{ sample.taxon.complete_name }}" disabled readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="SampleLocationInput" class="form-label">Location</label>
+                    <select id="SampleLocationInput" class="form-select" name="location">
+                        {% for l in locations %}
+                        <option value="{{ l.id }}"{% if l.id == sample.location.id %} selected{% endif %}>{{ l.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col">
+                <div class="mb-3">
+                    <label for="SampleMonthInput" class="form-label">Month</label>
+                    <input id="SampleMonthInput" class="form-control" type="number" name="month" value="{{ sample.month }}"/>
+                </div>
+                <div class="mb-3">
+                    <label for="SampleYearInput" class="form-label">Year</label>
+                    <input id="SampleYearInput" class="form-control" type="number" name="year" value="{{ sample.year }}"/>
+                </div>
+                <div class="mb-3">
+                    <label for="SampleQuantityInput" class="form-label">Quantity</label>
+                    <input id="SampleQuantityInput" class="form-control" type="number" name="quantity" value="{{ sample.quantity }}"/>
+                </div>
+            </div>
+        </div>
+        <div class="row g-6">
+            <div class="mb-3">
+            <label for="SampleNotesInput" class="form-label">Notes</label>
+            <textarea id="SampleNotesInput" class="form-control" name="notes">{% if sample.notes %}{{ sample.notes }}{% endif %}</textarea>
+            </div>
+        </div>
+        <div class="row g-6">
+            <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Update</button>
+            </div>
+        </div>
     </form>
     {% if collection %}
     <p>This sample is a part of collection <a href="../collection/{{ collection.id }}">{{ collection.name }}</a></p>
