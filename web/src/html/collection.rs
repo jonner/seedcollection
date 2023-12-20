@@ -19,6 +19,7 @@ pub fn router() -> Router<SharedState> {
         .route("/list", get(list_collections))
         .route("/new", post(add_collection))
         .route("/:id/sample/:sampleid/remove", get(remove_sample))
+        .route("/:id/add", get(add_sample))
         .route(
             "/:id",
             get(show_collection)
@@ -99,5 +100,29 @@ async fn remove_sample(
         key,
         state.tmpl,
         context!(collection => c, sample => sample),
+    ))
+}
+
+async fn add_sample(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+    Path(id): Path<i64>,
+) -> Result<impl IntoResponse, error::Error> {
+    let mut c: Collection =
+        sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L WHERE id=?")
+            .bind(id)
+            .fetch_one(&state.dbpool)
+            .await?;
+    let mut builder = sample::build_query(Some(Filter::Collection(id)));
+    c.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
+
+    let options: Vec<Sample> = sample::build_query(Some(Filter::NoCollection))
+        .build_query_as()
+        .fetch_all(&state.dbpool)
+        .await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(collection => c, options => options),
     ))
 }

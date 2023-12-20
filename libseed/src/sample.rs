@@ -15,6 +15,7 @@ pub struct Sample {
 
 pub enum Filter {
     Collection(i64),
+    NoCollection,
     Sample(i64),
     Location(i64),
 }
@@ -35,6 +36,10 @@ pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
                     " INNER JOIN seedcollectionsamples CS ON CS.sampleid=S.id WHERE cs.collectionid=",
                     );
                 builder.push_bind(id);
+            }
+            Filter::NoCollection => {
+                builder.push(" LEFT JOIN seedcollectionsamples CS ON CS.sampleid=S.id ");
+                builder.push(" WHERE cs.collectionid IS NULL");
             }
             Filter::Sample(id) => {
                 builder.push(" WHERE S.id=");

@@ -19,6 +19,7 @@ pub fn router() -> Router<SharedState> {
         .route("/list", get(list_collections))
         .route("/new", post(add_collection))
         .route("/:id/sample/:sampleid", delete(remove_sample))
+        .route("/:id/add", post(add_sample))
         .route(
             "/:id",
             get(show_collection)
@@ -133,4 +134,24 @@ async fn remove_sample(
         .execute(&state.dbpool)
         .await?;
     Ok(())
+}
+
+#[derive(Deserialize)]
+struct AddSampleProps {
+    sample: i64,
+}
+
+async fn add_sample(
+    State(state): State<SharedState>,
+    Path(id): Path<i64>,
+    Form(params): Form<AddSampleProps>,
+) -> Result<Json<i64>, error::Error> {
+    let id =
+        sqlx::query("INSERT INTO seedcollectionsamples (collectionid, sampleid) VALUES (?, ?)")
+            .bind(id)
+            .bind(params.sample)
+            .execute(&state.dbpool)
+            .await?
+            .last_insert_rowid();
+    Ok(Json(id))
 }
