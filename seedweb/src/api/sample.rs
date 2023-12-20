@@ -68,6 +68,7 @@ struct SampleParams {
     year: Option<u32>,
     #[serde(deserialize_with = "empty_string_as_none")]
     quantity: Option<i64>,
+    #[serde(deserialize_with = "empty_string_as_none")]
     notes: Option<String>,
 }
 
@@ -87,24 +88,28 @@ async fn modify_sample(
     }
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE seedsamples SET ");
     let mut sep = builder.separated(", ");
-    if let Some(id) = params.taxon {
-        sep.push_bind("tsn=");
-        sep.push_bind_unseparated(id);
+    if let Some(t) = params.taxon {
+        sep.push(" tsn=");
+        sep.push_bind_unseparated(t);
     }
-    if let Some(id) = params.location {
-        sep.push_bind("collectedlocation=");
-        sep.push_bind_unseparated(id);
+    if let Some(l) = params.location {
+        sep.push(" collectedlocation=");
+        sep.push_bind_unseparated(l);
     }
     if let Some(m) = params.month {
-        sep.push_bind("month=");
+        sep.push(" month=");
         sep.push_bind_unseparated(m);
     }
     if let Some(y) = params.year {
-        sep.push_bind("year=");
+        sep.push(" year=");
         sep.push_bind_unseparated(y);
     }
+    if let Some(n) = params.quantity {
+        sep.push(" quantity=");
+        sep.push_bind_unseparated(n);
+    }
     if let Some(notes) = params.notes {
-        sep.push_bind("notes=");
+        sep.push(" notes=");
         sep.push_bind_unseparated(notes);
     }
     builder.push(" WHERE id=");
@@ -121,13 +126,14 @@ async fn new_sample(
         return Err(anyhow!("Taxon and Location are required").into());
     }
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-        "INSERT INTO seedsamples (tsn, collectedlocation, month, year, notes) values (",
+        "INSERT INTO seedsamples (tsn, collectedlocation, month, year, quantity, notes) values (",
     );
     let mut sep = builder.separated(", ");
     sep.push_bind(params.taxon);
     sep.push_bind(params.location);
     sep.push_bind(params.month);
     sep.push_bind(params.year);
+    sep.push_bind(params.quantity);
     sep.push_bind(params.notes);
     builder.push(")");
     builder.build().execute(&state.dbpool).await?;

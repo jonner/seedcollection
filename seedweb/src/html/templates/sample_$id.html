@@ -2,7 +2,7 @@
 {% block title %}Sample {{ sample.id }}{% endblock %}
 {% block content %}
     <h2>Sample Details</h2>
-    <form hx-put="/api/v1/sample/{}">
+    <form hx-put="/api/v1/sample/{{ sample.id }}">
     <bdl>
     <dt>ID</dt>
     <dd>{{ sample.id }}</dd>
@@ -23,7 +23,7 @@
     <dt>Quantity</dt>
     <dd><input type="number" name="quantity" value="{{ sample.quantity }}"/></dd>
     <dt>Notes</dt>
-    <dd><textarea name="notes">{{ sample.notes }}</textarea></dd>
+    <dd><textarea name="notes">{% if sample.notes %}{{ sample.notes }}{% endif %}</textarea></dd>
     </dl>
     <input type="submit" value="Update"/>
     </form>
