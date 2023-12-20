@@ -77,13 +77,13 @@ async fn main() -> Result<()> {
     debug!("using database '{}'", args.database);
 
     let mut jinja = Environment::new();
-    jinja.set_loader(minijinja::path_loader("seedweb/src/html/templates"));
+    jinja.set_loader(minijinja::path_loader("web/src/html/templates"));
     let shared_state = SharedState::new(args.database, Engine::from(jinja)).await?;
 
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
-        .nest_service("/static", ServeDir::new("seedweb/src/html/static"))
+        .nest_service("/static", ServeDir::new("web/src/html/static"))
         .nest("/app/", html::router())
         .nest("/api/v1/", api::router())
         .with_state(shared_state);

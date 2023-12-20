@@ -1,5 +1,5 @@
 [workspace]
-members = ["libseed", "seedctl", "seedweb"]
+members = ["libseed", "seedctl", "web"]
 resolver = "2"
 
 [workspace.dependencies]
