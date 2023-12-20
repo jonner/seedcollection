@@ -4,7 +4,7 @@ use cli::*;
 use libseed::{
     collection::Collection,
     location,
-    sample::{self, Sample},
+    sample::{self, Filter, Sample},
     taxonomy::{self, filter_by, Taxon},
 };
 use log::debug;
@@ -32,7 +32,7 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
 }
 
 async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: bool) -> Result<()> {
-    let mut sqlbuilder = sample::build_query(collectionid, None);
+    let mut sqlbuilder = sample::build_query(collectionid.map(|x| (Filter::Collection(x))));
     let samples: Vec<Sample> = sqlbuilder.build_query_as().fetch_all(dbpool).await?;
     let mut tbuilder = tabled::builder::Builder::new();
     let mut headers = vec!["ID", "Taxon", "Location"];

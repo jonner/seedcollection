@@ -6,7 +6,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::collection::Collection;
-use libseed::sample::{self, Sample};
+use libseed::sample::{self, Filter, Sample};
 use minijinja::context;
 use serde::Deserialize;
 
@@ -60,7 +60,7 @@ async fn show_collection(
             .bind(id)
             .fetch_one(&state.dbpool)
             .await?;
-    let mut builder = sample::build_query(Some(id), None);
+    let mut builder = sample::build_query(Some(Filter::Collection(id)));
     c.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
 
     Ok(RenderHtml(key, state.tmpl, context!(collection => c)))
@@ -90,7 +90,7 @@ async fn remove_sample(
             .bind(id)
             .fetch_one(&state.dbpool)
             .await?;
-    let sample: Sample = sample::build_query(None, Some(sampleid))
+    let sample: Sample = sample::build_query(Some(Filter::Sample(sampleid)))
         .build_query_as()
         .fetch_one(&state.dbpool)
         .await?;

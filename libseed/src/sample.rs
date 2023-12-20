@@ -13,10 +13,13 @@ pub struct Sample {
     pub notes: Option<String>,
 }
 
-pub fn build_query(
-    collectionid: Option<i64>,
-    sampleid: Option<i64>,
-) -> QueryBuilder<'static, Sqlite> {
+pub enum Filter {
+    Collection(i64),
+    Sample(i64),
+    Location(i64),
+}
+
+pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3,
@@ -25,14 +28,24 @@ pub fn build_query(
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
                     INNER JOIN seedlocations L on L.locid=S.collectedlocation"#,
     );
-    if let Some(id) = collectionid {
-        builder.push(
-            " INNER JOIN seedcollectionsamples CS ON CS.sampleid=S.id WHERE cs.collectionid=",
-        );
-        builder.push_bind(id);
-    } else if let Some(id) = sampleid {
-        builder.push(" WHERE S.id=");
-        builder.push_bind(id);
+    match filter {
+        Some(f) => match f {
+            Filter::Collection(id) => {
+                builder.push(
+                    " INNER JOIN seedcollectionsamples CS ON CS.sampleid=S.id WHERE cs.collectionid=",
+                    );
+                builder.push_bind(id);
+            }
+            Filter::Sample(id) => {
+                builder.push(" WHERE S.id=");
+                builder.push_bind(id);
+            }
+            Filter::Location(id) => {
+                builder.push(" WHERE L.locid=");
+                builder.push_bind(id);
+            }
+        },
+        None => (),
     }
     builder
 }

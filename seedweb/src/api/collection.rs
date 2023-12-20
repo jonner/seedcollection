@@ -6,7 +6,10 @@ use axum::{
     routing::{delete, get, post},
     Form, Router,
 };
-use libseed::{collection::Collection, sample};
+use libseed::{
+    collection::Collection,
+    sample::{self, Filter},
+};
 use serde::Deserialize;
 use sqlx::{QueryBuilder, Sqlite};
 
@@ -46,7 +49,7 @@ async fn show_collection(
         QueryBuilder::new("SELECT L.id, L.name, L.description FROM seedcollections L WHERE id=");
     builder.push_bind(id);
     let mut collection: Collection = builder.build_query_as().fetch_one(&state.dbpool).await?;
-    let mut builder = sample::build_query(Some(id), None);
+    let mut builder = sample::build_query(Some(Filter::Collection(id)));
     collection.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(Json(collection))
 }

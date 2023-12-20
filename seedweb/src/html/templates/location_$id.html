@@ -13,4 +13,12 @@
 </dl>
 <input type="submit" value="Update"/>
 </form>
+<h3>{{ samples|count }} samples from this location</h3>
+{% if samples %}
+<ul>
+{% for sample in samples %}
+<li><a href="../sample/{{ sample.id }}">{{ sample.id }} - {{ sample.taxon.complete_name }}</a></li>
+{% endfor %}
+</ul>
+{% endif %}
 {% endblock %}

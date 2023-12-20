@@ -6,7 +6,10 @@ use axum::{
     Router,
 };
 use axum_template::RenderHtml;
-use libseed::location::{self, Location};
+use libseed::{
+    location::{self, Location},
+    sample::{self, Filter, Sample},
+};
 use minijinja::context;
 
 use crate::{error, state::SharedState};
@@ -53,5 +56,14 @@ async fn show_location(
     ).bind(id)
     .fetch_one(&state.dbpool)
     .await?;
-    Ok(RenderHtml(key, state.tmpl, context!(location => loc)))
+
+    let samples: Vec<Sample> = sample::build_query(Some(Filter::Location(id)))
+        .build_query_as()
+        .fetch_all(&state.dbpool)
+        .await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(location => loc, samples => samples),
+    ))
 }
