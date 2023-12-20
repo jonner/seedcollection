@@ -1,47 +1,7 @@
 {% extends "root.html" %}
+{% from "_macros.html" import sample_form %}
 {% block title %}New Sample{% endblock %}
 {% block content %}
     <h2>New sample</h2>
-    <form hx-post="/api/v1/sample/new">
-    <dl>
-    <dt>Taxon</dt>
-    <dd><input type="text" name="taxon"
-        hx-get="../taxonomy/quickfind"
-        hx-trigger="input changed delay:500ms"
-        hx-target="#taxon-suggestions">
-        <div id="taxon-suggestions"></div>
-    </dd>
-    <dt>Location</dt>
-    <dd>
-        <select name="location">
-            {% for l in locations %}
-            <option value="{{ l.id }}">{{ l.name }}</option>
-            {% endfor %}
-        </select>
-        <a href="../location/new"
-            hx-get="../location/new/modal"
-            hx-target="#modals-here"
-            hx-trigger="click"
-            data-bs-toggle="modal"
-            data-bs-target="#modals-here">
-            Add new location</a>
-    </dd>
-    <dt>Month</dt>
-    <dd><input type="month" name="month"/></dd>
-    <dt>Year</dt>
-    <dd><input type="number" name="year"/></dd>
-    <dt>Quantity</dt>
-    <dd><input type="number" name="quantity"/></dd>
-    <dt>Notes</dt>
-    <dd><textarea name="notes"></textarea></dd>
-    </dl>
-    <input type="submit" value="Update">
-    </form>
-    <div id="modals-here"
-         class="modal"
-         tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-            <div class="modal-content"></div>
-        </div>
-    </div>
+    {{ sample_form(locations) }}
 {% endblock %}

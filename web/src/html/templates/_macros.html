@@ -1,0 +1,91 @@
+{% macro sample_form(locations, sample=none) -%}
+{% if sample %}
+<form hx-put="/api/v1/sample/{{ sample.id }}">
+{% else %}
+<form hx-post="/api/v1/sample/new">
+{% endif %}
+    <div class="row g-6">
+        <div class="col">
+            {% if sample %}
+            <div class="mb-3">
+                <label for="SampleIdInput" class="form-label">ID</label>
+                <input id="SampleIdInput" class="form-control" value="{{ sample.id if sample }}" disabled readonly>
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                <label for="SampleTaxonInput" class="form-label">Taxon</label>
+                <input id="SampleTaxonInput" class="form-control" type="text" name="taxon"
+                placeholder="Type to search..." value="{{ sample.taxon.id if sample }}" 
+                list="taxonOptions"
+                hx-get="../taxonomy/quickfind"
+                hx-trigger="input changed delay:500ms"
+                hx-target="#taxonOptions">
+                <datalist id="taxonOptions">
+                </datalist>
+            </div>
+            <div class="mb-3">
+                <label for="SampleLocationInput" class="form-label">Location</label>
+                <select id="SampleLocationInput" class="form-select" name="location">
+                    <option value="">Choose a location...</option>
+                    {% for l in locations %}
+                    <option value="{{ l.id }}"{% if sample and (l.id == sample.location.id) %} selected{% endif %}>{{ l.name }}</option>
+                    {% endfor %}
+                </select>
+                <a href="../location/new"
+                   hx-get="../location/new/modal"
+                   hx-target="#modals-here"
+                   hx-trigger="click"
+                   data-bs-toggle="modal"
+                   data-bs-target="#modals-here">
+                    Add new location</a>
+            </div>
+        </div>
+        <div class="col">
+            <div class="mb-3">
+                <label for="SampleMonthInput" class="form-label">Month</label>
+                <select id="SampleMonthInput" class="form-control" name="month" value="{{ sample.month if sample }}">
+                    <option value="">Choose a month...</option>
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="SampleYearInput" class="form-label">Year</label>
+                <input id="SampleYearInput" class="form-control" type="number" name="year" value="{{ sample.year if sample }}"/>
+            </div>
+            <div class="mb-3">
+                <label for="SampleQuantityInput" class="form-label">Quantity</label>
+                <input id="SampleQuantityInput" class="form-control" type="number" name="quantity" value="{{ sample.quantity if sample }}"/>
+            </div>
+        </div>
+    </div>
+    <div class="row g-6">
+        <div class="mb-3">
+        <label for="SampleNotesInput" class="form-label">Notes</label>
+        <textarea id="SampleNotesInput" class="form-control" name="notes">{% if sample.notes %}{{ sample.notes if sample }}{% endif %}</textarea>
+        </div>
+    </div>
+    <div class="row g-6">
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">{% if sample %}Update{% else %}Add{% endif %}</button>
+        </div>
+    </div>
+</form>
+<div id="modals-here"
+     class="modal"
+     tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content"></div>
+    </div>
+</div>
+{%- endmacro %}

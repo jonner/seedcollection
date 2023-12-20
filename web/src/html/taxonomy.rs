@@ -70,7 +70,7 @@ async fn quickfind(
                 subfilters.push(Box::new(any_filter(part)));
             }
             let filter = CompoundFilterCondition::new(FilterOperation::And, subfilters);
-            taxonomy::build_query(Some(Box::new(filter)), Some(20))
+            taxonomy::build_query(Some(Box::new(filter)), Some(200))
                 .build_query_as()
                 .fetch_all(&state.dbpool)
                 .await?
