@@ -33,7 +33,7 @@ async fn list_locations(
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations: Vec<location::Location> = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations",
+        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY NAME ASC",
     )
     .fetch_all(&state.dbpool)
     .await?;
