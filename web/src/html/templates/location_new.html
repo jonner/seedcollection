@@ -2,7 +2,7 @@
 {% block title %}New Location{% endblock %}
 {% block content %}
 <h2>{{ self.title() }}</h2>
-<form hx-post="/api/v1/location/new" hx-swap="none">
+<form hx-post="{{ "/location/new" | api_url }}" hx-swap="none">
 <dl>
 <dt>Name</dt>
 <dd><input type="text" name="name"></dd>

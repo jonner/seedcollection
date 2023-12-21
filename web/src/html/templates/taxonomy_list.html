@@ -4,7 +4,7 @@
     <h2>Taxonomy</h2>
     <ul>
         {% for t in taxa %}
-        <li><a href="./{{ t.id }}">{{ t.complete_name }}</a></li>
+        <li><a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a></li>
         {% endfor %}
     </ul>
 {% endblock %}

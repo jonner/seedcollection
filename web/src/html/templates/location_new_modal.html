@@ -5,20 +5,19 @@
       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
     </div>
     <div class="modal-body">
-        <div id="delete-error-display"/>
-        <form hx-post="/api/v1/location/new" hx-swap="none" id="new-location-modal-form">
-        <div class="row px-3 mb-3">
+        <div id="delete-error-display"></div>
+        <form hx-post="{{ "/location/new" | api_url }}" hx-swap="none" id="new-location-modal-form">
+            <div class="row px-3 mb-3">
                 <label class="form-label" for="LocationNameInput">Name</label>
                 <input id="LocationNameInput" class="form-control" type="text" name="name">
-        </div>
-        <div class="row px-3 mb-3">
+            </div>
+            <div class="row px-3 mb-3">
                 <label class="form-label" for="LocationDescInput">Description</label>
                 <textarea id="LocationDescInput" class="form-control" name="description"></textarea>
-            </dl>
+                </dl>
                 <input id="LocationLatitudeInput" type="hidden" name="latitude" value="">
                 <input id="LocationLongitudeInput" type="hidden" name="longitude" value="">
         </form>
-        </div>
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

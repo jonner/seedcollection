@@ -2,12 +2,12 @@
 {% block title %}Samples{% endblock %}
 {% block content %}
     <h2>Samples</h2>
-    <p><a href="./new">Add a new sample</a></p>
+    <p><a href="{{ "/sample/new" | app_url }}">Add a new sample</a></p>
     <ul>
         {% for s in samples %}
-        <li><a href="./{{ s.id }}">{{ s.id }}</a> - 
-            <a href="../taxonomy/{{ s.taxon.id }}">{{ s.taxon.complete_name }}</a> -
-            <a href="../location/{{ s.location.id }}">{{ s.location.name }}</a>
+        <li><a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a> - 
+            <a href="{{ ("/taxonomy/" ~ s.taxon.id) | app_url }}">{{ s.taxon.complete_name }}</a> -
+            <a href="{{ ("/location/" ~ s.location.id) | app_url }}">{{ s.location.name }}</a>
         </li>
         {% endfor %}
     </ul>

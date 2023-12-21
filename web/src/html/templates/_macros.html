@@ -16,9 +16,9 @@
 
 {% macro sample_form(locations, sample=none, request=none, error=none) -%}
 {% if sample %}
-<form hx-put="/app/sample/{{ sample.id }}">
+<form hx-put="{{ ("/sample/" ~ sample.id) | app_url }}">
 {% else %}
-<form hx-post="/app/sample/new">
+<form hx-post="{{ "/sample/new" | app_url }}">
 {% endif %}
     {% if error %}
     <div class="mb-3 alert alert-danger">
@@ -42,7 +42,7 @@
                        placeholder="Type to search..."
                        value="{% if request %}{{ request.taxon }}{% elif sample %}{{ sample.taxon.id }}{% endif %}" 
                        list="taxonOptions"
-                       hx-get="../taxonomy/quickfind"
+                       hx-get="{{ "/taxonomy/quickfind" | app_url }}"
                        hx-trigger="input changed delay:500ms"
                        hx-target="#taxonOptions">
                 <datalist id="taxonOptions">
@@ -53,7 +53,7 @@
                 <div class="input-group">
                     <select id="SampleLocationInput" class="form-select" name="location"
                         hx-trigger="reload-locations from:body"
-                        hx-get="../location/list/options">
+                        hx-get="{{ "/location/list/options" | app_url }}">
                         <option value="">Choose a location...</option>
                         {% for l in locations %}
                         <option value="{{ l.id }}"
@@ -61,12 +61,13 @@
                         >{{ l.name }}</option>
                         {% endfor %}
                     </select>
-                    <button type="button" id="AddLocationButton" class="btn btn-outline-secondary"
-                                          hx-get="../location/new/modal"
-                                          hx-target="#ModalContainer"
-                                          hx-trigger="click"
-                                          data-bs-toggle="modal"
-                                          data-bs-target="#ModalContainer">
+                    <button type="button"
+                            id="AddLocationButton" class="btn btn-outline-secondary"
+                            hx-get="{{ "/location/new/modal" | app_url }}"
+                            hx-target="#ModalContainer"
+                            hx-trigger="click"
+                            data-bs-toggle="modal"
+                            data-bs-target="#ModalContainer">
                         Add new location</button>
                 </div>
             </div>
@@ -113,7 +114,7 @@
         <div class="mb-3">
             <button type="submit"
                     class="btn btn-danger"
-                    hx-delete="/api/v1/sample/{{ sample.id }}"
+                    hx-delete="{{ ("/sample/" ~ sample.id) | api_url }}"
                     hx-confirm="Are you sure you want to delete sample {{ sample.id }}?"
                     hx-target="closest form"
                     >Delete</button>

@@ -2,10 +2,10 @@
 {% block title %}Location List{% endblock %}
 {% block content %}
 <h2>Locations</h2>
-<p><a href="./new">Add a new location</a></p>
+<p><a href="{{ "/location/new" | app_url }}">Add a new location</a></p>
 <ul>
     {% for l in locations %}
-    <li><a href='./{{ l.id }}'>{{ l.name }}</a></li>
+    <li><a href="{{ ("location/" ~ l.id) | app_url }}">{{ l.name }}</a></li>
     {% endfor %}
 </ul>
 {% endblock %}

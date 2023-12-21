@@ -5,6 +5,6 @@
     <h2>Sample Details</h2>
     {{ sample_form(locations, sample) }}
     {% if collection %}
-    <p>This sample is a part of collection <a href="../collection/{{ collection.id }}">{{ collection.name }}</a></p>
+    <p>This sample is a part of collection <a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ collection.name }}</a></p>
     {% endif %}
 {% endblock %}

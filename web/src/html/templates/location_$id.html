@@ -2,7 +2,7 @@
 {% block title %}{{ location.name }} Details{% endblock %}
 {% block content %}
 <h2>Location Details</h2>
-<form hx-put="/api/v1/location/{{ location.id }}" hx-swap="none">
+<form hx-put="{{ ("/location/" ~ location.id) | api_url }}" hx-swap="none">
     <div class="row mb-3">
         <label class="form-label" for="LocationIdInput">ID</label>
         <input type="text" id="LocationIdInput" class="form-control" value="{{ location.id }}" disabled readonly>
@@ -30,7 +30,7 @@
 {% if samples %}
 <ul>
 {% for sample in samples %}
-<li><a href="../sample/{{ sample.id }}">{{ sample.id }} - {{ sample.taxon.complete_name }}</a></li>
+<li><a href="{{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }} - {{ sample.taxon.complete_name }}</a></li>
 {% endfor %}
 </ul>
 {% endif %}
@@ -48,7 +48,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-danger" hx-delete="/api/v1/location/{{ location.id }}" hx-swap="none">Delete</button>
+        <button type="button" class="btn btn-danger" hx-delete="{{ ("/location/" ~ location.id) | api_url }}" hx-swap="none">Delete</button>
       </div>
     </div>
   </div>

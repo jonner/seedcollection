@@ -2,7 +2,7 @@
 {% block title %}Collection {{ collection.id }}{% endblock %}
 {% block content %}
 <h2>Collection Details</h2>
-<form class="row mb-4" hx-put="/api/v1/collection/{{ collection.id }}" hx-swap="none">
+<form class="row mb-4" hx-put="{{ ("/collection/" ~ collection.id) | api_url }}" hx-swap="none">
     <div class="row mb-3">
     <label for="CollectionIdInput" class="form-label">ID</label>
     <input type="text" class="form-control" id="CollectionIdInput" value="{{ collection.id }}" disabled readonly>
@@ -19,7 +19,7 @@
     <button type="submit" class="btn btn-primary">Update</button>
     </div>
 </form>
-<h3>Samples in this collection <a href="{{ collection.id }}/add">+</a></h3>
+<h3>Samples in this collection <a href="{{ ("/collection/" ~ collection.id) | app_url }}/add">+</a></h3>
 {% if collection.samples %}
 <table class="table">
     <thead>
@@ -33,11 +33,11 @@
     <tbody>
     {% for s in collection.samples %}
     <tr>
-        <td><a href="../sample/{{ s.id }}">{{ s.id }}</a></td>
+        <td><a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a></td>
         <td>{{ s.taxon.complete_name }}</td>
         <td>{{ s.location.name }}</td>
         <td><button type="submit" class="btn btn-outline-danger"
-                hx-delete="/api/v1/collection/{{ collection.id }}/sample/{{ s.id }}"
+                hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ s.id) | api_url }}"
                 hx-confirm="Are you sure you want to remove sample {{ s.id }}?"
                 hx-target="closest tr"
                 hx-swap="outerHTML">Remove</button></td>

@@ -34,7 +34,7 @@
                 class="highlighted"
             {% endif %}
             >
-            <a href="{{ t.id }}">{{ t.complete_name }}</a>
+            <a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a>
             {% if t.vernaculars %}
             - <span class="vernacular">{{ t.vernaculars[0] }}</span>
             {% endif %}
@@ -54,7 +54,7 @@
                     class="unknown"
                     {% endif %}
                     {% endif %}
-                ><a href="{{ c.id }}">{{ c.complete_name }}</a>
+                ><a href="{{ ("/taxonomy/" ~ c.id) | app_url }}">{{ c.complete_name }}</a>
             {% if c.vernaculars %}
             - <span class="vernacular">{{ c.vernaculars[0] }}</span>
             {% endif %}

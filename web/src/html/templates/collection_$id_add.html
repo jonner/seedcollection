@@ -4,7 +4,7 @@
 <h2>{{ self.title() }}</h2>
 <p>Adding samples to Collection {{ collection.id }} - {{ collection.name }}</p>
     {% if options %}
-    <form hx-post="/api/v1/collection/{{ collection.id }}/add" hx-swap="none">
+    <form hx-post="{{ ("/collection/" ~ collection.id ~ "/add") | api_url }}" hx-swap="none">
         <select name="sample">
             {% for option in options %}
             <option value="{{ option.id }}">{{ option.id }} - {{ option.taxon.complete_name }}</option>
@@ -14,6 +14,6 @@
     </form>
     {% else %}
     <p class="error">No samples available to add</p>
-    <p><a href="../../sample/new">Add a new sample</a></p>
+    <p><a href="{{ "/sample/new" | app_url }}>Add a new sample</a></p>
     {% endif %}
 {% endblock %}

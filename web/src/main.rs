@@ -20,6 +20,7 @@ mod error;
 mod html;
 mod state;
 
+const API_PREFIX: &'static str = "/api/v1/";
 const APP_PREFIX: &str = "/app/";
 
 pub fn logger() -> env_logger::Builder {
@@ -70,6 +71,14 @@ pub struct Cli {
     pub port: u32,
 }
 
+pub fn api_url(value: String) -> String {
+    [API_PREFIX, &value.trim_start_matches('/')].join("")
+}
+
+pub fn app_url(value: String) -> String {
+    [APP_PREFIX, &value.trim_start_matches('/')].join("")
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     logger().init();
@@ -78,14 +87,17 @@ async fn main() -> Result<()> {
 
     let mut jinja = Environment::new();
     jinja.set_loader(minijinja::path_loader("web/src/html/templates"));
+    jinja.add_filter("app_url", app_url);
+    jinja.add_filter("api_url", api_url);
+
     let shared_state = SharedState::new(args.database, Engine::from(jinja)).await?;
 
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
         .nest_service("/static", ServeDir::new("web/src/html/static"))
-        .nest("/app/", html::router())
-        .nest("/api/v1/", api::router())
+        .nest(APP_PREFIX, html::router())
+        .nest(API_PREFIX, api::router())
         .with_state(shared_state);
 
     let addr = format!("{}:{}", args.listen, args.port);
