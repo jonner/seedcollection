@@ -2,11 +2,14 @@ use crate::{error, state::SharedState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
-    response::{Html, Json},
+    response::{Html, IntoResponse, Json},
     routing::{get, post},
     Form, Router,
 };
-use libseed::location::{self, Location};
+use libseed::{
+    empty_string_as_none,
+    location::{self, Location},
+};
 use serde::{Deserialize, Serialize};
 
 pub fn router() -> Router<SharedState> {
@@ -51,9 +54,13 @@ async fn show_location(
 
 #[derive(Deserialize)]
 struct ModifyParams {
+    #[serde(deserialize_with = "empty_string_as_none")]
     name: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none")]
     description: Option<String>,
+    #[serde(deserialize_with = "empty_string_as_none")]
     latitude: Option<f32>,
+    #[serde(deserialize_with = "empty_string_as_none")]
     longitude: Option<f32>,
 }
 
@@ -102,7 +109,7 @@ struct AddResponse {
 async fn add_location(
     State(state): State<SharedState>,
     Form(params): Form<ModifyParams>,
-) -> Result<Json<AddResponse>, error::Error> {
+) -> Result<impl IntoResponse, error::Error> {
     if params.name.is_none()
         && params.description.is_none()
         && params.latitude.is_none()
@@ -122,16 +129,19 @@ async fn add_location(
     .execute(&state.dbpool)
     .await?
     .last_insert_rowid();
-    Ok(Json(AddResponse { success: true, id }))
+    Ok((
+        [("HX-Trigger", "reload-locations")],
+        Json(AddResponse { success: true, id }),
+    ))
 }
 
 async fn delete_location(
     Path(id): Path<i64>,
     State(state): State<SharedState>,
-) -> Result<(), error::Error> {
+) -> Result<impl IntoResponse, error::Error> {
     sqlx::query("DELETE FROM seedlocations WHERE locid=?")
         .bind(id)
         .execute(&state.dbpool)
         .await?;
-    Ok(())
+    Ok([("HX-Trigger", "reload-locations")])
 }

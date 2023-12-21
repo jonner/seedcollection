@@ -25,19 +25,23 @@
             </div>
             <div class="mb-3">
                 <label for="SampleLocationInput" class="form-label">Location</label>
-                <select id="SampleLocationInput" class="form-select" name="location">
-                    <option value="">Choose a location...</option>
-                    {% for l in locations %}
-                    <option value="{{ l.id }}"{% if sample and (l.id == sample.location.id) %} selected{% endif %}>{{ l.name }}</option>
-                    {% endfor %}
-                </select>
-                <a href="../location/new"
-                   hx-get="../location/new/modal"
-                   hx-target="#modals-here"
-                   hx-trigger="click"
-                   data-bs-toggle="modal"
-                   data-bs-target="#modals-here">
-                    Add new location</a>
+                <div class="input-group">
+                    <select id="SampleLocationInput" class="form-select" name="location"
+                        hx-trigger="reload-locations from:body"
+                        hx-get="../location/list/options">
+                        <option value="">Choose a location...</option>
+                        {% for l in locations %}
+                        <option value="{{ l.id }}"{% if sample and (l.id == sample.location.id) %} selected{% endif %}>{{ l.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" id="AddLocationButton" class="btn btn-outline-secondary"
+                                          hx-get="../location/new/modal"
+                                          hx-target="#ModalContainer"
+                                          hx-trigger="click"
+                                          data-bs-toggle="modal"
+                                          data-bs-target="#ModalContainer">
+                        Add new location</button>
+                </div>
             </div>
         </div>
         <div class="col">
@@ -81,7 +85,7 @@
         </div>
     </div>
 </form>
-<div id="modals-here"
+<div id="ModalContainer"
      class="modal"
      tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">

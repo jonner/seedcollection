@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use crate::{error, state::SharedState};
 use anyhow::{anyhow, Result};
 use axum::{
@@ -8,8 +6,11 @@ use axum::{
     routing::{get, post},
     Form, Router,
 };
-use libseed::sample::{self, Filter, Sample};
-use serde::{Deserialize, Deserializer};
+use libseed::{
+    empty_string_as_none,
+    sample::{self, Filter, Sample},
+};
+use serde::Deserialize;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
 
@@ -41,21 +42,6 @@ async fn show_sample(
     let mut builder = sample::build_query(Some(Filter::Sample(id)));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
     Ok(Json(sample))
-}
-
-fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
-where
-    D: Deserializer<'de>,
-    T: FromStr,
-    T::Err: std::fmt::Display,
-{
-    let opt = Option::<String>::deserialize(de)?;
-    match opt.as_deref() {
-        None | Some("") => Ok(None),
-        Some(s) => FromStr::from_str(s)
-            .map_err(serde::de::Error::custom)
-            .map(Some),
-    }
 }
 
 #[derive(Deserialize)]

@@ -2,7 +2,7 @@ use crate::CustomKey;
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use axum_template::RenderHtml;
@@ -18,6 +18,7 @@ pub fn router() -> Router<SharedState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_locations))
+        .route("/list/options", get(list_locations))
         .route("/new", get(add_location))
         .route("/new/modal", get(add_location))
         .route("/:id", get(show_location))
