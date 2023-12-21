@@ -3,7 +3,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-pub struct Error(anyhow::Error);
+pub struct Error(pub anyhow::Error);
 
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for Error {

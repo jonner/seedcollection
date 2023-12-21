@@ -1,9 +1,30 @@
-{% macro sample_form(locations, sample=none) -%}
+{% macro month_options(selected) -%}
+<option value="">Choose a month...</option>
+<option value="1" {% if selected == 1 %}selected{% endif %}>January</option>
+<option value="2" {% if selected == 2 %}selected{% endif %}>February</option>
+<option value="3" {% if selected == 3 %}selected{% endif %}>March</option>
+<option value="4" {% if selected == 4 %}selected{% endif %}>April</option>
+<option value="5" {% if selected == 5 %}selected{% endif %}>May</option>
+<option value="6" {% if selected == 6 %}selected{% endif %}>June</option>
+<option value="7" {% if selected == 7 %}selected{% endif %}>July</option>
+<option value="8" {% if selected == 8 %}selected{% endif %}>August</option>
+<option value="9" {% if selected == 9 %}selected{% endif %}>September</option>
+<option value="10" {% if selected == 10 %}selected{% endif %}>October</option>
+<option value="11" {% if selected == 11 %}selected{% endif %}>November</option>
+<option value="12" {% if selected == 12 %}selected{% endif %}>December</option>
+{%- endmacro %}
+
+{% macro sample_form(locations, sample=none, request=none, error=none) -%}
 {% if sample %}
-<form hx-put="/api/v1/sample/{{ sample.id }}">
+<form hx-put="/app/sample/{{ sample.id }}">
 {% else %}
-<form hx-post="/api/v1/sample/new">
+<form hx-post="/app/sample/new">
 {% endif %}
+    {% if error %}
+    <div class="mb-3 alert alert-danger">
+        Failed to save sample: {{ error }}
+    </div>
+    {% endif %}
     <div class="row g-6">
         <div class="col">
             {% if sample %}
@@ -14,12 +35,16 @@
             {% endif %}
             <div class="mb-3">
                 <label for="SampleTaxonInput" class="form-label">Taxon</label>
-                <input id="SampleTaxonInput" class="form-control" type="text" name="taxon"
-                placeholder="Type to search..." value="{{ sample.taxon.id if sample }}" 
-                list="taxonOptions"
-                hx-get="../taxonomy/quickfind"
-                hx-trigger="input changed delay:500ms"
-                hx-target="#taxonOptions">
+                <input id="SampleTaxonInput"
+                       class="form-control"
+                       type="text"
+                       name="taxon"
+                       placeholder="Type to search..."
+                       value="{% if request %}{{ request.taxon }}{% elif sample %}{{ sample.taxon.id }}{% endif %}" 
+                       list="taxonOptions"
+                       hx-get="../taxonomy/quickfind"
+                       hx-trigger="input changed delay:500ms"
+                       hx-target="#taxonOptions">
                 <datalist id="taxonOptions">
                 </datalist>
             </div>
@@ -31,7 +56,9 @@
                         hx-get="../location/list/options">
                         <option value="">Choose a location...</option>
                         {% for l in locations %}
-                        <option value="{{ l.id }}"{% if sample and (l.id == sample.location.id) %} selected{% endif %}>{{ l.name }}</option>
+                        <option value="{{ l.id }}"
+                        {% if request and (request.location == l.id) %}selected{% elif sample and (l.id == sample.location.id) %}selected{% endif %}
+                        >{{ l.name }}</option>
                         {% endfor %}
                     </select>
                     <button type="button" id="AddLocationButton" class="btn btn-outline-secondary"
@@ -47,29 +74,28 @@
         <div class="col">
             <div class="mb-3">
                 <label for="SampleMonthInput" class="form-label">Month</label>
-                <select id="SampleMonthInput" class="form-control" name="month" value="{{ sample.month if sample }}">
-                    <option value="">Choose a month...</option>
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
+                <select id="SampleMonthInput"
+                    class="form-control"
+                    name="month"
+                    >
+                    {{ month_options(request.month if request else sample.month if sample) }}
                 </select>
             </div>
             <div class="mb-3">
                 <label for="SampleYearInput" class="form-label">Year</label>
-                <input id="SampleYearInput" class="form-control" type="number" name="year" value="{{ sample.year if sample }}"/>
+                <input id="SampleYearInput"
+                class="form-control"
+                type="number"
+                name="year"
+                value="{% if request %}{{ request.year }}{% elif sample %}{{ sample.year }}{% endif %}"/>
             </div>
             <div class="mb-3">
                 <label for="SampleQuantityInput" class="form-label">Quantity</label>
-                <input id="SampleQuantityInput" class="form-control" type="number" name="quantity" value="{{ sample.quantity if sample }}"/>
+                <input id="SampleQuantityInput"
+                class="form-control"
+                type="number"
+                name="quantity"
+                value="{% if request %}{{request.quantity }}{% elif sample %}{{ sample.quantity }}{% endif %}"/>
             </div>
         </div>
     </div>
@@ -83,6 +109,16 @@
         <div class="mb-3">
             <button type="submit" class="btn btn-primary">{% if sample %}Update{% else %}Add{% endif %}</button>
         </div>
+{% if sample %}
+        <div class="mb-3">
+            <button type="submit"
+                    class="btn btn-danger"
+                    hx-delete="/api/v1/sample/{{ sample.id }}"
+                    hx-confirm="Are you sure you want to delete sample {{ sample.id }}?"
+                    hx-target="closest form"
+                    >Delete</button>
+        </div>
+{% endif %}
     </div>
 </form>
 <div id="ModalContainer"
