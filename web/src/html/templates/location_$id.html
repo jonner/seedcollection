@@ -3,16 +3,28 @@
 {% block content %}
 <h2>Location Details</h2>
 <form hx-put="/api/v1/location/{{ location.id }}" hx-swap="none">
-<dl>
-<dt>ID</dt>
-<dd>{{ location.id }}</dd>
-<dt>Name</dt>
-<dd><input type="text" name="name" value="{{ location.name }}"></dd>
-<dt>Description</dt>
-<dd><textarea name="description">{{ location.description }}</textarea></dd>
-</dl>
-<input type="submit" name="submit" value="Update"/>
-<button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete-modal">Delete this location</button>
+    <div class="row mb-3">
+        <label class="form-label" for="LocationIdInput">ID</label>
+        <input type="text" id="LocationIdInput" class="form-control" value="{{ location.id }}" disabled readonly>
+    </div>
+    <div class="row mb-3">
+        <label class="form-label" for="LocationNameInput">Name</label>
+        <input type="text" id="LocationNameInput" class="form-control" name="name" value="{{ location.name }}"></dd>
+    </div>
+    <div class="row mb-3">
+        <label class="form-label" for="LocationDescInput">Description</label>
+        <textarea class="form-control" id="LocationDescInput" name="description">{{ location.description if location.description }}</textarea></dd>
+    </div>
+    <div class="row mb-3">
+        <div class="col">
+        <button type="submit" name="submit" class="btn btn-primary">Update</button>
+        </div>
+        <div class="col">
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete-modal">Delete</button>
+        </div>
+    </div>
+    <input type="hidden" name="latitude" value="">
+    <input type="hidden" name="longitude" value="">
 </form>
 <h3>{{ samples|count }} samples from this location</h3>
 {% if samples %}
