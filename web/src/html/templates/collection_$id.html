@@ -36,54 +36,15 @@
         <td><a href="../sample/{{ s.id }}">{{ s.id }}</a></td>
         <td>{{ s.taxon.complete_name }}</td>
         <td>{{ s.location.name }}</td>
-        <td><button type="submit" class="btn btn-outline-danger" href="{{ collection.id }}/sample/{{ s.id }}/remove" data-bs-toggle="modal" data-bs-target="#delete-modal"
-                data-bs-url="/api/v1/collection/{{ collection.id }}/sample/{{ s.id }}"
-                data-bs-summary="{{ s.id }}: {{ s.taxon.complete_name }} from {{ s.location.name }}">Remove</button></td>
+        <td><button type="submit" class="btn btn-outline-danger"
+                hx-delete="/api/v1/collection/{{ collection.id }}/sample/{{ s.id }}"
+                hx-confirm="Are you sure you want to remove sample {{ s.id }}?"
+                hx-target="closest tr"
+                hx-swap="outerHTML">Remove</button></td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
-<div class="modal" tabindex="-1" id="delete-modal">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Remove Sample?</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure that you wish to remove the following sample from this collection?</p>
-                <p class="remove-item-summary"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-danger" id="remove-button" hx-swap="none">Remove</button>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-const m = document.getElementById('delete-modal')
-if (m) {
-  m.addEventListener('show.bs.modal', event => {
-    // Button that triggered the modal
-    const triggerButton = event.relatedTarget
-    // Extract info from data-bs-* attributes
-    const summary = triggerButton.getAttribute('data-bs-summary')
-    const deleteUrl = triggerButton.getAttribute('data-bs-url')
-    // If necessary, you could initiate an Ajax request here
-    // and then do the updating in a callback.
-
-    // Update the modal's content.
-    const modalContent = m.querySelector('.remove-item-summary')
-    modalContent.textContent = summary
-
-    // update teh delete action url
-    const removeButton = m.querySelector('#remove-button')
-    removeButton.setAttribute("hx-delete", deleteUrl)
-    htmx.process(removeButton)
-  })
-}
-</script>
 {% else %}
 <p>No samples found</p>
 {% endif %}

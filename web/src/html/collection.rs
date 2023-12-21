@@ -18,7 +18,6 @@ pub fn router() -> Router<SharedState> {
         .route("/", get(root))
         .route("/list", get(list_collections))
         .route("/new", post(add_collection))
-        .route("/:id/sample/:sampleid/remove", get(remove_sample))
         .route("/:id/add", get(add_sample))
         .route(
             "/:id",
@@ -73,34 +72,6 @@ async fn modify_collection() -> impl IntoResponse {
 
 async fn delete_collection() -> impl IntoResponse {
     "Delete collection"
-}
-
-#[derive(Deserialize)]
-struct RemoveSampleParams {
-    id: i64,
-    sampleid: i64,
-}
-
-async fn remove_sample(
-    CustomKey(key): CustomKey,
-    Path(RemoveSampleParams { id, sampleid }): Path<RemoveSampleParams>,
-    State(state): State<SharedState>,
-) -> Result<impl IntoResponse, error::Error> {
-    let c: Collection =
-        sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L WHERE id=?")
-            .bind(id)
-            .fetch_one(&state.dbpool)
-            .await?;
-    let sample: Sample = sample::build_query(Some(Filter::Sample(sampleid)))
-        .build_query_as()
-        .fetch_one(&state.dbpool)
-        .await?;
-
-    Ok(RenderHtml(
-        key,
-        state.tmpl,
-        context!(collection => c, sample => sample),
-    ))
 }
 
 async fn add_sample(
