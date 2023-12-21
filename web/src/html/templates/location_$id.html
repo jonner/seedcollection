@@ -20,7 +20,12 @@
         <button type="submit" name="submit" class="btn btn-primary">Update</button>
         </div>
         <div class="col">
-        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete-modal">Delete</button>
+        <button type="button"
+                class="btn btn-danger"
+                hx-delete="{{ ("/location/" ~ location.id) | api_url }}"
+                hx-confirm="Are you sure you wish to delete location {{location.id}}?"
+                hx-target="closest form"
+                >Delete</button>
         </div>
     </div>
     <input type="hidden" name="latitude" value="">
@@ -34,24 +39,4 @@
 {% endfor %}
 </ul>
 {% endif %}
-
-<div class="modal" tabindex="-1" id="delete-modal">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Confirm Delete</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>Are you sure you want to delete the following location?</p>
-        <p>{{ location.id }}: {{ location.name }}</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-danger" hx-delete="{{ ("/location/" ~ location.id) | api_url }}" hx-swap="none">Delete</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 {% endblock %}
