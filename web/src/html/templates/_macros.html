@@ -130,3 +130,35 @@
     </div>
 </div>
 {%- endmacro %}
+
+{% macro location_form(id, loc=none, request=none) -%}
+<div id="delete-error-display"></div>
+<form hx-post="{{ "/location/new" | api_url }}" hx-swap="none" id="{{ id }}">
+</form>
+    <div class="row px-3 mb-3">
+        <label class="form-label" for="LocationNameInput">Name</label>
+        <input id="LocationNameInput"
+               form="{{ id }}"
+               class="form-control"
+               type="text"
+               name="name">
+    </div>
+    <div class="row px-3 mb-3">
+        <label class="form-label" for="LocationDescInput">Description</label>
+        <textarea id="LocationDescInput"
+                  form="{{ id }}"
+                  class="form-control"
+                  name="description"></textarea>
+        <input id="LocationLatitudeInput"
+               form="{{ id }}"
+               type="hidden"
+               name="latitude"
+               value="">
+        <input id="LocationLongitudeInput"
+               form="{{ id }}"
+               type="hidden"
+               name="longitude"
+               value="">
+    </div>
+{%- endmacro %}
+

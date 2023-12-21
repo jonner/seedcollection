@@ -1,14 +1,12 @@
+{% from "_macros.html" import location_form %}
 {% extends "root.html" %}
 {% block title %}New Location{% endblock %}
 {% block content %}
 <h2>{{ self.title() }}</h2>
-<form hx-post="{{ "/location/new" | api_url }}" hx-swap="none">
-<dl>
-<dt>Name</dt>
-<dd><input type="text" name="name"></dd>
-<dt>Description</dt>
-<dd><textarea name="description"></textarea></dd>
-</dl>
-<input type="submit" value="Add"/>
-</form>
+{{ location_form("new-location-form") }}
+<div class="row px-3 mb-3">
+<button class="btn btn-primary"
+    type="submit"
+    form="new-location-form">Add</button>
+</div>
 {% endblock %}
