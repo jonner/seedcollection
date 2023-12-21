@@ -2,7 +2,7 @@
 {% block title %}{{ location.name }} Details{% endblock %}
 {% block content %}
 <h2>Location Details</h2>
-<form hx-put="{{ ("/location/" ~ location.id) | api_url }}" hx-swap="none">
+<form hx-put="{{ ("/location/" ~ location.id) | api_url }}">
     <div class="row mb-3">
         <label class="form-label" for="LocationIdInput">ID</label>
         <input type="text" id="LocationIdInput" class="form-control" value="{{ location.id }}" disabled readonly>

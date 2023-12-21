@@ -3,10 +3,10 @@
 {% block title %}New Location{% endblock %}
 {% block content %}
 <h2>{{ self.title() }}</h2>
-{{ location_form("new-location-form") }}
+{% call location_form("new-location-form") %}
 <div class="row px-3 mb-3">
 <button class="btn btn-primary"
-    type="submit"
-    form="new-location-form">Add</button>
+    type="submit">Add</button>
 </div>
+{% endcall %}
 {% endblock %}
