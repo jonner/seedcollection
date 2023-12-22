@@ -40,7 +40,7 @@
                        type="text"
                        name="taxon"
                        placeholder="Type to search..."
-                       value="{% if request %}{{ request.taxon }}{% elif sample %}{{ sample.taxon.id }}{% endif %}" 
+                       value="{% if request and request.taxon %}{{ request.taxon }}{% elif sample %}{{ sample.taxon.id }}{% endif %}" 
                        list="taxonOptions"
                        autofocus
                        hx-get="{{ "/taxonomy/quickfind" | app_url }}"
