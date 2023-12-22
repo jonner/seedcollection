@@ -1,0 +1,22 @@
+    {% if options %}
+    <form hx-post="{{ ("/collection/" ~ collection.id ~ "/add") | app_url }}">
+        {% for option in options %}
+        <div class="form-check">
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="sample"
+                   value="{{option.id}}"
+                   id="sample-{{option.id}}">
+            <label class="form-check-label" for="sample-{{option.id}}">
+                {{ option.id }} - {{ option.taxon.complete_name }}
+            </label>
+        </div>
+        {% endfor %}
+        <div class="row mb-3">
+            <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+    </form>
+    {% else %}
+    <p class="error">No samples available to add</p>
+    <p><a href="{{ "/sample/new" | app_url }}>Add a new sample</a></p>
+    {% endif %}

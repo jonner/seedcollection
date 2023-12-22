@@ -2,18 +2,6 @@
 {% block title %}Add Samples{% endblock %}
 {% block content %}
 <h2>{{ self.title() }}</h2>
-<p>Adding samples to Collection {{ collection.id }} - {{ collection.name }}</p>
-    {% if options %}
-    <form hx-post="{{ ("/collection/" ~ collection.id ~ "/add") | api_url }}" hx-swap="none">
-        <select name="sample">
-            {% for option in options %}
-            <option value="{{ option.id }}">{{ option.id }} - {{ option.taxon.complete_name }}</option>
-            {% endfor %}
-        </select>
-        <input type="submit" value="add"></dd>
-    </form>
-    {% else %}
-    <p class="error">No samples available to add</p>
-    <p><a href="{{ "/sample/new" | app_url }}>Add a new sample</a></p>
-    {% endif %}
+<p>Adding samples to Collection {{ collection.id }}: <em>{{ collection.name }}</em></p>
+{% include "collection_$id_add.html.partial" %}
 {% endblock %}
