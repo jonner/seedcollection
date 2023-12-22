@@ -7,7 +7,6 @@ use axum::{Form, Router};
 use axum_template::RenderHtml;
 use libseed::collection::Collection;
 use libseed::sample::{self, Filter, Sample};
-use log::debug;
 use minijinja::context;
 
 use crate::CustomKey;

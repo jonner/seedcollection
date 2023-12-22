@@ -6,8 +6,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::taxonomy::{
-    self, any_filter, filter_by, CompoundFilterCondition, FilterOperation, FilterQueryBuilder,
-    Taxon,
+    self, any_filter, CompoundFilterCondition, FilterOperation, FilterQueryBuilder, Taxon,
 };
 use minijinja::context;
 use serde::Deserialize;
