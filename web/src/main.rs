@@ -11,6 +11,7 @@ use axum_template::engine::Engine;
 use clap::Parser;
 use log::debug;
 use minijinja::Environment;
+use serde::Serialize;
 use state::SharedState;
 use tower_http::services::ServeDir;
 
@@ -22,6 +23,19 @@ mod state;
 
 const API_PREFIX: &'static str = "/api/v1/";
 const APP_PREFIX: &str = "/app/";
+
+#[derive(Serialize)]
+pub enum MessageType {
+    Success,
+    Warning,
+    Error,
+}
+
+#[derive(Serialize)]
+pub struct Message {
+    r#type: MessageType,
+    msg: String,
+}
 
 pub fn logger() -> env_logger::Builder {
     let env = env_logger::Env::new()

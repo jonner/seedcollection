@@ -14,15 +14,15 @@
 <option value="12" {% if selected == 12 %}selected{% endif %}>December</option>
 {%- endmacro %}
 
-{% macro sample_form(locations, sample=none, request=none, error=none) -%}
+{% macro sample_form(locations, sample=none, request=none, message=none) -%}
 {% if sample %}
 <form hx-put="{{ ("/sample/" ~ sample.id) | app_url }}">
 {% else %}
 <form hx-post="{{ "/sample/new" | app_url }}">
 {% endif %}
-    {% if error %}
-    <div class="mb-3 alert alert-danger">
-        Failed to save sample: {{ error }}
+    {% if message %}
+    <div class="mb-3 alert alert-{% if message.type == "Error" %}danger{% elif message.type == "Warning" %}warning{% elif message.type== "Success" %}success{% endif %}">
+        {{ message.msg }}
     </div>
     {% endif %}
     <div class="row g-6">

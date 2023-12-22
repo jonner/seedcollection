@@ -14,9 +14,9 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use sqlx::{QueryBuilder, Sqlite};
+use sqlx::{sqlite::SqliteQueryResult, QueryBuilder, Sqlite};
 
-use crate::{error, state::SharedState, CustomKey};
+use crate::{app_url, error, state::SharedState, CustomKey, Message, MessageType};
 
 pub fn router() -> Router<SharedState> {
     Router::new()
@@ -96,7 +96,10 @@ struct SampleParams {
     notes: Option<String>,
 }
 
-async fn do_insert(params: &SampleParams, state: &SharedState) -> Result<(), error::Error> {
+async fn do_insert(
+    params: &SampleParams,
+    state: &SharedState,
+) -> Result<SqliteQueryResult, error::Error> {
     if params.taxon.is_none() {
         return Err(anyhow!("No taxon specified").into());
     }
@@ -112,9 +115,7 @@ async fn do_insert(params: &SampleParams, state: &SharedState) -> Result<(), err
         .bind(params.quantity)
         .bind(&params.notes)
         .execute(&state.dbpool)
-        .await
-        .map_err(anyhow::Error::from)?;
-    Ok(())
+        .await.map_err(|e| e.into())
 }
 
 async fn insert_sample(
@@ -128,12 +129,38 @@ async fn insert_sample(
     .fetch_all(&state.dbpool)
     .await?;
 
-    let res = do_insert(&params, &state).await;
-    Ok(RenderHtml(
-        key + ".partial",
-        state.tmpl,
-        context!(locations => locations, error => res.err().map(|error::Error(e)| e.to_string()), request => params),
-    ))
+    match do_insert(&params, &state).await {
+        Err(e) => Ok(RenderHtml(
+            key + ".partial",
+            state.tmpl,
+            context!(locations => locations,
+                     message => Message {
+                         r#type: MessageType::Error,
+                         msg: format!("Failed to save sample: {}", e.0.to_string())
+                     },
+                     request => params),
+        )),
+        Ok(result) => {
+            let id = result.last_insert_rowid();
+            let sample: Sample = sample::build_query(Some(Filter::Sample(id)))
+                .build_query_as()
+                .fetch_one(&state.dbpool)
+                .await?;
+
+            let sampleurl = app_url(format!("/sample/{}", sample.id));
+            Ok(RenderHtml(
+                key + ".partial",
+                state.tmpl,
+                context!(locations => locations,
+                message => Message {
+                    r#type: MessageType::Success,
+                    msg: format!("Added new sample <a href=\"{}\">{}: {}</a> to the database",
+                                 sampleurl,
+                                 sample.id, sample.taxon.complete_name)
+                }),
+            ))
+        }
+    }
 }
 
 async fn update_sample() -> () {
