@@ -6,7 +6,8 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::taxonomy::{
-    self, any_filter, CompoundFilterCondition, FilterOperation, FilterQueryBuilder, Taxon,
+    self, any_filter, CompoundFilterCondition, FilterField, FilterOperation, FilterQueryBuilder,
+    Rank, Taxon,
 };
 use minijinja::context;
 use serde::Deserialize;
@@ -25,11 +26,21 @@ async fn root() -> impl IntoResponse {
     "Taxonomy"
 }
 
+#[derive(Deserialize)]
+struct ListParams {
+    rank: Option<Rank>,
+}
+
 async fn list_taxa(
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
+    Query(params): Query<ListParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let taxa: Vec<Taxon> = taxonomy::build_query(None, None)
+    let rank = match params.rank {
+        Some(r) => r,
+        None => Rank::Species,
+    };
+    let taxa: Vec<Taxon> = taxonomy::build_query(Some(Box::new(FilterField::Rank(rank))), None)
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;

@@ -13,8 +13,12 @@
                 <li>{{ name }}</li>
                 {% endfor %}
             </ul>
+            {% else %}
+            None
             {% endif %}
         </dd>
+        <dt>Rank</dt>
+        <dd>{{ taxon.rank }}</dd>
         <dt>ID</dt>
         <dd>{{ taxon.id }}</dd>
         <dt>Minnesota Status</dt>
