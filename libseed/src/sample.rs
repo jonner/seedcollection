@@ -51,6 +51,7 @@ pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
         },
         None => (),
     }
+    builder.push(" ORDER BY phylo_sort_seq");
     builder
 }
 

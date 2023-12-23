@@ -264,7 +264,7 @@ pub fn build_query(
         filter.add_to_query(&mut builder);
     }
 
-    builder.push(" GROUP BY T.tsn");
+    builder.push(" GROUP BY T.tsn ORDER BY phylo_sort_seq");
     if let Some(n) = limit {
         builder.push(" LIMIT ");
         builder.push_bind(n);
