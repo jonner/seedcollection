@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, Query, Request, State},
     response::IntoResponse,
     routing::get,
     Router,
@@ -7,10 +7,12 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::taxonomy::{
     self, any_filter, CompoundFilterCondition, FilterField, FilterOperation, FilterQueryBuilder,
-    Rank, Taxon,
+    LimitSpec, Rank, Taxon,
 };
+use log::debug;
 use minijinja::context;
 use serde::Deserialize;
+use sqlx::Row;
 
 use crate::{error, state::SharedState, CustomKey};
 
@@ -26,25 +28,46 @@ async fn root() -> impl IntoResponse {
     "Taxonomy"
 }
 
+const PAGE_SIZE: i32 = 100;
 #[derive(Deserialize)]
 struct ListParams {
     rank: Option<Rank>,
+    page: Option<i32>,
 }
 
 async fn list_taxa(
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
     Query(params): Query<ListParams>,
+    req: Request,
 ) -> Result<impl IntoResponse, error::Error> {
     let rank = match params.rank {
         Some(r) => r,
         None => Rank::Species,
     };
-    let taxa: Vec<Taxon> = taxonomy::build_query(Some(Box::new(FilterField::Rank(rank))), None)
-        .build_query_as()
-        .fetch_all(&state.dbpool)
+    let pg = match params.page {
+        Some(n) => n,
+        None => 1,
+    };
+    let row = taxonomy::count_query(Some(Box::new(FilterField::Rank(rank.clone()))))
+        .build()
+        .fetch_one(&state.dbpool)
         .await?;
-    Ok(RenderHtml(key, state.tmpl, context!(taxa => taxa)))
+    let count = row.try_get::<i32, _>("count")?;
+    let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
+    let taxa: Vec<Taxon> = taxonomy::build_query(
+        Some(Box::new(FilterField::Rank(rank))),
+        Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
+    )
+    .build_query_as()
+    .fetch_all(&state.dbpool)
+    .await?;
+    debug!("req={:?}", req);
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(taxa => taxa, page => pg, total_pages => total_pages, request_uri => req.uri().to_string()),
+    ))
 }
 
 async fn show_taxon(
@@ -80,7 +103,7 @@ async fn quickfind(
                 subfilters.push(Box::new(any_filter(part)));
             }
             let filter = CompoundFilterCondition::new(FilterOperation::And, subfilters);
-            taxonomy::build_query(Some(Box::new(filter)), Some(200))
+            taxonomy::build_query(Some(Box::new(filter)), Some(LimitSpec(200, None)))
                 .build_query_as()
                 .fetch_all(&state.dbpool)
                 .await?

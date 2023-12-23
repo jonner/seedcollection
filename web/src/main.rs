@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use axum::{
     async_trait,
     extract::{rejection::MatchedPathRejection, FromRequestParts, MatchedPath},
-    http::request::Parts,
+    http::{request::Parts, Uri},
     response::{IntoResponse, Redirect},
     routing::get,
     RequestPartsExt, Router,
@@ -10,7 +12,7 @@ use axum::{
 use axum_template::engine::Engine;
 use clap::Parser;
 use log::debug;
-use minijinja::Environment;
+use minijinja::{Environment, ErrorKind};
 use serde::Serialize;
 use state::SharedState;
 use tower_http::services::ServeDir;
@@ -93,6 +95,29 @@ pub fn app_url(value: String) -> String {
     [APP_PREFIX, &value.trim_start_matches('/')].join("")
 }
 
+pub fn append_query_param(
+    uristr: String,
+    key: String,
+    value: String,
+) -> Result<String, minijinja::Error> {
+    let uri = uristr.parse::<Uri>().map_err(|e| {
+        minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to parse uri string")
+            .with_source(e)
+    })?;
+    let mut query: HashMap<_, _> = match uri.query() {
+        Some(q) => q.split("&").map(|s| s.split_once("=").unwrap()).collect(),
+        None => HashMap::new(),
+    };
+    query.insert(key.as_str(), value.as_str());
+    let querystring = query
+        .drain()
+        .map(|(k, v)| format!("{k}={v}"))
+        .collect::<Vec<_>>()
+        .join("&");
+
+    Ok(format!("?{querystring}"))
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     logger().init();
@@ -103,6 +128,7 @@ async fn main() -> Result<()> {
     jinja.set_loader(minijinja::path_loader("web/src/html/templates"));
     jinja.add_filter("app_url", app_url);
     jinja.add_filter("api_url", api_url);
+    jinja.add_filter("append_query_param", append_query_param);
 
     let shared_state = SharedState::new(args.database, Engine::from(jinja)).await?;
 
