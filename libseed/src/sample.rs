@@ -19,6 +19,7 @@ pub enum Filter {
     NoCollection,
     Sample(i64),
     Location(i64),
+    Taxon(i64),
 }
 
 pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
@@ -46,6 +47,10 @@ pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
             }
             Filter::Location(id) => {
                 builder.push(" WHERE L.locid=");
+                builder.push_bind(id);
+            }
+            Filter::Taxon(id) => {
+                builder.push(" WHERE S.tsn=");
                 builder.push_bind(id);
             }
         },

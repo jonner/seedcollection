@@ -69,5 +69,15 @@
                 </ul></li>
             {% endfor %}
         </dd>
+        <dt>Samples</dt>
+        <dd>
+            {% if samples %}
+            <ul>
+            {% for sample in samples %}
+            <li><a href={{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }} - {{ sample.location.name }}</a></li>
+            {% endfor %}
+            </ul>
+            {% endif %}
+        </dd>
     </dl>
 {% endblock %}

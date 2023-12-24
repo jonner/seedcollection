@@ -5,9 +5,12 @@ use axum::{
     Router,
 };
 use axum_template::RenderHtml;
-use libseed::taxonomy::{
-    self, any_filter, CompoundFilterCondition, FilterField, FilterOperation, FilterQueryBuilder,
-    LimitSpec, Rank, Taxon,
+use libseed::{
+    sample::{self, Filter, Sample},
+    taxonomy::{
+        self, any_filter, CompoundFilterCondition, FilterField, FilterOperation,
+        FilterQueryBuilder, LimitSpec, Rank, Taxon,
+    },
 };
 use log::debug;
 use minijinja::context;
@@ -77,10 +80,14 @@ async fn show_taxon(
 ) -> Result<impl IntoResponse, error::Error> {
     let hierarchy = taxonomy::fetch_taxon_hierarchy(id, &state.dbpool).await?;
     let children = taxonomy::fetch_children(id, &state.dbpool).await?;
+    let samples: Vec<Sample> = sample::build_query(Some(Filter::Taxon(id)))
+        .build_query_as()
+        .fetch_all(&state.dbpool)
+        .await?;
     Ok(RenderHtml(
         key,
         state.tmpl,
-        context!(taxon => hierarchy[0], parents => hierarchy, children => children),
+        context!(taxon => hierarchy[0], parents => hierarchy, children => children, samples => samples),
     ))
 }
 
