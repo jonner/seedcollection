@@ -62,6 +62,7 @@ pub struct Taxon {
     pub vernaculars: Vec<String>,
     pub native_status: Option<NativeStatus>,
     pub parentid: Option<i64>,
+    pub seq: Option<i64>,
 }
 
 impl FromRow<'_, SqliteRow> for Taxon {
@@ -106,6 +107,7 @@ impl FromRow<'_, SqliteRow> for Taxon {
             name3: row.try_get("unit_name3")?,
             native_status: status,
             parentid: row.try_get("parentid")?,
+            seq: row.try_get("seq").unwrap_or(None),
         })
     }
 }
@@ -250,7 +252,8 @@ pub fn build_query(
     limit: Option<LimitSpec>,
 ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
-        r#"SELECT T.tsn, T.parent_tsn as parentid, T.unit_name1, T.unit_name2, T.unit_name3, T.complete_name, T.rank_id, M.native_status,
+        r#"SELECT T.tsn, T.parent_tsn as parentid, T.unit_name1, T.unit_name2, T.unit_name3,
+        T.complete_name, T.rank_id, T.phylo_sort_seq as seq, M.native_status,
             GROUP_CONCAT(V.vernacular_name, "@") as cnames
             FROM taxonomic_units T
             LEFT JOIN (SELECT * FROM vernaculars WHERE

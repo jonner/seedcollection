@@ -24,7 +24,7 @@ pub enum Filter {
 pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
-        T.unit_name1, T.unit_name2, T.unit_name3,
+        T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
                     quantity, month, year, notes, CS.collectionid
                     FROM seedsamples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
