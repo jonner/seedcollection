@@ -137,8 +137,64 @@ async fn show_collection(
     Ok(RenderHtml(key, state.tmpl, context!(collection => c)))
 }
 
-async fn modify_collection() -> impl IntoResponse {
-    "Modify collection"
+async fn do_update(
+    id: i64,
+    params: &CollectionParams,
+    state: &SharedState,
+) -> Result<SqliteQueryResult, error::Error> {
+    if params.name.is_empty() {
+        return Err(anyhow!("No name specified").into());
+    }
+    sqlx::query("UPDATE seedcollections SET name=?, description=? WHERE id=?")
+        .bind(params.name.clone())
+        .bind(params.description.clone())
+        .bind(id)
+        .execute(&state.dbpool)
+        .await
+        .map_err(|e| e.into())
+}
+
+async fn modify_collection(
+    CustomKey(key): CustomKey,
+    Path(id): Path<i64>,
+    State(state): State<SharedState>,
+    Form(params): Form<CollectionParams>,
+) -> Result<impl IntoResponse, error::Error> {
+    match do_update(id, &params, &state).await {
+        Err(e) => {
+            let c: Collection =
+                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
+                    .bind(id)
+                    .fetch_one(&state.dbpool)
+                    .await?;
+            Ok(RenderHtml(
+                key + ".partial",
+                state.tmpl,
+                context!(collection => c,
+                 message => Message {
+                     r#type: MessageType::Error,
+                     msg: e.0.to_string(),
+                 }
+                ),
+            ))
+        }
+        Ok(_) => {
+            let c: Collection =
+                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
+                    .bind(id)
+                    .fetch_one(&state.dbpool)
+                    .await?;
+            Ok(RenderHtml(
+                key + ".partial",
+                state.tmpl,
+                context!(collection => c,
+                message => Message {
+                    r#type: MessageType::Success,
+                    msg: "Successfully updated collection".to_string(),
+                }),
+            ))
+        }
+    }
 }
 
 async fn delete_collection(

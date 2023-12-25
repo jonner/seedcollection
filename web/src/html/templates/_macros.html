@@ -196,7 +196,7 @@ hx-post="{{ "/collection/new" | app_url }}"
     </div>
     <div class="row px-3 mb-3">
         <button class="btn btn-primary"
-                type="submit">Add</button>
+                type="submit">{% if collection %}Update{% else %}Add{% endif %}</button>
     </div>
     {% if collection %}
     <div class="row px-3 mb-3">
