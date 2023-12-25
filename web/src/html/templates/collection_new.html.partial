@@ -1,0 +1,2 @@
+{% from "_macros.html" import collection_form %}
+{{ collection_form("new-collection-form", none, message, request) }}

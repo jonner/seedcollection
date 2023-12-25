@@ -164,3 +164,39 @@
 </form>
 {%- endmacro %}
 
+
+{% macro collection_form(id, collection=none, message=none, request=none) -%}
+<form 
+{% if collection %}
+hx-put="{{ ("/collection/" ~ collection.id) | app_url }}"
+{% else %}
+hx-post="{{ "/collection/new" | app_url }}"
+{% endif %}
+ hx-swap="outerHTML" id="{{ id }}">
+    {% if message %}
+    <div class="mb-3 alert alert-{% if message.type == "Error" %}danger{% elif message.type == "Warning" %}warning{% elif message.type== "Success" %}success{% endif %}">
+        {{ message.msg }}
+    </div>
+    {% endif %}
+    <div class="row px-3 mb-3">
+        <label class="form-label" for="CollectionNameInput">Name</label>
+        <input id="CollectionNameInput"
+               form="{{ id }}"
+               class="form-control"
+               type="text"
+               value="{{ request.name or collection.name or "" }}"
+               name="name">
+    </div>
+    <div class="row px-3 mb-3">
+        <label class="form-label" for="CollectionDescInput">Description</label>
+        <textarea id="CollectionDescInput"
+                  form="{{ id }}"
+                  class="form-control"
+                  name="description">{{ request.description or collection.description or ""}}</textarea>
+    </div>
+    <div class="row px-3 mb-3">
+        <button class="btn btn-primary"
+                type="submit">Add</button>
+    </div>
+</form>
+{%- endmacro %}

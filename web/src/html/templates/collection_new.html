@@ -1,0 +1,7 @@
+{% from "_macros.html" import collection_form %}
+{% extends "root.html" %}
+{% block title %}New Collection{% endblock %}
+{% block content %}
+<h2>{{ self.title() }}</h2>
+{{ collection_form("new-collection-form") }}
+{% endblock %}
