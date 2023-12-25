@@ -1,0 +1,7 @@
+{% from "_macros.html" import collection_form %}
+{% if deleted %}
+<div class="alert alert-success">Deleted collection {{ id }}</div>
+{% else %}
+{{ collection_form("collection-form", collection, message, request) }}
+{% endif %}
+

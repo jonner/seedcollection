@@ -11,6 +11,7 @@ use libseed::{
     empty_string_as_none,
     sample::{self, Filter, Sample},
 };
+use log::debug;
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
@@ -140,8 +141,39 @@ async fn modify_collection() -> impl IntoResponse {
     "Modify collection"
 }
 
-async fn delete_collection() -> impl IntoResponse {
-    "Delete collection"
+async fn delete_collection(
+    CustomKey(key): CustomKey,
+    Path(id): Path<i64>,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
+    match sqlx::query!("DELETE FROM seedcollections WHERE id=?", id)
+        .execute(&state.dbpool)
+        .await
+    {
+        Err(e) => {
+            let c: Collection =
+                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
+                    .bind(id)
+                    .fetch_one(&state.dbpool)
+                    .await?;
+            Ok(RenderHtml(
+                key + ".partial",
+                state.tmpl,
+                context!(
+                collection => c,
+                message => Message {
+                    r#type: MessageType::Error,
+                    msg: format!("Failed to delete collection: {}", e.to_string())
+                },
+                ),
+            ))
+        }
+        Ok(_) => Ok(RenderHtml(
+            key + ".partial",
+            state.tmpl,
+            context!(deleted => true, id => id),
+        )),
+    }
 }
 
 async fn show_add_sample(

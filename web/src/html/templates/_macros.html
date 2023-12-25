@@ -198,5 +198,15 @@ hx-post="{{ "/collection/new" | app_url }}"
         <button class="btn btn-primary"
                 type="submit">Add</button>
     </div>
+    {% if collection %}
+    <div class="row px-3 mb-3">
+        <button type="submit"
+                class="btn btn-danger"
+                hx-delete="{{ ("/collection/" ~ collection.id) | app_url }}"
+                hx-confirm="Are you sure you want to delete collection {{ collection.id }}?"
+                hx-target="closest form"
+                >Delete</button>
+    </div>
+    {% endif %}
 </form>
 {%- endmacro %}
