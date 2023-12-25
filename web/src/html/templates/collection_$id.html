@@ -22,7 +22,7 @@
         <td>{{ s.taxon.complete_name }}</td>
         <td>{{ s.location.name }}</td>
         <td><button type="submit" class="btn btn-outline-danger"
-                hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ s.id) | api_url }}"
+                hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ s.id) | app_url }}"
                 hx-confirm="Are you sure you want to remove sample {{ s.id }}?"
                 hx-target="closest tr"
                 hx-swap="outerHTML">Remove</button></td>

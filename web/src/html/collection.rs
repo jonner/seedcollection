@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
-    routing::get,
+    routing::{delete, get},
     Form, Router,
 };
 use axum_template::RenderHtml;
@@ -24,6 +24,7 @@ pub fn router() -> Router<SharedState> {
         .route("/list", get(list_collections))
         .route("/new", get(new_collection).post(insert_collection))
         .route("/:id/add", get(show_add_sample).post(add_sample))
+        .route("/:id/sample/:sampleid", delete(remove_sample))
         .route(
             "/:id",
             get(show_collection)
@@ -290,4 +291,18 @@ async fn add_sample(
         state.tmpl,
         context!(collection => c, options => options, partial => true),
     ))
+}
+
+async fn remove_sample(
+    State(state): State<SharedState>,
+    Path((id, sampleid)): Path<(i64, i64)>,
+) -> Result<impl IntoResponse, error::Error> {
+    sqlx::query!(
+        "DELETE FROM seedcollectionsamples WHERE collectionid=? AND sampleid=?",
+        id,
+        sampleid
+    )
+    .execute(&state.dbpool)
+    .await?;
+    Ok(())
 }
