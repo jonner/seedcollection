@@ -3,12 +3,26 @@
 {% block content %}
     <h2>Samples</h2>
     <p><a href="{{ "/sample/new" | app_url }}">Add a new sample</a></p>
-    <ul>
-        {% for s in samples %}
-        <li><a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a> - 
-            <a href="{{ ("/taxonomy/" ~ s.taxon.id) | app_url }}">{{ s.taxon.complete_name }}</a> -
-            <a href="{{ ("/location/" ~ s.location.id) | app_url }}">{{ s.location.name }}</a>
-        </li>
-        {% endfor %}
-    </ul>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Taxon</th>
+                <th>Location</th>
+                <th>Year</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in samples %}
+            <tr>
+                <td><a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a></td>
+                <td><a href="{{ ("/taxonomy/" ~ s.taxon.id) | app_url }}">{{ s.taxon.complete_name }}</a></td>
+                <td><a href="{{ ("/location/" ~ s.location.id) | app_url }}">{{ s.location.name }}</a></td>
+                <td>{{ s.year or "" }}</td>
+                <td>{{ s.quantity or "" }}</td>
+            <tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endblock %}
