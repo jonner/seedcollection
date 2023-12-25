@@ -27,8 +27,11 @@ pub fn router() -> Router<SharedState> {
         .route("/quickfind", get(quickfind))
 }
 
-async fn root() -> impl IntoResponse {
-    "Taxonomy"
+async fn root(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
+    Ok(RenderHtml(key, state.tmpl, ()))
 }
 
 const PAGE_SIZE: i32 = 100;

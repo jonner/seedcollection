@@ -1,0 +1,10 @@
+{% extends "root.html" %}
+{% block title %}Taxonomy{% endblock %}
+{% block content %}
+    <h2>Taxonomy</h2>
+    <p>This tool uses the <a href="https://www.itis.gov/index.html">ITIS taxonomy</a>
+        to categorize plant species.</p>
+    <ul>
+        <li><a href="{{ "/taxonomy/list" | app_url }}">List all species</a></li>
+    <ul>
+{% endblock %}

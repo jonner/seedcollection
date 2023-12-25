@@ -20,9 +20,17 @@ use crate::{app_url, error, state::SharedState, CustomKey, Message, MessageType}
 
 pub fn router() -> Router<SharedState> {
     Router::new()
+        .route("/", get(sample_index))
         .route("/list", get(list_samples))
         .route("/:id", get(show_sample).put(update_sample))
         .route("/new", get(new_sample).post(insert_sample))
+}
+
+async fn sample_index(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
+    Ok(RenderHtml(key, state.tmpl, ()))
 }
 
 async fn list_samples(

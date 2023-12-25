@@ -26,8 +26,11 @@ pub fn router() -> Router<SharedState> {
         )
 }
 
-async fn root() -> impl IntoResponse {
-    "Collections"
+async fn root(
+    CustomKey(key): CustomKey,
+    State(state): State<SharedState>,
+) -> Result<impl IntoResponse, error::Error> {
+    Ok(RenderHtml(key, state.tmpl, ()))
 }
 
 async fn list_collections(
