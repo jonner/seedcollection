@@ -21,3 +21,10 @@ strum = "0.25.0"
 axum-template = { version = "2.0.0", features = ["minijinja"] }
 minijinja = { version = "1.0.10", features = ["loader"] }
 tower-http = { version = "0.5.0", features = ["fs"] }
+axum-login = "0.11.0"
+argon2 = "0.5.2"
+password-hash = { version = "0.5.0", features = ["std", "getrandom"] }
+thiserror = "1.0.52"
+tower = "0.4.13"
+time = "0.3.31"
+tower-sessions = { version = "0.8.2", features = ["sqlite-store"] }

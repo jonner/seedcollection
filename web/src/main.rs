@@ -1,13 +1,16 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use axum::{
     async_trait,
+    error_handling::HandleErrorLayer,
     extract::{rejection::MatchedPathRejection, FromRequestParts, MatchedPath},
-    http::{request::Parts, Uri},
+    http::{request::Parts, StatusCode, Uri},
     response::{IntoResponse, Redirect},
     routing::get,
-    RequestPartsExt, Router,
+    BoxError, RequestPartsExt, Router,
+};
+use axum_login::{
+    tower_sessions::{Expiry, SessionManagerLayer, SqliteStore},
+    AuthManagerLayerBuilder,
 };
 use axum_template::engine::Engine;
 use clap::Parser;
@@ -15,9 +18,13 @@ use log::debug;
 use minijinja::{Environment, ErrorKind};
 use serde::Serialize;
 use state::SharedState;
+use std::collections::HashMap;
+use time::Duration;
+use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
 
 mod api;
+mod auth;
 mod db;
 mod error;
 mod html;
@@ -132,13 +139,27 @@ async fn main() -> Result<()> {
 
     let shared_state = SharedState::new(args.database, Engine::from(jinja)).await?;
 
+    let session_store = SqliteStore::new(shared_state.dbpool.clone());
+    session_store.migrate().await?;
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnInactivity(Duration::days(1)));
+
+    let auth_backend = auth::SqliteAuthBackend::new(shared_state.dbpool.clone());
+    let auth_service = ServiceBuilder::new()
+        .layer(HandleErrorLayer::new(|_: BoxError| async {
+            StatusCode::BAD_REQUEST
+        }))
+        .layer(AuthManagerLayerBuilder::new(auth_backend, session_layer).build());
+
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
         .nest_service("/static", ServeDir::new("web/src/html/static"))
         .nest(APP_PREFIX, html::router())
         .nest(API_PREFIX, api::router())
-        .with_state(shared_state);
+        .with_state(shared_state)
+        .layer(auth_service);
 
     let addr = format!("{}:{}", args.listen, args.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
