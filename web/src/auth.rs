@@ -100,3 +100,5 @@ impl SqliteAuthBackend {
         Self { db }
     }
 }
+
+pub type AuthSession = axum_login::AuthSession<SqliteAuthBackend>;

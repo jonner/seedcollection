@@ -5,12 +5,11 @@ use axum::{
     routing::get,
     Form, Router,
 };
-use axum_login::AuthSession;
 use axum_template::RenderHtml;
 use minijinja::context;
 
 use crate::{
-    auth::{Credentials, SqliteAuthBackend},
+    auth::{AuthSession, Credentials},
     error,
     state::SharedState,
     CustomKey,
@@ -24,10 +23,10 @@ pub fn router() -> Router<SharedState> {
 }
 
 async fn register_user(
-    auth_session: AuthSession<SqliteAuthBackend>,
+    auth: AuthSession,
     Form(creds): Form<Credentials>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(auth_session
+    Ok(auth
         .backend
         .register(creds.username, creds.password)
         .await?)
@@ -42,25 +41,21 @@ async fn show_register(
 
 async fn show_login(
     CustomKey(key): CustomKey,
-    auth_session: AuthSession<SqliteAuthBackend>,
+    auth: AuthSession,
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(
-        key,
-        state.tmpl,
-        context!(user => auth_session.user),
-    ))
+    Ok(RenderHtml(key, state.tmpl, context!(user => auth.user)))
 }
 
 async fn do_login(
     CustomKey(key): CustomKey,
-    mut auth_session: AuthSession<SqliteAuthBackend>,
+    mut auth: AuthSession,
     State(state): State<SharedState>,
     Form(creds): Form<Credentials>,
 ) -> Result<impl IntoResponse, error::Error> {
-    match auth_session.authenticate(creds.clone()).await? {
+    match auth.authenticate(creds.clone()).await? {
         Some(user) => {
-            auth_session.login(&user).await?;
+            auth.login(&user).await?;
             Ok(format!("Logged in as {}", user.username).into_response())
         }
         None => Ok(
@@ -69,8 +64,8 @@ async fn do_login(
     }
 }
 
-async fn logout(mut auth_session: AuthSession<SqliteAuthBackend>) -> impl IntoResponse {
-    match auth_session.logout().await {
+async fn logout(mut auth: AuthSession) -> impl IntoResponse {
+    match auth.logout().await {
         Ok(_) => Redirect::to("login").into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }

@@ -32,7 +32,15 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ "/taxonomy/" | app_url }}">Taxonomy</a>
                         </li>
+                        <li class="nav-item">
+                        {% if not user %}
+                            <a class="nav-link" href="{{ "/auth/login" | app_url }}">Log in</a>
+                        {% endif %}
+                        </li>
                     </ul>
+                    {% if user %}
+                    <span class="navbar-text">Logged in as {{ user.username }}</span>
+                    {% endif %}
                 </div>
             </div>
         </nav>
