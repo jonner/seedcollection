@@ -11,7 +11,6 @@ use libseed::{
     empty_string_as_none,
     sample::{self, Filter, Sample},
 };
-use log::debug;
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
