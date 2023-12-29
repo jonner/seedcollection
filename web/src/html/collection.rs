@@ -6,7 +6,6 @@ use axum::{
     routing::{delete, get, put},
     Form, Router,
 };
-use axum_login::login_required;
 use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
@@ -18,11 +17,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
 use crate::{
-    app_url,
-    auth::{AuthSession, SqliteAuthBackend},
-    error,
-    state::SharedState,
-    CustomKey, Message, MessageType,
+    app_url, auth::AuthSession, error, state::SharedState, CustomKey, Message, MessageType,
 };
 
 pub fn router() -> Router<SharedState> {
@@ -30,11 +25,6 @@ pub fn router() -> Router<SharedState> {
         .route("/new", get(new_collection).post(insert_collection))
         .route("/:id", put(modify_collection).delete(delete_collection))
         .route("/:id/add", get(show_add_sample).post(add_sample))
-        /* Anything above here is only available to logged-in users */
-        .route_layer(login_required!(
-            SqliteAuthBackend,
-            login_url = app_url("/auth/login")
-        ))
         .route("/", get(root))
         .route("/list", get(list_collections))
         .route("/:id/sample/:sampleid", delete(remove_sample))

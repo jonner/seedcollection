@@ -1,5 +1,6 @@
-use crate::{error, state::SharedState, CustomKey};
+use crate::{app_url, auth::SqliteAuthBackend, error, state::SharedState, CustomKey};
 use axum::{extract::State, response::IntoResponse, routing::get, Router};
+use axum_login::login_required;
 use axum_template::RenderHtml;
 use minijinja::context;
 
@@ -11,12 +12,17 @@ mod taxonomy;
 
 pub fn router() -> Router<SharedState> {
     Router::new()
-        .nest("/auth/", auth::router())
         .nest("/collection/", collection::router())
         .nest("/location/", location::router())
         .nest("/sample/", sample::router())
         .nest("/taxonomy/", taxonomy::router())
+        /* Anything above here is only available to logged-in users */
+        .route_layer(login_required!(
+            SqliteAuthBackend,
+            login_url = app_url("/auth/login")
+        ))
         .route("/", get(root))
+        .nest("/auth/", auth::router())
 }
 
 async fn root(
