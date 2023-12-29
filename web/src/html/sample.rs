@@ -157,17 +157,14 @@ async fn insert_sample(
     .fetch_all(&state.dbpool)
     .await?;
 
-    match do_insert(&params, &state).await {
-        Err(e) => Ok(RenderHtml(
-            key + ".partial",
-            state.tmpl,
-            context!(locations => locations,
-                     message => Message {
-                         r#type: MessageType::Error,
-                         msg: format!("Failed to save sample: {}", e.0.to_string())
-                     },
-                     request => params),
-        )),
+    let (request, message) = match do_insert(&params, &state).await {
+        Err(e) => (
+            Some(&params),
+            Message {
+                r#type: MessageType::Error,
+                msg: format!("Failed to save sample: {}", e.0.to_string()),
+            },
+        ),
         Ok(result) => {
             let id = result.last_insert_rowid();
             let sample: Sample = sample::build_query(Some(Filter::Sample(id)))
@@ -176,19 +173,25 @@ async fn insert_sample(
                 .await?;
 
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
-            Ok(RenderHtml(
-                key + ".partial",
-                state.tmpl,
-                context!(locations => locations,
-                message => Message {
+            (
+                None,
+                Message {
                     r#type: MessageType::Success,
-                    msg: format!("Added new sample <a href=\"{}\">{}: {}</a> to the database",
-                                 sampleurl,
-                                 sample.id, sample.taxon.complete_name)
-                }),
-            ))
+                    msg: format!(
+                        "Added new sample <a href=\"{}\">{}: {}</a> to the database",
+                        sampleurl, sample.id, sample.taxon.complete_name
+                    ),
+                },
+            )
         }
-    }
+    };
+    Ok(RenderHtml(
+        key + ".partial",
+        state.tmpl,
+        context!(locations => locations,
+                     message => message,
+                     request => request),
+    ))
 }
 
 async fn do_update(
@@ -222,41 +225,34 @@ async fn update_sample(
     .fetch_all(&state.dbpool)
     .await?;
 
-    match do_update(id, &params, &state).await {
-        Err(e) => {
-            let sample: Sample = sample::build_query(Some(Filter::Sample(id)))
-                .build_query_as()
-                .fetch_one(&state.dbpool)
-                .await?;
+    let (request, message) = match do_update(id, &params, &state).await {
+        Err(e) => (
+            Some(params),
+            Message {
+                r#type: MessageType::Error,
+                msg: format!("Failed to save sample: {}", e.0.to_string()),
+            },
+        ),
+        Ok(_) => (
+            None,
+            Message {
+                r#type: MessageType::Success,
+                msg: format!("Updated sample {}", id),
+            },
+        ),
+    };
 
-            Ok(RenderHtml(
-                key + ".partial",
-                state.tmpl,
-                context!(locations => locations,
+    let sample: Sample = sample::build_query(Some(Filter::Sample(id)))
+        .build_query_as()
+        .fetch_one(&state.dbpool)
+        .await?;
+
+    Ok(RenderHtml(
+        key + ".partial",
+        state.tmpl,
+        context!(locations => locations,
                      sample => sample,
-                     message => Message {
-                         r#type: MessageType::Error,
-                         msg: format!("Failed to save sample: {}", e.0.to_string())
-                     },
-                     request => params),
-            ))
-        }
-        Ok(_) => {
-            let sample: Sample = sample::build_query(Some(Filter::Sample(id)))
-                .build_query_as()
-                .fetch_one(&state.dbpool)
-                .await?;
-
-            Ok(RenderHtml(
-                key + ".partial",
-                state.tmpl,
-                context!(locations => locations,
-                         sample => sample,
-                         message => Message {
-                    r#type: MessageType::Success,
-                    msg: format!("Updated sample {}", sample.id)
-                }),
-            ))
-        }
-    }
+                     message => message,
+                     request => request),
+    ))
 }
