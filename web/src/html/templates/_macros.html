@@ -132,38 +132,47 @@
 </div>
 {%- endmacro %}
 
-{% macro location_form(id, loc=none, request=none) -%}
+{% macro location_form(id, loc=none, message=none, request=none) -%}
 <div id="delete-error-display"></div>
-<form hx-post="{{ "/location/new" | api_url }}" id="{{ id }}">
+{% if loc %}
+<form hx-put="{{ ("/location/" ~ loc.id) | app_url }}" id="{{ id }}">
+{% else %}
+<form hx-post="{{ "/location/new" | app_url }}" id="{{ id }}">
+{% endif %}
+    {{ show_message(message) }}
     <div class="row px-3 mb-3">
         <label class="form-label" for="LocationNameInput">Name</label>
         <input id="LocationNameInput"
-               form="{{ id }}"
                class="form-control"
                type="text"
-               name="name">
+               name="name"
+               value="{{ request.name or loc.name or "" }}">
     </div>
     <div class="row px-3 mb-3">
         <label class="form-label" for="LocationDescInput">Description</label>
         <textarea id="LocationDescInput"
-                  form="{{ id }}"
                   class="form-control"
-                  name="description"></textarea>
+                  name="description">{{ request.description or loc.description or "" }}</textarea>
         <input id="LocationLatitudeInput"
-               form="{{ id }}"
                type="hidden"
                name="latitude"
-               value="">
+              value="{{ request.latitude or loc.latitude or "" }}">
         <input id="LocationLongitudeInput"
-               form="{{ id }}"
                type="hidden"
                name="longitude"
-               value="">
+               value="{{ request.longitude or loc.longitude or "" }}">
     </div>
     {{ caller() }}
 </form>
 {%- endmacro %}
 
+{% macro show_message(message) -%}
+{% if message %}
+<div class="mb-3 alert alert-{% if message.type == "Error" %}danger{% elif message.type == "Warning" %}warning{% elif message.type== "Success" %}success{% endif %}">
+    {{ message.msg }}
+</div>
+{% endif %}
+{%- endmacro %}
 
 {% macro collection_form(id, collection=none, message=none, request=none) -%}
 <form 
@@ -173,11 +182,7 @@ hx-put="{{ ("/collection/" ~ collection.id) | app_url }}"
 hx-post="{{ "/collection/new" | app_url }}"
 {% endif %}
  hx-swap="outerHTML" id="{{ id }}">
-    {% if message %}
-    <div class="mb-3 alert alert-{% if message.type == "Error" %}danger{% elif message.type == "Warning" %}warning{% elif message.type== "Success" %}success{% endif %}">
-        {{ message.msg }}
-    </div>
-    {% endif %}
+    {{ show_message(message) }}
     <div class="row px-3 mb-3">
         <label class="form-label" for="CollectionNameInput">Name</label>
         <input id="CollectionNameInput"
@@ -209,4 +214,15 @@ hx-post="{{ "/collection/new" | app_url }}"
     </div>
     {% endif %}
 </form>
+{%- endmacro %}
+
+{% macro collection_display(collection) -%}
+    <div class="row px-3 mb-3">
+        <div class="form-label">Name</div>
+        <div class="form-control">{{ collection.name }}</div>
+    </div>
+    <div class="row px-3 mb-3">
+        <div class="form-label">Description</div>
+        <div class="form-control">{{ collection.description }}</div>
+    </div>
 {%- endmacro %}

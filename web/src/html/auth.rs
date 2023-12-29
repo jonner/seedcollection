@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
     routing::get,
@@ -7,6 +7,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use minijinja::context;
+use serde::Deserialize;
 
 use crate::{
     auth::{AuthSession, Credentials},
@@ -39,12 +40,22 @@ async fn show_register(
     Ok(RenderHtml(key, state.tmpl, ()))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct NextUrl {
+    next: Option<String>,
+}
+
 async fn show_login(
     CustomKey(key): CustomKey,
     auth: AuthSession,
     State(state): State<SharedState>,
+    Query(NextUrl { next }): Query<NextUrl>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, context!(user => auth.user)))
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(user => auth.user, next => next),
+    ))
 }
 
 async fn do_login(
@@ -56,7 +67,15 @@ async fn do_login(
     match auth.authenticate(creds.clone()).await? {
         Some(user) => {
             auth.login(&user).await?;
-            Ok(format!("Logged in as {}", user.username).into_response())
+            let msg = format!(
+                r#"<div class="alert alert-success">Logged in as {}</div>"#,
+                user.username
+            );
+            if let Some(next) = creds.next {
+                Ok(([("HX-Redirect", next)], msg).into_response())
+            } else {
+                Ok(msg.into_response())
+            }
         }
         None => Ok(
             RenderHtml(key, state.tmpl, context!(message => "Invalid credentials")).into_response(),

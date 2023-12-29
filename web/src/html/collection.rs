@@ -1,10 +1,12 @@
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
+    http::StatusCode,
     response::IntoResponse,
-    routing::{delete, get},
+    routing::{delete, get, put},
     Form, Router,
 };
+use axum_login::login_required;
 use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
@@ -15,31 +17,40 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{app_url, error, state::SharedState, CustomKey, Message, MessageType};
+use crate::{
+    app_url,
+    auth::{AuthSession, SqliteAuthBackend},
+    error,
+    state::SharedState,
+    CustomKey, Message, MessageType,
+};
 
 pub fn router() -> Router<SharedState> {
     Router::new()
+        .route("/new", get(new_collection).post(insert_collection))
+        .route("/:id", put(modify_collection).delete(delete_collection))
+        .route("/:id/add", get(show_add_sample).post(add_sample))
+        /* Anything above here is only available to logged-in users */
+        .route_layer(login_required!(
+            SqliteAuthBackend,
+            login_url = app_url("/auth/login")
+        ))
         .route("/", get(root))
         .route("/list", get(list_collections))
-        .route("/new", get(new_collection).post(insert_collection))
-        .route("/:id/add", get(show_add_sample).post(add_sample))
         .route("/:id/sample/:sampleid", delete(remove_sample))
-        .route(
-            "/:id",
-            get(show_collection)
-                .put(modify_collection)
-                .delete(delete_collection),
-        )
+        .route("/:id", get(show_collection))
 }
 
 async fn root(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, ()))
+    Ok(RenderHtml(key, state.tmpl, context!(user => auth.user)))
 }
 
 async fn list_collections(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -50,15 +61,17 @@ async fn list_collections(
     Ok(RenderHtml(
         key,
         state.tmpl,
-        context!(collections => collections),
+        context!(user => auth.user,
+                 collections => collections),
     ))
 }
 
 async fn new_collection(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, ()))
+    Ok(RenderHtml(key, state.tmpl, context!(user => auth.user)).into_response())
 }
 
 #[derive(Deserialize, Serialize)]
@@ -84,6 +97,7 @@ async fn do_insert(
 }
 
 async fn insert_collection(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
     Form(params): Form<CollectionParams>,
@@ -97,7 +111,8 @@ async fn insert_collection(
                 msg: format!("Failed to save collection: {}", e.0.to_string())
             },
             request => params),
-        )),
+        )
+        .into_response()),
         Ok(result) => {
             let id = result.last_insert_rowid();
             let collection: Collection =
@@ -106,7 +121,7 @@ async fn insert_collection(
                     .fetch_one(&state.dbpool)
                     .await?;
 
-            let collectionurl = app_url(format!("/collection/{}", collection.id));
+            let collectionurl = app_url(&format!("/collection/{}", collection.id));
             Ok(RenderHtml(
                 key + ".partial",
                 state.tmpl,
@@ -116,12 +131,14 @@ async fn insert_collection(
                                  collectionurl,
                                  collection.id, collection.name)
                 }),
-            ))
+            )
+            .into_response())
         }
     }
 }
 
 async fn show_collection(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     Path(id): Path<i64>,
     State(state): State<SharedState>,
@@ -134,7 +151,12 @@ async fn show_collection(
     let mut builder = sample::build_query(Some(Filter::Collection(id)));
     c.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
 
-    Ok(RenderHtml(key, state.tmpl, context!(collection => c)))
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(user => auth.user,
+                 collection => c),
+    ))
 }
 
 async fn do_update(
@@ -155,6 +177,7 @@ async fn do_update(
 }
 
 async fn modify_collection(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     Path(id): Path<i64>,
     State(state): State<SharedState>,
@@ -176,7 +199,8 @@ async fn modify_collection(
                      msg: e.0.to_string(),
                  }
                 ),
-            ))
+            )
+            .into_response())
         }
         Ok(_) => {
             let c: Collection =
@@ -192,12 +216,14 @@ async fn modify_collection(
                     r#type: MessageType::Success,
                     msg: "Successfully updated collection".to_string(),
                 }),
-            ))
+            )
+            .into_response())
         }
     }
 }
 
 async fn delete_collection(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     Path(id): Path<i64>,
     State(state): State<SharedState>,
@@ -222,17 +248,20 @@ async fn delete_collection(
                     msg: format!("Failed to delete collection: {}", e.to_string())
                 },
                 ),
-            ))
+            )
+            .into_response())
         }
         Ok(_) => Ok(RenderHtml(
             key + ".partial",
             state.tmpl,
             context!(deleted => true, id => id),
-        )),
+        )
+        .into_response()),
     }
 }
 
 async fn show_add_sample(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
     Path(id): Path<i64>,
@@ -250,11 +279,15 @@ async fn show_add_sample(
     Ok(RenderHtml(
         key,
         state.tmpl,
-        context!(collection => c, options => options),
-    ))
+        context!(user => auth.user,
+                 collection => c,
+                 options => options),
+    )
+    .into_response())
 }
 
 async fn add_sample(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
     Path(id): Path<i64>,
@@ -289,13 +322,18 @@ async fn add_sample(
         key + ".partial",
         state.tmpl,
         context!(collection => c, options => options, partial => true),
-    ))
+    )
+    .into_response())
 }
 
 async fn remove_sample(
+    auth: AuthSession,
     State(state): State<SharedState>,
     Path((id, sampleid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
+    if auth.user.is_none() {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    }
     sqlx::query!(
         "DELETE FROM seedcollectionsamples WHERE collectionid=? AND sampleid=?",
         id,
@@ -303,5 +341,5 @@ async fn remove_sample(
     )
     .execute(&state.dbpool)
     .await?;
-    Ok(())
+    Ok(().into_response())
 }

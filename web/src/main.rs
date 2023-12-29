@@ -98,7 +98,7 @@ pub fn api_url(value: String) -> String {
     [API_PREFIX, &value.trim_start_matches('/')].join("")
 }
 
-pub fn app_url(value: String) -> String {
+pub fn app_url(value: &str) -> String {
     [APP_PREFIX, &value.trim_start_matches('/')].join("")
 }
 

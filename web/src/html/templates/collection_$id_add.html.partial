@@ -1,3 +1,4 @@
+{%if user %}
     {% if options %}
     <form hx-post="{{ ("/collection/" ~ collection.id ~ "/add") | app_url }}">
         {% for option in options %}
@@ -19,4 +20,8 @@
     {% else %}
     <p class="error">No samples available to add</p>
     <p><a href="{{ "/sample/new" | app_url }}>Add a new sample</a></p>
+    {% endif %}
+    {% else %}
+    <div class="alert alert-warning">You must be logged in to add a sample to the collection.
+    <a href="{{ "auth/login" | app_url }}">Log in</a></div>
     {% endif %}

@@ -39,7 +39,7 @@
                         </li>
                     </ul>
                     {% if user %}
-                    <span class="navbar-text">Logged in as {{ user.username }}</span>
+                    <span class="navbar-text">Logged in as {{ user.username }} <a href="{{ "/auth/logout" | app_url }}">log out</a></span>
                     {% endif %}
                 </div>
             </div>

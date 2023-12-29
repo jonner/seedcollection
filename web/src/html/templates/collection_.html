@@ -4,7 +4,9 @@
     <h2>Collections</h2>
     <p>A collection represents a group of seed samples intended for a specific purpose.</p>
     <ul>
+        {% if user %}
         <li><a href="{{ "/collection/new" | app_url }}">New collection</a></li>
+        {% endif %}
         <li><a href="{{ "/collection/list" | app_url }}">List all collections</a></li>
     <ul>
 {% endblock %}

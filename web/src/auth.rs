@@ -30,6 +30,7 @@ impl AuthUser for SqliteUser {
 pub struct Credentials {
     pub username: String,
     pub password: String,
+    pub next: Option<String>,
 }
 
 #[derive(thiserror::Error, Debug)]

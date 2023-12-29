@@ -1,9 +1,13 @@
-{% from "_macros.html" import collection_form %}
+{% from "_macros.html" import collection_form, collection_display %}
 {% extends "root.html" %}
 {% block title %}Collection {{ collection.id }}{% endblock %}
 {% block content %}
 <h2>Collection Details</h2>
+{% if user %}
 {{ collection_form("collection-form", collection, messages, request) }}
+{% else %}
+{{ collection_display(collection) }}
+{% endif %}
 <h3>Samples in this collection <a href="{{ ("/collection/" ~ collection.id) | app_url }}/add">+</a></h3>
 {% if collection.samples %}
 <table class="table">
@@ -21,11 +25,14 @@
         <td><a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a></td>
         <td>{{ s.taxon.complete_name }}</td>
         <td>{{ s.location.name }}</td>
-        <td><button type="submit" class="btn btn-outline-danger"
+        <td>
+            {% if user %}
+            <button type="submit" class="btn btn-outline-danger"
                 hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ s.id) | app_url }}"
                 hx-confirm="Are you sure you want to remove sample {{ s.id }}?"
                 hx-target="closest tr"
                 hx-swap="outerHTML">Remove</button></td>
+            {% endif %}
     </tr>
     {% endfor %}
     </tbody>

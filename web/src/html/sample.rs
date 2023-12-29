@@ -160,7 +160,7 @@ async fn insert_sample(
                 .fetch_one(&state.dbpool)
                 .await?;
 
-            let sampleurl = app_url(format!("/sample/{}", sample.id));
+            let sampleurl = app_url(&format!("/sample/{}", sample.id));
             Ok(RenderHtml(
                 key + ".partial",
                 state.tmpl,

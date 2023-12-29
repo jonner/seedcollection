@@ -1,12 +1,6 @@
-{% from "_macros.html" import location_form %}
 {% extends "root.html" %}
 {% block title %}New Location{% endblock %}
 {% block content %}
 <h2>{{ self.title() }}</h2>
-{% call location_form("new-location-form") %}
-<div class="row px-3 mb-3">
-<button class="btn btn-primary"
-    type="submit">Add</button>
-</div>
-{% endcall %}
+{% include "location_new.html.partial" %}
 {% endblock %}
