@@ -6,6 +6,7 @@ use crate::{
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
+    http::HeaderMap,
     response::IntoResponse,
     routing::{get, post, put},
     Form, Router,
@@ -150,48 +151,37 @@ async fn update_location(
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;
-    match do_update(id, &params, &state).await {
+    let mut request: Option<&LocationParams> = None;
+    let message = match do_update(id, &params, &state).await {
         Err(e) => {
-            let loc: Location = sqlx::query_as(
-                "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations WHERE locid=?",
-            )
-            .bind(id)
-            .fetch_one(&state.dbpool)
-            .await?;
-            Ok(RenderHtml(
-                key + ".partial",
-                state.tmpl,
-                context!(location => loc,
-                 message => Message {
-                     r#type: MessageType::Error,
-                     msg: e.0.to_string(),
-                 },
-                 samples => samples
-                ),
-            )
-            .into_response())
+            request = Some(&params);
+            Message {
+                r#type: MessageType::Error,
+                msg: e.0.to_string(),
+            }
         }
-        Ok(_) => {
-            let loc: Location = sqlx::query_as(
-                "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations WHERE locid=?",
-            )
-            .bind(id)
-            .fetch_one(&state.dbpool)
-            .await?;
-            Ok(RenderHtml(
-                key + ".partial",
-                state.tmpl,
-                context!(location => loc,
-                 message => Message {
-                     r#type: MessageType::Success,
-                     msg: "Successfully updated location".to_string(),
-                 },
-                 samples => samples
-                ),
-            )
-            .into_response())
-        }
-    }
+        Ok(_) => Message {
+            r#type: MessageType::Success,
+            msg: "Successfully updated location".to_string(),
+        },
+    };
+    let loc: Location = sqlx::query_as(
+        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations WHERE locid=?",
+        )
+        .bind(id)
+        .fetch_one(&state.dbpool)
+        .await?;
+
+    Ok(RenderHtml(
+        key + ".partial",
+        state.tmpl,
+        context!(location => loc,
+         message => message,
+         request => request,
+         samples => samples
+        ),
+    )
+    .into_response())
 }
 
 async fn do_insert(
@@ -220,31 +210,38 @@ async fn new_location(
     State(state): State<SharedState>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let message;
+    let mut request: Option<&LocationParams> = None;
+    let mut headers = HeaderMap::new();
     match do_insert(&params, &state).await {
-        Err(e) => Ok(RenderHtml(
-            key + ".partial",
-            state.tmpl,
-            context!(message => Message {
+        Err(e) => {
+            message = Some(Message {
                 r#type: MessageType::Error,
                 msg: e.0.to_string(),
-            },
-            request => params
-            ),
-        )
-        .into_response()),
+            });
+            request = Some(&params)
+        }
         Ok(result) => {
             let newid = result.last_insert_rowid();
-            let message = Message {
+            let url = app_url(&format!("/location/{newid}"));
+            message = Some(Message {
                 r#type: MessageType::Success,
-                msg: format!("Successfully added location {newid}"),
-            };
-            Ok((
-                [("HX-Trigger", "reload-locations")],
-                RenderHtml(key + ".partial", state.tmpl, context!(message => message)),
-            )
-                .into_response())
+                msg: format!(r#"Successfully added location <a href="{url}">{newid}</a>"#),
+            });
+            headers.append("HX-Trigger", "reload-locations".parse()?);
         }
-    }
+    };
+    Ok((
+        headers,
+        RenderHtml(
+            key + ".partial",
+            state.tmpl,
+            context!(message => message,
+            request => request,
+            ),
+        ),
+    )
+        .into_response())
 }
 
 async fn delete_location(

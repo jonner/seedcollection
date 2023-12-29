@@ -97,44 +97,41 @@ async fn do_insert(
 }
 
 async fn insert_collection(
-    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    match do_insert(&params, &state).await {
-        Err(e) => Ok(RenderHtml(
-            key + ".partial",
-            state.tmpl,
-            context!( message => Message {
+    let (request, message) = match do_insert(&params, &state).await {
+        Err(e) => (
+            Some(&params),
+            Message {
                 r#type: MessageType::Error,
-                msg: format!("Failed to save collection: {}", e.0.to_string())
+                msg: format!("Failed to save collection: {}", e.0.to_string()),
             },
-            request => params),
-        )
-        .into_response()),
+        ),
         Ok(result) => {
             let id = result.last_insert_rowid();
-            let collection: Collection =
-                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-                    .bind(id)
-                    .fetch_one(&state.dbpool)
-                    .await?;
-
-            let collectionurl = app_url(&format!("/collection/{}", collection.id));
-            Ok(RenderHtml(
-                key + ".partial",
-                state.tmpl,
-                context!(message => Message {
+            let collectionurl = app_url(&format!("/collection/{}", id));
+            (
+                None,
+                Message {
                     r#type: MessageType::Success,
-                    msg: format!(r#"Added new collection <a href="{}">{}: {}</a> to the database"#,
-                                 collectionurl,
-                                 collection.id, collection.name)
-                }),
+                    msg: format!(
+                        r#"Added new collection <a href="{}">{}: {}</a> to the database"#,
+                        collectionurl, id, params.name
+                    ),
+                },
             )
-            .into_response())
         }
-    }
+    };
+
+    Ok(RenderHtml(
+        key + ".partial",
+        state.tmpl,
+        context!( message => message,
+            request => request),
+    )
+    .into_response())
 }
 
 async fn show_collection(
@@ -177,53 +174,44 @@ async fn do_update(
 }
 
 async fn modify_collection(
-    auth: AuthSession,
     CustomKey(key): CustomKey,
     Path(id): Path<i64>,
     State(state): State<SharedState>,
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    match do_update(id, &params, &state).await {
-        Err(e) => {
-            let c: Collection =
-                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-                    .bind(id)
-                    .fetch_one(&state.dbpool)
-                    .await?;
-            Ok(RenderHtml(
-                key + ".partial",
-                state.tmpl,
-                context!(collection => c,
-                 message => Message {
-                     r#type: MessageType::Error,
-                     msg: e.0.to_string(),
-                 }
-                ),
-            )
-            .into_response())
-        }
-        Ok(_) => {
-            let c: Collection =
-                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-                    .bind(id)
-                    .fetch_one(&state.dbpool)
-                    .await?;
-            Ok(RenderHtml(
-                key + ".partial",
-                state.tmpl,
-                context!(collection => c,
-                message => Message {
-                    r#type: MessageType::Success,
-                    msg: "Successfully updated collection".to_string(),
-                }),
-            )
-            .into_response())
-        }
-    }
+    let (request, message) = match do_update(id, &params, &state).await {
+        Err(e) => (
+            Some(&params),
+            Message {
+                r#type: MessageType::Error,
+                msg: e.0.to_string(),
+            },
+        ),
+        Ok(_) => (
+            None,
+            Message {
+                r#type: MessageType::Success,
+                msg: "Successfully updated collection".to_string(),
+            },
+        ),
+    };
+    let c: Collection =
+        sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
+            .bind(id)
+            .fetch_one(&state.dbpool)
+            .await?;
+    Ok(RenderHtml(
+        key + ".partial",
+        state.tmpl,
+        context!(collection => c,
+         message => message,
+         request => request,
+        ),
+    )
+    .into_response())
 }
 
 async fn delete_collection(
-    auth: AuthSession,
     CustomKey(key): CustomKey,
     Path(id): Path<i64>,
     State(state): State<SharedState>,
@@ -287,7 +275,6 @@ async fn show_add_sample(
 }
 
 async fn add_sample(
-    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
     Path(id): Path<i64>,
