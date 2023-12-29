@@ -16,7 +16,9 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{app_url, error, state::SharedState, CustomKey, Message, MessageType};
+use crate::{
+    app_url, auth::AuthSession, error, state::SharedState, CustomKey, Message, MessageType,
+};
 
 pub fn router() -> Router<SharedState> {
     Router::new()
@@ -27,22 +29,30 @@ pub fn router() -> Router<SharedState> {
 }
 
 async fn sample_index(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, ()))
+    Ok(RenderHtml(key, state.tmpl, context!(user => auth.user)))
 }
 
 async fn list_samples(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut builder = sample::build_query(None);
     let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
-    Ok(RenderHtml(key, state.tmpl, context!(samples => samples)))
+    Ok(RenderHtml(
+        key,
+        state.tmpl,
+        context!(user => auth.user,
+                                            samples => samples),
+    ))
 }
 
 async fn show_sample(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
     Path(id): Path<i64>,
@@ -68,11 +78,15 @@ async fn show_sample(
     Ok(RenderHtml(
         key,
         state.tmpl,
-        context!(sample => sample, locations => locations, collection => collection),
+        context!(user => auth.user,
+                 sample => sample,
+                 locations => locations,
+                 collection => collection),
     ))
 }
 
 async fn new_sample(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<SharedState>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -84,7 +98,8 @@ async fn new_sample(
     Ok(RenderHtml(
         key,
         state.tmpl,
-        context!(locations => locations),
+        context!(user => auth.user,
+                 locations => locations),
     ))
 }
 
