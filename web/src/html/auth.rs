@@ -20,9 +20,9 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(show_login).post(do_login))
         .route("/logout", get(logout))
-        .route("/register", get(show_register).post(register_user))
 }
 
+#[allow(dead_code)]
 async fn register_user(
     auth: AuthSession,
     Form(creds): Form<Credentials>,
@@ -33,6 +33,7 @@ async fn register_user(
         .await?)
 }
 
+#[allow(dead_code)]
 async fn show_register(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
