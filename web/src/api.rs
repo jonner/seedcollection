@@ -1,4 +1,4 @@
-use crate::state::SharedState;
+use crate::state::AppState;
 use axum::{response::Html, routing::get, Router};
 
 mod collection;
@@ -6,7 +6,7 @@ mod location;
 mod sample;
 mod taxonomy;
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .nest("/collection/", collection::router())

@@ -22,9 +22,9 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{error, state::SharedState};
+use crate::{error, state::AppState};
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(add_location))
         .route("/new/modal", get(add_location))
@@ -44,11 +44,11 @@ pub fn router() -> Router<SharedState> {
 async fn root(
     auth_session: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth_session.user),
     ))
 }
@@ -56,7 +56,7 @@ async fn root(
 async fn list_locations(
     auth_session: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations: Vec<location::Location> = sqlx::query_as(
         "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY NAME ASC",
@@ -65,7 +65,7 @@ async fn list_locations(
     .await?;
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth_session.user, locations => locations),
     ))
 }
@@ -73,11 +73,11 @@ async fn list_locations(
 async fn add_location(
     auth_session: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth_session.user),
     ))
 }
@@ -85,7 +85,7 @@ async fn add_location(
 async fn show_location(
     auth_session: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let loc: Location = sqlx::query_as(
@@ -100,7 +100,7 @@ async fn show_location(
         .await?;
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth_session.user,
                  location => loc,
                  samples => samples),
@@ -122,7 +122,7 @@ struct LocationParams {
 async fn do_update(
     id: i64,
     params: &LocationParams,
-    state: &SharedState,
+    state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
     if params.name.is_none() {
         return Err(anyhow!("No name specified").into());
@@ -143,7 +143,7 @@ async fn do_update(
 
 async fn update_location(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -174,7 +174,7 @@ async fn update_location(
 
     Ok(RenderHtml(
         key + ".partial",
-        state.tmpl,
+        state.tmpl.clone(),
         context!(location => loc,
          message => message,
          request => request,
@@ -186,7 +186,7 @@ async fn update_location(
 
 async fn do_insert(
     params: &LocationParams,
-    state: &SharedState,
+    state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
     if params.name.is_none() {
         return Err(anyhow!("No name was given").into());
@@ -207,7 +207,7 @@ async fn do_insert(
 
 async fn new_location(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let message;
@@ -235,7 +235,7 @@ async fn new_location(
         headers,
         RenderHtml(
             key + ".partial",
-            state.tmpl,
+            state.tmpl.clone(),
             context!(message => message,
             request => request,
             ),
@@ -246,7 +246,7 @@ async fn new_location(
 
 async fn delete_location(
     Path(id): Path<i64>,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     sqlx::query("DELETE FROM seedlocations WHERE locid=?")
         .bind(id)

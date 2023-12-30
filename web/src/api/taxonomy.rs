@@ -1,4 +1,4 @@
-use crate::{error, state::SharedState};
+use crate::{error, state::AppState};
 use axum::{
     extract::{Path, Query, State},
     response::{Html, Json},
@@ -9,7 +9,7 @@ use libseed::taxonomy::{self, filter_by, Rank, Taxon};
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .route("/find", get(find_taxa))
@@ -32,7 +32,7 @@ struct TaxonomyFindParams {
 }
 
 async fn find_taxa(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
     let mut q = taxonomy::build_query(
@@ -51,7 +51,7 @@ async fn find_taxa(
 }
 
 async fn show_taxon(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Taxon>, error::Error> {
     let t = taxonomy::fetch_taxon(id, &state.dbpool).await?;

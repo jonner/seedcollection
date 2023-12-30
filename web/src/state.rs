@@ -1,10 +1,10 @@
 use crate::db;
 use anyhow::Result;
 use axum_template::engine::Engine;
-use minijinja::Environment;
 use sqlx::SqlitePool;
+use std::sync::Arc;
 
-type TemplateEngine = Engine<Environment<'static>>;
+type TemplateEngine = Engine<minijinja::Environment<'static>>;
 
 #[derive(Clone)]
 pub struct SharedState {
@@ -20,3 +20,5 @@ impl SharedState {
         })
     }
 }
+
+pub type AppState = Arc<SharedState>;

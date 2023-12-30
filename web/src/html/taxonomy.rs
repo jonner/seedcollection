@@ -17,9 +17,9 @@ use minijinja::context;
 use serde::Deserialize;
 use sqlx::Row;
 
-use crate::{error, state::SharedState, CustomKey};
+use crate::{error, state::AppState, CustomKey};
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_taxa))
@@ -29,9 +29,9 @@ pub fn router() -> Router<SharedState> {
 
 async fn root(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, ()))
+    Ok(RenderHtml(key, state.tmpl.clone(), ()))
 }
 
 const PAGE_SIZE: i32 = 100;
@@ -43,7 +43,7 @@ struct ListParams {
 
 async fn list_taxa(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Query(params): Query<ListParams>,
     req: Request,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -71,14 +71,14 @@ async fn list_taxa(
     debug!("req={:?}", req);
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(taxa => taxa, page => pg, total_pages => total_pages, request_uri => req.uri().to_string()),
     ))
 }
 
 async fn show_taxon(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let hierarchy = taxonomy::fetch_taxon_hierarchy(id, &state.dbpool).await?;
@@ -89,7 +89,7 @@ async fn show_taxon(
         .await?;
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(taxon => hierarchy[0], parents => hierarchy, children => children, samples => samples),
     ))
 }
@@ -101,7 +101,7 @@ struct QuickfindParams {
 
 async fn quickfind(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Query(QuickfindParams { taxon }): Query<QuickfindParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let taxa: Vec<Taxon> = match taxon.is_empty() {
@@ -119,5 +119,5 @@ async fn quickfind(
                 .await?
         }
     };
-    Ok(RenderHtml(key, state.tmpl, context!(taxa => taxa)))
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }

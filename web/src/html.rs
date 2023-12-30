@@ -1,4 +1,4 @@
-use crate::{app_url, auth::SqliteAuthBackend, error, state::SharedState, CustomKey};
+use crate::{app_url, auth::SqliteAuthBackend, error, state::AppState, CustomKey};
 use axum::{extract::State, response::IntoResponse, routing::get, Router};
 use axum_login::login_required;
 use axum_template::RenderHtml;
@@ -10,7 +10,7 @@ mod location;
 mod sample;
 mod taxonomy;
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .nest("/collection/", collection::router())
         .nest("/location/", location::router())
@@ -27,7 +27,7 @@ pub fn router() -> Router<SharedState> {
 
 async fn root(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, context!()))
+    Ok(RenderHtml(key, state.tmpl.clone(), context!()))
 }

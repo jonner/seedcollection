@@ -1,4 +1,4 @@
-use crate::{error, state::SharedState};
+use crate::{error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
@@ -12,7 +12,7 @@ use libseed::{
 };
 use serde::{Deserialize, Serialize};
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_locations))
@@ -30,7 +30,7 @@ async fn root() -> Html<String> {
 }
 
 async fn list_locations(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<Location>>, error::Error> {
     let locations: Vec<location::Location> = sqlx::query_as(
         "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations",
@@ -42,7 +42,7 @@ async fn list_locations(
 
 async fn show_location(
     Path(id): Path<i64>,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<Json<Location>, error::Error> {
     let location: Location = sqlx::query_as(
         "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations WHERE locid=?",
@@ -66,7 +66,7 @@ struct ModifyParams {
 
 async fn modify_location(
     Path(id): Path<i64>,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(params): Form<ModifyParams>,
 ) -> Result<(), error::Error> {
     if params.name.is_none()
@@ -107,7 +107,7 @@ struct AddResponse {
 }
 
 async fn add_location(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(params): Form<ModifyParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     if params.name.is_none()
@@ -137,7 +137,7 @@ async fn add_location(
 
 async fn delete_location(
     Path(id): Path<i64>,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     sqlx::query("DELETE FROM seedlocations WHERE locid=?")
         .bind(id)

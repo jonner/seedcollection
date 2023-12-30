@@ -12,11 +12,11 @@ use serde::Deserialize;
 use crate::{
     auth::{AuthSession, Credentials},
     error,
-    state::SharedState,
+    state::AppState,
     CustomKey,
 };
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(show_login).post(do_login))
         .route("/logout", get(logout))
@@ -35,9 +35,9 @@ async fn register_user(
 
 async fn show_register(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, ()))
+    Ok(RenderHtml(key, state.tmpl.clone(), ()))
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,12 +48,12 @@ pub struct NextUrl {
 async fn show_login(
     CustomKey(key): CustomKey,
     auth: AuthSession,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Query(NextUrl { next }): Query<NextUrl>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth.user, next => next),
     ))
 }
@@ -61,7 +61,7 @@ async fn show_login(
 async fn do_login(
     CustomKey(key): CustomKey,
     mut auth: AuthSession,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(creds): Form<Credentials>,
 ) -> Result<impl IntoResponse, error::Error> {
     match auth.authenticate(creds.clone()).await? {
@@ -77,9 +77,12 @@ async fn do_login(
                 Ok(msg.into_response())
             }
         }
-        None => Ok(
-            RenderHtml(key, state.tmpl, context!(message => "Invalid credentials")).into_response(),
-        ),
+        None => Ok(RenderHtml(
+            key,
+            state.tmpl.clone(),
+            context!(message => "Invalid credentials"),
+        )
+        .into_response()),
     }
 }
 

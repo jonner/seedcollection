@@ -18,7 +18,7 @@ use log::debug;
 use minijinja::{Environment, ErrorKind};
 use serde::Serialize;
 use state::SharedState;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use time::Duration;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
@@ -137,7 +137,7 @@ async fn main() -> Result<()> {
     jinja.add_filter("api_url", api_url);
     jinja.add_filter("append_query_param", append_query_param);
 
-    let shared_state = SharedState::new(args.database, Engine::from(jinja)).await?;
+    let shared_state = Arc::new(SharedState::new(args.database, Engine::from(jinja)).await?);
 
     let session_store = SqliteStore::new(shared_state.dbpool.clone());
     session_store.migrate().await?;

@@ -1,4 +1,4 @@
-use crate::{error, state::SharedState};
+use crate::{error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, Query, State},
@@ -13,7 +13,7 @@ use libseed::{
 use serde::Deserialize;
 use sqlx::{QueryBuilder, Sqlite};
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_collections))
@@ -33,7 +33,7 @@ async fn root() -> Html<String> {
 }
 
 async fn list_collections(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<Collection>>, error::Error> {
     let collections: Vec<Collection> =
         sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L")
@@ -43,7 +43,7 @@ async fn list_collections(
 }
 
 async fn show_collection(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {
     let mut builder: QueryBuilder<Sqlite> =
@@ -62,7 +62,7 @@ struct ModifyProps {
 }
 
 async fn modify_collection(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<ModifyProps>,
 ) -> Result<(), error::Error> {
@@ -86,7 +86,7 @@ async fn modify_collection(
 }
 
 async fn delete_collection(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
     sqlx::query("DELETE FROM seedcollections WHERE id=?")
@@ -104,7 +104,7 @@ struct AddProps {
 
 async fn add_collection(
     Query(params): Query<AddProps>,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<Json<i64>, error::Error> {
     let id = sqlx::query(
         "INSERT INTO seedcollections (name, description) VALUES (?,
@@ -125,7 +125,7 @@ struct RemoveSampleParams {
 }
 
 async fn remove_sample(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(RemoveSampleParams { id, sampleid }): Path<RemoveSampleParams>,
 ) -> Result<(), error::Error> {
     sqlx::query("DELETE FROM seedcollectionsamples WHERE collectionid=? AND sampleid=?")
@@ -142,7 +142,7 @@ struct AddSampleProps {
 }
 
 async fn add_sample(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<AddSampleProps>,
 ) -> Result<Json<i64>, error::Error> {

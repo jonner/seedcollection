@@ -1,4 +1,4 @@
-use crate::{error, state::SharedState};
+use crate::{error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
@@ -14,7 +14,7 @@ use serde::Deserialize;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_samples))
@@ -25,18 +25,18 @@ pub fn router() -> Router<SharedState> {
         .route("/new", post(new_sample))
 }
 
-async fn root(State(_state): State<SharedState>) -> Html<String> {
+async fn root(State(_state): State<AppState>) -> Html<String> {
     Html("Samples".to_string())
 }
 
-async fn list_samples(State(state): State<SharedState>) -> Result<Json<Vec<Sample>>, error::Error> {
+async fn list_samples(State(state): State<AppState>) -> Result<Json<Vec<Sample>>, error::Error> {
     let mut builder = sample::build_query(None);
     let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(Json(samples))
 }
 
 async fn show_sample(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Sample>, error::Error> {
     let mut builder = sample::build_query(Some(Filter::Sample(id)));
@@ -59,7 +59,7 @@ struct SampleParams {
 }
 
 async fn modify_sample(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<SampleParams>,
 ) -> Result<(), error::Error> {
@@ -105,7 +105,7 @@ async fn modify_sample(
 }
 
 async fn new_sample(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<(), error::Error> {
     if params.taxon.is_none() && params.location.is_none() {
@@ -127,7 +127,7 @@ async fn new_sample(
 }
 
 async fn delete_sample(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
     sqlx::query("DELETE FROM seedsamples WHERE id=?")

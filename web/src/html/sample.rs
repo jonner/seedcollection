@@ -16,11 +16,9 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{
-    app_url, auth::AuthSession, error, state::SharedState, CustomKey, Message, MessageType,
-};
+use crate::{app_url, auth::AuthSession, error, state::AppState, CustomKey, Message, MessageType};
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(sample_index))
         .route("/list", get(list_samples))
@@ -31,21 +29,25 @@ pub fn router() -> Router<SharedState> {
 async fn sample_index(
     auth: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, context!(user => auth.user)))
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => auth.user),
+    ))
 }
 
 async fn list_samples(
     auth: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut builder = sample::build_query(None);
     let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth.user,
                                             samples => samples),
     ))
@@ -54,7 +56,7 @@ async fn list_samples(
 async fn show_sample(
     auth: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut builder = sample::build_query(Some(Filter::Sample(id)));
@@ -77,7 +79,7 @@ async fn show_sample(
     .await?;
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth.user,
                  sample => sample,
                  locations => locations,
@@ -88,7 +90,7 @@ async fn show_sample(
 async fn new_sample(
     auth: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations: Vec<Location> = sqlx::query_as(
         "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY name ASC",
@@ -97,7 +99,7 @@ async fn new_sample(
     .await?;
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth.user,
                  locations => locations),
     ))
@@ -131,7 +133,7 @@ fn validate_sample_params(params: &SampleParams) -> Result<(), anyhow::Error> {
 
 async fn do_insert(
     params: &SampleParams,
-    state: &SharedState,
+    state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
     validate_sample_params(params)?;
 
@@ -148,7 +150,7 @@ async fn do_insert(
 
 async fn insert_sample(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations: Vec<Location> = sqlx::query_as(
@@ -187,7 +189,7 @@ async fn insert_sample(
     };
     Ok(RenderHtml(
         key + ".partial",
-        state.tmpl,
+        state.tmpl.clone(),
         context!(locations => locations,
                      message => message,
                      request => request),
@@ -197,7 +199,7 @@ async fn insert_sample(
 async fn do_update(
     id: i64,
     params: &SampleParams,
-    state: &SharedState,
+    state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
     validate_sample_params(params)?;
 
@@ -216,7 +218,7 @@ async fn do_update(
 async fn update_sample(
     Path(id): Path<i64>,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations: Vec<Location> = sqlx::query_as(
@@ -249,7 +251,7 @@ async fn update_sample(
 
     Ok(RenderHtml(
         key + ".partial",
-        state.tmpl,
+        state.tmpl.clone(),
         context!(locations => locations,
                      sample => sample,
                      message => message,

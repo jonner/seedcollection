@@ -16,11 +16,9 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{
-    app_url, auth::AuthSession, error, state::SharedState, CustomKey, Message, MessageType,
-};
+use crate::{app_url, auth::AuthSession, error, state::AppState, CustomKey, Message, MessageType};
 
-pub fn router() -> Router<SharedState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(new_collection).post(insert_collection))
         .route("/:id", put(modify_collection).delete(delete_collection))
@@ -34,15 +32,19 @@ pub fn router() -> Router<SharedState> {
 async fn root(
     auth: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, context!(user => auth.user)))
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => auth.user),
+    ))
 }
 
 async fn list_collections(
     auth: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let collections: Vec<Collection> =
         sqlx::query_as("SELECT id, name, description FROM seedcollections")
@@ -50,7 +52,7 @@ async fn list_collections(
             .await?;
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth.user,
                  collections => collections),
     ))
@@ -59,9 +61,9 @@ async fn list_collections(
 async fn new_collection(
     auth: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl, context!(user => auth.user)).into_response())
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => auth.user)).into_response())
 }
 
 #[derive(Deserialize, Serialize)]
@@ -73,7 +75,7 @@ struct CollectionParams {
 
 async fn do_insert(
     params: &CollectionParams,
-    state: &SharedState,
+    state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
@@ -88,7 +90,7 @@ async fn do_insert(
 
 async fn insert_collection(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let (request, message) = match do_insert(&params, &state).await {
@@ -117,7 +119,7 @@ async fn insert_collection(
 
     Ok(RenderHtml(
         key + ".partial",
-        state.tmpl,
+        state.tmpl.clone(),
         context!( message => message,
             request => request),
     )
@@ -128,7 +130,7 @@ async fn show_collection(
     auth: AuthSession,
     CustomKey(key): CustomKey,
     Path(id): Path<i64>,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut c: Collection =
         sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
@@ -140,7 +142,7 @@ async fn show_collection(
 
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth.user,
                  collection => c),
     ))
@@ -149,7 +151,7 @@ async fn show_collection(
 async fn do_update(
     id: i64,
     params: &CollectionParams,
-    state: &SharedState,
+    state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
@@ -166,7 +168,7 @@ async fn do_update(
 async fn modify_collection(
     CustomKey(key): CustomKey,
     Path(id): Path<i64>,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let (request, message) = match do_update(id, &params, &state).await {
@@ -192,7 +194,7 @@ async fn modify_collection(
             .await?;
     Ok(RenderHtml(
         key + ".partial",
-        state.tmpl,
+        state.tmpl.clone(),
         context!(collection => c,
          message => message,
          request => request,
@@ -204,7 +206,7 @@ async fn modify_collection(
 async fn delete_collection(
     CustomKey(key): CustomKey,
     Path(id): Path<i64>,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     match sqlx::query!("DELETE FROM seedcollections WHERE id=?", id)
         .execute(&state.dbpool)
@@ -218,7 +220,7 @@ async fn delete_collection(
                     .await?;
             Ok(RenderHtml(
                 key + ".partial",
-                state.tmpl,
+                state.tmpl.clone(),
                 context!(
                 collection => c,
                 message => Message {
@@ -231,7 +233,7 @@ async fn delete_collection(
         }
         Ok(_) => Ok(RenderHtml(
             key + ".partial",
-            state.tmpl,
+            state.tmpl.clone(),
             context!(deleted => true, id => id),
         )
         .into_response()),
@@ -241,7 +243,7 @@ async fn delete_collection(
 async fn show_add_sample(
     auth: AuthSession,
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let c: Collection =
@@ -256,7 +258,7 @@ async fn show_add_sample(
         .await?;
     Ok(RenderHtml(
         key,
-        state.tmpl,
+        state.tmpl.clone(),
         context!(user => auth.user,
                  collection => c,
                  options => options),
@@ -266,7 +268,7 @@ async fn show_add_sample(
 
 async fn add_sample(
     CustomKey(key): CustomKey,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -297,7 +299,7 @@ async fn add_sample(
         .await?;
     Ok(RenderHtml(
         key + ".partial",
-        state.tmpl,
+        state.tmpl.clone(),
         context!(collection => c, options => options, partial => true),
     )
     .into_response())
@@ -305,7 +307,7 @@ async fn add_sample(
 
 async fn remove_sample(
     auth: AuthSession,
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path((id, sampleid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     if auth.user.is_none() {
