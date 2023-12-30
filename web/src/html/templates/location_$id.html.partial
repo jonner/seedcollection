@@ -1,0 +1,14 @@
+{% from "_macros.html" import location_form %}
+{% call location_form("location-edit", location, message, request) %}
+    <div class="row mb-3">
+        <button type="submit" name="submit" class="btn btn-primary">Update</button>
+    </div>
+    <div class="row mb-3">
+        <button type="button"
+                class="btn btn-danger"
+                hx-delete="{{ ("/location/" ~ location.id) | api_url }}"
+                hx-confirm="Are you sure you wish to delete location {{location.id}}?"
+                hx-target="closest form"
+                >Delete</button>
+    </div>
+{% endcall %}
