@@ -7,17 +7,10 @@ use libseed::{
     sample::{self, Filter, Sample},
     taxonomy::{self, filter_by, Taxon},
 };
-use log::debug;
 use sqlx::SqlitePool;
+use tracing::debug;
 
 mod cli;
-
-pub fn logger() -> env_logger::Builder {
-    let env = env_logger::Env::new()
-        .filter_or("SC_LOG", "warn")
-        .write_style("SC_LOG_STYLE");
-    env_logger::Builder::from_env(env)
-}
 
 fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
     use tabled::settings::{object::Segment, width::Width, Modify, Style};
@@ -70,7 +63,7 @@ async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: boo
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    logger().init();
+    tracing_subscriber::fmt::init();
     let args = Cli::parse();
     let dbpool =
         SqlitePool::connect(&format!("sqlite://{}", args.database.to_string_lossy())).await?;

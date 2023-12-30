@@ -14,7 +14,6 @@ use axum_login::{
 };
 use axum_template::engine::Engine;
 use clap::Parser;
-use log::debug;
 use minijinja::{Environment, ErrorKind};
 use serde::Serialize;
 use state::SharedState;
@@ -22,6 +21,7 @@ use std::{collections::HashMap, sync::Arc};
 use time::Duration;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
+use tracing::debug;
 
 mod api;
 mod auth;
@@ -44,13 +44,6 @@ pub enum MessageType {
 pub struct Message {
     r#type: MessageType,
     msg: String,
-}
-
-pub fn logger() -> env_logger::Builder {
-    let env = env_logger::Env::new()
-        .filter_or("SW_LOG", "warn")
-        .write_style("SW_LOG_STYLE");
-    env_logger::Builder::from_env(env)
 }
 
 // Because minijinja loads an entire folder, we need to remove the `/` prefix
@@ -127,7 +120,7 @@ pub fn append_query_param(
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    logger().init();
+    tracing_subscriber::fmt::init();
     let args = Cli::parse();
     debug!("using database '{}'", args.database);
 

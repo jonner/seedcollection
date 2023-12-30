@@ -12,10 +12,10 @@ use libseed::{
         FilterQueryBuilder, LimitSpec, Rank, Taxon,
     },
 };
-use log::debug;
 use minijinja::context;
 use serde::Deserialize;
 use sqlx::Row;
+use tracing::debug;
 
 use crate::{error, state::AppState, CustomKey};
 

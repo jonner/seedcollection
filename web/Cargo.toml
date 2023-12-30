@@ -6,26 +6,25 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.75"
-axum = "0.7.2"
-clap = { version = "4.4.11", features = ["derive"] }
-env_logger = "0.10.1"
-log = "0.4.20"
-serde = { version = "1.0.193", features = ["serde_derive"] }
-sqlx = { version = "0.7.3", features = [ "sqlite", "runtime-tokio" ] }
-tokio = { version = "1.34.0", features = [ "full" ] }
-
 # local deps
 libseed.workspace = true
-strum = "0.25.0"
-axum-template = { version = "2.0.0", features = ["minijinja"] }
-minijinja = { version = "1.0.10", features = ["loader"] }
-tower-http = { version = "0.5.0", features = ["fs"] }
-axum-login = "0.11.1"
+
+anyhow = "1.0.75"
 argon2 = "0.5.2"
+axum = { version = "0.7.2", features = ["macros"] }
+axum-login = "0.11.1"
+axum-template = { version = "2.0.0", features = ["minijinja"] }
+clap = { version = "4.4.11", features = ["derive"] }
+minijinja = { version = "1.0.10", features = ["loader"] }
 password-hash = { version = "0.5.0", features = ["std", "getrandom"] }
+serde = { version = "1.0.193", features = ["serde_derive"] }
+sqlx = { version = "0.7.3", features = [ "sqlite", "runtime-tokio" ] }
+strum = "0.25.0"
 thiserror = "1.0.52"
-tower = "0.4.13"
 time = "0.3.31"
+tokio = { version = "1.34.0", features = [ "full" ] }
+tower = "0.4.13"
+tower-http = { version = "0.5.0", features = ["fs"] }
 tower-sessions = { version = "0.8.2", features = ["sqlite-store"] }
-axum-macros = "0.4.0"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"

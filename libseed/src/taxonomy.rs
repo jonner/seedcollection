@@ -1,9 +1,9 @@
 use anyhow::Result;
-use log::debug;
 use serde::{Deserialize, Serialize};
 use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Pool, Row, Sqlite};
 use std::str::FromStr;
 use strum_macros::{Display, EnumIter, EnumString, FromRepr};
+use tracing::debug;
 
 pub const KINGDOM_PLANTAE: i64 = 3;
 
