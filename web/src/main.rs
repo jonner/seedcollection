@@ -22,6 +22,7 @@ use time::Duration;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
 use tracing::debug;
+use tracing_subscriber::filter::EnvFilter;
 
 mod api;
 mod auth;
@@ -120,7 +121,9 @@ pub fn append_query_param(
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_env("SEEDWEB_LOG"))
+        .init();
     let args = Cli::parse();
     debug!("using database '{}'", args.database);
 
