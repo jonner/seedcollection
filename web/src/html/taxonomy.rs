@@ -17,7 +17,7 @@ use serde::Deserialize;
 use sqlx::Row;
 use tracing::debug;
 
-use crate::{error, state::AppState, CustomKey};
+use crate::{auth::AuthSession, error, state::AppState, CustomKey};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -28,10 +28,15 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn root(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), ()))
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => auth.user),
+    ))
 }
 
 const PAGE_SIZE: i32 = 100;
@@ -42,6 +47,7 @@ struct ListParams {
 }
 
 async fn list_taxa(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
     Query(params): Query<ListParams>,
@@ -72,11 +78,16 @@ async fn list_taxa(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(taxa => taxa, page => pg, total_pages => total_pages, request_uri => req.uri().to_string()),
+        context!(user => auth.user,
+                 taxa => taxa,
+                 page => pg,
+                 total_pages => total_pages,
+                 request_uri => req.uri().to_string()),
     ))
 }
 
 async fn show_taxon(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -90,7 +101,11 @@ async fn show_taxon(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(taxon => hierarchy[0], parents => hierarchy, children => children, samples => samples),
+        context!(user => auth.user,
+                 taxon => hierarchy[0],
+                 parents => hierarchy,
+                 children => children,
+                 samples => samples),
     ))
 }
 

@@ -1,4 +1,10 @@
-use crate::{app_url, auth::SqliteAuthBackend, error, state::AppState, CustomKey};
+use crate::{
+    app_url,
+    auth::{AuthSession, SqliteAuthBackend},
+    error,
+    state::AppState,
+    CustomKey,
+};
 use axum::{extract::State, response::IntoResponse, routing::get, Router};
 use axum_login::login_required;
 use axum_template::RenderHtml;
@@ -26,8 +32,13 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn root(
+    auth: AuthSession,
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!()))
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => auth.user),
+    ))
 }
