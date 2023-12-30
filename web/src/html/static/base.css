@@ -59,5 +59,7 @@ td, th {
     font-size: 80%;
 }
 
-.native {
-    background-color
+#sc-footer {
+    padding-top: 2em;
+    padding-bottom: 2em;
+}
