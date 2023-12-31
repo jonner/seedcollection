@@ -1,10 +1,7 @@
 {% extends "root.html" %}
 {% from "_macros.html" import sample_form %}
-{% block title %}Sample {{ sample.id }}{% endblock %}
+{% block title %}Edit Sample #{{ sample.id }}{% endblock %}
 {% block content %}
-    <h2>Sample Details</h2>
-    {{ sample_form(locations, sample) }}
-    {% if collection %}
-    <p>This sample is a part of collection <a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ collection.name }}</a></p>
-    {% endif %}
+<h2>{{ self.title() }}</h2>
+{{ sample_form(locations, sample) }}
 {% endblock %}

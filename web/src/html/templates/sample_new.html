@@ -1,7 +1,7 @@
 {% extends "root.html" %}
 {% from "_macros.html" import sample_form %}
-{% block title %}New Sample{% endblock %}
+{% block title %}Add a New Sample{% endblock %}
 {% block content %}
-    <h2>Sample Details</h2>
-    {{ sample_form(locations) }}
+<h2>{{ self.title() }}</h2>
+{{ sample_form(locations) }}
 {% endblock %}

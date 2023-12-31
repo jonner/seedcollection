@@ -26,15 +26,9 @@
     </div>
     {% endif %}
     <div class="row g-6">
-        <div class="col">
-            {% if sample %}
-            <div class="mb-3">
-                <label for="SampleIdInput" class="form-label">ID</label>
-                <input id="SampleIdInput" class="form-control" value="{{ sample.id if sample }}" disabled readonly>
-            </div>
-            {% endif %}
-            <div class="mb-3">
-                <label for="SampleTaxonInput" class="form-label">Taxon</label>
+        <div class="mb-3 col-12">
+            <label for="SampleTaxonInput" class="form-label">Taxon</label>
+            <div class="input-group">
                 <input id="SampleTaxonInput"
                        class="form-control"
                        type="text"
@@ -48,78 +42,71 @@
                        hx-target="#taxonOptions">
                 <datalist id="taxonOptions">
                 </datalist>
-            </div>
-            <div class="mb-3">
-                <label for="SampleLocationInput" class="form-label">Location</label>
-                <div class="input-group">
-                    <select id="SampleLocationInput" class="form-select" name="location"
-                        hx-trigger="reload-locations from:body"
-                        hx-get="{{ "/location/list/options" | app_url }}">
-                        <option value="">Choose a location...</option>
-                        {% for l in locations %}
-                        <option value="{{ l.id }}"
-                        {% if request and (request.location == l.id) %}selected{% elif sample and (l.id == sample.location.id) %}selected{% endif %}
-                        >{{ l.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="button"
-                            id="AddLocationButton" class="btn btn-outline-secondary"
-                            hx-get="{{ "/location/new/modal" | app_url }}"
-                            hx-target="#ModalContainer"
-                            hx-trigger="click"
-                            data-bs-toggle="modal"
-                            data-bs-target="#ModalContainer">
-                        Add new location</button>
+                <div class="input-group-text">
+                    <input id="SampleUncertaintyInput" type="checkbox" class="form-check-input mt-0" value="true" name="uncertain" {% if sample.certainty == "Uncertain" %}checked{% endif %}>
+                    <label for="SampleUncertaintyInput" class="form-check-label">ID is uncertain</label>
                 </div>
             </div>
         </div>
-        <div class="col">
-            <div class="mb-3">
-                <label for="SampleMonthInput" class="form-label">Month</label>
-                <select id="SampleMonthInput"
+        <div class="mb-3 col-12">
+            <label for="SampleLocationInput" class="form-label">Location</label>
+            <div class="input-group">
+                <select id="SampleLocationInput" class="form-select" name="location"
+                                                                     hx-trigger="reload-locations from:body"
+                                                                     hx-get="{{ "/location/list/options" | app_url }}">
+                    <option value="">Choose a location...</option>
+                    {% for l in locations %}
+                    <option value="{{ l.id }}"
+                            {% if request and (request.location == l.id) %}selected{% elif sample and (l.id == sample.location.id) %}selected{% endif %}
+                            >{{ l.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button"
+                        id="AddLocationButton" class="btn btn-outline-secondary"
+                                               hx-get="{{ "/location/new/modal" | app_url }}"
+                                               hx-target="#ModalContainer"
+                                               hx-trigger="click"
+                                               data-bs-toggle="modal"
+                                               data-bs-target="#ModalContainer">
+                    Add new location</button>
+            </div>
+        </div>
+        <div class="mb-3 col-4">
+            <label for="SampleMonthInput" class="form-label">Month</label>
+            <select id="SampleMonthInput"
                     class="form-control"
                     name="month"
                     >
                     {{ month_options(request.month if request else sample.month if sample) }}
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="SampleYearInput" class="form-label">Year</label>
-                <input id="SampleYearInput"
-                class="form-control"
-                type="number"
-                name="year"
-                value="{% if request %}{{ request.year }}{% elif sample %}{{ sample.year }}{% endif %}"/>
-            </div>
-            <div class="mb-3">
-                <label for="SampleQuantityInput" class="form-label">Quantity</label>
-                <input id="SampleQuantityInput"
-                class="form-control"
-                type="number"
-                name="quantity"
-                value="{% if request %}{{request.quantity }}{% elif sample %}{{ sample.quantity }}{% endif %}"/>
-            </div>
+            </select>
         </div>
-    </div>
-    <div class="row g-6">
-        <div class="mb-3">
-        <label for="SampleNotesInput" class="form-label">Notes</label>
-        <textarea id="SampleNotesInput" class="form-control" name="notes">{% if sample.notes %}{{ sample.notes if sample }}{% endif %}</textarea>
+        <div class="mb-3 col-4">
+            <label for="SampleYearInput" class="form-label">Year</label>
+            <input id="SampleYearInput"
+                   class="form-control"
+                   type="number"
+                   name="year"
+                   value="{% if request %}{{ request.year }}{% elif sample %}{{ sample.year }}{% endif %}"/>
         </div>
-    </div>
-    <div class="row g-6">
-        <div class="mb-3">
-            <div class="form-check">
-            <input id="SampleUncertaintyInput" type="checkbox" class="form-check-input" value="true" name="uncertain" {% if sample.certainty == "Uncertain" %}checked{% endif %}>
-            <label for="SampleUncertaintyInput" class="form-check-label">ID is uncertain</label>
-            </div>
+        <div class="mb-3 col-4">
+            <label for="SampleQuantityInput" class="form-label">Quantity</label>
+            <input id="SampleQuantityInput"
+                   class="form-control"
+                   type="number"
+                   name="quantity"
+                   value="{% if request %}{{request.quantity }}{% elif sample %}{{ sample.quantity }}{% endif %}"/>
         </div>
-    </div>
-    <div class="row g-6">
+        <div class="mb-3 col-12">
+            <label for="SampleNotesInput" class="form-label">Notes</label>
+            <textarea id="SampleNotesInput"
+                      rows="5"
+                      class="form-control"
+                      name="notes">{% if sample.notes %}{{ sample.notes if sample }}{% endif %}</textarea>
+        </div>
         <div class="mb-3">
             <button type="submit" class="btn btn-primary">{% if sample %}Update{% else %}Add{% endif %}</button>
         </div>
-{% if sample %}
+        {% if sample %}
         <div class="mb-3">
             <button type="button"
                     class="btn btn-danger"
@@ -128,7 +115,7 @@
                     hx-target="closest form"
                     >Delete</button>
         </div>
-{% endif %}
+        {% endif %}
     </div>
 </form>
 <div id="ModalContainer"
