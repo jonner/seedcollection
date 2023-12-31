@@ -29,12 +29,8 @@
             <td><a href="{{ ( "/location/" ~ sample.location.id) | app_url }}">{{ sample.location.name }}</a></td>
         </tr>
         <tr>
-            <td>Month</td>
-            <td>{{ sample.month }}</td>
-        </tr>
-        <tr>
-            <td>Year</td>
-            <td>{{ sample.year }}</td>
+            <td>Collection Date</td>
+            <td>{% if sample.month %}{{ sample.month }}/{% endif %}{{ sample.year }}</td>
         </tr>
         <tr>
             <td>Quantity</td>
