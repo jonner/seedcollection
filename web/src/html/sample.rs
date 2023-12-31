@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -22,8 +22,9 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(sample_index))
         .route("/list", get(list_samples))
-        .route("/:id", get(show_sample).put(update_sample))
         .route("/new", get(new_sample).post(insert_sample))
+        .route("/filter", get(filter_samples))
+        .route("/:id", get(show_sample).put(update_sample))
 }
 
 async fn sample_index(
@@ -35,6 +36,27 @@ async fn sample_index(
         key,
         state.tmpl.clone(),
         context!(user => auth.user),
+    ))
+}
+
+#[derive(Deserialize)]
+struct FilterParams {
+    fragment: String,
+}
+
+async fn filter_samples(
+    auth: AuthSession,
+    Query(FilterParams { fragment }): Query<FilterParams>,
+    CustomKey(key): CustomKey,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, error::Error> {
+    let mut builder = sample::build_query(Some(Filter::TaxonNameLike(fragment)));
+    let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => auth.user,
+                 samples => samples),
     ))
 }
 

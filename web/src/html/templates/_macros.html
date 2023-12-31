@@ -226,3 +226,28 @@ hx-post="{{ "/collection/new" | app_url }}"
         <div class="form-control">{{ collection.description }}</div>
     </div>
 {%- endmacro %}
+
+{% macro sample_list(samples, cssid) -%}
+<table class="table" id="{{ cssid }}">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Taxon</th>
+                <th>Location</th>
+                <th>Year</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in samples %}
+            <tr>
+                <td><a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a></td>
+                <td><a href="{{ ("/taxonomy/" ~ s.taxon.id) | app_url }}">{{ s.taxon.complete_name }}</a></td>
+                <td><a href="{{ ("/location/" ~ s.location.id) | app_url }}">{{ s.location.name }}</a></td>
+                <td>{{ s.year or "" }}</td>
+                <td>{{ s.quantity or "" }}</td>
+            <tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{%- endmacro %}

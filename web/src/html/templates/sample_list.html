@@ -1,28 +1,16 @@
 {% extends "root.html" %}
+{% from "_macros.html" import sample_list %}
 {% block title %}Samples{% endblock %}
 {% block content %}
     <h2>Samples</h2>
     <p><a href="{{ "/sample/new" | app_url }}">Add a new sample</a></p>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Taxon</th>
-                <th>Location</th>
-                <th>Year</th>
-                <th>Quantity</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for s in samples %}
-            <tr>
-                <td><a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a></td>
-                <td><a href="{{ ("/taxonomy/" ~ s.taxon.id) | app_url }}">{{ s.taxon.complete_name }}</a></td>
-                <td><a href="{{ ("/location/" ~ s.location.id) | app_url }}">{{ s.location.name }}</a></td>
-                <td>{{ s.year or "" }}</td>
-                <td>{{ s.quantity or "" }}</td>
-            <tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <input type="text"
+           class="form-control"
+           placeholder="Filter list..."
+           name="fragment"
+           hx-trigger="keyup changed delay:500ms"
+           hx-swap="OuterHTML"
+           hx-target="#sample-table"
+           hx-get="{{ "/sample/filter" | app_url }}">
+    {{ sample_list(samples, "sample-table") }}
 {% endblock %}

@@ -20,41 +20,64 @@ pub enum Filter {
     Sample(i64),
     Location(i64),
     Taxon(i64),
+    TaxonNameLike(String),
 }
 
 pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
-                    quantity, month, year, notes, CS.collectionid
+                    quantity, month, year, notes, CS.collectionid,
+                    GROUP_CONCAT(V.vernacular_name, "@") as cnames
                     FROM seedsamples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
                     INNER JOIN seedlocations L on L.locid=S.collectedlocation
-                    LEFT JOIN seedcollectionsamples CS ON CS.sampleid=S.id "#,
+                    LEFT JOIN seedcollectionsamples CS ON CS.sampleid=S.id
+                    LEFT JOIN (SELECT * FROM vernaculars WHERE
+                    (language="English" or language="unspecified")) V on V.tsn=T.tsn
+                    "#,
     );
-    match filter {
+    match &filter {
         Some(f) => match f {
             Filter::Collection(id) => {
                 builder.push(" WHERE cs.collectionid=");
-                builder.push_bind(id);
+                builder.push_bind(id.clone());
             }
             Filter::NoCollection => {
                 builder.push(" WHERE cs.collectionid IS NULL");
             }
             Filter::Sample(id) => {
                 builder.push(" WHERE S.id=");
-                builder.push_bind(id);
+                builder.push_bind(id.clone());
             }
             Filter::Location(id) => {
                 builder.push(" WHERE L.locid=");
-                builder.push_bind(id);
+                builder.push_bind(id.clone());
             }
             Filter::Taxon(id) => {
                 builder.push(" WHERE S.tsn=");
-                builder.push_bind(id);
+                builder.push_bind(id.clone());
             }
+            _ => (),
         },
         None => (),
+    }
+    builder.push(" GROUP BY S.id, T.tsn");
+    match &filter {
+        Some(Filter::TaxonNameLike(substr)) => {
+            if !substr.is_empty() {
+                let wildcard = format!("%{substr}%");
+                builder.push(" HAVING T.unit_name1 LIKE ");
+                builder.push_bind(wildcard.clone());
+                builder.push(" OR T.unit_name2 LIKE ");
+                builder.push_bind(wildcard.clone());
+                builder.push(" OR T.unit_name3 LIKE ");
+                builder.push_bind(wildcard.clone());
+                builder.push(" OR cnames LIKE ");
+                builder.push_bind(wildcard.clone());
+            }
+        }
+        _ => (),
     }
     builder.push(" ORDER BY phylo_sort_seq");
     builder
