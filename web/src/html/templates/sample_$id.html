@@ -1,9 +1,52 @@
 {% extends "root.html" %}
-{% from "_macros.html" import sample_form %}
 {% block title %}Sample {{ sample.id }}{% endblock %}
 {% block content %}
-    <h2>Sample Details</h2>
-    {{ sample_form(locations, sample) }}
+<h2>Sample Details <a href="{{ ("/sample/" ~ sample.id ~ "/edit") | app_url }}"><img src="/static/pen.svg"></a></h2>
+<table class="table">
+    <tbody>
+        <tr>
+            <td>ID</td>
+            <td>{{ sample.id }}</td>
+        </tr>
+        <tr>
+            <td>Taxon</td>
+            <td><a href="{{ ("/taxonomy/" ~ sample.taxon.id) | app_url }}">{{ sample.taxon.complete_name }}</a></td>
+        </tr>
+        <tr>
+            <td>Common Names</td>
+            <td>
+                {% if sample.taxon.vernaculars %}
+                <ul class="list-group list-group-flush">
+                {% for name in sample.taxon.vernaculars %}
+                <li class="list-group-item">{{ name }}</li>
+                {% endfor %}
+                </ul>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Location</td>
+            <td><a href="{{ ( "/location/" ~ sample.location.id) | app_url }}">{{ sample.location.name }}</a></td>
+        </tr>
+        <tr>
+            <td>Month</td>
+            <td>{{ sample.month }}</td>
+        </tr>
+        <tr>
+            <td>Year</td>
+            <td>{{ sample.year }}</td>
+        </tr>
+        <tr>
+            <td>Quantity</td>
+            <td>{{ sample.quantity }}</td>
+        </tr>
+        <tr>
+            <td>Notes</td>
+            <td>{{ sample.notes }}</td>
+        </tr>
+    </tbody>
+    </table>
+
     {% if collection %}
     <p>This sample is a part of collection <a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ collection.name }}</a></p>
     {% endif %}

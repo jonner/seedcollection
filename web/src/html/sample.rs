@@ -25,6 +25,7 @@ pub fn router() -> Router<AppState> {
         .route("/new", get(new_sample).post(insert_sample))
         .route("/filter", get(filter_samples))
         .route("/:id", get(show_sample).put(update_sample))
+        .route("/:id/edit", get(show_sample))
 }
 
 async fn sample_index(
