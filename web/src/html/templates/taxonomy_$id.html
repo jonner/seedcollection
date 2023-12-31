@@ -2,35 +2,47 @@
 {% block title %}{{ taxon.complete_name }}{% endblock %}
 {% block content %}
     <h2>Taxon Details</h2>
-    <dl>
-        <dt>Full Name</dt>
-        <dd>{{ taxon.complete_name }}</dd>
-        <dt>Common Names</dt>
-        <dd>
-            {% if taxon.vernaculars|count > 0 %}
-            <ul>
+    <table class="table">
+        <tbody>
+            <tr>
+        <td>Full Name</td>
+        <td>{{ taxon.complete_name }}</td>
+            </tr>
+            <tr>
+        <td>Common Names</td>
+        <td>
+            {% if taxon.vernaculars %}
+            <ul class="list-group list-group-flush">
                 {% for name in taxon.vernaculars %}
-                <li>{{ name }}</li>
+                <li class="list-group-item">{{ name }}</li>
                 {% endfor %}
             </ul>
             {% else %}
             None
             {% endif %}
-        </dd>
-        <dt>Rank</dt>
-        <dd>{{ taxon.rank }}</dd>
-        <dt>ID</dt>
-        <dd>{{ taxon.id }}</dd>
-        <dt>Minnesota Status</dt>
-        <dd>
+        </td>
+            </tr>
+            <tr>
+        <td>Rank</td>
+        <td>{{ taxon.rank }}</td>
+            </tr>
+            <tr>
+        <td>Taxonomic ID</td>
+        <td>{{ taxon.id }}</td>
+            </tr>
+            <tr>
+        <td>Minnesota Status</td>
+        <td>
             {% if taxon.native_status %}
             Present, {{ taxon.native_status }}
             {% else %}
             Not present
             {% endif %}
-        </dd>
-        <dt>Type Hierarchy</dt>
-        <dd id="taxa-hierarchy">
+        </td>
+            </tr>
+            <tr>
+        <td>Type Hierarchy</td>
+        <td id="taxa-hierarchy">
             <ul>
             {% for t in parents|reverse %}
             <li
@@ -68,9 +80,11 @@
             {% for t in parents|reverse %}
                 </ul></li>
             {% endfor %}
-        </dd>
-        <dt>Samples</dt>
-        <dd>
+        </td>
+            </tr>
+            <tr>
+        <td>Samples</td>
+        <td>
             {% if samples %}
             <ul>
             {% for sample in samples %}
@@ -78,6 +92,8 @@
             {% endfor %}
             </ul>
             {% endif %}
-        </dd>
-    </dl>
+        </td>
+            </tr>
+        </tbody>
+    </table>
 {% endblock %}
