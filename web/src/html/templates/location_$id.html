@@ -1,14 +1,41 @@
 {% extends "root.html" %}
 {% block title %}{{ location.name }} Details{% endblock %}
 {% block content %}
-<h2>Location Details</h2>
-{% include "location_$id.html.partial" %}
-<h3>{{ samples|count }} samples from this location</h3>
+<h2>Location Details <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}"><img src="/static/pen.svg"></a></h2>
+<table class="table">
+    <tbody>
+        <tr>
+            <td>ID</td>
+            <td>{{ location.id }}</td>
+        </tr>
+        <tr>
+            <td>Name</td>
+            <td>{{ location.name }}</td>
+        </tr>
+        <tr>
+            <td>Description</td>
+            <td>{{ location.description }}</td>
+        </tr>
+        <tr>
+            <td>Location</td>
+            <td>
+                {%if map_viewer %}
+                <iframe width="500", height="300" src="{{ map_viewer }}"></iframe>
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+<td>Samples from this location</td>
+<td>
 {% if samples %}
-<ul>
+<ul class="list-group list-group-flush">
 {% for sample in samples %}
-<li><a href="{{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }} - {{ sample.taxon.complete_name }}</a></li>
+<li class="list-group-item"J><a href="{{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }} - {{ sample.taxon.complete_name }}</a></li>
 {% endfor %}
 </ul>
 {% endif %}
+</td>
+        </tr>
+    </tbody>
+</table>
 {% endblock %}

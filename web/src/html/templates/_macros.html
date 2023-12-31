@@ -153,12 +153,22 @@
         <textarea id="LocationDescInput"
                   class="form-control"
                   name="description">{{ request.description or loc.description or "" }}</textarea>
+    </div>
+    <div class="row px-3 mb-3">
+        <label class="form-label" for="LocationLatitudeInput">Latitude</label>
         <input id="LocationLatitudeInput"
-               type="hidden"
+               class="form-control"
+               type="number"
+               step="any"
                name="latitude"
-              value="{{ request.latitude or loc.latitude or "" }}">
+               value="{{ request.latitude or loc.latitude or "" }}">
+    </div>
+    <div class="row px-3 mb-3">
+        <label class="form-label" for="LocationLongitudeInput">Longitude</label>
         <input id="LocationLongitudeInput"
-               type="hidden"
+               class="form-control"
+               type="number"
+               step="any"
                name="longitude"
                value="{{ request.longitude or loc.longitude or "" }}">
     </div>

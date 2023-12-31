@@ -39,6 +39,7 @@ pub fn router() -> Router<AppState> {
         .route("/list", get(list_locations))
         .route("/list/options", get(list_locations))
         .route("/:id", get(show_location))
+        .route("/:id/edit", get(show_location))
 }
 
 async fn root(
@@ -103,6 +104,7 @@ async fn show_location(
         state.tmpl.clone(),
         context!(user => auth_session.user,
                  location => loc,
+                 map_viewer => loc.map_viewer_uri(12.0),
                  samples => samples),
     ))
 }
@@ -114,9 +116,9 @@ struct LocationParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     description: Option<String>,
     #[serde(deserialize_with = "empty_string_as_none")]
-    latitude: Option<u32>,
+    latitude: Option<f64>,
     #[serde(deserialize_with = "empty_string_as_none")]
-    longitude: Option<u32>,
+    longitude: Option<f64>,
 }
 
 async fn do_update(
