@@ -35,19 +35,22 @@ td, th {
     list-style-type: disc;
 }
 
-#taxa-hierarchy li.native,
-#taxa-hierarchy li.native > * {
-    color: var(--bs-success);
+#taxa-hierarchy .native,
+#taxa-hierarchy .native > * {
+    color: var(--bs-success-text-emphasis);
+    background-color: var(--bs-success-bg-subtle);
 }
 
-#taxa-hierarchy li.introduced,
-#taxa-hierarchy li.introduced  > * {
-    color: var(--bs-danger);
+#taxa-hierarchy .introduced,
+#taxa-hierarchy .introduced  > * {
+    color: var(--bs-danger-text-emphasis);
+    background-color: var(--bs-danger-bg-subtle);
 }
 
-#taxa-hierarchy li.unknown,
-#taxa-hierarchy li.unknown  > * {
-    color: var(--bs-warning);
+#taxa-hierarchy .unknown,
+#taxa-hierarchy .unknown  > * {
+    color: var(--bs-warning-text-emphasis);
+    background-color: var(--bs-warning-bg-subtle);
 }
 
 #taxa-hierarchy .vernacular,.rank {
@@ -62,4 +65,29 @@ td, th {
 #sc-footer {
     padding-top: 2em;
     padding-bottom: 2em;
+}
+
+
+span.success, span.danger, span.warning {
+    border-style: solid;
+    border-width: 1px;
+    padding: 2px;
+}
+
+span.success {
+    background-color: var(--bs-success-bg-subtle);
+    border-color: var(--bs-success-border-subtle);
+    color: var(--bs-success-text-emphasis);
+}
+
+span.danger {
+    background-color: var(--bs-danger-bg-subtle);
+    border-color: var(--bs-danger-border-subtle);
+    color: var(--bs-danger-text-emphasis);
+}
+
+span.warning {
+    background-color: var(--bs-warning-bg-subtle);
+    border-color: var(--bs-warning-border-subtle);
+    color: var(--bs-warning-text-emphasis);
 }

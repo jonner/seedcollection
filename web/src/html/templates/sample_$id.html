@@ -38,7 +38,12 @@
         </tr>
         <tr>
             <td>Certainty</td>
-            <td>{{ sample.certainty or "Unknown" }}</td>
+            <td>
+                <span
+                    {% if sample.certainty == "Certain" %}class="success"{% elif sample.certainty == "Uncertain" %}class="warning"{% endif %}>
+                    {{ sample.certainty or "Not specified" }}
+                </span>
+            </td>
         </tr>
         <tr>
             <td>Notes</td>
