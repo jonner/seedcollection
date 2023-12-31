@@ -86,9 +86,9 @@
         <td>Samples</td>
         <td>
             {% if samples %}
-            <ul>
+            <ul class="list-group list-group-flush">
             {% for sample in samples %}
-            <li><a href={{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }} - {{ sample.location.name }}</a></li>
+            <li class="list-group-item"><a href={{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }}</a>: {{ sample.location.name }}</li>
             {% endfor %}
             </ul>
             {% endif %}
