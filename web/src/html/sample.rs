@@ -10,7 +10,7 @@ use libseed::{
     collection::Collection,
     empty_string_as_none,
     location::Location,
-    sample::{self, Filter, Sample},
+    sample::{self, Certainty, Filter, Sample},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -142,6 +142,7 @@ struct SampleParams {
     quantity: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none")]
     notes: Option<String>,
+    uncertain: Option<bool>,
 }
 
 fn validate_sample_params(params: &SampleParams) -> Result<(), anyhow::Error> {
@@ -160,6 +161,11 @@ async fn do_insert(
 ) -> Result<SqliteQueryResult, error::Error> {
     validate_sample_params(params)?;
 
+    let certainty = match params.uncertain {
+        Some(true) => Certainty::Uncertain,
+        _ => Certainty::Certain,
+    };
+
     sqlx::query("INSERT INTO seedsamples (tsn, collectedlocation, month, year, quantity, notes) VALUES (?, ?, ?, ?, ?, ?)")
         .bind(params.taxon)
         .bind(params.location)
@@ -167,6 +173,7 @@ async fn do_insert(
         .bind(params.year)
         .bind(params.quantity)
         .bind(&params.notes)
+        .bind(certainty)
         .execute(&state.dbpool)
         .await.map_err(|e| e.into())
 }
@@ -226,13 +233,19 @@ async fn do_update(
 ) -> Result<SqliteQueryResult, error::Error> {
     validate_sample_params(params)?;
 
-    sqlx::query("Update seedsamples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=? WHERE id=?")
+    let certainty = match params.uncertain {
+        Some(true) => Certainty::Uncertain,
+        _ => Certainty::Certain,
+    };
+
+    sqlx::query("Update seedsamples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE id=?")
         .bind(params.taxon)
         .bind(params.location)
         .bind(params.month)
         .bind(params.year)
         .bind(params.quantity)
         .bind(&params.notes)
+        .bind(certainty)
         .bind(id)
         .execute(&state.dbpool)
         .await.map_err(|e| e.into())

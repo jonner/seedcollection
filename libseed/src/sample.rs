@@ -2,6 +2,13 @@ use crate::{location::Location, taxonomy::Taxon};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, FromRow, QueryBuilder, Row, Sqlite};
 
+#[derive(Deserialize, Serialize, Debug, sqlx::Type)]
+#[repr(i32)]
+pub enum Certainty {
+    Certain = 1,
+    Uncertain = 2,
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct Sample {
     pub id: i64,
@@ -12,6 +19,7 @@ pub struct Sample {
     pub year: Option<u32>,
     pub notes: Option<String>,
     pub collection: Option<i64>,
+    pub certainty: Certainty,
 }
 
 pub enum Filter {
@@ -27,7 +35,7 @@ pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
-                    quantity, month, year, notes, CS.collectionid,
+                    quantity, month, year, notes, certainty, CS.collectionid,
                     GROUP_CONCAT(V.vernacular_name, "@") as cnames
                     FROM seedsamples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
@@ -94,6 +102,7 @@ impl FromRow<'_, SqliteRow> for Sample {
             year: row.try_get("year").unwrap_or(None),
             notes: row.try_get("notes").unwrap_or(None),
             collection: row.try_get("collectionid").unwrap_or(None),
+            certainty: row.try_get("certainty").unwrap_or(Certainty::Uncertain),
         })
     }
 }

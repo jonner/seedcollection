@@ -109,6 +109,14 @@
     </div>
     <div class="row g-6">
         <div class="mb-3">
+            <div class="form-check">
+            <input id="SampleUncertaintyInput" type="checkbox" class="form-check-input" value="true" name="uncertain" {% if sample.certainty == "Uncertain" %}checked{% endif %}>
+            <label for="SampleUncertaintyInput" class="form-check-label">ID is uncertain</label>
+            </div>
+        </div>
+    </div>
+    <div class="row g-6">
+        <div class="mb-3">
             <button type="submit" class="btn btn-primary">{% if sample %}Update{% else %}Add{% endif %}</button>
         </div>
 {% if sample %}
@@ -241,7 +249,8 @@ hx-post="{{ "/collection/new" | app_url }}"
             {% for s in samples %}
             <tr>
                 <td><a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a></td>
-                <td><a href="{{ ("/taxonomy/" ~ s.taxon.id) | app_url }}">{{ s.taxon.complete_name }}</a></td>
+                <td><a href="{{ ("/taxonomy/" ~ s.taxon.id) | app_url }}">{{ s.taxon.complete_name }}</a>
+                    {% if s.certainty == "Uncertain" %}(?){% endif %}</td>
                 <td><a href="{{ ("/location/" ~ s.location.id) | app_url }}">{{ s.location.name }}</a></td>
                 <td>{{ s.year or "" }}</td>
                 <td>{{ s.quantity or "" }}</td>
