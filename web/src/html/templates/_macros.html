@@ -135,37 +135,40 @@
 <form hx-post="{{ "/location/new" | app_url }}" id="{{ id }}">
 {% endif %}
     {{ show_message(message) }}
-    <div class="row px-3 mb-3">
-        <label class="form-label" for="LocationNameInput">Name</label>
-        <input id="LocationNameInput"
-               class="form-control"
-               type="text"
-               name="name"
-               value="{{ request.name or loc.name or "" }}">
-    </div>
-    <div class="row px-3 mb-3">
-        <label class="form-label" for="LocationDescInput">Description</label>
-        <textarea id="LocationDescInput"
-                  class="form-control"
-                  name="description">{{ request.description or loc.description or "" }}</textarea>
-    </div>
-    <div class="row px-3 mb-3">
-        <label class="form-label" for="LocationLatitudeInput">Latitude</label>
-        <input id="LocationLatitudeInput"
-               class="form-control"
-               type="number"
-               step="any"
-               name="latitude"
-               value="{{ request.latitude or loc.latitude or "" }}">
-    </div>
-    <div class="row px-3 mb-3">
-        <label class="form-label" for="LocationLongitudeInput">Longitude</label>
-        <input id="LocationLongitudeInput"
-               class="form-control"
-               type="number"
-               step="any"
-               name="longitude"
-               value="{{ request.longitude or loc.longitude or "" }}">
+    <div class="row g-6">
+        <div class="mb-3 col-12">
+            <label class="form-label" for="LocationNameInput">Name</label>
+            <input id="LocationNameInput"
+                   class="form-control"
+                   type="text"
+                   name="name"
+                   value="{{ request.name or loc.name or "" }}">
+        </div>
+        <div class="mb-3 col-6">
+            <label class="form-label" for="LocationLatitudeInput">Latitude</label>
+            <input id="LocationLatitudeInput"
+                   class="form-control"
+                   type="number"
+                   step="any"
+                   name="latitude"
+                   value="{{ request.latitude or loc.latitude or "" }}">
+        </div>
+        <div class="mb-3 col-6">
+            <label class="form-label" for="LocationLongitudeInput">Longitude</label>
+            <input id="LocationLongitudeInput"
+                   class="form-control"
+                   type="number"
+                   step="any"
+                   name="longitude"
+                   value="{{ request.longitude or loc.longitude or "" }}">
+        </div>
+        <div class="mb-3 col-12">
+            <label class="form-label" for="LocationDescInput">Description</label>
+            <textarea id="LocationDescInput"
+                      rows="5"
+                      class="form-control"
+                      name="description">{{ request.description or loc.description or "" }}</textarea>
+        </div>
     </div>
     {{ caller() }}
 </form>
