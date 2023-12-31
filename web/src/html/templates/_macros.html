@@ -121,7 +121,7 @@
         </div>
 {% if sample %}
         <div class="mb-3">
-            <button type="submit"
+            <button type="button"
                     class="btn btn-danger"
                     hx-delete="{{ ("/sample/" ~ sample.id) | api_url }}"
                     hx-confirm="Are you sure you want to delete sample {{ sample.id }}?"
