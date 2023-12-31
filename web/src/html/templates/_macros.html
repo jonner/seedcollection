@@ -226,17 +226,6 @@ hx-post="{{ "/collection/new" | app_url }}"
 </form>
 {%- endmacro %}
 
-{% macro collection_display(collection) -%}
-    <div class="row px-3 mb-3">
-        <div class="form-label">Name</div>
-        <div class="form-control">{{ collection.name }}</div>
-    </div>
-    <div class="row px-3 mb-3">
-        <div class="form-label">Description</div>
-        <div class="form-control">{{ collection.description }}</div>
-    </div>
-{%- endmacro %}
-
 {% macro sample_list(samples, cssid) -%}
 <table class="table" id="{{ cssid }}">
         <thead>

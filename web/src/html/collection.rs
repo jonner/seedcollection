@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{delete, get, put},
+    routing::{delete, get},
     Form, Router,
 };
 use axum_template::RenderHtml;
@@ -20,13 +20,18 @@ use crate::{app_url, auth::AuthSession, error, state::AppState, CustomKey, Messa
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/new", get(new_collection).post(insert_collection))
-        .route("/:id", put(modify_collection).delete(delete_collection))
-        .route("/:id/add", get(show_add_sample).post(add_sample))
         .route("/", get(root))
+        .route("/new", get(new_collection).post(insert_collection))
         .route("/list", get(list_collections))
+        .route(
+            "/:id",
+            get(show_collection)
+                .put(modify_collection)
+                .delete(delete_collection),
+        )
+        .route("/:id/edit", get(show_collection))
+        .route("/:id/add", get(show_add_sample).post(add_sample))
         .route("/:id/sample/:sampleid", delete(remove_sample))
-        .route("/:id", get(show_collection))
 }
 
 async fn root(
