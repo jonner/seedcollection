@@ -80,13 +80,21 @@
             <tr>
         <td>Samples</td>
         <td>
-            {% if samples %}
-            <ul class="list-group list-group-flush">
+            <ul id="taxon-samples" class="list-group list-group-flush">
             {% for sample in samples %}
-            <li class="list-group-item"><a href="{{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }}</a>: {{ sample.location.name }}</li>
+            <li class="list-group-item"><a href="{{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }}</a>: <i>{{ sample.taxon.complete_name }}</i> from {{ sample.location.name }} ({{ sample.year or "Unknown Year" }})</li>
             {% endfor %}
             </ul>
-            {% endif %}
+            <button type="button"
+                    class="btn btn-primary"
+                    hx-get="{{ ("/taxonomy/" ~ taxon.id ~ "/samples") | app_url }}"
+                    hx-target="#taxon-samples"
+                    hx-swap="OuterHTML">
+                    <div class="htmx-indicator spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    Query all child samples
+            </button>
         </td>
             </tr>
         </tbody>

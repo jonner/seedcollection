@@ -24,6 +24,7 @@ pub fn router() -> Router<AppState> {
         .route("/", get(root))
         .route("/list", get(list_taxa))
         .route("/:id", get(show_taxon))
+        .route("/:id/samples", get(show_all_children))
         .route("/quickfind", get(quickfind))
 }
 
@@ -83,6 +84,39 @@ async fn list_taxa(
                  page => pg,
                  total_pages => total_pages,
                  request_uri => req.uri().to_string()),
+    ))
+}
+
+async fn show_all_children(
+    auth: AuthSession,
+    CustomKey(key): CustomKey,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<impl IntoResponse, error::Error> {
+    let samples: Vec<Sample> = sqlx::query_as(
+        r#"WITH RECURSIVE CTE AS (
+        SELECT T.tsn, T.parent_tsn, T.complete_name, T.unit_name1, T.unit_name2, T.unit_name3,
+        T.rank_id, T.phylo_sort_seq, T.tsn as top_parent, T.complete_name as top_parent_name
+        FROM taxonomic_units T WHERE T.tsn=?
+        UNION ALL
+        SELECT TT.tsn, TT.parent_tsn, TT.complete_name, TT.unit_name1, TT.unit_name2, TT.unit_name3,
+        TT.rank_id, TT.phylo_sort_seq, CTE.top_parent, CTE.top_parent_name
+        FROM taxonomic_units TT, CTE
+        WHERE TT.parent_tsn = CTE.tsn)
+        SELECT CTE.tsn, CTE.parent_tsn as parentid, CTE.complete_name, CTE.unit_name1, CTE.unit_name2, CTE.unit_name3, CTE.phylo_sort_seq as seq, top_parent, top_parent_name,
+        S.id, L.locid, L.name as locname, quantity, month, year, notes
+        FROM CTE
+        INNER JOIN seedsamples S ON CTE.tsn=S.tsn
+        INNER JOIN seedlocations L on L.locid=S.collectedlocation
+        ORDER BY seq"#)
+        .bind(id)
+        .fetch_all(&state.dbpool)
+        .await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => auth.user,
+                     samples => samples),
     ))
 }
 
