@@ -3,6 +3,10 @@
 {% block content %}
 <h2>Location Details <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}"><img src="/static/pen.svg"></a></h2>
 <table class="table">
+    <colgroup>
+        <col style="width: 15%">
+        <col>
+    </colgroup>
     <tbody>
         <tr>
             <td>ID</td>
