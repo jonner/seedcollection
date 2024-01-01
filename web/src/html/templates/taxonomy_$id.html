@@ -1,4 +1,5 @@
 {% extends "root.html" %}
+{% from "_macros.html" import show_germination_list %}
 {% block title %}{{ taxon.complete_name }}{% endblock %}
 {% block content %}
     <h2>Taxon Details</h2>
@@ -33,6 +34,16 @@
             <tr>
         <td>Taxonomic ID</td>
         <td>{{ taxon.id }}</td>
+            </tr>
+            <tr>
+        <td>Germination Info</td>
+        <td>
+            {% if germination %}
+            {{ show_germination_list(germination) }}
+            {% else %}
+            <div>No Data</div>
+            {% endif %}
+        </td>
             </tr>
             <tr>
         <td>Minnesota Status</td>

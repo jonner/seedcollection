@@ -14,6 +14,26 @@
 <option value="12" {% if selected == 12 %}selected{% endif %}>December</option>
 {%- endmacro %}
 
+{% macro show_germination_item(germination, list) -%}
+{% if list %}<li class="list-group-item">{% else %}<div>{% endif %}
+<span class="badge text-bg-secondary">{{ germination.code }}</span> {{ germination.summary }}
+{% if list %}</li>{% else %}</div>{% endif %}
+{%- endmacro %}
+
+{% macro show_germination_list(germinations) -%}
+{% with uselist = (germinations | count) > 1 %}
+{% if uselist %}
+    <ul class="list-group list-group-flush">
+{% endif %}
+{% for g in germinations %}
+{{ show_germination_item(g, uselist) }}
+{% endfor %}
+{% if uselist %}
+    </ul>
+{% endif %}
+{% endwith %}
+{%- endmacro %}
+
 {% macro sample_form(locations, sample=none, request=none, message=none) -%}
 {% if sample %}
 <form hx-put="{{ ("/sample/" ~ sample.id) | app_url }}">

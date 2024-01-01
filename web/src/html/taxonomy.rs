@@ -13,7 +13,7 @@ use libseed::{
     },
 };
 use minijinja::context;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use tracing::debug;
 
@@ -120,6 +120,14 @@ async fn show_all_children(
     ))
 }
 
+#[derive(Serialize)]
+struct Germination {
+    id: i64,
+    code: String,
+    summary: Option<String>,
+    description: Option<String>,
+}
+
 async fn show_taxon(
     auth: AuthSession,
     CustomKey(key): CustomKey,
@@ -132,6 +140,16 @@ async fn show_taxon(
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;
+    let germination = sqlx::query_as!(
+        Germination,
+        r#"SELECT G.* from germinationcodes G
+                                      INNER JOIN taxongermination TG ON TG.germid=G.id
+                                      WHERE TG.tsn=?"#,
+        id
+    )
+    .fetch_all(&state.dbpool)
+    .await?;
+
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -139,7 +157,8 @@ async fn show_taxon(
                  taxon => hierarchy[0],
                  parents => hierarchy,
                  children => children,
-                 samples => samples),
+                 samples => samples,
+                 germination => germination,),
     ))
 }
 
