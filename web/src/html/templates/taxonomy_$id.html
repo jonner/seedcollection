@@ -1,5 +1,6 @@
 {% extends "root.html" %}
 {% from "_macros.html" import show_germination_list %}
+{% from "_macros.html" import show_vernacular_list %}
 {% block title %}{{ taxon.complete_name }}{% endblock %}
 {% block content %}
     <h2>Taxon Details</h2>
@@ -17,11 +18,7 @@
         <td>Common Names</td>
         <td>
             {% if taxon.vernaculars %}
-            <ul class="list-group list-group-flush">
-                {% for name in taxon.vernaculars %}
-                <li class="list-group-item">{{ name }}</li>
-                {% endfor %}
-            </ul>
+            {{ show_vernacular_list(taxon.vernaculars) }}
             {% else %}
             None
             {% endif %}
