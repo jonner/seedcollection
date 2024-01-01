@@ -166,7 +166,7 @@ async fn do_insert(
         _ => Certainty::Certain,
     };
 
-    sqlx::query("INSERT INTO seedsamples (tsn, collectedlocation, month, year, quantity, notes) VALUES (?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO seedsamples (tsn, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?)")
         .bind(params.taxon)
         .bind(params.location)
         .bind(params.month)
