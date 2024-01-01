@@ -2,7 +2,7 @@ use axum::{
     extract::{Path, Query, Request, State},
     response::IntoResponse,
     routing::get,
-    Router,
+    Form, Router,
 };
 use axum_template::RenderHtml;
 use libseed::{
@@ -26,6 +26,7 @@ pub fn router() -> Router<AppState> {
         .route("/:id", get(show_taxon))
         .route("/:id/samples", get(show_all_children))
         .route("/quickfind", get(quickfind))
+        .route("/editgerm", get(editgerm).post(addgerm))
 }
 
 async fn root(
@@ -188,4 +189,47 @@ async fn quickfind(
         }
     };
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
+}
+
+#[derive(Serialize)]
+struct GerminationInfo {
+    id: i64,
+    code: Option<String>,
+    summary: Option<String>,
+    description: Option<String>,
+}
+
+async fn editgerm(
+    CustomKey(key): CustomKey,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, error::Error> {
+    let codes = sqlx::query_as!(GerminationInfo, "SELECT * FROM germinationcodes")
+        .fetch_all(&state.dbpool)
+        .await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(codes => codes),
+    ))
+}
+
+#[derive(Deserialize)]
+struct AddGermParams {
+    taxon: i64,
+    germid: i64,
+}
+
+async fn addgerm(
+    State(state): State<AppState>,
+    Form(params): Form<AddGermParams>,
+) -> Result<impl IntoResponse, error::Error> {
+    let newid = sqlx::query!(
+        "INSERT INTO taxongermination (tsn, germid) VALUES (?, ?)",
+        params.taxon,
+        params.germid
+    )
+    .execute(&state.dbpool)
+    .await?
+    .last_insert_rowid();
+    Ok(format!("<div>Inserted row {newid}</div>"))
 }
