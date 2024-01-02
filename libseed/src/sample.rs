@@ -66,28 +66,23 @@ pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
                 builder.push(" WHERE S.tsn=");
                 builder.push_bind(id.clone());
             }
-            _ => (),
+            Filter::TaxonNameLike(substr) => {
+                if !substr.is_empty() {
+                    let wildcard = format!("%{substr}%");
+                    builder.push(" WHERE T.unit_name1 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR T.unit_name2 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR T.unit_name3 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR V.vernacular_name LIKE ");
+                    builder.push_bind(wildcard.clone());
+                }
+            }
         },
         None => (),
     }
-    builder.push(" GROUP BY S.id, T.tsn");
-    match &filter {
-        Some(Filter::TaxonNameLike(substr)) => {
-            if !substr.is_empty() {
-                let wildcard = format!("%{substr}%");
-                builder.push(" HAVING T.unit_name1 LIKE ");
-                builder.push_bind(wildcard.clone());
-                builder.push(" OR T.unit_name2 LIKE ");
-                builder.push_bind(wildcard.clone());
-                builder.push(" OR T.unit_name3 LIKE ");
-                builder.push_bind(wildcard.clone());
-                builder.push(" OR cnames LIKE ");
-                builder.push_bind(wildcard.clone());
-            }
-        }
-        _ => (),
-    }
-    builder.push(" ORDER BY phylo_sort_seq");
+    builder.push(" GROUP BY S.id, T.tsn ORDER BY phylo_sort_seq");
     builder
 }
 
