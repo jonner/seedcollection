@@ -12,6 +12,7 @@ use minijinja::context;
 
 mod auth;
 mod collection;
+mod info;
 mod location;
 mod sample;
 mod taxonomy;
@@ -22,6 +23,7 @@ pub fn router() -> Router<AppState> {
         .nest("/location/", location::router())
         .nest("/sample/", sample::router())
         .nest("/taxonomy/", taxonomy::router())
+        .nest("/info/", info::router())
         /* Anything above here is only available to logged-in users */
         .route_layer(login_required!(
             SqliteAuthBackend,

@@ -16,7 +16,7 @@
 
 {% macro show_germination_item(germination, list) -%}
 {% if list %}<li class="list-group-item">{% else %}<div>{% endif %}
-<span class="badge text-bg-secondary">{{ germination.code }}</span> {{ germination.summary }}
+        <a href="{{ ("/info/germination#germ-code-" ~ germination.id ) | app_url}}" class="badge text-bg-secondary">{{ germination.code }}</a> {{ germination.summary }}
 {% if list %}</li>{% else %}</div>{% endif %}
 {%- endmacro %}
 
