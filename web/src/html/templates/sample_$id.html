@@ -1,5 +1,6 @@
 {% extends "root.html" %}
 {% from "_macros.html" import show_germination_list %}
+{% from "_macros.html" import show_vernacular_list %}
 {% block title %}Sample {{ sample.id }}{% endblock %}
 {% block content %}
 <h2>Sample Details <a href="{{ ("/sample/" ~ sample.id ~ "/edit") | app_url }}"><img src="/static/pen.svg"></a></h2>
@@ -21,11 +22,9 @@
             <td>Common Names</td>
             <td>
                 {% if sample.taxon.vernaculars %}
-                <ul class="list-group list-group-flush">
-                {% for name in sample.taxon.vernaculars %}
-                <li class="list-group-item">{{ name }}</li>
-                {% endfor %}
-                </ul>
+                {{ show_vernacular_list(sample.taxon.vernaculars) }}
+                {% else %}
+                None
                 {% endif %}
             </td>
         </tr>
