@@ -2,9 +2,40 @@
 {% block title %}Taxonomy{% endblock %}
 {% block content %}
     <h2>Taxonomy</h2>
-    <p>This tool uses the <a href="https://www.itis.gov/index.html">ITIS taxonomy</a>
-        to categorize plant species.</p>
-    <ul>
-        <li><a href="{{ "/taxonomy/list" | app_url }}">List all species</a></li>
-    <ul>
+    <div class="mb-3">
+        <p>This tool uses the <a href="https://www.itis.gov/index.html">ITIS taxonomy</a>
+            to categorize plant species.</p>
+    </div>
+    <div class="mb-3"><a href="{{ "/taxonomy/list" | app_url }}">List all species</a></div>
+    <div class="mb-3">
+        <form
+                hx-get="{{ "/taxonomy/search" | app_url }}"
+                hx-trigger="submit, input changed delay:500ms from:input, input changed delay:500ms from:select"
+                hx-target="#searchResults"
+                >
+                <div class="input-group">
+                    <div class="col-9">
+                        <input id="taxon-input"
+                               placeholder="Type to search..."
+                               type="text"
+                               autofocus
+                               class="form-control"
+                               name="taxon"
+                               >
+                    </div>
+                    <div class="col-3">
+                        <select id="rank-input"
+                                name="rank"
+                                class="form-select">
+                            <option value="">Any Rank</option>
+                            {% for rank in ranks %}
+                            <option value="{{rank}}">{{rank}}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+        </form>
+    </div>
+    <div id="searchResults"
+        class="mv-3"></div>
 {% endblock %}

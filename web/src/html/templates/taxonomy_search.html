@@ -1,0 +1,9 @@
+{% if taxa %}
+<ul class="list-group list-group-flush">
+    {% for taxon in taxa %}
+    <li class="list-group-item"><span class="scientific"><a href="{{ ("/taxonomy/" ~ taxon.id) | app_url}}">{{ taxon.complete_name }}</a></span>
+    {% if taxon.vernaculars %}- <span class="vernacular">{{ taxon.vernaculars|join(", ") }}</span>{% endif %}
+    <span class='rank'>({{ taxon.rank }})</span></li>
+    {% endfor %}
+</ul>
+{% endif %}

@@ -6,6 +6,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
+    empty_string_as_none,
     filter::{Cmp, CompoundFilter, FilterOp},
     sample::{self, Filter, Sample},
     taxonomy::{self, any_filter, FilterField, Germination, LimitSpec, Rank, Taxon},
@@ -13,6 +14,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use strum::IntoEnumIterator;
 use tracing::debug;
 
 use crate::{auth::AuthSession, error, state::AppState, CustomKey};
@@ -23,7 +25,8 @@ pub fn router() -> Router<AppState> {
         .route("/list", get(list_taxa))
         .route("/:id", get(show_taxon))
         .route("/:id/samples", get(show_all_children))
-        .route("/quickfind", get(quickfind))
+        .route("/datalist", get(datalist))
+        .route("/search", get(search))
         .route("/editgerm", get(editgerm).post(addgerm))
 }
 
@@ -32,10 +35,11 @@ async fn root(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let ranks: Vec<Rank> = Rank::iter().collect();
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth.user),
+        context!(user => auth.user, ranks => ranks),
     ))
 }
 
@@ -154,14 +158,38 @@ async fn show_taxon(
 }
 
 #[derive(Deserialize)]
-struct QuickfindParams {
+struct DatalistParams {
     taxon: String,
 }
 
-async fn quickfind(
+async fn datalist(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
-    Query(QuickfindParams { taxon }): Query<QuickfindParams>,
+    Query(DatalistParams { taxon }): Query<DatalistParams>,
+) -> Result<impl IntoResponse, error::Error> {
+    quickfind(key, &state, taxon, None).await
+}
+
+#[derive(Deserialize)]
+struct SearchParams {
+    taxon: String,
+    #[serde(deserialize_with = "empty_string_as_none")]
+    rank: Option<Rank>,
+}
+
+async fn search(
+    CustomKey(key): CustomKey,
+    State(state): State<AppState>,
+    Query(SearchParams { taxon, rank }): Query<SearchParams>,
+) -> Result<impl IntoResponse, error::Error> {
+    quickfind(key, &state, taxon, rank).await
+}
+
+async fn quickfind(
+    key: String,
+    state: &AppState,
+    taxon: String,
+    rank: Option<Rank>,
 ) -> Result<impl IntoResponse, error::Error> {
     let taxa: Vec<Taxon> = match taxon.is_empty() {
         true => Vec::new(),
@@ -171,6 +199,10 @@ async fn quickfind(
             for part in parts {
                 filter.add_filter(Box::new(any_filter(part)));
             }
+            if let Some(rank) = rank {
+                filter.add_filter(Box::new(FilterField::Rank(rank)));
+            }
+            /* FIXME: pagination for /search endpoing? */
             taxonomy::build_query(Some(Box::new(filter)), Some(LimitSpec(200, None)))
                 .build_query_as()
                 .fetch_all(&state.dbpool)
