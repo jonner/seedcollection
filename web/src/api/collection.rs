@@ -36,7 +36,7 @@ async fn list_collections(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Collection>>, error::Error> {
     let collections: Vec<Collection> =
-        sqlx::query_as("SELECT L.id, L.name, L.description FROM seedcollections L")
+        sqlx::query_as("SELECT id, name, description FROM seedcollections")
             .fetch_all(&state.dbpool)
             .await?;
     Ok(Json(collections))
@@ -47,7 +47,7 @@ async fn show_collection(
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {
     let mut builder: QueryBuilder<Sqlite> =
-        QueryBuilder::new("SELECT L.id, L.name, L.description FROM seedcollections L WHERE id=");
+        QueryBuilder::new("SELECT id, name, description FROM seedcollections WHERE id=");
     builder.push_bind(id);
     let mut collection: Collection = builder.build_query_as().fetch_one(&state.dbpool).await?;
     let mut builder = sample::build_query(Some(Filter::Collection(id)));
