@@ -1,6 +1,25 @@
 {% extends "root.html" %}
 {% from "_macros.html" import show_germination_list %}
 {% from "_macros.html" import show_vernacular_list %}
+
+{% macro show_status_badge(native_status) -%}
+{% if native_status == "Native" %}
+<span class="badge text-bg-success">{{ native_status }}</span>
+{% elif native_status == "Introduced" %}
+<span class="badge text-bg-danger">{{ native_status }}</span>
+{% elif native_status == "Unknown" %}
+<span class="badge text-bg-warning">{{ native_status }}</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro show_taxon(t) -%}
+<a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a>
+{% if t.vernaculars %}
+- <span class="vernacular">{{ t.vernaculars[0] }}</span>
+{% endif %}
+<span class="rank">({{ t.rank }})</span> {{ show_status_badge(t.native_status) }}
+{%- endmacro %}
+
 {% block title %}{{ taxon.complete_name }}{% endblock %}
 {% block content %}
     <h2>Taxon Details</h2>
@@ -46,9 +65,7 @@
         <td>Minnesota Status</td>
         <td>
             {% if taxon.native_status %}
-            <span class="{%if taxon.native_status == "Native" %}success{% elif taxon.native_status == "Introduced" %}danger{% elif taxon.native_status == "Unknown" %}warning{% endif %}">
-                Present, {{ taxon.native_status }}
-            </span>
+            {{ show_status_badge(taxon.native_status) }}
             {% else %}
             Not present
             {% endif %}
@@ -59,29 +76,13 @@
         <td id="taxa-hierarchy">
             <ul>
             {% for t in parents|reverse %}
-            <li
-            {% if t.native_status is not none and t.native_status == "Native" %}
-                class="highlighted"
-            {% endif %}
-            >
-            <span class="{{ t.native_status | lower }}">
-                <a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a>
-                {% if t.vernaculars %}
-                - <span class="vernacular">{{ t.vernaculars[0] }}</span>
-                {% endif %}
-                <span class="rank">({{ t.rank }})</span>
-            </span>
+            <li>
+                {{ show_taxon(t) }}
             <ul>
             {% endfor %}
             {% for c in children %}
             <li>
-                <span class="{{ c.native_status | lower }}">
-                <a href="{{ ("/taxonomy/" ~ c.id) | app_url }}">{{ c.complete_name }}</a>
-                {% if c.vernaculars %}
-                - <span class="vernacular">{{ c.vernaculars[0] }}</span>
-                {% endif %}
-                <span class="rank">({{ c.rank }})</span>
-                </span>
+                {{ show_taxon(c) }}
             </li>
             {% endfor %}
             {% for t in parents|reverse %}
