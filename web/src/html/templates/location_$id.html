@@ -1,7 +1,8 @@
 {% extends "root.html" %}
+{% from "_macros.html" import icon %}
 {% block title %}{{ location.name }} Details{% endblock %}
 {% block content %}
-<h2>Location Details <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}"><img src="/static/pen.svg"></a></h2>
+<h2>Location Details <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <table class="table">
     <colgroup>
         <col style="width: 15%">

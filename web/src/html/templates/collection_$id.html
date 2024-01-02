@@ -1,7 +1,8 @@
 {% extends "root.html" %}
+{% from "_macros.html" import icon %}
 {% block title %}Collection {{ collection.id }}{% endblock %}
 {% block content %}
-<h2>Collection Details <a href="{{ ("/collection/" ~ collection.id ~ "/edit") | app_url }}"><img src="/static/pen.svg"></a></h2>
+<h2>Collection Details <a href="{{ ("/collection/" ~ collection.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <table class="table">
     <colgroup>
         <col style="width: 15%">
@@ -17,24 +18,23 @@
             <td>{{ collection.description }}</td>
         </tr>
         <tr>
-        <td>Samples in this collection</td>
+            <td>Samples in this collection
+                <a class="ms-2" href="{{ ("/collection/" ~ collection.id) | app_url }}/add">{{ icon("plus-square") }}</a>
+        </td>
         <td>
-        <ul class="list-group list-group-flush">
+        <ul id="collection-sample-list" class="list-group list-group-flush">
                 {% for s in collection.samples %}
                 <li class="list-group-item">
                     <a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a>:
                     <b>{{ s.taxon.complete_name }}</b> from
                     <i>{{ s.location.name }}</i>
-                        <a
+                        <a class="ms-2" href="#"
                            hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ s.id) | app_url }}"
                            hx-confirm="Are you sure you want to remove sample {{ s.id }}?"
                            hx-target="closest li"
-                           hx-swap="outerHTML"><img src="/static/trash.svg"/></a>
+                           hx-swap="outerHTML">{{ icon("x-square", "danger") }}</a>
                 </li>
                 {% endfor %}
-                <li class="list-group-item">
-                    <a href="{{ ("/collection/" ~ collection.id) | app_url }}/add">Add new samples</a>
-                </li>
         </ul>
         </tr>
     </tbody>

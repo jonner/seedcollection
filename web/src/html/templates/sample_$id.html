@@ -1,9 +1,10 @@
 {% extends "root.html" %}
 {% from "_macros.html" import show_germination_list %}
 {% from "_macros.html" import show_vernacular_list %}
+{% from "_macros.html" import icon %}
 {% block title %}Sample {{ sample.id }}{% endblock %}
 {% block content %}
-<h2>Sample Details <a href="{{ ("/sample/" ~ sample.id ~ "/edit") | app_url }}"><img src="/static/pen.svg"></a></h2>
+<h2>Sample Details <a href="{{ ("/sample/" ~ sample.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <table class="table">
     <colgroup>
         <col style="width: 15%">

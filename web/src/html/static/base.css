@@ -64,3 +64,10 @@ td, th {
     border: 1px solid var(--bs-primary-border-subtle);
     border-radius: 0.5rem;
 }
+
+#collection-sample-list > li .bi {
+    display: none;
+}
+#collection-sample-list > li:hover .bi {
+    display: inline-block;
+}

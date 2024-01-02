@@ -14,6 +14,10 @@
 <option value="12" {% if selected == 12 %}selected{% endif %}>December</option>
 {%- endmacro %}
 
+{% macro icon(icon_name, color=none) -%}
+<i class="bi bi-{{ icon_name }}{% if color %} text-{{ color }}{% endif %}"></i>
+{%- endmacro %}
+
 {% macro show_germination_item(germination, list) -%}
 {% if list %}<li class="list-group-item">{% else %}<div>{% endif %}
         <a href="{{ ("/info/germination#germ-code-" ~ germination.id ) | app_url}}" class="badge text-bg-secondary">{{ germination.code }}</a> {{ germination.summary }}
