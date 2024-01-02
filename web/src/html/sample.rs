@@ -9,7 +9,7 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
     empty_string_as_none,
-    filter::Cmp,
+    filter::{Cmp, FilterPart},
     location::Location,
     sample::{self, Certainty, Filter, Sample},
     taxonomy::Germination,
@@ -53,7 +53,11 @@ async fn filter_samples(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut builder = sample::build_query(Some(Box::new(Filter::TaxonNameLike(fragment))));
+    let filter: Option<Box<dyn FilterPart>> = match fragment.is_empty() {
+        true => None,
+        false => Some(Box::new(Filter::TaxonNameLike(fragment))),
+    };
+    let mut builder = sample::build_query(filter);
     let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(RenderHtml(
         key,

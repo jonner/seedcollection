@@ -62,14 +62,16 @@ impl FilterPart for Filter {
             Self::TaxonNameLike(s) => {
                 if !s.is_empty() {
                     let wildcard = format!("%{s}%");
-                    builder.push(" WHERE T.unit_name1 LIKE ");
+                    builder.push(" (");
+                    builder.push(" T.unit_name1 LIKE ");
                     builder.push_bind(wildcard.clone());
                     builder.push(" OR T.unit_name2 LIKE ");
                     builder.push_bind(wildcard.clone());
                     builder.push(" OR T.unit_name3 LIKE ");
                     builder.push_bind(wildcard.clone());
-                    builder.push(" OR cnames LIKE ");
+                    builder.push(" OR V.vernacular_name LIKE ");
                     builder.push_bind(wildcard.clone());
+                    builder.push(") ");
                 }
             }
         };
