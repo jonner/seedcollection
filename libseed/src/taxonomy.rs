@@ -65,6 +65,14 @@ pub struct Taxon {
     pub seq: Option<i64>,
 }
 
+#[derive(Serialize)]
+pub struct Germination {
+    pub id: i64,
+    pub code: String,
+    pub summary: Option<String>,
+    pub description: Option<String>,
+}
+
 impl FromRow<'_, SqliteRow> for Taxon {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         let rank = match row.try_get::<i64, _>("rank_id") {

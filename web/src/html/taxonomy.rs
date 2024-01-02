@@ -9,7 +9,7 @@ use libseed::{
     sample::{self, Filter, Sample},
     taxonomy::{
         self, any_filter, CompoundFilterCondition, FilterField, FilterOperation,
-        FilterQueryBuilder, LimitSpec, Rank, Taxon,
+        FilterQueryBuilder, Germination, LimitSpec, Rank, Taxon,
     },
 };
 use minijinja::context;
@@ -119,14 +119,6 @@ async fn show_all_children(
         context!(user => auth.user,
                      samples => samples),
     ))
-}
-
-#[derive(Serialize)]
-struct Germination {
-    id: i64,
-    code: String,
-    summary: Option<String>,
-    description: Option<String>,
 }
 
 async fn show_taxon(
