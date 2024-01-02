@@ -52,8 +52,12 @@
     {% block content %}
     {% endblock %}
     </div>
-    <footer id="sc-footer" class="bg-body-tertiary">
+    <footer id="sc-footer" class="pb-5 text-body-tertiary bg-body-tertiary">
     {% block footer %}
+    <div class="mb-3">
+        <p>This tool uses the <a href="https://www.itis.gov/index.html">ITIS taxonomy</a>
+            to categorize plant species.</p>
+    </div>
     &copy; Jonathon Jongsma
     {% endblock %}
     </footer>
