@@ -1,14 +1,14 @@
-    {% if options %}
+    {% if samples %}
     <form hx-post="{{ ("/collection/" ~ collection.id ~ "/add") | app_url }}">
-        {% for option in options %}
+        {% for sample in samples %}
         <div class="form-check">
             <input class="form-check-input"
                    type="checkbox"
                    name="sample"
-                   value="{{option.id}}"
-                   id="sample-{{option.id}}">
-            <label class="form-check-label" for="sample-{{option.id}}">
-                {{ option.id }} - {{ option.taxon.complete_name }}
+                   value="{{sample.id}}"
+                   id="sample-{{sample.id}}">
+            <label class="form-check-label" for="sample-{{sample.id}}">
+                {{ sample.id }}: <b>{{ sample.taxon.complete_name }}</b> from {{ sample.location.name }} ({{ sample.year }}) - {{ sample.notes }}
             </label>
         </div>
         {% endfor %}

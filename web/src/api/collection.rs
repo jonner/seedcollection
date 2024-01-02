@@ -8,6 +8,7 @@ use axum::{
 };
 use libseed::{
     collection::Collection,
+    filter::Cmp,
     sample::{self, Filter},
 };
 use serde::Deserialize;
@@ -50,7 +51,7 @@ async fn show_collection(
         QueryBuilder::new("SELECT id, name, description FROM seedcollections WHERE id=");
     builder.push_bind(id);
     let mut collection: Collection = builder.build_query_as().fetch_one(&state.dbpool).await?;
-    let mut builder = sample::build_query(Some(Box::new(Filter::Collection(id))));
+    let mut builder = sample::build_query(Some(Box::new(Filter::Collection(Cmp::Equal, id))));
     collection.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(Json(collection))
 }

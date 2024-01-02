@@ -6,7 +6,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    filter::{CompoundFilter, FilterOp},
+    filter::{Cmp, CompoundFilter, FilterOp},
     sample::{self, Filter, Sample},
     taxonomy::{self, any_filter, FilterField, Germination, LimitSpec, Rank, Taxon},
 };
@@ -127,7 +127,7 @@ async fn show_taxon(
 ) -> Result<impl IntoResponse, error::Error> {
     let hierarchy = taxonomy::fetch_taxon_hierarchy(id, &state.dbpool).await?;
     let children = taxonomy::fetch_children(id, &state.dbpool).await?;
-    let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::Taxon(id))))
+    let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::Taxon(Cmp::Equal, id))))
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;

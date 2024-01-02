@@ -1,4 +1,8 @@
-use crate::{filter::FilterPart, location::Location, taxonomy::Taxon};
+use crate::{
+    filter::{Cmp, FilterPart},
+    location::Location,
+    taxonomy::Taxon,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, FromRow, QueryBuilder, Row, Sqlite};
 
@@ -23,22 +27,38 @@ pub struct Sample {
 }
 
 pub enum Filter {
-    Collection(i64),
+    Collection(Cmp, i64),
     NoCollection,
-    Sample(i64),
-    Location(i64),
-    Taxon(i64),
+    Sample(Cmp, i64),
+    SampleNotIn(Vec<i64>),
+    Location(Cmp, i64),
+    Taxon(Cmp, i64),
     TaxonNameLike(String),
 }
 
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Collection(id) => _ = builder.push("CS.collectionid=").push_bind(id.clone()),
+            Self::Collection(cmp, id) => {
+                _ = builder
+                    .push("CS.collectionid")
+                    .push(cmp)
+                    .push_bind(id.clone())
+            }
             Self::NoCollection => _ = builder.push("CS.collectionid IS NULL"),
-            Self::Sample(id) => _ = builder.push("S.id=").push_bind(id.clone()),
-            Self::Location(id) => _ = builder.push("L.locid=").push_bind(id.clone()),
-            Self::Taxon(id) => _ = builder.push("S.tsn=").push_bind(id.clone() as i64),
+            Self::Sample(cmp, id) => _ = builder.push("S.id").push(cmp).push_bind(id.clone()),
+            Self::SampleNotIn(list) => {
+                _ = builder.push("S.id NOT IN (");
+                let mut sep = builder.separated(", ");
+                for id in list {
+                    sep.push_bind(id.clone());
+                }
+                builder.push(")");
+            }
+            Self::Location(cmp, id) => _ = builder.push("L.locid").push(cmp).push_bind(id.clone()),
+            Self::Taxon(cmp, id) => {
+                _ = builder.push("S.tsn").push(cmp).push_bind(id.clone() as i64)
+            }
             Self::TaxonNameLike(s) => {
                 if !s.is_empty() {
                     let wildcard = format!("%{s}%");
@@ -71,6 +91,7 @@ pub fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static,
                     "#,
     );
     if let Some(f) = filter {
+        builder.push(" WHERE ");
         f.add_to_query(&mut builder);
     }
     builder.push(" GROUP BY S.id, T.tsn ORDER BY phylo_sort_seq");

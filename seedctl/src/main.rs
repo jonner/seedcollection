@@ -3,7 +3,7 @@ use clap::Parser;
 use cli::*;
 use libseed::{
     collection::Collection,
-    filter::FilterPart,
+    filter::{Cmp, FilterPart},
     location,
     sample::{self, Filter, Sample},
     taxonomy::{self, filter_by, Taxon},
@@ -27,7 +27,7 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
 
 async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: bool) -> Result<()> {
     let filter: Option<Box<dyn FilterPart>> = match collectionid {
-        Some(id) => Some(Box::new(Filter::Collection(id))),
+        Some(id) => Some(Box::new(Filter::Collection(Cmp::Equal, id))),
         _ => None,
     };
     let mut sqlbuilder = sample::build_query(filter);

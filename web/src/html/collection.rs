@@ -10,6 +10,7 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
     empty_string_as_none,
+    filter::Cmp,
     sample::{self, Filter, Sample},
 };
 use minijinja::context;
@@ -142,7 +143,7 @@ async fn show_collection(
             .bind(id)
             .fetch_one(&state.dbpool)
             .await?;
-    let mut builder = sample::build_query(Some(Box::new(Filter::Collection(id))));
+    let mut builder = sample::build_query(Some(Box::new(Filter::Collection(Cmp::Equal, id))));
     c.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
 
     Ok(RenderHtml(
@@ -245,28 +246,43 @@ async fn delete_collection(
     }
 }
 
-async fn show_add_sample(
-    auth: AuthSession,
-    CustomKey(key): CustomKey,
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-) -> Result<impl IntoResponse, error::Error> {
+async fn add_sample_prep(
+    id: i64,
+    state: &AppState,
+) -> Result<(Collection, Vec<Sample>), error::Error> {
     let c: Collection =
         sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
             .bind(id)
             .fetch_one(&state.dbpool)
             .await?;
 
-    let options: Vec<Sample> = sample::build_query(Some(Box::new(Filter::NoCollection)))
+    let ids_in_collection = sqlx::query!(
+        "SELECT CS.sampleid from seedcollectionsamples CS WHERE CS.collectionid=?",
+        id
+    )
+    .fetch_all(&state.dbpool)
+    .await?;
+    let ids = ids_in_collection.iter().map(|row| row.sampleid).collect();
+    let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::SampleNotIn(ids))))
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;
+    Ok((c, samples))
+}
+
+async fn show_add_sample(
+    auth: AuthSession,
+    CustomKey(key): CustomKey,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<impl IntoResponse, error::Error> {
+    let (c, samples) = add_sample_prep(id, &state).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => auth.user,
                  collection => c,
-                 options => options),
+                 samples => samples),
     )
     .into_response())
 }
@@ -277,7 +293,7 @@ async fn add_sample(
     Path(id): Path<i64>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let samples: Vec<i64> = params
+    let toadd: Vec<i64> = params
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
             "sample" => value.parse::<i64>().ok(),
@@ -285,7 +301,7 @@ async fn add_sample(
         })
         .collect();
 
-    for sample in samples {
+    for sample in toadd {
         sqlx::query("INSERT INTO seedcollectionsamples (collectionid, sampleid) VALUES (?, ?)")
             .bind(id)
             .bind(sample)
@@ -293,19 +309,12 @@ async fn add_sample(
             .await?;
     }
 
-    let c: Collection =
-        sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-            .bind(id)
-            .fetch_one(&state.dbpool)
-            .await?;
-    let options: Vec<Sample> = sample::build_query(Some(Box::new(Filter::NoCollection)))
-        .build_query_as()
-        .fetch_all(&state.dbpool)
-        .await?;
+    let (c, samples) = add_sample_prep(id, &state).await?;
     Ok(RenderHtml(
         key + ".partial",
         state.tmpl.clone(),
-        context!(collection => c, options => options, partial => true),
+        context!(collection => c,
+                 samples => samples),
     )
     .into_response())
 }

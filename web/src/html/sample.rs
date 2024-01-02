@@ -9,6 +9,7 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
     empty_string_as_none,
+    filter::Cmp,
     location::Location,
     sample::{self, Certainty, Filter, Sample},
     taxonomy::Germination,
@@ -83,7 +84,7 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut builder = sample::build_query(Some(Box::new(Filter::Sample(id))));
+    let mut builder = sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
     let collection = match sample.collection {
         Some(cid) => {
@@ -210,10 +211,11 @@ async fn insert_sample(
         ),
         Ok(result) => {
             let id = result.last_insert_rowid();
-            let sample: Sample = sample::build_query(Some(Box::new(Filter::Sample(id))))
-                .build_query_as()
-                .fetch_one(&state.dbpool)
-                .await?;
+            let sample: Sample =
+                sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))))
+                    .build_query_as()
+                    .fetch_one(&state.dbpool)
+                    .await?;
 
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
             (
@@ -291,7 +293,7 @@ async fn update_sample(
         ),
     };
 
-    let sample: Sample = sample::build_query(Some(Box::new(Filter::Sample(id))))
+    let sample: Sample = sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))))
         .build_query_as()
         .fetch_one(&state.dbpool)
         .await?;

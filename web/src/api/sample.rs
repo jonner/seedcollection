@@ -8,6 +8,7 @@ use axum::{
 };
 use libseed::{
     empty_string_as_none,
+    filter::Cmp,
     sample::{self, Filter, Sample},
 };
 use serde::Deserialize;
@@ -39,7 +40,7 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Sample>, error::Error> {
-    let mut builder = sample::build_query(Some(Box::new(Filter::Sample(id))));
+    let mut builder = sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
     Ok(Json(sample))
 }
