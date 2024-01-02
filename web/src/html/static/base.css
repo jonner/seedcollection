@@ -31,8 +31,17 @@ td, th {
 }
 
 #taxa-hierarchy ul {
-    padding-left: 1em;
-    list-style-type: disc;
+    list-style-type: none;
+}
+
+#taxa-hierarchy > ul {
+    padding-left: 0;
+}
+
+#taxa-hierarchy li > ul > li:before {
+    font-family: "bootstrap-icons";
+    content: "\F132";
+    list-style-type: none;
 }
 
 #taxa-hierarchy .vernacular,.rank {
