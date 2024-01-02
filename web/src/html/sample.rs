@@ -11,6 +11,7 @@ use libseed::{
     empty_string_as_none,
     location::Location,
     sample::{self, Certainty, Filter, Sample},
+    taxonomy::Germination,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -100,11 +101,21 @@ async fn show_sample(
     )
     .fetch_all(&state.dbpool)
     .await?;
+    let germination = sqlx::query_as!(
+        Germination,
+        r#"SELECT G.* from germinationcodes G
+                                      INNER JOIN taxongermination TG ON TG.germid=G.id
+                                      WHERE TG.tsn=?"#,
+        sample.taxon.id
+    )
+    .fetch_all(&state.dbpool)
+    .await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => auth.user,
                  sample => sample,
+                 germination => germination,
                  locations => locations,
                  collection => collection),
     ))
