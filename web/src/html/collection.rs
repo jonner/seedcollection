@@ -142,7 +142,7 @@ async fn show_collection(
             .bind(id)
             .fetch_one(&state.dbpool)
             .await?;
-    let mut builder = sample::build_query(Some(Filter::Collection(id)));
+    let mut builder = sample::build_query(Some(Box::new(Filter::Collection(id))));
     c.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
 
     Ok(RenderHtml(
@@ -257,7 +257,7 @@ async fn show_add_sample(
             .fetch_one(&state.dbpool)
             .await?;
 
-    let options: Vec<Sample> = sample::build_query(Some(Filter::NoCollection))
+    let options: Vec<Sample> = sample::build_query(Some(Box::new(Filter::NoCollection)))
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;
@@ -298,7 +298,7 @@ async fn add_sample(
             .bind(id)
             .fetch_one(&state.dbpool)
             .await?;
-    let options: Vec<Sample> = sample::build_query(Some(Filter::NoCollection))
+    let options: Vec<Sample> = sample::build_query(Some(Box::new(Filter::NoCollection)))
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;

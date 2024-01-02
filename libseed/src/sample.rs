@@ -1,4 +1,4 @@
-use crate::{location::Location, taxonomy::Taxon};
+use crate::{filter::FilterPart, location::Location, taxonomy::Taxon};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, FromRow, QueryBuilder, Row, Sqlite};
 
@@ -31,7 +31,32 @@ pub enum Filter {
     TaxonNameLike(String),
 }
 
-pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
+impl FilterPart for Filter {
+    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
+        match self {
+            Self::Collection(id) => _ = builder.push("CS.collectionid=").push_bind(id.clone()),
+            Self::NoCollection => _ = builder.push("CS.collectionid IS NULL"),
+            Self::Sample(id) => _ = builder.push("S.id=").push_bind(id.clone()),
+            Self::Location(id) => _ = builder.push("L.locid=").push_bind(id.clone()),
+            Self::Taxon(id) => _ = builder.push("S.tsn=").push_bind(id.clone() as i64),
+            Self::TaxonNameLike(s) => {
+                if !s.is_empty() {
+                    let wildcard = format!("%{s}%");
+                    builder.push(" WHERE T.unit_name1 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR T.unit_name2 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR T.unit_name3 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR cnames LIKE ");
+                    builder.push_bind(wildcard.clone());
+                }
+            }
+        };
+    }
+}
+
+pub fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
         r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
@@ -45,42 +70,8 @@ pub fn build_query(filter: Option<Filter>) -> QueryBuilder<'static, Sqlite> {
                     (language="English" or language="unspecified")) V on V.tsn=T.tsn
                     "#,
     );
-    match &filter {
-        Some(f) => match f {
-            Filter::Collection(id) => {
-                builder.push(" WHERE cs.collectionid=");
-                builder.push_bind(id.clone());
-            }
-            Filter::NoCollection => {
-                builder.push(" WHERE cs.collectionid IS NULL");
-            }
-            Filter::Sample(id) => {
-                builder.push(" WHERE S.id=");
-                builder.push_bind(id.clone());
-            }
-            Filter::Location(id) => {
-                builder.push(" WHERE L.locid=");
-                builder.push_bind(id.clone());
-            }
-            Filter::Taxon(id) => {
-                builder.push(" WHERE S.tsn=");
-                builder.push_bind(id.clone());
-            }
-            Filter::TaxonNameLike(substr) => {
-                if !substr.is_empty() {
-                    let wildcard = format!("%{substr}%");
-                    builder.push(" WHERE T.unit_name1 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR T.unit_name2 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR T.unit_name3 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR V.vernacular_name LIKE ");
-                    builder.push_bind(wildcard.clone());
-                }
-            }
-        },
-        None => (),
+    if let Some(f) = filter {
+        f.add_to_query(&mut builder);
     }
     builder.push(" GROUP BY S.id, T.tsn ORDER BY phylo_sort_seq");
     builder

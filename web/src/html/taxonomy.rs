@@ -6,11 +6,9 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
+    filter::{CompoundFilter, FilterOp},
     sample::{self, Filter, Sample},
-    taxonomy::{
-        self, any_filter, CompoundFilterCondition, FilterField, FilterOperation,
-        FilterQueryBuilder, Germination, LimitSpec, Rank, Taxon,
-    },
+    taxonomy::{self, any_filter, FilterField, Germination, LimitSpec, Rank, Taxon},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -129,7 +127,7 @@ async fn show_taxon(
 ) -> Result<impl IntoResponse, error::Error> {
     let hierarchy = taxonomy::fetch_taxon_hierarchy(id, &state.dbpool).await?;
     let children = taxonomy::fetch_children(id, &state.dbpool).await?;
-    let samples: Vec<Sample> = sample::build_query(Some(Filter::Taxon(id)))
+    let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::Taxon(id))))
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;
@@ -169,11 +167,10 @@ async fn quickfind(
         true => Vec::new(),
         false => {
             let parts = taxon.split(" ");
-            let mut subfilters: Vec<Box<dyn FilterQueryBuilder>> = Vec::new();
+            let mut filter = CompoundFilter::new(FilterOp::And);
             for part in parts {
-                subfilters.push(Box::new(any_filter(part)));
+                filter.add_filter(Box::new(any_filter(part)));
             }
-            let filter = CompoundFilterCondition::new(FilterOperation::And, subfilters);
             taxonomy::build_query(Some(Box::new(filter)), Some(LimitSpec(200, None)))
                 .build_query_as()
                 .fetch_all(&state.dbpool)

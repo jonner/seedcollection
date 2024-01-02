@@ -5,6 +5,8 @@ use std::str::FromStr;
 use strum_macros::{Display, EnumIter, EnumString, FromRepr};
 use tracing::debug;
 
+use crate::filter::{CompoundFilter, FilterOp, FilterPart};
+
 pub const KINGDOM_PLANTAE: i64 = 3;
 
 #[derive(Debug, Clone, Display, EnumString, EnumIter, FromRepr, Deserialize, Serialize)]
@@ -134,35 +136,8 @@ pub enum FilterField {
     ParentId(i64),
 }
 
-pub enum FilterOperation {
-    Or,
-    And,
-}
-
-pub struct CompoundFilterCondition {
-    conditions: Vec<Box<dyn FilterQueryBuilder>>,
-    op: FilterOperation,
-}
-
-impl CompoundFilterCondition {
-    pub fn new(op: FilterOperation, fields: Vec<Box<dyn FilterQueryBuilder>>) -> Self {
-        Self {
-            conditions: fields,
-            op,
-        }
-    }
-
-    pub fn add_field(&mut self, field: FilterField) {
-        self.conditions.push(Box::new(field))
-    }
-}
-
-pub trait FilterQueryBuilder: Send {
-    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<'static, sqlx::Sqlite>);
-}
-
-impl FilterQueryBuilder for FilterField {
-    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<'static, sqlx::Sqlite>) {
+impl FilterPart for FilterField {
+    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(n) => builder.push("T.tsn=").push_bind(n.clone()),
             Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(n.clone()),
@@ -194,69 +169,41 @@ pub fn filter_by(
     species: Option<String>,
     any: Option<String>,
     minnesota: Option<bool>,
-) -> Option<Box<dyn FilterQueryBuilder>> {
-    let mut fields: Vec<Box<dyn FilterQueryBuilder>> = Vec::new();
+) -> Option<Box<dyn FilterPart>> {
+    let mut f = Box::new(CompoundFilter::new(FilterOp::And));
     if let Some(id) = id {
-        fields.push(Box::new(FilterField::Id(id)));
+        f.add_filter(Box::new(FilterField::Id(id)));
     }
     if let Some(rank) = rank {
-        fields.push(Box::new(FilterField::Rank(rank)));
+        f.add_filter(Box::new(FilterField::Rank(rank)));
     }
     if let Some(genus) = genus {
-        fields.push(Box::new(FilterField::Genus(genus)));
+        f.add_filter(Box::new(FilterField::Genus(genus)));
     }
     if let Some(species) = species {
-        fields.push(Box::new(FilterField::Species(species)));
+        f.add_filter(Box::new(FilterField::Species(species)));
     }
     if let Some(s) = any {
-        fields.push(Box::new(any_filter(&s)));
+        f.add_filter(Box::new(any_filter(&s)));
     }
     if let Some(val) = minnesota {
-        fields.push(Box::new(FilterField::Minnesota(val)));
+        f.add_filter(Box::new(FilterField::Minnesota(val)));
     }
 
-    if fields.is_empty() {
-        None
-    } else {
-        Some(Box::new(CompoundFilterCondition::new(
-            FilterOperation::And,
-            fields,
-        )))
-    }
+    Some(f)
 }
 
-pub fn any_filter(s: &str) -> CompoundFilterCondition {
-    let mut fields: Vec<Box<dyn FilterQueryBuilder>> = Vec::new();
-    fields.push(Box::new(FilterField::Name1(s.to_string())));
-    fields.push(Box::new(FilterField::Name2(s.to_string())));
-    fields.push(Box::new(FilterField::Name3(s.to_string())));
-    CompoundFilterCondition::new(FilterOperation::Or, fields)
-}
-
-impl FilterQueryBuilder for CompoundFilterCondition {
-    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<'static, sqlx::Sqlite>) {
-        let mut first = true;
-        builder.push(" (");
-        let separator = match self.op {
-            FilterOperation::And => " AND ",
-            FilterOperation::Or => " OR ",
-        };
-
-        for cond in &self.conditions {
-            if first {
-                first = false;
-            } else {
-                builder.push(separator);
-            }
-            cond.add_to_query(builder);
-        }
-        builder.push(")");
-    }
+pub fn any_filter(s: &str) -> CompoundFilter {
+    let mut f = CompoundFilter::new(FilterOp::Or);
+    f.add_filter(Box::new(FilterField::Name1(s.to_string())));
+    f.add_filter(Box::new(FilterField::Name2(s.to_string())));
+    f.add_filter(Box::new(FilterField::Name3(s.to_string())));
+    f
 }
 
 pub struct LimitSpec(pub i32, pub Option<i32>);
 pub fn build_query(
-    filter: Option<Box<dyn FilterQueryBuilder>>,
+    filter: Option<Box<dyn FilterPart>>,
     limit: Option<LimitSpec>,
 ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
@@ -312,7 +259,7 @@ pub async fn fetch_taxon_hierarchy(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<T
 }
 
 pub fn count_query(
-    filter: Option<Box<dyn FilterQueryBuilder>>,
+    filter: Option<Box<dyn FilterPart>>,
 ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
         r#"SELECT COUNT(tsn) as count
@@ -330,7 +277,7 @@ pub fn count_query(
 }
 
 pub async fn fetch_children(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<Taxon>> {
-    let filter: Option<Box<dyn FilterQueryBuilder>> = Some(Box::new(FilterField::ParentId(id)));
+    let filter: Option<Box<dyn FilterPart>> = Some(Box::new(FilterField::ParentId(id)));
     let mut query = build_query(filter, None);
     Ok(query.build_query_as().fetch_all(pool).await?)
 }

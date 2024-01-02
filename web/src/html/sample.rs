@@ -52,7 +52,7 @@ async fn filter_samples(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut builder = sample::build_query(Some(Filter::TaxonNameLike(fragment)));
+    let mut builder = sample::build_query(Some(Box::new(Filter::TaxonNameLike(fragment))));
     let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
@@ -83,7 +83,7 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut builder = sample::build_query(Some(Filter::Sample(id)));
+    let mut builder = sample::build_query(Some(Box::new(Filter::Sample(id))));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
     let collection = match sample.collection {
         Some(cid) => {
@@ -210,7 +210,7 @@ async fn insert_sample(
         ),
         Ok(result) => {
             let id = result.last_insert_rowid();
-            let sample: Sample = sample::build_query(Some(Filter::Sample(id)))
+            let sample: Sample = sample::build_query(Some(Box::new(Filter::Sample(id))))
                 .build_query_as()
                 .fetch_one(&state.dbpool)
                 .await?;
@@ -291,7 +291,7 @@ async fn update_sample(
         ),
     };
 
-    let sample: Sample = sample::build_query(Some(Filter::Sample(id)))
+    let sample: Sample = sample::build_query(Some(Box::new(Filter::Sample(id))))
         .build_query_as()
         .fetch_one(&state.dbpool)
         .await?;

@@ -95,7 +95,7 @@ async fn show_location(
     .fetch_one(&state.dbpool)
     .await?;
 
-    let samples: Vec<Sample> = sample::build_query(Some(Filter::Location(id)))
+    let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::Location(id))))
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;
@@ -149,7 +149,7 @@ async fn update_location(
     Path(id): Path<i64>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let samples: Vec<Sample> = sample::build_query(Some(Filter::Location(id)))
+    let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::Location(id))))
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;

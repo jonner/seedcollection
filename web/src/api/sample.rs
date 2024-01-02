@@ -39,7 +39,7 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Sample>, error::Error> {
-    let mut builder = sample::build_query(Some(Filter::Sample(id)));
+    let mut builder = sample::build_query(Some(Box::new(Filter::Sample(id))));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
     Ok(Json(sample))
 }

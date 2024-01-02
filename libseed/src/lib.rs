@@ -2,6 +2,7 @@ use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 
 pub mod collection;
+pub mod filter;
 pub mod location;
 pub mod sample;
 pub mod taxonomy;
