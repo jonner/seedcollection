@@ -5,7 +5,7 @@
 <div class="mb-3">
     {% for l in locations %}
     <div class="d-flex flex-row mb-1">
-        <div class="fs-2 align-middle p-1 text-end flex-shrink-0">
+        <div class="fs-3 align-middle p-1 text-end flex-shrink-0">
             <a class="badge text-bg-light font-monospace"
                href="{{ ("/location/" ~ l.id) | app_url}}">L{{ l.id | idfmt }}</a>
         </div>

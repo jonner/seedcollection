@@ -5,7 +5,7 @@
     <div class="mb-3">
         {% for collection in collections %}
         <div class="d-flex flex-row mb-1">
-            <div class="fs-2 align-middle p-1 text-end flex-shrink-0">
+            <div class="fs-3 align-middle p-1 text-end flex-shrink-0">
                 <a class="badge text-bg-light font-monospace"
                    href="{{ ("/collection/" ~ collection.id) | app_url}}">C{{ collection.id | idfmt }}</a>
             </div>
