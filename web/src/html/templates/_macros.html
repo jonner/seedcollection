@@ -19,7 +19,7 @@
 {%- endmacro %}
 
 {% macro show_germination_item(germination, list) -%}
-{% if list %}<li class="list-group-item">{% else %}<div>{% endif %}
+{% if list %}<li>{% else %}<div>{% endif %}
         <a href="{{ ("/info/germination#germ-code-" ~ germination.id ) | app_url}}" class="badge text-bg-secondary">{{ germination.code }}</a> {{ germination.summary }}
 {% if list %}</li>{% else %}</div>{% endif %}
 {%- endmacro %}
@@ -27,7 +27,7 @@
 {% macro show_germination_list(germinations) -%}
 {% with uselist = (germinations | count) > 1 %}
 {% if uselist %}
-    <ul class="list-group list-group-flush">
+    <ul>
 {% endif %}
 {% for g in germinations %}
 {{ show_germination_item(g, uselist) }}
