@@ -2,9 +2,23 @@
 {% block title %}Location List{% endblock %}
 {% block content %}
 <h2>Locations <a class="ms-2" href="{{ "/location/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
-<ul>
+<div class="mb-3">
     {% for l in locations %}
-    <li><a href="{{ ("location/" ~ l.id) | app_url }}">{{ l.name }}</a></li>
+    <div class="d-flex flex-row mb-1">
+        <div class="fs-2 align-middle p-1 text-end flex-shrink-0">
+            <a class="badge text-bg-light font-monospace"
+               href="{{ ("/location/" ~ l.id) | app_url}}">{{ l.id | idfmt }}</a>
+        </div>
+        <div class="d-flex flex-column p-1">
+            <div>{{ l.name }}
+            </div>
+            <div class="text-secondary">
+                <div class="d-flex flex-row flex-wrap column-gap-3">
+                    {% if l.description %}<div class="fst-italic">{{ l.description | truncate }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
     {% endfor %}
-</ul>
+</div>
 {% endblock %}
