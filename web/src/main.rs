@@ -133,6 +133,11 @@ pub fn truncate_text(mut s: String, chars: Option<usize>) -> String {
     }
 }
 
+pub fn format_id_number(id: i64, width: Option<usize>) -> String {
+    let width = width.unwrap_or(4);
+    format!("{:0>width$}", id, width = width)
+}
+
 #[derive(Clone, Copy)]
 struct Ports {
     http: u16,
@@ -166,6 +171,7 @@ async fn main() -> Result<()> {
     jinja.add_filter("api_url", api_url);
     jinja.add_filter("append_query_param", append_query_param);
     jinja.add_filter("truncate", truncate_text);
+    jinja.add_filter("idfmt", format_id_number);
 
     let shared_state = Arc::new(SharedState::new(args.database, Engine::from(jinja)).await?);
 
