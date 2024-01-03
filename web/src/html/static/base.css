@@ -34,12 +34,12 @@ td, th {
     list-style-type: none;
 }
 
-#taxa-hierarchy > ul {
-    padding-left: 0;
+#taxa-hierarchy ul {
+    padding-left: 0.5rem;
 }
 
-#taxa-hierarchy ul {
-    padding-left: 1rem;
+#taxa-hierarchy > ul {
+    padding-left: 0;
 }
 
 #taxa-hierarchy li > ul > li:before {
