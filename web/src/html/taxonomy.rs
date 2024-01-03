@@ -167,7 +167,7 @@ async fn datalist(
     State(state): State<AppState>,
     Query(DatalistParams { taxon }): Query<DatalistParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    quickfind(key, &state, taxon, None).await
+    quickfind(key, &state, taxon, None, None).await
 }
 
 #[derive(Deserialize)]
@@ -175,14 +175,19 @@ struct SearchParams {
     taxon: String,
     #[serde(deserialize_with = "empty_string_as_none")]
     rank: Option<Rank>,
+    minnesota: Option<bool>,
 }
 
 async fn search(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
-    Query(SearchParams { taxon, rank }): Query<SearchParams>,
+    Query(SearchParams {
+        taxon,
+        rank,
+        minnesota,
+    }): Query<SearchParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    quickfind(key, &state, taxon, rank).await
+    quickfind(key, &state, taxon, rank, minnesota).await
 }
 
 async fn quickfind(
@@ -190,6 +195,7 @@ async fn quickfind(
     state: &AppState,
     taxon: String,
     rank: Option<Rank>,
+    minnesota: Option<bool>,
 ) -> Result<impl IntoResponse, error::Error> {
     let taxa: Vec<Taxon> = match taxon.is_empty() {
         true => Vec::new(),
@@ -201,6 +207,9 @@ async fn quickfind(
             }
             if let Some(rank) = rank {
                 filter.add_filter(Box::new(FilterField::Rank(rank)));
+            }
+            if Some(true) == minnesota {
+                filter.add_filter(Box::new(FilterField::Minnesota(true)));
             }
             /* FIXME: pagination for /search endpoing? */
             taxonomy::build_query(Some(Box::new(filter)), Some(LimitSpec(200, None)))
