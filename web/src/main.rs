@@ -123,6 +123,16 @@ pub fn append_query_param(
     Ok(format!("?{querystring}"))
 }
 
+pub fn truncate_text(mut s: String, chars: Option<usize>) -> String {
+    let chars = chars.unwrap_or(100);
+    if s.len() > chars {
+        s.truncate(chars);
+        s + "..."
+    } else {
+        s
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Ports {
     http: u16,
@@ -155,6 +165,7 @@ async fn main() -> Result<()> {
     jinja.add_filter("app_url", app_url);
     jinja.add_filter("api_url", api_url);
     jinja.add_filter("append_query_param", append_query_param);
+    jinja.add_filter("truncate", truncate_text);
 
     let shared_state = Arc::new(SharedState::new(args.database, Engine::from(jinja)).await?);
 

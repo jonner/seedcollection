@@ -283,7 +283,7 @@ hx-post="{{ "/collection/new" | app_url }}"
                 <div>{{ sample.location.name }}</div>
                 <div>{% if sample.month %}{{sample.month}}/{% endif %}{{ sample.year }}</div>
             </div>
-            <div class="fst-italic">{{ sample.notes or "" }}</div>
+            <div class="fst-italic">{{ (sample.notes or "") | truncate }}</div>
         </div>
     </div>
 </div>
