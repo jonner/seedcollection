@@ -54,8 +54,11 @@
     <footer id="sc-footer" class="pb-5 text-body-tertiary bg-body-tertiary">
     {% block footer %}
     <div class="mb-3">
-        <p>This tool uses the <a href="https://www.itis.gov/index.html">ITIS taxonomy</a>
-            to categorize plant species.</p>
+        <div>This project is made possible by the following data sources:</div>
+        <ul>
+            <li><a href="https://www.itis.gov/index.html">ITIS</a></li>
+            <li><a href="https://www.dnr.state.mn.us/eco/mbs/plant-lists.html">MNTaxa</a></li>
+        </ul>
     </div>
     &copy; Jonathon Jongsma
     {% endblock %}
