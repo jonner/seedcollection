@@ -153,7 +153,9 @@ impl FilterPart for FilterField {
             Self::Name3(s) => builder
                 .push("T.unit_name3 LIKE ")
                 .push_bind(format!("%{s}%")),
-            Self::Vernacular(s) => builder.push("V.vernacular_name LIKE ").push_bind(s.clone()),
+            Self::Vernacular(s) => builder
+                .push("V.vernacular_name LIKE ")
+                .push_bind(format!("%{s}%")),
             Self::Minnesota(val) => match val {
                 true => builder.push("M.tsn IS NOT NULL"),
                 false => builder.push("M.tsn IS NULL"),
@@ -198,6 +200,7 @@ pub fn any_filter(s: &str) -> CompoundFilter {
     f.add_filter(Box::new(FilterField::Name1(s.to_string())));
     f.add_filter(Box::new(FilterField::Name2(s.to_string())));
     f.add_filter(Box::new(FilterField::Name3(s.to_string())));
+    f.add_filter(Box::new(FilterField::Vernacular(s.to_string())));
     f
 }
 
