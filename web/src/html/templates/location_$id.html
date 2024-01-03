@@ -6,7 +6,7 @@
 <h2>{{ self.title() }} <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ location.description }}</p>
 {%if map_viewer %}
-<iframe width="500", height="300" src="{{ map_viewer }}"></iframe>
+<iframe class="mb-3" width="500", height="300" src="{{ map_viewer }}"></iframe>
 {% endif %}
 <h3>{{ samples | count }} Samples from this location</h3>
 {{ sample_list(samples, "sample-list") }}
