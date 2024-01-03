@@ -29,8 +29,8 @@
 {%- endmacro %}
 
 {% macro show_germination_item(germination, list) -%}
-{% if list %}<li>{% else %}<div>{% endif %}
-        <a href="{{ ("/info/germination#germ-code-" ~ germination.id ) | app_url}}" class="badge text-bg-secondary">{{ germination.code }}</a> {{ germination.summary }}
+<{% if list %}li{% else %}div{% endif %} class="d-flex flex-row gap-2 align-items-start mb-3">
+        <a href="{{ ("/info/germination#germ-code-" ~ germination.id ) | app_url}}" class="badge text-bg-light border border-light-subtle">{{ germination.code }}</a><span>{{ germination.summary }}</span>
 {% if list %}</li>{% else %}</div>{% endif %}
 {%- endmacro %}
 
