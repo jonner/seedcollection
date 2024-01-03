@@ -22,7 +22,6 @@ pub struct Sample {
     pub month: Option<u32>,
     pub year: Option<u32>,
     pub notes: Option<String>,
-    pub collection: Option<i64>,
     pub certainty: Certainty,
 }
 
@@ -110,7 +109,6 @@ impl FromRow<'_, SqliteRow> for Sample {
             month: row.try_get("month").unwrap_or(None),
             year: row.try_get("year").unwrap_or(None),
             notes: row.try_get("notes").unwrap_or(None),
-            collection: row.try_get("collectionid").unwrap_or(None),
             certainty: row.try_get("certainty").unwrap_or(Certainty::Uncertain),
         })
     }

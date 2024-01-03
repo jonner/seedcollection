@@ -40,7 +40,10 @@
 </div>
 <h5>Notes</h5>
 <div class="mb-3 px-2">{{ sample.notes }}</div>
-    {% if collection %}
-    <p>This sample is a part of collection <a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ collection.name }}</a></p>
-    {% endif %}
+<h5>Included in</h5>
+<ul>
+    {% for collection in collections %}
+    <li><a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ collection.name }}</a></li>
+    {% endfor %}
+</ul>
 {% endblock %}

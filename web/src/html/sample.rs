@@ -90,22 +90,12 @@ async fn show_sample(
 ) -> Result<impl IntoResponse, error::Error> {
     let mut builder = sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))));
     let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
-    let collection = match sample.collection {
-        Some(cid) => {
-            let c: Collection =
-                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-                    .bind(cid)
-                    .fetch_one(&state.dbpool)
-                    .await?;
-            Some(c)
-        }
-        None => None,
-    };
-    let locations: Vec<Location> = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY name ASC",
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
+    let collections: Vec<Collection> = sqlx::query_as(
+        r#"SELECT C.id, C.name, C.description FROM seedcollections C INNER JOIN seedcollectionsamples CS
+        ON C.id == CS.collectionid WHERE CS.sampleid = ?"#)
+        .bind(id)
+        .fetch_all(&state.dbpool)
+        .await?;
     let germination = sqlx::query_as!(
         Germination,
         r#"SELECT G.* from germinationcodes G
@@ -121,8 +111,7 @@ async fn show_sample(
         context!(user => auth.user,
                  sample => sample,
                  germination => germination,
-                 locations => locations,
-                 collection => collection),
+                 collections => collections),
     ))
 }
 
