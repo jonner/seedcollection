@@ -1,7 +1,8 @@
+{% from "_macros.html" import icon %}
 {% extends "root.html" %}
 {% block title %}Location List{% endblock %}
 {% block content %}
-<h2>Locations <a class="ms-2" href="{{ "/location/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
+<h2><span class="me-2">{{ icon("geo-alt") }}</span>Locations <a class="ms-2" href="{{ "/location/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
 <div class="mb-3">
     {% for l in locations %}
     <div class="d-flex flex-row mb-1">

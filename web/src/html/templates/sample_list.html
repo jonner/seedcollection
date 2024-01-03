@@ -1,8 +1,8 @@
 {% extends "root.html" %}
-{% from "_macros.html" import sample_list %}
+{% from "_macros.html" import sample_list, icon %}
 {% block title %}Samples{% endblock %}
 {% block content %}
-    <h2>Samples <a class="ms-2" href="{{ "/sample/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
+<h2><span class="me-2">{{ icon("box-seam") }}</span>Samples <a class="ms-2" href="{{ "/sample/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
     <form 
            hx-target="#sample-table"
