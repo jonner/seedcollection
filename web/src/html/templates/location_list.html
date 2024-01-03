@@ -1,8 +1,7 @@
 {% extends "root.html" %}
 {% block title %}Location List{% endblock %}
 {% block content %}
-<h2>Locations</h2>
-<p><a href="{{ "/location/new" | app_url }}">Add a new location</a></p>
+<h2>Locations <a class="ms-2" href="{{ "/location/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
 <ul>
     {% for l in locations %}
     <li><a href="{{ ("location/" ~ l.id) | app_url }}">{{ l.name }}</a></li>
