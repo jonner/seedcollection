@@ -1,42 +1,10 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon %}
-{% block title %}Collection {{ collection.id }}{% endblock %}
+{% from "_macros.html" import sample_list %}
+{% block title %}{{ collection.name or "Collection Details" }}{% endblock %}
 {% block content %}
-<h2>Collection Details <a href="{{ ("/collection/" ~ collection.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
-<table class="table">
-    <colgroup>
-        <col style="width: 15%">
-        <col>
-    </colgroup>
-    <tbody>
-        <tr>
-            <td>Name</td>
-            <td>{{ collection.name }}</td>
-        </tr>
-        <tr>
-            <td>Description</td>
-            <td>{{ collection.description }}</td>
-        </tr>
-        <tr>
-            <td>Samples in this collection
-                <a class="ms-2" href="{{ ("/collection/" ~ collection.id) | app_url }}/add">{{ icon("plus-square") }}</a>
-        </td>
-        <td>
-        <ul id="collection-sample-list" class="list-group list-group-flush">
-                {% for s in collection.samples %}
-                <li class="list-group-item">
-                    <a href="{{ ("/sample/" ~ s.id) | app_url }}">{{ s.id }}</a>:
-                    <b>{{ s.taxon.complete_name }}</b> from
-                    <i>{{ s.location.name }}</i>
-                        <a class="ms-2" href="#"
-                           hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ s.id) | app_url }}"
-                           hx-confirm="Are you sure you want to remove sample {{ s.id }}?"
-                           hx-target="closest li"
-                           hx-swap="outerHTML">{{ icon("x-square", "danger") }}</a>
-                </li>
-                {% endfor %}
-        </ul>
-        </tr>
-    </tbody>
-</table>
+<h2>{{ self.title() }} <a href="{{ ("/collection/" ~ collection.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
+<p>{{ collection.description }}</p>
+<h3>Samples in this collection <a class="ms-2" href="{{ ("/collection/" ~ collection.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
+{{ sample_list(collection.samples, "sample-list") }}
 {% endblock %}

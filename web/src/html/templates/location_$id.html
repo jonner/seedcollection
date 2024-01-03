@@ -1,46 +1,13 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon %}
-{% block title %}{{ location.name }} Details{% endblock %}
+{% from "_macros.html" import sample_list %}
+{% block title %}{{ location.name or "Location Details" }} Details{% endblock %}
 {% block content %}
-<h2>Location Details <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
-<table class="table">
-    <colgroup>
-        <col style="width: 15%">
-        <col>
-    </colgroup>
-    <tbody>
-        <tr>
-            <td>ID</td>
-            <td>{{ location.id }}</td>
-        </tr>
-        <tr>
-            <td>Name</td>
-            <td>{{ location.name }}</td>
-        </tr>
-        <tr>
-            <td>Description</td>
-            <td>{{ location.description }}</td>
-        </tr>
-        <tr>
-            <td>Location</td>
-            <td>
-                {%if map_viewer %}
-                <iframe width="500", height="300" src="{{ map_viewer }}"></iframe>
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-<td>Samples from this location</td>
-<td>
-{% if samples %}
-<ul class="list-group list-group-flush">
-{% for sample in samples %}
-<li class="list-group-item"J><a href="{{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }} - {{ sample.taxon.complete_name }}</a></li>
-{% endfor %}
-</ul>
+<h2>{{ self.title() }} <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
+<p>{{ location.description }}</p>
+{%if map_viewer %}
+<iframe width="500", height="300" src="{{ map_viewer }}"></iframe>
 {% endif %}
-</td>
-        </tr>
-    </tbody>
-</table>
+<h3>{{ samples | count }} Samples from this location</h3>
+{{ sample_list(samples, "sample-list") }}
 {% endblock %}

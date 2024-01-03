@@ -39,7 +39,7 @@
 {%- endmacro %}
 
 {% macro show_vernacular_item(name, list) -%}
-{% if list %}<li class="list-group-item">{% else %}<div>{% endif %}
+{% if list %}<li>{% else %}<div>{% endif %}
  {{ name }}
 {% if list %}</li>{% else %}</div>{% endif %}
 {%- endmacro %}
@@ -47,7 +47,7 @@
 {% macro show_vernacular_list(vernaculars) -%}
 {% with uselist = (vernaculars | count) > 1 %}
 {% if uselist %}
-    <ul class="list-group list-group-flush">
+    <ul>
 {% endif %}
 {% for name in vernaculars %}
 {{ show_vernacular_item(name, uselist) }}
@@ -276,7 +276,7 @@ hx-post="{{ "/collection/new" | app_url }}"
             href="{{ ("/sample/" ~ sample.id) | app_url}}">{{ sample.id | idfmt }}</a>
     </div>
     <div class="d-flex flex-column p-1">
-        <div class="fs-5"><a href="{{ ("/taxonomy/" ~ sample.taxon.id) | app_url}}">{{ sample.taxon.complete_name }}</a>
+        <div><a href="{{ ("/taxonomy/" ~ sample.taxon.id) | app_url}}">{{ sample.taxon.complete_name }}</a>
         </div>
         <div class="text-secondary">
             <div class="d-flex flex-row gap-3">

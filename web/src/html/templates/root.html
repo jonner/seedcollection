@@ -15,7 +15,6 @@
     {% block body %}
         {% block header %}
         <nav class="navbar bg-dark navbar-expand-lg" data-bs-theme="dark">
-            <div class="container-fluid">
                 <a class="navbar-brand" href="{{ "/" | app_url }}">SeedCollection</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -43,12 +42,11 @@
                     {% if user %}
                     <span class="navbar-text">Logged in as {{ user.username }} <a href="{{ "/auth/logout" | app_url }}">log out</a></span>
                     {% endif %}
-                </div>
             </div>
         </nav>
         {% endblock %}
     {% endblock %}
-    <div id="sc-content" class="container-fluid">
+    <div id="sc-content" class="container">
     {% block content %}
     {% endblock %}
     </div>

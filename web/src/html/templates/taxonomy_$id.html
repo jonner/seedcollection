@@ -1,6 +1,7 @@
 {% extends "root.html" %}
 {% from "_macros.html" import show_germination_list %}
 {% from "_macros.html" import show_vernacular_list %}
+{% from "_macros.html" import sample_list %}
 
 {% macro show_status_badge(native_status) -%}
 {% if native_status == "Native" %}
@@ -20,96 +21,63 @@
 <span class="rank">({{ t.rank }})</span> {{ show_status_badge(t.native_status) }}
 {%- endmacro %}
 
-{% block title %}{{ taxon.complete_name }}{% endblock %}
+{% block title %}{{ taxon.complete_name }} ({{ taxon.rank }}){% endblock %}
 {% block content %}
-    <h2>Taxon Details</h2>
-    <table class="table">
-        <colgroup>
-            <col style="width: 15%">
-            <col>
-        </colgroup>
-        <tbody>
-            <tr>
-        <td>Full Name</td>
-        <td>{{ taxon.complete_name }}</td>
-            </tr>
-            <tr>
-        <td>Common Names</td>
-        <td>
-            {% if taxon.vernaculars %}
-            {{ show_vernacular_list(taxon.vernaculars) }}
-            {% else %}
-            None
-            {% endif %}
-        </td>
-            </tr>
-            <tr>
-        <td>Rank</td>
-        <td>{{ taxon.rank }}</td>
-            </tr>
-            <tr>
-        <td>Taxonomic ID</td>
-        <td>{{ taxon.id }}</td>
-            </tr>
-            <tr>
-        <td>Germination Info</td>
-        <td>
-            {% if germination %}
-            {{ show_germination_list(germination) }}
-            {% else %}
-            <div>No Data</div>
-            {% endif %}
-        </td>
-            </tr>
-            <tr>
-        <td>Minnesota Status</td>
-        <td>
-            {% if taxon.native_status %}
-            {{ show_status_badge(taxon.native_status) }}
-            {% else %}
-            Not present
-            {% endif %}
-        </td>
-            </tr>
-            <tr>
-        <td>Type Hierarchy</td>
-        <td id="taxa-hierarchy">
-            <ul>
-            {% for t in parents|reverse %}
-            <li>
-                {{ show_taxon(t) }}
-            <ul>
-            {% endfor %}
-            {% for c in children %}
-            <li>
-                {{ show_taxon(c) }}
-            </li>
-            {% endfor %}
-            {% for t in parents|reverse %}
-                </ul></li>
-            {% endfor %}
-        </td>
-            </tr>
-            <tr>
-        <td>Samples</td>
-        <td>
-            <ul id="taxon-samples" class="list-group list-group-flush">
-            {% for sample in samples %}
-            <li class="list-group-item"><a href="{{ ("/sample/" ~ sample.id) | app_url }}">{{ sample.id }}</a>: <i>{{ sample.taxon.complete_name }}</i> from {{ sample.location.name }} ({{ sample.year or "Unknown Year" }})</li>
-            {% endfor %}
-            </ul>
-            <button type="button"
-                    class="btn btn-primary"
-                    hx-get="{{ ("/taxonomy/" ~ taxon.id ~ "/samples") | app_url }}"
-                    hx-target="#taxon-samples"
-                    hx-swap="OuterHTML">
-                    <div class="htmx-indicator spinner-border spinner-border-sm" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    Query all child samples
-            </button>
-        </td>
-            </tr>
-        </tbody>
-    </table>
+<h2 class="border-bottom mb-3">{{ self.title() }}</h2>
+<h5>Common Names</h5>
+<div class="mb-3 px-2">
+    {% if taxon.vernaculars %}
+    {{ show_vernacular_list(taxon.vernaculars) }}
+    {% else %}
+    None
+    {% endif %}
+</div>
+<h5>Minnesota Status</h5>
+<div class="mb-3 px-2">
+    {% if taxon.native_status %}
+    {{ show_status_badge(taxon.native_status) }}
+    {% else %}
+    Not present
+    {% endif %}
+</div>
+<h5>Germination Info</h5>
+<div class="mb-3 px-2">
+    {% if germination %}
+    {{ show_germination_list(germination) }}
+    {% else %}
+    <div>No Data</div>
+    {% endif %}
+</div>
+<h5>Type Hierarchy</h5>
+<div id="taxa-hierarchy" class="mb-3 px-2">
+<ul>
+    {% for t in parents|reverse %}
+    <li>
+        {{ show_taxon(t) }}
+    <ul>
+    {% endfor %}
+    {% for c in children %}
+    <li>
+        {{ show_taxon(c) }}
+    </li>
+    {% endfor %}
+    {% for t in parents|reverse %}
+        </ul></li>
+    {% endfor %}
+</ul>
+</div>
+<h5>Samples</h5>
+    <div class="mb-3 px-2">
+    {{ sample_list(samples, "taxon-samples") }}
+    <button type="button"
+            class="btn btn-primary"
+            hx-get="{{ ("/taxonomy/" ~ taxon.id ~ "/samples") | app_url }}"
+            hx-target="#taxon-samples"
+            hx-swap="OuterHTML">
+            <div class="htmx-indicator spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            Query all child samples
+    </button>
+</div>
 {% endblock %}
