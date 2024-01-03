@@ -14,6 +14,16 @@
 <option value="12" {% if selected == 12 %}selected{% endif %}>December</option>
 {%- endmacro %}
 
+{% macro native_status_badge(native_status) -%}
+{% if native_status == "Native" %}
+<span class="badge text-bg-success">{{ native_status }}</span>
+{% elif native_status == "Introduced" %}
+<span class="badge text-bg-danger">{{ native_status }}</span>
+{% elif native_status == "Unknown" %}
+<span class="badge text-bg-warning">{{ native_status }}</span>
+{% endif %}
+{%- endmacro %}
+
 {% macro icon(icon_name, color=none) -%}
 <i class="bi bi-{{ icon_name }}{% if color %} text-{{ color }}{% endif %}"></i>
 {%- endmacro %}

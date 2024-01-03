@@ -2,23 +2,14 @@
 {% from "_macros.html" import show_germination_list %}
 {% from "_macros.html" import show_vernacular_list %}
 {% from "_macros.html" import sample_list %}
-
-{% macro show_status_badge(native_status) -%}
-{% if native_status == "Native" %}
-<span class="badge text-bg-success">{{ native_status }}</span>
-{% elif native_status == "Introduced" %}
-<span class="badge text-bg-danger">{{ native_status }}</span>
-{% elif native_status == "Unknown" %}
-<span class="badge text-bg-warning">{{ native_status }}</span>
-{% endif %}
-{%- endmacro %}
+{% from "_macros.html" import native_status_badge %}
 
 {% macro show_taxon(t) -%}
 <a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a>
 {% if t.vernaculars %}
 - <span class="vernacular">{{ t.vernaculars[0] }}</span>
 {% endif %}
-<span class="rank">({{ t.rank }})</span> {{ show_status_badge(t.native_status) }}
+<span class="rank">({{ t.rank }})</span> {{ native_status_badge(t.native_status) }}
 {%- endmacro %}
 
 {% block title %}{{ taxon.complete_name }} ({{ taxon.rank }}){% endblock %}
@@ -35,7 +26,7 @@
 <h5>Minnesota Status</h5>
 <div class="mb-3 px-2">
     {% if taxon.native_status %}
-    {{ show_status_badge(taxon.native_status) }}
+    {{ native_status_badge(taxon.native_status) }}
     {% else %}
     Not present
     {% endif %}
