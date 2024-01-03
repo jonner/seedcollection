@@ -2,9 +2,35 @@
 {% block title %}Seed Collection app{% endblock %}
 {% block content %}
 <h2>Welcome</h2>
-<p>Some things to do here:</p>
+<p>This site is a tool to track seed collections and to keep records about how
+    those seeds have been used. It is geared toward native wild species rather
+    than cultivated vegetable and flower varieties.
+</p>
+<p>
+    There are three basic concepts to explain: Samples, Collections, and
+    Locations.
+</p>
+<p>
+    <a href={{ "/sample/list" | app_url }}>Samples</a> refer to a single
+    collection event for a particular species at a particular location. So if
+    you went to a friend's property (with permission, no doubt) and collected a
+    bag of little bluestem seeds, and a bag of skyblue aster seeds, that would
+    be represented as two samples. If you went back and collected more little
+    bluestem seeds next year, that would be another new sample.
+</p>
+<p>
+    <a href={{ "/location/list" | app_url }}>Locations</a> refer to the place
+    where the seed was collected. Than be well defined, or it can be vague.
+    You're free to interpret it how you wish. In the previous example, "your
+    friend's property" would be the location. This could also be something like
+    a seed seller where you purchased the seeds.
+</p>
+<p>
+    <a href={{ "/collection/list" | app_url }}>Collections</a> are sets of
+    seed samples grouped for a specific purpose. For example, if you were
+    working on a restoration project and wanted to keep track of what you
+    planted in a particular location, you could create a collection for that
+    project and add the appropriate seed samples to that collection.
+</p>
 <ul>
-    <li><a href={{ "/sample/list" | app_url }}>Samples</a></li>
-    <li><a href={{ "/collection/list" | app_url }}>Collections</a></li>
-    <li><a href={{ "/location/list" | app_url }}>Locations</a></li>
 {% endblock %}
