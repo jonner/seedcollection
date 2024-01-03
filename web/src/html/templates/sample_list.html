@@ -4,13 +4,16 @@
 {% block content %}
     <h2>Samples</h2>
     <p><a href="{{ "/sample/new" | app_url }}">Add a new sample</a></p>
+    <div class="mb-3">
+    <form 
+           hx-target="#sample-table"
+           hx-get="{{ "/sample/filter" | app_url }}"
+           hx-trigger="submit, input changed delay:500ms from:input">
     <input type="text"
            class="form-control"
            placeholder="Filter list..."
-           name="fragment"
-           hx-trigger="keyup changed delay:500ms"
-           hx-swap="OuterHTML"
-           hx-target="#sample-table"
-           hx-get="{{ "/sample/filter" | app_url }}">
+           name="fragment">
+    </form>
+    </div>
     {{ sample_list(samples, "sample-table") }}
 {% endblock %}
