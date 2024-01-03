@@ -8,12 +8,14 @@ use axum::{
 use axum_template::RenderHtml;
 use minijinja::context;
 use serde::Deserialize;
+use tracing::debug;
 
 use crate::{
+    app_url,
     auth::{AuthSession, Credentials},
     error,
     state::AppState,
-    CustomKey,
+    CustomKey, Message, MessageType,
 };
 
 pub fn router() -> Router<AppState> {
@@ -64,26 +66,41 @@ async fn do_login(
     mut auth: AuthSession,
     State(state): State<AppState>,
     Form(creds): Form<Credentials>,
-) -> Result<impl IntoResponse, error::Error> {
-    match auth.authenticate(creds.clone()).await? {
-        Some(user) => {
-            auth.login(&user).await?;
-            let msg = format!(
-                r#"<div class="alert alert-success">Logged in as {}</div>"#,
-                user.username
-            );
-            if let Some(next) = creds.next {
-                Ok(([("HX-Redirect", next)], msg).into_response())
-            } else {
-                Ok(msg.into_response())
-            }
+) -> impl IntoResponse {
+    let key = key + ".partial";
+    let res = match auth.authenticate(creds.clone()).await {
+        Ok(authenticated) => match authenticated {
+            Some(user) => match auth.login(&user).await {
+                Ok(()) => Ok((
+                    [(
+                        "HX-Redirect",
+                        creds.next.as_ref().cloned().unwrap_or(app_url("/")),
+                    )],
+                    "",
+                )
+                    .into_response()),
+                Err(e) => Err(format!("Failed to log in: {}", e)),
+            },
+            None => Err(format!("Failed to find a user '{}'", creds.username)),
+        },
+        Err(e) => Err(format!("Failed to authenticate: {}", e)),
+    };
+    match res {
+        Ok(resp) => resp,
+        Err(msg) => {
+            debug!(msg);
+            RenderHtml(
+                key,
+                state.tmpl.clone(),
+                context!(message => Message {
+                   r#type: MessageType::Error,
+                   msg: "Login failed".to_string(),
+               },
+               username => creds.username,
+               next => creds.next),
+            )
+            .into_response()
         }
-        None => Ok(RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(message => "Invalid credentials"),
-        )
-        .into_response()),
     }
 }
 

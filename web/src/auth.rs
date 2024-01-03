@@ -2,6 +2,7 @@ use crate::error;
 use argon2::Argon2;
 use axum::async_trait;
 use axum_login::{AuthUser, AuthnBackend, UserId};
+use libseed::empty_string_as_none;
 use password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
@@ -30,6 +31,7 @@ impl AuthUser for SqliteUser {
 pub struct Credentials {
     pub username: String,
     pub password: String,
+    #[serde(deserialize_with = "empty_string_as_none")]
     pub next: Option<String>,
 }
 

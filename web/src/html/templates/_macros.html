@@ -68,17 +68,21 @@
 {% endwith %}
 {%- endmacro %}
 
+{% macro show_message(message) -%}
+    {% if message %}
+    <div class="mb-3 alert alert-{% if message.type == "Error" %}danger{% elif message.type == "Warning" %}warning{% elif message.type== "Success" %}success{% endif %}">
+        {{ message.msg }}
+    </div>
+    {% endif %}
+{%- endmacro %}
+
 {% macro sample_form(locations, sample=none, request=none, message=none) -%}
 {% if sample %}
 <form hx-put="{{ ("/sample/" ~ sample.id) | app_url }}">
 {% else %}
 <form hx-post="{{ "/sample/new" | app_url }}">
 {% endif %}
-    {% if message %}
-    <div class="mb-3 alert alert-{% if message.type == "Error" %}danger{% elif message.type == "Warning" %}warning{% elif message.type== "Success" %}success{% endif %}">
-        {{ message.msg }}
-    </div>
-    {% endif %}
+{{ show_message(message) }}
     <div class="row g-6">
         <div class="mb-3 col-12">
             <label for="SampleTaxonInput" class="form-label">Taxon</label>
