@@ -276,7 +276,7 @@ hx-post="{{ "/collection/new" | app_url }}"
             href="{{ ("/sample/" ~ sample.id) | app_url}}">S{{ sample.id | idfmt }}</a>
     </div>
     <div class="d-flex flex-column p-1">
-        <div>{{ sample.taxon.complete_name }}
+        <div>{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}
         </div>
         <div class="text-secondary">
             <div class="d-flex flex-row flex-wrap column-gap-3">
