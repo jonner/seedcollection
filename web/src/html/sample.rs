@@ -105,12 +105,21 @@ async fn show_sample(
     )
     .fetch_all(&state.dbpool)
     .await?;
+
+    // needed for edit form
+    let locations: Vec<Location> = sqlx::query_as(
+        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY name ASC",
+    )
+    .fetch_all(&state.dbpool)
+    .await?;
+
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => auth.user,
                  sample => sample,
                  germination => germination,
+                 locations => locations,
                  collections => collections),
     ))
 }
