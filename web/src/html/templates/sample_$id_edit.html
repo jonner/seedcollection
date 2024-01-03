@@ -1,6 +1,6 @@
 {% extends "root.html" %}
 {% from "_macros.html" import sample_form %}
-{% block title %}Edit Sample #{{ sample.id }}{% endblock %}
+{% block title %}Edit Sample S{{ sample.id | idfmt }}{% endblock %}
 {% block content %}
 <h2>{{ self.title() }}</h2>
 {{ sample_form(locations, sample) }}

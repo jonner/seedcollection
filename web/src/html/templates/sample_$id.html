@@ -2,7 +2,7 @@
 {% from "_macros.html" import show_germination_list %}
 {% from "_macros.html" import show_vernacular_list %}
 {% from "_macros.html" import icon %}
-{% block title %}Sample {{ sample.id | idfmt }}{% endblock %}
+{% block title %}Sample S{{ sample.id | idfmt }}{% endblock %}
 {% block content %}
 <h2>{{ self.title() }} <a href="{{ ("/sample/" ~ sample.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <h5>Taxon</h5>
