@@ -1,3 +1,4 @@
+{% from "_macros.html" import icon %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,8 +15,8 @@
 <body>
     {% block body %}
         {% block header %}
-        <nav class="navbar bg-dark navbar-expand-lg" data-bs-theme="dark">
-                <a class="navbar-brand" href="{{ "/" | app_url }}">SeedCollection</a>
+        <nav class="navbar bg-success navbar-expand-md px-3" data-bs-theme="dark">
+            <a class="navbar-brand" href="{{ "/" | app_url }}">{{ icon("flower2", "body") }} SeedCollection</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
