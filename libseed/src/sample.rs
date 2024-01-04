@@ -39,25 +39,20 @@ impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Collection(cmp, id) => {
-                _ = builder
-                    .push("CS.collectionid")
-                    .push(cmp)
-                    .push_bind(id.clone())
+                _ = builder.push("CS.collectionid").push(cmp).push_bind(*id)
             }
             Self::NoCollection => _ = builder.push("CS.collectionid IS NULL"),
-            Self::Sample(cmp, id) => _ = builder.push("S.id").push(cmp).push_bind(id.clone()),
+            Self::Sample(cmp, id) => _ = builder.push("S.id").push(cmp).push_bind(*id),
             Self::SampleNotIn(list) => {
                 _ = builder.push("S.id NOT IN (");
                 let mut sep = builder.separated(", ");
                 for id in list {
-                    sep.push_bind(id.clone());
+                    sep.push_bind(*id);
                 }
                 builder.push(")");
             }
-            Self::Location(cmp, id) => _ = builder.push("L.locid").push(cmp).push_bind(id.clone()),
-            Self::Taxon(cmp, id) => {
-                _ = builder.push("S.tsn").push(cmp).push_bind(id.clone() as i64)
-            }
+            Self::Location(cmp, id) => _ = builder.push("L.locid").push(cmp).push_bind(*id),
+            Self::Taxon(cmp, id) => _ = builder.push("S.tsn").push(cmp).push_bind(*id),
             Self::TaxonNameLike(s) => {
                 if !s.is_empty() {
                     let wildcard = format!("%{s}%");

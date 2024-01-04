@@ -29,10 +29,7 @@ async fn register_user(
     auth: AuthSession,
     Form(creds): Form<Credentials>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(auth
-        .backend
-        .register(creds.username, creds.password)
-        .await?)
+    auth.backend.register(creds.username, creds.password).await
 }
 
 #[allow(dead_code)]

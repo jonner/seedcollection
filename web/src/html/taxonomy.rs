@@ -61,10 +61,7 @@ async fn list_taxa(
         Some(r) => r,
         None => Rank::Species,
     };
-    let pg = match params.page {
-        Some(n) => n,
-        None => 1,
-    };
+    let pg = params.page.unwrap_or(1);
     let row = taxonomy::count_query(Some(Box::new(FilterField::Rank(rank.clone()))))
         .build()
         .fetch_one(&state.dbpool)
@@ -189,7 +186,7 @@ async fn quickfind(
     let taxa: Vec<Taxon> = match taxon.is_empty() {
         true => Vec::new(),
         false => {
-            let parts = taxon.split(" ");
+            let parts = taxon.split(' ');
             let mut filter = CompoundFilter::new(FilterOp::And);
             for part in parts {
                 filter.add_filter(Box::new(any_filter(part)));

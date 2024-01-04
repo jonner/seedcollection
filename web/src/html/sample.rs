@@ -140,10 +140,10 @@ struct SampleParams {
 
 fn validate_sample_params(params: &SampleParams) -> Result<(), anyhow::Error> {
     if params.taxon.is_none() {
-        return Err(anyhow!("No taxon specified").into());
+        return Err(anyhow!("No taxon specified"));
     }
     if params.location.is_none() {
-        return Err(anyhow!("No location specified").into());
+        return Err(anyhow!("No location specified"));
     }
     Ok(())
 }
@@ -182,7 +182,7 @@ async fn insert_sample(
             Some(&params),
             Message {
                 r#type: MessageType::Error,
-                msg: format!("Failed to save sample: {}", e.0.to_string()),
+                msg: format!("Failed to save sample: {}", e.0),
             },
         ),
         Ok(result) => {
@@ -248,7 +248,7 @@ async fn update_sample(
             Some(params),
             Message {
                 r#type: MessageType::Error,
-                msg: format!("Failed to save sample: {}", e.0.to_string()),
+                msg: format!("Failed to save sample: {}", e.0),
             },
         ),
         Ok(_) => (

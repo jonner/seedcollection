@@ -63,7 +63,7 @@ impl AuthnBackend for SqliteAuthBackend {
             Some(user) => {
                 let hasher = Argon2::default();
                 let expected_hash =
-                    PasswordHash::new(&user.pwhash).map_err(|e| AuthenticationError::from(e))?;
+                    PasswordHash::new(&user.pwhash).map_err(AuthenticationError::from)?;
                 hasher
                     .verify_password(credentials.password.as_bytes(), &expected_hash)
                     .map(|_| Some(user))

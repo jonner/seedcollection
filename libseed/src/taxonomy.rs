@@ -141,8 +141,8 @@ pub enum FilterField {
 impl FilterPart for FilterField {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(n) => builder.push("T.tsn=").push_bind(n.clone()),
-            Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(n.clone()),
+            Self::Id(n) => builder.push("T.tsn=").push_bind(*n),
+            Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(*n),
             Self::Genus(s) => builder.push("T.unit_name1=").push_bind(s.clone()),
             Self::Species(s) => builder.push("T.unit_name2=").push_bind(s.clone()),
             Self::Rank(rank) => builder.push("T.rank_id=").push_bind(rank.clone() as i64),
@@ -228,7 +228,7 @@ pub fn count_query(
 
 impl Taxon {
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut query = Taxon::build_query(Some(Box::new(FilterField::Id(id.clone()))), None);
+        let mut query = Taxon::build_query(Some(Box::new(FilterField::Id(id))), None);
         Ok(query.build_query_as().fetch_one(pool).await?)
     }
 
@@ -294,10 +294,10 @@ impl Taxon {
         limit: Option<LimitSpec>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Taxon>, sqlx::Error> {
-        Ok(Taxon::build_query(filter, limit)
+        Taxon::build_query(filter, limit)
             .build_query_as()
             .fetch_all(pool)
-            .await?)
+            .await
     }
 
     pub async fn fetch_germination_info(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {

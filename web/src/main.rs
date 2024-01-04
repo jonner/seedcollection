@@ -33,7 +33,7 @@ mod error;
 mod html;
 mod state;
 
-const API_PREFIX: &'static str = "/api/v1/";
+const API_PREFIX: &str = "/api/v1/";
 const APP_PREFIX: &str = "/app/";
 
 #[derive(Serialize)]
@@ -68,8 +68,8 @@ where
             // Cargo doesn't allow `:` as a file name
             .as_str()
             .trim_start_matches(APP_PREFIX)
-            .replace(":", "$")
-            .replace("/", "_");
+            .replace(':', "$")
+            .replace('/', "_");
 
         if key.is_empty() {
             key = "_INDEX".to_string();
@@ -110,7 +110,7 @@ pub fn append_query_param(
             .with_source(e)
     })?;
     let mut query: HashMap<_, _> = match uri.query() {
-        Some(q) => q.split("&").map(|s| s.split_once("=").unwrap()).collect(),
+        Some(q) => q.split('&').map(|s| s.split_once('=').unwrap()).collect(),
         None => HashMap::new(),
     };
     query.insert(key.as_str(), value.as_str());

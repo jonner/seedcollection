@@ -17,7 +17,7 @@ pub struct Location {
     pub longitude: Option<f64>,
 }
 
-const MAP_TILER_KEY: &'static str = "OfKZsQq0kXBWp83M3Wjx";
+const MAP_TILER_KEY: &str = "OfKZsQq0kXBWp83M3Wjx";
 impl Location {
     pub fn map_viewer_uri(&self, zoom: f32) -> Option<String> {
         match (self.latitude, self.longitude) {
