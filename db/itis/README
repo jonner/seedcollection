@@ -1,0 +1,7 @@
+- convert mntaxa xls file to csv
+- Then convert to a format that match-species.py can understand:
+  - columns: X,genus,X,species,subttype,subtaxa,native_status,rarity_status,invasive_status
+- run the script and look at the output indicating not-found species
+- massage the csv file a bit after comparing the missing species to the ITIS taxonomy
+- re-run the script with the --updatedb option to add the mntaxa table to the db
+
