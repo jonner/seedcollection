@@ -174,6 +174,9 @@ async fn main() -> Result<()> {
     jinja.add_filter("idfmt", format_id_number);
 
     let shared_state = Arc::new(SharedState::new(args.database, Engine::from(jinja)).await?);
+    sqlx::migrate!("../dbmigration")
+        .run(&shared_state.dbpool)
+        .await?;
 
     let session_store = SqliteStore::new(shared_state.dbpool.clone());
     session_store.migrate().await?;

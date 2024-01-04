@@ -71,6 +71,7 @@ async fn main() -> Result<()> {
     let args = Cli::parse();
     let dbpool =
         SqlitePool::connect(&format!("sqlite://{}", args.database.to_string_lossy())).await?;
+    sqlx::migrate!("../dbmigration").run(&dbpool).await?;
     match args.command {
         Commands::Collection { command } => match command {
             CollectionCommands::List { full } => {
