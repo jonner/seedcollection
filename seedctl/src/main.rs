@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
             CollectionCommands::List { full } => {
                 let collections: Vec<Collection> = sqlx::query_as(
                     r#"SELECT L.id, L.name, L.description
-                                      FROM seedcollections L"#,
+                                      FROM sc_collections L"#,
                 )
                 .fetch_all(&dbpool)
                 .await?;
@@ -99,7 +99,7 @@ async fn main() -> Result<()> {
             }
             CollectionCommands::Add { name, description } => {
                 let id = sqlx::query!(
-                    r#"INSERT INTO seedcollections (name, description)
+                    r#"INSERT INTO sc_collections (name, description)
                 VALUES (?1, ?2)"#,
                     name,
                     description,
@@ -109,7 +109,7 @@ async fn main() -> Result<()> {
                 .last_insert_rowid();
                 let row = sqlx::query!(
                     r#"SELECT L.id, L.name, L.description
-                                      FROM seedcollections L WHERE id=?"#,
+                                      FROM sc_collections L WHERE id=?"#,
                     id
                 )
                 .fetch_one(&dbpool)
@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
                 if name.is_none() && description.is_none() {
                     return Err(anyhow!("Cannot modify without new values"));
                 }
-                let mut builder = sqlx::QueryBuilder::new("UPDATE seedcollections SET ");
+                let mut builder = sqlx::QueryBuilder::new("UPDATE sc_collections SET ");
                 let mut sep = builder.separated(", ");
                 if let Some(name) = name {
                     sep.push("name = ");
@@ -144,7 +144,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             CollectionCommands::Remove { id } => {
-                sqlx::query!(r#"DELETE FROM seedcollections WHERE id=?"#, id)
+                sqlx::query!(r#"DELETE FROM sc_collections WHERE id=?"#, id)
                     .execute(&dbpool)
                     .await?;
                 println!("Removed collection {id}");
@@ -152,7 +152,7 @@ async fn main() -> Result<()> {
             }
             CollectionCommands::AddSample { collection, sample } => {
                 sqlx::query!(
-                    r#"INSERT INTO seedcollectionsamples (collectionid, sampleid) 
+                    r#"INSERT INTO sc_collection_samples (collectionid, sampleid) 
                     VALUES (?, ?)"#,
                     collection,
                     sample,
@@ -164,7 +164,7 @@ async fn main() -> Result<()> {
             }
             CollectionCommands::RemoveSample { collection, sample } => {
                 sqlx::query!(
-                    r#"DELETE FROM seedcollectionsamples WHERE collectionid=? AND sampleid=?"#,
+                    r#"DELETE FROM sc_collection_samples WHERE collectionid=? AND sampleid=?"#,
                     collection,
                     sample,
                 )
@@ -175,7 +175,7 @@ async fn main() -> Result<()> {
             }
             CollectionCommands::Show { id, full } => {
                 let collectioninfo = sqlx::query!(
-                    "SELECT name, description from seedcollections WHERE id=?1",
+                    "SELECT name, description from sc_collections WHERE id=?1",
                     id
                 )
                 .fetch_one(&dbpool)
@@ -191,7 +191,7 @@ async fn main() -> Result<()> {
         },
         Commands::Location { command } => match command {
             LocationCommands::List { full } => {
-                let locations: Vec<location::Location> = sqlx::query_as("SELECT locid, name as locname, description, latitude, longitude FROM seedlocations")
+                let locations: Vec<location::Location> = sqlx::query_as("SELECT locid, name as locname, description, latitude, longitude FROM sc_locations")
                     .fetch_all(&dbpool)
                     .await?;
                 let mut tbuilder = tabled::builder::Builder::new();
@@ -229,7 +229,7 @@ async fn main() -> Result<()> {
                 longitude,
             } => {
                 let newid = sqlx::query!(
-                    r#"INSERT INTO seedlocations (name, description, latitude, longitude)
+                    r#"INSERT INTO sc_locations (name, description, latitude, longitude)
                 VALUES (?1, ?2, ?3, ?4)"#,
                     name,
                     description,
@@ -243,7 +243,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             LocationCommands::Remove { id } => {
-                sqlx::query!(r#"DELETE FROM seedlocations WHERE locid=?1"#, id)
+                sqlx::query!(r#"DELETE FROM sc_locations WHERE locid=?1"#, id)
                     .execute(&dbpool)
                     .await?;
                 Ok(())
@@ -262,7 +262,7 @@ async fn main() -> Result<()> {
                 {
                     return Err(anyhow!("Cannot modify location without new values"));
                 }
-                let mut builder = sqlx::QueryBuilder::new("UPDATE seedlocations SET ");
+                let mut builder = sqlx::QueryBuilder::new("UPDATE sc_locations SET ");
                 let mut sep = builder.separated(", ");
                 if let Some(name) = name {
                     sep.push("name = ");
@@ -299,7 +299,7 @@ async fn main() -> Result<()> {
                 notes,
             } => {
                 let newid = sqlx::query!(
-                    r#"INSERT INTO seedsamples (tsn, month, year, collectedlocation, quantity, notes)
+                    r#"INSERT INTO sc_samples (tsn, month, year, collectedlocation, quantity, notes)
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#,
                     taxon,
                     month,
@@ -315,7 +315,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Remove { id } => {
-                sqlx::query!("DELETE FROM seedsamples WHERE id=?", id,)
+                sqlx::query!("DELETE FROM sc_samples WHERE id=?", id,)
                     .execute(&dbpool)
                     .await?
                     .rows_affected();
@@ -339,7 +339,7 @@ async fn main() -> Result<()> {
                 {
                     return Err(anyhow!("Cannot modify without new values"));
                 }
-                let mut builder = sqlx::QueryBuilder::new("UPDATE seedsamples SET ");
+                let mut builder = sqlx::QueryBuilder::new("UPDATE sc_samples SET ");
                 let mut sep = builder.separated(", ");
                 if let Some(taxon) = taxon {
                     sep.push("tsn = ");

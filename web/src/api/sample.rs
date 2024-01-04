@@ -67,7 +67,7 @@ async fn modify_sample(
     {
         return Err(anyhow!("No params specified").into());
     }
-    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE seedsamples SET ");
+    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE sc_samples SET ");
     let mut sep = builder.separated(", ");
     if let Some(t) = params.taxon {
         sep.push(" tsn=");
@@ -107,7 +107,7 @@ async fn new_sample(
         return Err(anyhow!("Taxon and Location are required").into());
     }
     let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-        "INSERT INTO seedsamples (tsn, collectedlocation, month, year, quantity, notes) values (",
+        "INSERT INTO sc_samples (tsn, collectedlocation, month, year, quantity, notes) values (",
     );
     let mut sep = builder.separated(", ");
     sep.push_bind(params.taxon);
@@ -125,7 +125,7 @@ async fn delete_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
-    sqlx::query("DELETE FROM seedsamples WHERE id=?")
+    sqlx::query("DELETE FROM sc_samples WHERE id=?")
         .bind(id)
         .execute(&state.dbpool)
         .await?;

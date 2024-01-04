@@ -79,10 +79,10 @@ impl Sample {
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
                     quantity, month, year, notes, certainty, CS.collectionid,
                     GROUP_CONCAT(V.vernacular_name, "@") as cnames
-                    FROM seedsamples S
+                    FROM sc_samples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-                    INNER JOIN seedlocations L on L.locid=S.collectedlocation
-                    LEFT JOIN seedcollectionsamples CS ON CS.sampleid=S.id
+                    INNER JOIN sc_locations L on L.locid=S.collectedlocation
+                    LEFT JOIN sc_collection_samples CS ON CS.sampleid=S.id
                     LEFT JOIN (SELECT * FROM vernaculars WHERE
                     (language="English" or language="unspecified")) V on V.tsn=T.tsn
                     "#,

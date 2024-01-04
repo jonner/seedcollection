@@ -87,7 +87,7 @@ async fn show_sample(
 ) -> Result<impl IntoResponse, error::Error> {
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
     let collections: Vec<Collection> = sqlx::query_as(
-        r#"SELECT C.id, C.name, C.description FROM seedcollections C INNER JOIN seedcollectionsamples CS
+        r#"SELECT C.id, C.name, C.description FROM sc_collections C INNER JOIN sc_collection_samples CS
         ON C.id == CS.collectionid WHERE CS.sampleid = ?"#)
         .bind(id)
         .fetch_all(&state.dbpool)
@@ -159,7 +159,7 @@ async fn do_insert(
         _ => Certainty::Certain,
     };
 
-    sqlx::query("INSERT INTO seedsamples (tsn, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO sc_samples (tsn, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?)")
         .bind(params.taxon)
         .bind(params.location)
         .bind(params.month)
@@ -223,7 +223,7 @@ async fn do_update(
         _ => Certainty::Certain,
     };
 
-    sqlx::query("Update seedsamples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE id=?")
+    sqlx::query("Update sc_samples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE id=?")
         .bind(params.taxon)
         .bind(params.location)
         .bind(params.month)

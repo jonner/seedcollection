@@ -65,7 +65,7 @@ async fn modify_location(
     {
         return Err(anyhow!("No parameters given").into());
     }
-    let mut builder = sqlx::QueryBuilder::<sqlx::Sqlite>::new("UPDATE seedlocations SET ");
+    let mut builder = sqlx::QueryBuilder::<sqlx::Sqlite>::new("UPDATE sc_locations SET ");
     let mut sep = builder.separated(", ");
     if let Some(name) = params.name {
         sep.push(" name=");
@@ -107,7 +107,7 @@ async fn add_location(
         return Err(anyhow!("No parameters given").into());
     }
     let id = sqlx::query(
-        r#"INSERT INTO seedlocations
+        r#"INSERT INTO sc_locations
           (name, description, latitude, longitude)
           VALUES (?, ?, ?, ?)"#,
     )
@@ -128,7 +128,7 @@ async fn delete_location(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    sqlx::query("DELETE FROM seedlocations WHERE locid=?")
+    sqlx::query("DELETE FROM sc_locations WHERE locid=?")
         .bind(id)
         .execute(&state.dbpool)
         .await?;

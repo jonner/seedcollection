@@ -123,7 +123,7 @@ async fn do_update(
     }
 
     sqlx::query(
-        "UPDATE seedlocations SET name=?, description=?, latitude=?, longitude=? WHERE locid=?",
+        "UPDATE sc_locations SET name=?, description=?, latitude=?, longitude=? WHERE locid=?",
     )
     .bind(params.name.clone())
     .bind(params.description.clone())
@@ -182,7 +182,7 @@ async fn do_insert(
         return Err(anyhow!("No name was given").into());
     }
     sqlx::query(
-        r#"INSERT INTO seedlocations
+        r#"INSERT INTO sc_locations
           (name, description, latitude, longitude)
           VALUES (?, ?, ?, ?)"#,
     )
@@ -238,7 +238,7 @@ async fn delete_location(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    sqlx::query("DELETE FROM seedlocations WHERE locid=?")
+    sqlx::query("DELETE FROM sc_locations WHERE locid=?")
         .bind(id)
         .execute(&state.dbpool)
         .await?;

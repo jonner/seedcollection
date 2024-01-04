@@ -67,7 +67,7 @@ async fn modify_collection(
     if params.name.is_none() && params.description.is_none() {
         return Err(anyhow!("No params to modify").into());
     }
-    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE seedcollections SET ");
+    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE sc_collections SET ");
     let mut sep = builder.separated(", ");
     if let Some(name) = params.name {
         sep.push(" name=");
@@ -87,7 +87,7 @@ async fn delete_collection(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
-    sqlx::query("DELETE FROM seedcollections WHERE id=?")
+    sqlx::query("DELETE FROM sc_collections WHERE id=?")
         .bind(id)
         .execute(&state.dbpool)
         .await?;
@@ -105,7 +105,7 @@ async fn add_collection(
     State(state): State<AppState>,
 ) -> Result<Json<i64>, error::Error> {
     let id = sqlx::query(
-        "INSERT INTO seedcollections (name, description) VALUES (?,
+        "INSERT INTO sc_collections (name, description) VALUES (?,
     ?)",
     )
     .bind(params.name)
@@ -126,7 +126,7 @@ async fn remove_sample(
     State(state): State<AppState>,
     Path(RemoveSampleParams { id, sampleid }): Path<RemoveSampleParams>,
 ) -> Result<(), error::Error> {
-    sqlx::query("DELETE FROM seedcollectionsamples WHERE collectionid=? AND sampleid=?")
+    sqlx::query("DELETE FROM sc_collection_samples WHERE collectionid=? AND sampleid=?")
         .bind(id)
         .bind(sampleid)
         .execute(&state.dbpool)
@@ -145,7 +145,7 @@ async fn add_sample(
     Form(params): Form<AddSampleProps>,
 ) -> Result<Json<i64>, error::Error> {
     let id =
-        sqlx::query("INSERT INTO seedcollectionsamples (collectionid, sampleid) VALUES (?, ?)")
+        sqlx::query("INSERT INTO sc_collection_samples (collectionid, sampleid) VALUES (?, ?)")
             .bind(id)
             .bind(params.sample)
             .execute(&state.dbpool)

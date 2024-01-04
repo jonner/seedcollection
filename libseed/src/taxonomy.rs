@@ -304,8 +304,8 @@ impl Taxon {
         self.germination = Some(
             sqlx::query_as!(
                 Germination,
-                r#"SELECT G.* from germinationcodes G
-            INNER JOIN taxongermination TG ON TG.germid=G.id
+                r#"SELECT G.* from sc_germination_codes G
+            INNER JOIN sc_taxon_germination TG ON TG.germid=G.id
             WHERE TG.tsn=?"#,
                 self.id
             )

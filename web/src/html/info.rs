@@ -14,7 +14,7 @@ async fn germination(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let germination = sqlx::query_as!(Germination, "SELECT * FROM germinationcodes")
+    let germination = sqlx::query_as!(Germination, "SELECT * FROM sc_germination_codes")
         .fetch_all(&state.dbpool)
         .await?;
     Ok(RenderHtml(

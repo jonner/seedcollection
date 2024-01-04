@@ -105,8 +105,8 @@ async fn show_all_children(
         SELECT CTE.tsn, CTE.parent_tsn as parentid, CTE.complete_name, CTE.unit_name1, CTE.unit_name2, CTE.unit_name3, CTE.phylo_sort_seq as seq, top_parent, top_parent_name,
         S.id, L.locid, L.name as locname, quantity, month, year, notes
         FROM CTE
-        INNER JOIN seedsamples S ON CTE.tsn=S.tsn
-        INNER JOIN seedlocations L on L.locid=S.collectedlocation
+        INNER JOIN sc_samples S ON CTE.tsn=S.tsn
+        INNER JOIN sc_locations L on L.locid=S.collectedlocation
         ORDER BY seq"#)
         .bind(id)
         .fetch_all(&state.dbpool)
@@ -213,7 +213,7 @@ async fn editgerm(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let codes = sqlx::query_as!(Germination, "SELECT * FROM germinationcodes")
+    let codes = sqlx::query_as!(Germination, "SELECT * FROM sc_germination_codes")
         .fetch_all(&state.dbpool)
         .await?;
     Ok(RenderHtml(
@@ -234,7 +234,7 @@ async fn addgerm(
     Form(params): Form<AddGermParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let newid = sqlx::query!(
-        "INSERT INTO taxongermination (tsn, germid) VALUES (?, ?)",
+        "INSERT INTO sc_taxon_germination (tsn, germid) VALUES (?, ?)",
         params.taxon,
         params.germid
     )

@@ -18,7 +18,7 @@ pub struct Collection {
 impl Collection {
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
         Ok(
-            sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
+            sqlx::query_as("SELECT id, name, description FROM sc_collections WHERE id=?")
                 .bind(id)
                 .fetch_one(pool)
                 .await?,
@@ -27,7 +27,7 @@ impl Collection {
 
     pub async fn fetch_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Self>> {
         Ok(
-            sqlx::query_as("SELECT id, name, description FROM seedcollections")
+            sqlx::query_as("SELECT id, name, description FROM sc_collections")
                 .fetch_all(pool)
                 .await?,
         )

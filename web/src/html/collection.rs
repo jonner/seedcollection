@@ -82,7 +82,7 @@ async fn do_insert(
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
-    sqlx::query("INSERT INTO seedcollections (name, description) VALUES (?, ?)")
+    sqlx::query("INSERT INTO sc_collections (name, description) VALUES (?, ?)")
         .bind(params.name.clone())
         .bind(params.description.clone())
         .execute(&state.dbpool)
@@ -153,7 +153,7 @@ async fn do_update(
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
-    sqlx::query("UPDATE seedcollections SET name=?, description=? WHERE id=?")
+    sqlx::query("UPDATE sc_collections SET name=?, description=? WHERE id=?")
         .bind(params.name.clone())
         .bind(params.description.clone())
         .bind(id)
@@ -201,7 +201,7 @@ async fn delete_collection(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    match sqlx::query!("DELETE FROM seedcollections WHERE id=?", id)
+    match sqlx::query!("DELETE FROM sc_collections WHERE id=?", id)
         .execute(&state.dbpool)
         .await
     {
@@ -236,7 +236,7 @@ async fn add_sample_prep(
     let c = Collection::fetch(id, &state.dbpool).await?;
 
     let ids_in_collection = sqlx::query!(
-        "SELECT CS.sampleid from seedcollectionsamples CS WHERE CS.collectionid=?",
+        "SELECT CS.sampleid from sc_collection_samples CS WHERE CS.collectionid=?",
         id
     )
     .fetch_all(&state.dbpool)
@@ -279,7 +279,7 @@ async fn add_sample(
         .collect();
 
     for sample in toadd {
-        sqlx::query("INSERT INTO seedcollectionsamples (collectionid, sampleid) VALUES (?, ?)")
+        sqlx::query("INSERT INTO sc_collection_samples (collectionid, sampleid) VALUES (?, ?)")
             .bind(id)
             .bind(sample)
             .execute(&state.dbpool)
@@ -305,7 +305,7 @@ async fn remove_sample(
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
     sqlx::query!(
-        "DELETE FROM seedcollectionsamples WHERE collectionid=? AND sampleid=?",
+        "DELETE FROM sc_collection_samples WHERE collectionid=? AND sampleid=?",
         id,
         sampleid
     )

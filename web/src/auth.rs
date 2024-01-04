@@ -74,11 +74,13 @@ impl AuthnBackend for SqliteAuthBackend {
     }
 
     async fn get_user(&self, username: &UserId<Self>) -> Result<Option<Self::User>, Self::Error> {
-        Ok(
-            sqlx::query_as!(SqliteUser, "SELECT * from users WHERE username=?", username)
-                .fetch_optional(&self.db)
-                .await?,
+        Ok(sqlx::query_as!(
+            SqliteUser,
+            "SELECT * from sc_users WHERE username=?",
+            username
         )
+        .fetch_optional(&self.db)
+        .await?)
     }
 }
 
@@ -90,7 +92,7 @@ impl SqliteAuthBackend {
             .hash_password(password.as_bytes(), &salt)?
             .to_string();
         sqlx::query!(
-            "INSERT INTO users (username, pwhash) VALUES (?, ?)",
+            "INSERT INTO sc_users (username, pwhash) VALUES (?, ?)",
             username,
             password_hash
         )
