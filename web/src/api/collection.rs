@@ -9,7 +9,7 @@ use axum::{
 use libseed::{
     collection::Collection,
     filter::Cmp,
-    sample::{self, Filter},
+    sample::{Filter, Sample},
 };
 use serde::Deserialize;
 use sqlx::{QueryBuilder, Sqlite};
@@ -36,10 +36,7 @@ async fn root() -> Html<String> {
 async fn list_collections(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Collection>>, error::Error> {
-    let collections: Vec<Collection> =
-        sqlx::query_as("SELECT id, name, description FROM seedcollections")
-            .fetch_all(&state.dbpool)
-            .await?;
+    let collections = Collection::query(&state.dbpool).await?;
     Ok(Json(collections))
 }
 
@@ -47,12 +44,12 @@ async fn show_collection(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {
-    let mut builder: QueryBuilder<Sqlite> =
-        QueryBuilder::new("SELECT id, name, description FROM seedcollections WHERE id=");
-    builder.push_bind(id);
-    let mut collection: Collection = builder.build_query_as().fetch_one(&state.dbpool).await?;
-    let mut builder = sample::build_query(Some(Box::new(Filter::Collection(Cmp::Equal, id))));
-    collection.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
+    let mut collection = Collection::fetch(id, &state.dbpool).await?;
+    collection.samples = Sample::query(
+        Some(Box::new(Filter::Collection(Cmp::Equal, id))),
+        &state.dbpool,
+    )
+    .await?;
     Ok(Json(collection))
 }
 

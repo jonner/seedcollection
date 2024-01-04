@@ -9,9 +9,9 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
     empty_string_as_none,
-    filter::{Cmp, FilterPart},
+    filter::FilterPart,
     location::Location,
-    sample::{self, Certainty, Filter, Sample},
+    sample::{Certainty, Filter, Sample},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -56,8 +56,7 @@ async fn filter_samples(
         true => None,
         false => Some(Box::new(Filter::TaxonNameLike(fragment))),
     };
-    let mut builder = sample::build_query(filter);
-    let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
+    let samples = Sample::query(filter, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -71,8 +70,7 @@ async fn list_samples(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut builder = sample::build_query(None);
-    let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
+    let samples = Sample::query(None, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -87,8 +85,7 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut builder = sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))));
-    let mut sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
+    let mut sample = Sample::fetch(id, &state.dbpool).await?;
     let collections: Vec<Collection> = sqlx::query_as(
         r#"SELECT C.id, C.name, C.description FROM seedcollections C INNER JOIN seedcollectionsamples CS
         ON C.id == CS.collectionid WHERE CS.sampleid = ?"#)
@@ -203,11 +200,7 @@ async fn insert_sample(
         ),
         Ok(result) => {
             let id = result.last_insert_rowid();
-            let sample: Sample =
-                sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))))
-                    .build_query_as()
-                    .fetch_one(&state.dbpool)
-                    .await?;
+            let sample = Sample::fetch(id, &state.dbpool).await?;
 
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
             (
@@ -285,10 +278,7 @@ async fn update_sample(
         ),
     };
 
-    let sample: Sample = sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))))
-        .build_query_as()
-        .fetch_one(&state.dbpool)
-        .await?;
+    let sample = Sample::fetch(id, &state.dbpool).await?;
 
     Ok(RenderHtml(
         key + ".partial",

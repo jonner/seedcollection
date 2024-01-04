@@ -5,7 +5,7 @@ use libseed::{
     collection::Collection,
     filter::{Cmp, FilterPart},
     location,
-    sample::{self, Filter, Sample},
+    sample::{Filter, Sample},
     taxonomy::{self, filter_by, Taxon},
 };
 use sqlx::SqlitePool;
@@ -30,8 +30,7 @@ async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: boo
         Some(id) => Some(Box::new(Filter::Collection(Cmp::Equal, id))),
         _ => None,
     };
-    let mut sqlbuilder = sample::build_query(filter);
-    let samples: Vec<Sample> = sqlbuilder.build_query_as().fetch_all(dbpool).await?;
+    let samples = Sample::query(filter, dbpool).await?;
     let mut tbuilder = tabled::builder::Builder::new();
     let mut headers = vec!["ID", "Taxon", "Location"];
     if full {

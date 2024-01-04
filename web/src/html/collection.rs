@@ -10,8 +10,7 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
     empty_string_as_none,
-    filter::Cmp,
-    sample::{self, Filter, Sample},
+    sample::{Filter, Sample},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -52,10 +51,7 @@ async fn list_collections(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let collections: Vec<Collection> =
-        sqlx::query_as("SELECT id, name, description FROM seedcollections")
-            .fetch_all(&state.dbpool)
-            .await?;
+    let collections = Collection::query(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -138,13 +134,8 @@ async fn show_collection(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut c: Collection =
-        sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-            .bind(id)
-            .fetch_one(&state.dbpool)
-            .await?;
-    let mut builder = sample::build_query(Some(Box::new(Filter::Collection(Cmp::Equal, id))));
-    c.samples = builder.build_query_as().fetch_all(&state.dbpool).await?;
+    let mut c = Collection::fetch(id, &state.dbpool).await?;
+    c.fetch_samples(&state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
@@ -193,11 +184,7 @@ async fn modify_collection(
             },
         ),
     };
-    let c: Collection =
-        sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-            .bind(id)
-            .fetch_one(&state.dbpool)
-            .await?;
+    let c = Collection::fetch(id, &state.dbpool).await?;
     Ok(RenderHtml(
         key + ".partial",
         state.tmpl.clone(),
@@ -219,11 +206,7 @@ async fn delete_collection(
         .await
     {
         Err(e) => {
-            let c: Collection =
-                sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-                    .bind(id)
-                    .fetch_one(&state.dbpool)
-                    .await?;
+            let c = Collection::fetch(id, &state.dbpool).await?;
             Ok(RenderHtml(
                 key + ".partial",
                 state.tmpl.clone(),
@@ -250,11 +233,7 @@ async fn add_sample_prep(
     id: i64,
     state: &AppState,
 ) -> Result<(Collection, Vec<Sample>), error::Error> {
-    let c: Collection =
-        sqlx::query_as("SELECT id, name, description FROM seedcollections WHERE id=?")
-            .bind(id)
-            .fetch_one(&state.dbpool)
-            .await?;
+    let c = Collection::fetch(id, &state.dbpool).await?;
 
     let ids_in_collection = sqlx::query!(
         "SELECT CS.sampleid from seedcollectionsamples CS WHERE CS.collectionid=?",
@@ -263,10 +242,7 @@ async fn add_sample_prep(
     .fetch_all(&state.dbpool)
     .await?;
     let ids = ids_in_collection.iter().map(|row| row.sampleid).collect();
-    let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::SampleNotIn(ids))))
-        .build_query_as()
-        .fetch_all(&state.dbpool)
-        .await?;
+    let samples = Sample::query(Some(Box::new(Filter::SampleNotIn(ids))), &state.dbpool).await?;
     Ok((c, samples))
 }
 

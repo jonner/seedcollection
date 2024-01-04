@@ -4,7 +4,7 @@ use crate::{
     taxonomy::Taxon,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteRow, FromRow, QueryBuilder, Row, Sqlite};
+use sqlx::{sqlite::SqliteRow, FromRow, Pool, QueryBuilder, Row, Sqlite};
 
 #[derive(Deserialize, Serialize, Debug, sqlx::Type)]
 #[repr(i32)]
@@ -77,9 +77,10 @@ impl FilterPart for Filter {
     }
 }
 
-pub fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
-    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-        r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
+impl Sample {
+    fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
+        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+            r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
                     quantity, month, year, notes, certainty, CS.collectionid,
                     GROUP_CONCAT(V.vernacular_name, "@") as cnames
@@ -90,13 +91,27 @@ pub fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static,
                     LEFT JOIN (SELECT * FROM vernaculars WHERE
                     (language="English" or language="unspecified")) V on V.tsn=T.tsn
                     "#,
-    );
-    if let Some(f) = filter {
-        builder.push(" WHERE ");
-        f.add_to_query(&mut builder);
+        );
+        if let Some(f) = filter {
+            builder.push(" WHERE ");
+            f.add_to_query(&mut builder);
+        }
+        builder.push(" GROUP BY S.id, T.tsn ORDER BY phylo_sort_seq");
+        builder
     }
-    builder.push(" GROUP BY S.id, T.tsn ORDER BY phylo_sort_seq");
-    builder
+
+    pub async fn query(
+        filter: Option<Box<dyn FilterPart>>,
+        pool: &Pool<Sqlite>,
+    ) -> anyhow::Result<Vec<Sample>> {
+        let mut builder = Self::build_query(filter);
+        Ok(builder.build_query_as().fetch_all(pool).await?)
+    }
+
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Sample> {
+        let mut builder = Self::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))));
+        Ok(builder.build_query_as().fetch_one(pool).await?)
+    }
 }
 
 impl FromRow<'_, SqliteRow> for Sample {

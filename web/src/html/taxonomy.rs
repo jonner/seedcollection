@@ -8,7 +8,7 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, CompoundFilter, FilterOp},
-    sample::{self, Filter, Sample},
+    sample::{Filter, Sample},
     taxonomy::{self, any_filter, FilterField, Germination, LimitSpec, Rank, Taxon},
 };
 use minijinja::context;
@@ -131,10 +131,8 @@ async fn show_taxon(
     let mut taxon = Taxon::fetch(id, &state.dbpool).await?;
     let hierarchy = taxon.fetch_hierarchy(&state.dbpool).await?;
     let children = taxon.fetch_children(&state.dbpool).await?;
-    let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::Taxon(Cmp::Equal, id))))
-        .build_query_as()
-        .fetch_all(&state.dbpool)
-        .await?;
+    let samples =
+        Sample::query(Some(Box::new(Filter::Taxon(Cmp::Equal, id))), &state.dbpool).await?;
     taxon.fetch_germination_info(&state.dbpool).await?;
 
     Ok(RenderHtml(

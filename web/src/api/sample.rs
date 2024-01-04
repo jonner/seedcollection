@@ -6,11 +6,7 @@ use axum::{
     routing::{get, post},
     Form, Router,
 };
-use libseed::{
-    empty_string_as_none,
-    filter::Cmp,
-    sample::{self, Filter, Sample},
-};
+use libseed::{empty_string_as_none, sample::Sample};
 use serde::Deserialize;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
@@ -31,8 +27,7 @@ async fn root(State(_state): State<AppState>) -> Html<String> {
 }
 
 async fn list_samples(State(state): State<AppState>) -> Result<Json<Vec<Sample>>, error::Error> {
-    let mut builder = sample::build_query(None);
-    let samples: Vec<Sample> = builder.build_query_as().fetch_all(&state.dbpool).await?;
+    let samples = Sample::query(None, &state.dbpool).await?;
     Ok(Json(samples))
 }
 
@@ -40,8 +35,7 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Sample>, error::Error> {
-    let mut builder = sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))));
-    let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
+    let sample = Sample::fetch(id, &state.dbpool).await?;
     Ok(Json(sample))
 }
 

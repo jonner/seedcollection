@@ -16,7 +16,7 @@ use axum_template::RenderHtml;
 use libseed::{empty_string_as_none, filter::Cmp};
 use libseed::{
     location::{self, Location},
-    sample::{self, Filter, Sample},
+    sample::{Filter, Sample},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -95,11 +95,11 @@ async fn show_location(
     .fetch_one(&state.dbpool)
     .await?;
 
-    let samples: Vec<Sample> =
-        sample::build_query(Some(Box::new(Filter::Location(Cmp::Equal, id))))
-            .build_query_as()
-            .fetch_all(&state.dbpool)
-            .await?;
+    let samples = Sample::query(
+        Some(Box::new(Filter::Location(Cmp::Equal, id))),
+        &state.dbpool,
+    )
+    .await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -150,11 +150,11 @@ async fn update_location(
     Path(id): Path<i64>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let samples: Vec<Sample> =
-        sample::build_query(Some(Box::new(Filter::Location(Cmp::Equal, id))))
-            .build_query_as()
-            .fetch_all(&state.dbpool)
-            .await?;
+    let samples = Sample::query(
+        Some(Box::new(Filter::Location(Cmp::Equal, id))),
+        &state.dbpool,
+    )
+    .await?;
     let mut request: Option<&LocationParams> = None;
     let message = match do_update(id, &params, &state).await {
         Err(e) => {
