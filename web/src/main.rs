@@ -174,7 +174,7 @@ async fn main() -> Result<()> {
     jinja.add_filter("idfmt", format_id_number);
 
     let shared_state = Arc::new(SharedState::new(args.database, Engine::from(jinja)).await?);
-    sqlx::migrate!("../dbmigration")
+    sqlx::migrate!("../db/migrations")
         .run(&shared_state.dbpool)
         .await?;
 
