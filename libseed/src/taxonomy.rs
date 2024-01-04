@@ -53,7 +53,7 @@ pub enum NativeStatus {
     Unknown,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Taxon {
     pub id: i64,
     pub rank: Rank,
@@ -65,9 +65,10 @@ pub struct Taxon {
     pub native_status: Option<NativeStatus>,
     pub parentid: Option<i64>,
     pub seq: Option<i64>,
+    pub germination: Option<Vec<Germination>>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Germination {
     pub id: i64,
     pub code: String,
@@ -118,6 +119,7 @@ impl FromRow<'_, SqliteRow> for Taxon {
             native_status: status,
             parentid: row.try_get("parentid")?,
             seq: row.try_get("seq").unwrap_or(None),
+            germination: None,
         })
     }
 }
@@ -205,61 +207,6 @@ pub fn any_filter(s: &str) -> CompoundFilter {
 }
 
 pub struct LimitSpec(pub i32, pub Option<i32>);
-pub fn build_query(
-    filter: Option<Box<dyn FilterPart>>,
-    limit: Option<LimitSpec>,
-) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
-    let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
-        r#"SELECT T.tsn, T.parent_tsn as parentid, T.unit_name1, T.unit_name2, T.unit_name3,
-        T.complete_name, T.rank_id, T.phylo_sort_seq as seq, M.native_status,
-            GROUP_CONCAT(V.vernacular_name, "@") as cnames
-            FROM taxonomic_units T
-            LEFT JOIN (SELECT * FROM vernaculars WHERE
-                       (language="English" or language="unspecified")) V on V.tsn=T.tsn
-     LEFT JOIN mntaxa M on T.tsn=M.tsn 
-      WHERE name_usage="accepted" AND kingdom_id="#,
-    );
-    builder.push_bind(KINGDOM_PLANTAE);
-
-    if let Some(filter) = filter {
-        builder.push(" AND ");
-        filter.add_to_query(&mut builder);
-    }
-
-    builder.push(" GROUP BY T.tsn ORDER BY phylo_sort_seq");
-    if let Some(LimitSpec(count, offset)) = limit {
-        builder.push(" LIMIT ");
-        builder.push_bind(count);
-        if let Some(offset) = offset {
-            builder.push(" OFFSET ");
-            builder.push_bind(offset);
-        }
-    }
-    debug!("generated sql: <<{}>>", builder.sql());
-    builder
-}
-
-pub async fn fetch_taxon(id: i64, pool: &Pool<Sqlite>) -> Result<Taxon> {
-    let mut query = build_query(Some(Box::new(FilterField::Id(id.clone()))), None);
-    Ok(query.build_query_as().fetch_one(pool).await?)
-}
-
-pub async fn fetch_taxon_hierarchy(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<Taxon>> {
-    let mut hierarchy = Vec::new();
-    let mut taxon = fetch_taxon(id, pool).await?;
-    loop {
-        let parentid = taxon.parentid;
-        hierarchy.push(taxon);
-        match parentid {
-            Some(id) if id > 0 => {
-                taxon = fetch_taxon(id, pool).await?;
-            }
-            _ => break,
-        }
-    }
-
-    Ok(hierarchy)
-}
 
 pub fn count_query(
     filter: Option<Box<dyn FilterPart>>,
@@ -279,8 +226,77 @@ pub fn count_query(
     builder
 }
 
-pub async fn fetch_children(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<Taxon>> {
-    let filter: Option<Box<dyn FilterPart>> = Some(Box::new(FilterField::ParentId(id)));
-    let mut query = build_query(filter, None);
-    Ok(query.build_query_as().fetch_all(pool).await?)
+impl Taxon {
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
+        let mut query = Taxon::build_query(Some(Box::new(FilterField::Id(id.clone()))), None);
+        Ok(query.build_query_as().fetch_one(pool).await?)
+    }
+
+    pub async fn fetch_hierarchy(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
+        let mut hierarchy = Vec::new();
+        let mut taxon = Taxon::fetch(self.id, pool).await?;
+        loop {
+            let parentid = taxon.parentid;
+            hierarchy.push(taxon);
+            match parentid {
+                Some(id) if id > 0 => {
+                    taxon = Taxon::fetch(id, pool).await?;
+                }
+                _ => break,
+            }
+        }
+
+        Ok(hierarchy)
+    }
+
+    pub async fn fetch_children(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
+        let filter: Option<Box<dyn FilterPart>> = Some(Box::new(FilterField::ParentId(self.id)));
+        let mut query = Taxon::build_query(filter, None);
+        Ok(query.build_query_as().fetch_all(pool).await?)
+    }
+
+    fn build_query(
+        filter: Option<Box<dyn FilterPart>>,
+        limit: Option<LimitSpec>,
+    ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
+        let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            r#"SELECT T.tsn, T.parent_tsn as parentid, T.unit_name1, T.unit_name2, T.unit_name3,
+        T.complete_name, T.rank_id, T.phylo_sort_seq as seq, M.native_status,
+            GROUP_CONCAT(V.vernacular_name, "@") as cnames
+            FROM taxonomic_units T
+            LEFT JOIN (SELECT * FROM vernaculars WHERE
+                       (language="English" or language="unspecified")) V on V.tsn=T.tsn
+     LEFT JOIN mntaxa M on T.tsn=M.tsn 
+      WHERE name_usage="accepted" AND kingdom_id="#,
+        );
+        builder.push_bind(KINGDOM_PLANTAE);
+
+        if let Some(filter) = filter {
+            builder.push(" AND ");
+            filter.add_to_query(&mut builder);
+        }
+
+        builder.push(" GROUP BY T.tsn ORDER BY phylo_sort_seq");
+        if let Some(LimitSpec(count, offset)) = limit {
+            builder.push(" LIMIT ");
+            builder.push_bind(count);
+            if let Some(offset) = offset {
+                builder.push(" OFFSET ");
+                builder.push_bind(offset);
+            }
+        }
+        debug!("generated sql: <<{}>>", builder.sql());
+        builder
+    }
+
+    pub async fn query(
+        filter: Option<Box<dyn FilterPart>>,
+        limit: Option<LimitSpec>,
+        pool: &Pool<Sqlite>,
+    ) -> Result<Vec<Taxon>, sqlx::Error> {
+        Ok(Taxon::build_query(filter, limit)
+            .build_query_as()
+            .fetch_all(pool)
+            .await?)
+    }
 }

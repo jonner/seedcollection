@@ -35,7 +35,7 @@ async fn find_taxa(
     State(state): State<AppState>,
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
-    let mut q = taxonomy::build_query(
+    let t = Taxon::query(
         filter_by(
             params.id,
             params.rank,
@@ -45,8 +45,9 @@ async fn find_taxa(
             params.minnesota,
         ),
         None,
-    );
-    let t = q.build_query_as::<Taxon>().fetch_all(&state.dbpool).await?;
+        &state.dbpool,
+    )
+    .await?;
     Ok(Json(t))
 }
 
@@ -54,7 +55,7 @@ async fn show_taxon(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Taxon>, error::Error> {
-    let t = taxonomy::fetch_taxon(id, &state.dbpool).await?;
+    let t = Taxon::fetch(id, &state.dbpool).await?;
     Ok(Json(t))
 }
 

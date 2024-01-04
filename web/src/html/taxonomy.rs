@@ -71,12 +71,11 @@ async fn list_taxa(
         .await?;
     let count = row.try_get::<i32, _>("count")?;
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
-    let taxa: Vec<Taxon> = taxonomy::build_query(
+    let taxa: Vec<Taxon> = Taxon::query(
         Some(Box::new(FilterField::Rank(rank))),
         Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
+        &state.dbpool,
     )
-    .build_query_as()
-    .fetch_all(&state.dbpool)
     .await?;
     debug!("req={:?}", req);
     Ok(RenderHtml(
@@ -129,8 +128,9 @@ async fn show_taxon(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let hierarchy = taxonomy::fetch_taxon_hierarchy(id, &state.dbpool).await?;
-    let children = taxonomy::fetch_children(id, &state.dbpool).await?;
+    let taxon = Taxon::fetch(id, &state.dbpool).await?;
+    let hierarchy = taxon.fetch_hierarchy(&state.dbpool).await?;
+    let children = taxon.fetch_children(&state.dbpool).await?;
     let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::Taxon(Cmp::Equal, id))))
         .build_query_as()
         .fetch_all(&state.dbpool)
@@ -149,7 +149,7 @@ async fn show_taxon(
         key,
         state.tmpl.clone(),
         context!(user => auth.user,
-                 taxon => hierarchy[0],
+                 taxon => taxon,
                  parents => hierarchy,
                  children => children,
                  samples => samples,
@@ -212,10 +212,12 @@ async fn quickfind(
                 filter.add_filter(Box::new(FilterField::Minnesota(true)));
             }
             /* FIXME: pagination for /search endpoing? */
-            taxonomy::build_query(Some(Box::new(filter)), Some(LimitSpec(200, None)))
-                .build_query_as()
-                .fetch_all(&state.dbpool)
-                .await?
+            Taxon::query(
+                Some(Box::new(filter)),
+                Some(LimitSpec(200, None)),
+                &state.dbpool,
+            )
+            .await?
         }
     };
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
