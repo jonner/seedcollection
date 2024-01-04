@@ -12,7 +12,6 @@ use libseed::{
     filter::{Cmp, FilterPart},
     location::Location,
     sample::{self, Certainty, Filter, Sample},
-    taxonomy::Germination,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -89,22 +88,14 @@ async fn show_sample(
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut builder = sample::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))));
-    let sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
+    let mut sample: Sample = builder.build_query_as().fetch_one(&state.dbpool).await?;
     let collections: Vec<Collection> = sqlx::query_as(
         r#"SELECT C.id, C.name, C.description FROM seedcollections C INNER JOIN seedcollectionsamples CS
         ON C.id == CS.collectionid WHERE CS.sampleid = ?"#)
         .bind(id)
         .fetch_all(&state.dbpool)
         .await?;
-    let germination = sqlx::query_as!(
-        Germination,
-        r#"SELECT G.* from germinationcodes G
-                                      INNER JOIN taxongermination TG ON TG.germid=G.id
-                                      WHERE TG.tsn=?"#,
-        sample.taxon.id
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
+    sample.taxon.fetch_germination_info(&state.dbpool).await?;
 
     // needed for edit form
     let locations: Vec<Location> = sqlx::query_as(
@@ -118,7 +109,6 @@ async fn show_sample(
         state.tmpl.clone(),
         context!(user => auth.user,
                  sample => sample,
-                 germination => germination,
                  locations => locations,
                  collections => collections),
     ))

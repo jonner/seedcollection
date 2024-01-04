@@ -299,4 +299,19 @@ impl Taxon {
             .fetch_all(pool)
             .await?)
     }
+
+    pub async fn fetch_germination_info(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+        self.germination = Some(
+            sqlx::query_as!(
+                Germination,
+                r#"SELECT G.* from germinationcodes G
+            INNER JOIN taxongermination TG ON TG.germid=G.id
+            WHERE TG.tsn=?"#,
+                self.id
+            )
+            .fetch_all(pool)
+            .await?,
+        );
+        Ok(())
+    }
 }

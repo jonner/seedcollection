@@ -33,8 +33,8 @@
 </div>
 <h5>Germination Info</h5>
 <div class="mb-3 px-2">
-    {% if germination %}
-    {{ show_germination_list(germination) }}
+    {% if taxon.germination %}
+    {{ show_germination_list(taxon.germination) }}
     {% else %}
     <div>No Data</div>
     {% endif %}

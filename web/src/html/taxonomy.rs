@@ -12,7 +12,7 @@ use libseed::{
     taxonomy::{self, any_filter, FilterField, Germination, LimitSpec, Rank, Taxon},
 };
 use minijinja::context;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::Row;
 use strum::IntoEnumIterator;
 use tracing::debug;
@@ -128,22 +128,14 @@ async fn show_taxon(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let taxon = Taxon::fetch(id, &state.dbpool).await?;
+    let mut taxon = Taxon::fetch(id, &state.dbpool).await?;
     let hierarchy = taxon.fetch_hierarchy(&state.dbpool).await?;
     let children = taxon.fetch_children(&state.dbpool).await?;
     let samples: Vec<Sample> = sample::build_query(Some(Box::new(Filter::Taxon(Cmp::Equal, id))))
         .build_query_as()
         .fetch_all(&state.dbpool)
         .await?;
-    let germination = sqlx::query_as!(
-        Germination,
-        r#"SELECT G.* from germinationcodes G
-                                      INNER JOIN taxongermination TG ON TG.germid=G.id
-                                      WHERE TG.tsn=?"#,
-        id
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
+    taxon.fetch_germination_info(&state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
@@ -152,8 +144,7 @@ async fn show_taxon(
                  taxon => taxon,
                  parents => hierarchy,
                  children => children,
-                 samples => samples,
-                 germination => germination,),
+                 samples => samples),
     ))
 }
 
@@ -223,19 +214,11 @@ async fn quickfind(
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
 
-#[derive(Serialize)]
-struct GerminationInfo {
-    id: i64,
-    code: Option<String>,
-    summary: Option<String>,
-    description: Option<String>,
-}
-
 async fn editgerm(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let codes = sqlx::query_as!(GerminationInfo, "SELECT * FROM germinationcodes")
+    let codes = sqlx::query_as!(Germination, "SELECT * FROM germinationcodes")
         .fetch_all(&state.dbpool)
         .await?;
     Ok(RenderHtml(
