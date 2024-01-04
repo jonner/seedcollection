@@ -36,7 +36,7 @@ async fn root() -> Html<String> {
 async fn list_collections(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Collection>>, error::Error> {
-    let collections = Collection::query(&state.dbpool).await?;
+    let collections = Collection::fetch_all(&state.dbpool).await?;
     Ok(Json(collections))
 }
 
@@ -45,7 +45,7 @@ async fn show_collection(
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {
     let mut collection = Collection::fetch(id, &state.dbpool).await?;
-    collection.samples = Sample::query(
+    collection.samples = Sample::fetch_all(
         Some(Box::new(Filter::Collection(Cmp::Equal, id))),
         &state.dbpool,
     )

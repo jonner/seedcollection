@@ -35,7 +35,7 @@ async fn find_taxa(
     State(state): State<AppState>,
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
-    let t = Taxon::query(
+    let t = Taxon::fetch_all(
         filter_by(
             params.id,
             params.rank,

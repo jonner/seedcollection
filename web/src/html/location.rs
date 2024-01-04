@@ -59,7 +59,7 @@ async fn list_locations(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::query(&state.dbpool).await?;
+    let locations = Location::fetch_all(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -86,7 +86,7 @@ async fn show_location(
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let loc = Location::fetch(id, &state.dbpool).await?;
-    let samples = Sample::query(
+    let samples = Sample::fetch_all(
         Some(Box::new(Filter::Location(Cmp::Equal, id))),
         &state.dbpool,
     )
@@ -141,7 +141,7 @@ async fn update_location(
     Path(id): Path<i64>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let samples = Sample::query(
+    let samples = Sample::fetch_all(
         Some(Box::new(Filter::Location(Cmp::Equal, id))),
         &state.dbpool,
     )

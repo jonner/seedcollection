@@ -51,7 +51,7 @@ async fn list_collections(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let collections = Collection::query(&state.dbpool).await?;
+    let collections = Collection::fetch_all(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -242,7 +242,8 @@ async fn add_sample_prep(
     .fetch_all(&state.dbpool)
     .await?;
     let ids = ids_in_collection.iter().map(|row| row.sampleid).collect();
-    let samples = Sample::query(Some(Box::new(Filter::SampleNotIn(ids))), &state.dbpool).await?;
+    let samples =
+        Sample::fetch_all(Some(Box::new(Filter::SampleNotIn(ids))), &state.dbpool).await?;
     Ok((c, samples))
 }
 

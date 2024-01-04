@@ -71,7 +71,7 @@ async fn list_taxa(
         .await?;
     let count = row.try_get::<i32, _>("count")?;
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
-    let taxa: Vec<Taxon> = Taxon::query(
+    let taxa: Vec<Taxon> = Taxon::fetch_all(
         Some(Box::new(FilterField::Rank(rank))),
         Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
         &state.dbpool,
@@ -132,7 +132,7 @@ async fn show_taxon(
     let hierarchy = taxon.fetch_hierarchy(&state.dbpool).await?;
     let children = taxon.fetch_children(&state.dbpool).await?;
     let samples =
-        Sample::query(Some(Box::new(Filter::Taxon(Cmp::Equal, id))), &state.dbpool).await?;
+        Sample::fetch_all(Some(Box::new(Filter::Taxon(Cmp::Equal, id))), &state.dbpool).await?;
     taxon.fetch_germination_info(&state.dbpool).await?;
 
     Ok(RenderHtml(
@@ -201,7 +201,7 @@ async fn quickfind(
                 filter.add_filter(Box::new(FilterField::Minnesota(true)));
             }
             /* FIXME: pagination for /search endpoing? */
-            Taxon::query(
+            Taxon::fetch_all(
                 Some(Box::new(filter)),
                 Some(LimitSpec(200, None)),
                 &state.dbpool,

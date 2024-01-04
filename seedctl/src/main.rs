@@ -30,7 +30,7 @@ async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: boo
         Some(id) => Some(Box::new(Filter::Collection(Cmp::Equal, id))),
         _ => None,
     };
-    let samples = Sample::query(filter, dbpool).await?;
+    let samples = Sample::fetch_all(filter, dbpool).await?;
     let mut tbuilder = tabled::builder::Builder::new();
     let mut headers = vec!["ID", "Taxon", "Location"];
     if full {
@@ -385,7 +385,7 @@ async fn main() -> Result<()> {
                     true => Some(true),
                     false => None,
                 };
-                let taxa: Vec<Taxon> = Taxon::query(
+                let taxa: Vec<Taxon> = Taxon::fetch_all(
                     filter_by(id, rank, genus, species, any, minnesota),
                     None,
                     &dbpool,

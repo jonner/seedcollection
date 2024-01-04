@@ -289,7 +289,7 @@ impl Taxon {
         builder
     }
 
-    pub async fn query(
+    pub async fn fetch_all(
         filter: Option<Box<dyn FilterPart>>,
         limit: Option<LimitSpec>,
         pool: &Pool<Sqlite>,

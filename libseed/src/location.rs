@@ -34,7 +34,7 @@ impl Location {
             .await?)
     }
 
-    pub async fn query(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Location>> {
+    pub async fn fetch_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Location>> {
         Ok(sqlx::query_as(
                 "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY NAME ASC",
                 )

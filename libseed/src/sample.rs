@@ -100,7 +100,7 @@ impl Sample {
         builder
     }
 
-    pub async fn query(
+    pub async fn fetch_all(
         filter: Option<Box<dyn FilterPart>>,
         pool: &Pool<Sqlite>,
     ) -> anyhow::Result<Vec<Sample>> {

@@ -27,7 +27,7 @@ async fn root(State(_state): State<AppState>) -> Html<String> {
 }
 
 async fn list_samples(State(state): State<AppState>) -> Result<Json<Vec<Sample>>, error::Error> {
-    let samples = Sample::query(None, &state.dbpool).await?;
+    let samples = Sample::fetch_all(None, &state.dbpool).await?;
     Ok(Json(samples))
 }
 

@@ -56,7 +56,7 @@ async fn filter_samples(
         true => None,
         false => Some(Box::new(Filter::TaxonNameLike(fragment))),
     };
-    let samples = Sample::query(filter, &state.dbpool).await?;
+    let samples = Sample::fetch_all(filter, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -70,7 +70,7 @@ async fn list_samples(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let samples = Sample::query(None, &state.dbpool).await?;
+    let samples = Sample::fetch_all(None, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -95,7 +95,7 @@ async fn show_sample(
     sample.taxon.fetch_germination_info(&state.dbpool).await?;
 
     // needed for edit form
-    let locations = Location::query(&state.dbpool).await?;
+    let locations = Location::fetch_all(&state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
@@ -112,7 +112,7 @@ async fn new_sample(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::query(&state.dbpool).await?;
+    let locations = Location::fetch_all(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -176,7 +176,7 @@ async fn insert_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::query(&state.dbpool).await?;
+    let locations = Location::fetch_all(&state.dbpool).await?;
     let (request, message) = match do_insert(&params, &state).await {
         Err(e) => (
             Some(&params),
@@ -242,7 +242,7 @@ async fn update_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::query(&state.dbpool).await?;
+    let locations = Location::fetch_all(&state.dbpool).await?;
     let (request, message) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(params),

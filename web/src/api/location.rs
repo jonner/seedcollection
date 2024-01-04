@@ -29,7 +29,7 @@ async fn root() -> Html<String> {
 async fn list_locations(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Location>>, error::Error> {
-    let locations = Location::query(&state.dbpool).await?;
+    let locations = Location::fetch_all(&state.dbpool).await?;
     Ok(Json(locations))
 }
 

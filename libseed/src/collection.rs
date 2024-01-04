@@ -25,8 +25,16 @@ impl Collection {
         )
     }
 
+    pub async fn fetch_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Self>> {
+        Ok(
+            sqlx::query_as("SELECT id, name, description FROM seedcollections")
+                .fetch_all(pool)
+                .await?,
+        )
+    }
+
     pub async fn fetch_samples(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-        self.samples = Sample::query(
+        self.samples = Sample::fetch_all(
             Some(Box::new(sample::Filter::Collection(
                 filter::Cmp::Equal,
                 self.id,
@@ -35,13 +43,5 @@ impl Collection {
         )
         .await?;
         Ok(())
-    }
-
-    pub async fn query(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Self>> {
-        Ok(
-            sqlx::query_as("SELECT id, name, description FROM seedcollections")
-                .fetch_all(pool)
-                .await?,
-        )
     }
 }
