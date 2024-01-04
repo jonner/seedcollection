@@ -15,7 +15,7 @@ use axum_login::login_required;
 use axum_template::RenderHtml;
 use libseed::{empty_string_as_none, filter::Cmp};
 use libseed::{
-    location::{self, Location},
+    location::Location,
     sample::{Filter, Sample},
 };
 use minijinja::context;
@@ -59,11 +59,7 @@ async fn list_locations(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations: Vec<location::Location> = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY NAME ASC",
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
+    let locations = Location::query(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -89,12 +85,7 @@ async fn show_location(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let loc: Location = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations WHERE locid=?"
-    ).bind(id)
-    .fetch_one(&state.dbpool)
-    .await?;
-
+    let loc = Location::fetch(id, &state.dbpool).await?;
     let samples = Sample::query(
         Some(Box::new(Filter::Location(Cmp::Equal, id))),
         &state.dbpool,
@@ -169,12 +160,7 @@ async fn update_location(
             msg: "Successfully updated location".to_string(),
         },
     };
-    let loc: Location = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations WHERE locid=?",
-        )
-        .bind(id)
-        .fetch_one(&state.dbpool)
-        .await?;
+    let loc = Location::fetch(id, &state.dbpool).await?;
 
     Ok(RenderHtml(
         key + ".partial",

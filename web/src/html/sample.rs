@@ -95,11 +95,7 @@ async fn show_sample(
     sample.taxon.fetch_germination_info(&state.dbpool).await?;
 
     // needed for edit form
-    let locations: Vec<Location> = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY name ASC",
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
+    let locations = Location::query(&state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
@@ -116,11 +112,7 @@ async fn new_sample(
     CustomKey(key): CustomKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations: Vec<Location> = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY name ASC",
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
+    let locations = Location::query(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -184,12 +176,7 @@ async fn insert_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations: Vec<Location> = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY name ASC",
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
-
+    let locations = Location::query(&state.dbpool).await?;
     let (request, message) = match do_insert(&params, &state).await {
         Err(e) => (
             Some(&params),
@@ -255,12 +242,7 @@ async fn update_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations: Vec<Location> = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY name ASC",
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
-
+    let locations = Location::query(&state.dbpool).await?;
     let (request, message) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(params),

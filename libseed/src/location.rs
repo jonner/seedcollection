@@ -1,5 +1,7 @@
 use serde::Deserialize;
 use serde::Serialize;
+use sqlx::Pool;
+use sqlx::Sqlite;
 
 #[derive(sqlx::FromRow, Deserialize, Serialize)]
 pub struct Location {
@@ -22,5 +24,21 @@ impl Location {
             (Some(latitude), Some(longitude)) => Some(format!("https://api.maptiler.com/maps/topo-v2/?key={MAP_TILER_KEY}#{zoom}/{latitude}/{longitude}")),
             _ => None,
         }
+    }
+
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Location> {
+        Ok(sqlx::query_as(
+                "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations WHERE locid=?"
+                ).bind(id)
+            .fetch_one(pool)
+            .await?)
+    }
+
+    pub async fn query(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Location>> {
+        Ok(sqlx::query_as(
+                "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations ORDER BY NAME ASC",
+                )
+            .fetch_all(pool)
+            .await?)
     }
 }

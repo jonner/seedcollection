@@ -6,10 +6,7 @@ use axum::{
     routing::{get, post},
     Form, Router,
 };
-use libseed::{
-    empty_string_as_none,
-    location::{self, Location},
-};
+use libseed::{empty_string_as_none, location::Location};
 use serde::{Deserialize, Serialize};
 
 pub fn router() -> Router<AppState> {
@@ -32,11 +29,7 @@ async fn root() -> Html<String> {
 async fn list_locations(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Location>>, error::Error> {
-    let locations: Vec<location::Location> = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations",
-    )
-    .fetch_all(&state.dbpool)
-    .await?;
+    let locations = Location::query(&state.dbpool).await?;
     Ok(Json(locations))
 }
 
@@ -44,11 +37,7 @@ async fn show_location(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<Json<Location>, error::Error> {
-    let location: Location = sqlx::query_as(
-        "SELECT locid, name as locname, description, latitude, longitude FROM seedlocations WHERE locid=?",
-    ).bind(id)
-    .fetch_one(&state.dbpool)
-    .await?;
+    let location = Location::fetch(id, &state.dbpool).await?;
     Ok(Json(location))
 }
 
