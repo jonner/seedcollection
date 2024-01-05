@@ -92,7 +92,7 @@ pub struct Cli {
     pub tls_port: u16,
 }
 
-pub fn api_url(value: String) -> String {
+pub fn api_url(value: &str) -> String {
     [API_PREFIX, &value.trim_start_matches('/')].join("")
 }
 

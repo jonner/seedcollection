@@ -27,7 +27,7 @@ pub fn router() -> Router<AppState> {
         /* Anything above here is only available to logged-in users */
         .route_layer(login_required!(
             SqliteAuthBackend,
-            login_url = app_url("/auth/login")
+            login_url = &app_url("/auth/login")
         ))
         .route("/", get(root))
         .nest("/auth/", auth::router())
