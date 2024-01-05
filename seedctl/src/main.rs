@@ -2,14 +2,98 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::*;
 use libseed::{
-    collection::Collection,
-    filter::{Cmp, FilterPart},
+    collection::{AssignedSample, Collection},
     location,
-    sample::{Filter, Sample},
+    sample::Sample,
     taxonomy::{self, filter_by, Taxon},
 };
 use sqlx::SqlitePool;
 use tracing::debug;
+
+trait ConstructTableRow {
+    fn row_values(&self, full: bool) -> Vec<String>;
+}
+
+impl ConstructTableRow for Sample {
+    fn row_values(&self, full: bool) -> Vec<String> {
+        let mut vals = vec![
+            self.id.to_string(),
+            self.taxon.complete_name.clone(),
+            self.location.name.clone(),
+        ];
+        if full {
+            vals.push(self.month.map(|x| x.to_string()).unwrap_or("".to_string()));
+            vals.push(self.year.map(|x| x.to_string()).unwrap_or("".to_string()));
+            vals.push(
+                self.quantity
+                    .map(|x| x.to_string())
+                    .unwrap_or("".to_string()),
+            );
+            vals.push(self.notes.clone().unwrap_or("".to_string()));
+        }
+        vals
+    }
+}
+
+impl ConstructTableRow for AssignedSample {
+    fn row_values(&self, full: bool) -> Vec<String> {
+        let mut vals = vec![self.id.to_string()];
+        vals.append(&mut self.sample.row_values(full));
+        vals
+    }
+}
+
+trait ConstructTable {
+    type Item: ConstructTableRow;
+
+    fn table_headers(&self, full: bool) -> Vec<&'static str>;
+    fn items(&self) -> impl Iterator<Item = &Self::Item>;
+    fn construct_table(&self, full: bool) -> Result<(tabled::builder::Builder, usize)> {
+        let mut tbuilder = tabled::builder::Builder::new();
+        let headers = self.table_headers(full);
+        tbuilder.set_header(headers);
+        for item in self.items() {
+            let vals = item.row_values(full);
+            tbuilder.push_record(vals);
+        }
+        Ok((tbuilder, self.items().count()))
+    }
+}
+
+fn sample_headers(full: bool) -> Vec<&'static str> {
+    let mut headers = vec!["ID", "Taxon", "Location"];
+    if full {
+        headers.extend_from_slice(&["Month", "Year", "Qty", "Notes"]);
+    }
+    headers
+}
+
+impl ConstructTable for Vec<Sample> {
+    type Item = Sample;
+
+    fn table_headers(&self, full: bool) -> Vec<&'static str> {
+        sample_headers(full)
+    }
+
+    fn items(&self) -> impl Iterator<Item = &Self::Item> {
+        self.iter()
+    }
+}
+
+impl ConstructTable for Collection {
+    type Item = AssignedSample;
+
+    fn table_headers(&self, full: bool) -> Vec<&'static str> {
+        let mut headers = sample_headers(full);
+        headers.insert(0, "ID");
+        headers[1] = "SampleID";
+        headers
+    }
+
+    fn items(&self) -> impl Iterator<Item = &Self::Item> {
+        self.samples.iter()
+    }
+}
 
 mod cli;
 
@@ -23,46 +107,6 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
             .with(Modify::new(Segment::all()).with(Width::wrap(60)))
     );
     println!("{} records found", nrecs);
-}
-
-async fn print_samples(dbpool: &SqlitePool, collectionid: Option<i64>, full: bool) -> Result<()> {
-    let filter: Option<Box<dyn FilterPart>> = match collectionid {
-        Some(id) => Some(Box::new(Filter::Collection(Cmp::Equal, id))),
-        _ => None,
-    };
-    let samples = Sample::fetch_all(filter, dbpool).await?;
-    let mut tbuilder = tabled::builder::Builder::new();
-    let mut headers = vec!["ID", "Taxon", "Location"];
-    if full {
-        headers.extend_from_slice(&["Month", "Year", "Qty", "Notes"]);
-    }
-    tbuilder.set_header(headers);
-    for sample in &samples {
-        let mut vals = vec![
-            sample.id.to_string(),
-            sample.taxon.complete_name.clone(),
-            sample.location.name.clone(),
-        ];
-        if full {
-            vals.push(
-                sample
-                    .month
-                    .map(|x| x.to_string())
-                    .unwrap_or("".to_string()),
-            );
-            vals.push(sample.year.map(|x| x.to_string()).unwrap_or("".to_string()));
-            vals.push(
-                sample
-                    .quantity
-                    .map(|x| x.to_string())
-                    .unwrap_or("".to_string()),
-            );
-            vals.push(sample.notes.clone().unwrap_or("".to_string()));
-        }
-        tbuilder.push_record(vals);
-    }
-    print_table(tbuilder, samples.len());
-    Ok(())
 }
 
 #[tokio::main]
@@ -174,19 +218,16 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             CollectionCommands::Show { id, full } => {
-                let collectioninfo = sqlx::query!(
-                    "SELECT name, description from sc_collections WHERE id=?1",
-                    id
-                )
-                .fetch_one(&dbpool)
-                .await?;
+                let mut collectioninfo = Collection::fetch(id, &dbpool).await?;
+                collectioninfo.fetch_samples(&dbpool).await?;
                 println!("Collection ID: {}", id);
                 println!("Collection name: {}", collectioninfo.name);
                 if let Some(desc) = &collectioninfo.description {
                     println!("  {}", desc);
                 }
                 println!();
-                print_samples(&dbpool, Some(id), full).await
+                let (builder, nitems) = collectioninfo.construct_table(full)?;
+                Ok(print_table(builder, nitems))
             }
         },
         Commands::Location { command } => match command {
@@ -289,7 +330,11 @@ async fn main() -> Result<()> {
             }
         },
         Commands::Sample { command } => match command {
-            SampleCommands::List { full } => print_samples(&dbpool, None, full).await,
+            SampleCommands::List { full } => {
+                let samples = Sample::fetch_all(None, &dbpool).await?;
+                let (builder, nitems) = samples.construct_table(full)?;
+                Ok(print_table(builder, nitems))
+            }
             SampleCommands::Add {
                 taxon,
                 location,

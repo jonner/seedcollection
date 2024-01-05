@@ -26,8 +26,6 @@ pub struct Sample {
 }
 
 pub enum Filter {
-    Collection(Cmp, i64),
-    NoCollection,
     Sample(Cmp, i64),
     SampleNotIn(Vec<i64>),
     Location(Cmp, i64),
@@ -38,10 +36,6 @@ pub enum Filter {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Collection(cmp, id) => {
-                _ = builder.push("CS.collectionid").push(cmp).push_bind(*id)
-            }
-            Self::NoCollection => _ = builder.push("CS.collectionid IS NULL"),
             Self::Sample(cmp, id) => _ = builder.push("S.id").push(cmp).push_bind(*id),
             Self::SampleNotIn(list) => {
                 _ = builder.push("S.id NOT IN (");
@@ -77,12 +71,11 @@ impl Sample {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
-                    quantity, month, year, notes, certainty, CS.collectionid,
+                    quantity, month, year, notes, certainty,
                     GROUP_CONCAT(V.vernacular_name, "@") as cnames
                     FROM sc_samples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
                     INNER JOIN sc_locations L on L.locid=S.collectedlocation
-                    LEFT JOIN sc_collection_samples CS ON CS.sampleid=S.id
                     LEFT JOIN (SELECT * FROM vernaculars WHERE
                     (language="English" or language="unspecified")) V on V.tsn=T.tsn
                     "#,

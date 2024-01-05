@@ -1,10 +1,14 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon %}
-{% from "_macros.html" import sample_list %}
+{% from "_macros.html" import sample_item %}
 {% block title %}{{ collection.name or "Collection Details" }}{% endblock %}
 {% block content %}
 <h2>{{ self.title() }} <a href="{{ ("/collection/" ~ collection.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ collection.description }}</p>
 <h3>Samples in this collection <a class="ms-2" href="{{ ("/collection/" ~ collection.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
-{{ sample_list(collection.samples, "sample-list") }}
+<div id="sample-list">
+{% for csample in collection.samples %}
+{{ sample_item(csample.sample) }}
+{% endfor %}
+</div>
 {% endblock %}

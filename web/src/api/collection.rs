@@ -6,11 +6,7 @@ use axum::{
     routing::{delete, get, post},
     Form, Router,
 };
-use libseed::{
-    collection::Collection,
-    filter::Cmp,
-    sample::{Filter, Sample},
-};
+use libseed::collection::Collection;
 use serde::Deserialize;
 use sqlx::{QueryBuilder, Sqlite};
 
@@ -45,11 +41,7 @@ async fn show_collection(
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {
     let mut collection = Collection::fetch(id, &state.dbpool).await?;
-    collection.samples = Sample::fetch_all(
-        Some(Box::new(Filter::Collection(Cmp::Equal, id))),
-        &state.dbpool,
-    )
-    .await?;
+    collection.fetch_samples(&state.dbpool).await?;
     Ok(Json(collection))
 }
 
