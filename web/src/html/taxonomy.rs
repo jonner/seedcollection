@@ -103,10 +103,11 @@ async fn show_all_children(
         FROM taxonomic_units TT, CTE
         WHERE TT.parent_tsn = CTE.tsn)
         SELECT CTE.tsn, CTE.parent_tsn as parentid, CTE.complete_name, CTE.unit_name1, CTE.unit_name2, CTE.unit_name3, CTE.phylo_sort_seq as seq, top_parent, top_parent_name,
-        S.id, L.locid, L.name as locname, quantity, month, year, notes
+        M.native_status, S.id, L.locid, L.name as locname, quantity, month, year, notes, certainty
         FROM CTE
         INNER JOIN sc_samples S ON CTE.tsn=S.tsn
         INNER JOIN sc_locations L on L.locid=S.collectedlocation
+        LEFT JOIN mntaxa M on CTE.tsn=M.tsn 
         ORDER BY seq"#)
         .bind(id)
         .fetch_all(&state.dbpool)
