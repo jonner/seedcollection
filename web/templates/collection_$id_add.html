@@ -1,7 +1,7 @@
 {% extends "root.html" %}
-{% block title %}Add Samples{% endblock %}
+{% block title %}Add samples to collection{% endblock %}
 {% block content %}
 <h2>{{ self.title() }}</h2>
-<p>Adding samples to Collection {{ collection.id }}: <em>{{ collection.name }}</em></p>
+<p>Choose samples to add to the collection <i>{{ collection.name }}</p>
 {% include "collection_$id_add-POST.html" %}
 {% endblock %}

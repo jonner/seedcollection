@@ -17,6 +17,7 @@
         </div>
     </form>
     {% else %}
-    <p class="error">No samples available to add</p>
-    <p><a href="{{ "/sample/new" | app_url }}>Add a new sample</a></p>
+    <div class="alert alert-warning">No samples available to add. 
+        <a href="{{ "/sample/new" | app_url }}">Add a new sample to the database first</a>.
+    </div>
     {% endif %}

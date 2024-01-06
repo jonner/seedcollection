@@ -20,6 +20,10 @@
             </div>
         </div>
     </div>
+    {% else %}
+    <div class="alert alert-info">
+        No locations exist yet. Create one to get started.
+    </div>
     {% endfor %}
 </div>
 {% endblock %}

@@ -302,6 +302,10 @@ hx-post="{{ "/collection/new" | app_url }}"
 <div id="{{ cssid }}">
 {% for s in samples %}
 {{ sample_item(s) }}
+{% else %}
+<div class="alert alert-info">
+    No samples exist yet. Create one to get started.
+</div>
 {% endfor %}
 </div>
 {%- endmacro %}

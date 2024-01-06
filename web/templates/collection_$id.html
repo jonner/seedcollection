@@ -19,6 +19,10 @@
                     hx-confirm="Are you sure you want to remove this sample from the collection?">{{ icon("x") }}</button>
         </div>
     </div>
+    {% else %}
+    <div class="alert alert-info">
+        No samples are a part of this collection yet. Add one to get started.
+    </div>
     {% endfor %}
 </div>
 {% endblock %}
