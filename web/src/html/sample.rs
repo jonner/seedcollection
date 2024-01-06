@@ -24,7 +24,6 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(sample_index))
         .route("/list", get(list_samples))
         .route("/new", get(new_sample).post(insert_sample))
         .route("/filter", get(filter_samples))
@@ -33,18 +32,6 @@ pub fn router() -> Router<AppState> {
             get(show_sample).put(update_sample).delete(delete_sample),
         )
         .route("/:id/edit", get(show_sample))
-}
-
-async fn sample_index(
-    auth: AuthSession,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => auth.user),
-    ))
 }
 
 #[derive(Deserialize)]

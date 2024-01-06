@@ -22,7 +22,6 @@ use crate::{error, state::AppState};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(root))
         .route("/new", get(add_location).post(new_location))
         .route("/new/modal", get(add_location))
         .route(
@@ -34,18 +33,6 @@ pub fn router() -> Router<AppState> {
         .route("/:id/edit", get(show_location))
         .route("/list", get(list_locations))
         .route("/list/options", get(list_locations))
-}
-
-async fn root(
-    auth_session: AuthSession,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => auth_session.user),
-    ))
 }
 
 async fn list_locations(

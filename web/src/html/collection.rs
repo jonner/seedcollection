@@ -29,7 +29,6 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(root))
         .route("/new", get(new_collection).post(insert_collection))
         .route("/list", get(list_collections))
         .route(
@@ -41,18 +40,6 @@ pub fn router() -> Router<AppState> {
         .route("/:id/edit", get(show_collection))
         .route("/:id/add", get(show_add_sample).post(add_sample))
         .route("/:id/sample/:sampleid", delete(remove_sample))
-}
-
-async fn root(
-    auth: AuthSession,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => auth.user),
-    ))
 }
 
 async fn list_collections(
