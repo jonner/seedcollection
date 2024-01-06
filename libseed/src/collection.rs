@@ -28,22 +28,49 @@ impl FilterPart for AssignedSampleFilter {
     }
 }
 
+pub enum Filter {
+    Id(i64),
+    User(i64),
+}
+
+impl FilterPart for Filter {
+    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
+        match self {
+            Self::Id(id) => _ = builder.push(" C.id = ").push_bind(*id),
+            Self::User(id) => _ = builder.push(" userid = ").push_bind(*id),
+        }
+    }
+}
+
 impl Collection {
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
-        Ok(
-            sqlx::query_as("SELECT id, name, description FROM sc_collections WHERE id=?")
-                .bind(id)
-                .fetch_one(pool)
-                .await?,
-        )
+    fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
+        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+            r#"SELECT C.id, C.name, C.description, C.userid, U.username
+            FROM sc_collections C INNER JOIN sc_users U ON U.id=C.userid"#,
+        );
+        if let Some(f) = filter {
+            builder.push(" WHERE ");
+            f.add_to_query(&mut builder);
+        }
+        builder
     }
 
-    pub async fn fetch_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Self>> {
-        Ok(
-            sqlx::query_as("SELECT id, name, description FROM sc_collections")
-                .fetch_all(pool)
-                .await?,
-        )
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+        Ok(Self::build_query(Some(Box::new(Filter::Id(id))))
+            .build_query_as()
+            .fetch_one(pool)
+            .await?)
+    }
+
+    pub async fn fetch_all(
+        filter: Option<Box<dyn FilterPart>>,
+        pool: &Pool<Sqlite>,
+    ) -> anyhow::Result<Vec<Self>> {
+        Self::build_query(filter)
+            .build_query_as()
+            .fetch_all(pool)
+            .await
+            .map_err(|e| e.into())
     }
 
     pub async fn fetch_samples(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
@@ -74,12 +101,15 @@ impl AssignedSample {
             T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
             GROUP_CONCAT(V.vernacular_name, "@") as cnames,
 
-            L.locid, L.name as locname, T.complete_name
+            L.locid, L.name as locname, T.complete_name,
+
+            U.id as userid, U.username
 
             FROM sc_collection_samples CS
             INNER JOIN taxonomic_units T ON T.tsn=S.tsn
             INNER JOIN sc_locations L on L.locid=S.collectedlocation
             INNER JOIN sc_samples S ON CS.sampleid=S.id
+            INNER JOIN sc_users U on U.id=S.userid
             LEFT JOIN (SELECT * FROM vernaculars WHERE
             (language="English" or language="unspecified")) V on V.tsn=T.tsn
             "#,

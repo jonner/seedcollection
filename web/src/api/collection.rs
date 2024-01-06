@@ -1,12 +1,13 @@
-use crate::{error, state::AppState};
+use crate::{auth::AuthSession, error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, Query, State},
-    response::{Html, Json},
+    http::StatusCode,
+    response::{Html, IntoResponse, Json},
     routing::{delete, get, post},
     Form, Router,
 };
-use libseed::collection::Collection;
+use libseed::collection::{Collection, Filter};
 use serde::Deserialize;
 use sqlx::{QueryBuilder, Sqlite};
 
@@ -30,10 +31,16 @@ async fn root() -> Html<String> {
 }
 
 async fn list_collections(
+    auth: AuthSession,
     State(state): State<AppState>,
-) -> Result<Json<Vec<Collection>>, error::Error> {
-    let collections = Collection::fetch_all(&state.dbpool).await?;
-    Ok(Json(collections))
+) -> Result<impl IntoResponse, error::Error> {
+    if let Some(user) = auth.user {
+        let collections =
+            Collection::fetch_all(Some(Box::new(Filter::User(user.id))), &state.dbpool).await?;
+        Ok(Json(collections).into_response())
+    } else {
+        Ok(StatusCode::UNAUTHORIZED.into_response())
+    }
 }
 
 async fn show_collection(

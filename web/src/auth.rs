@@ -9,7 +9,7 @@ use sqlx::SqlitePool;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SqliteUser {
-    id: i64,
+    pub id: i64,
     pub username: String,
     #[serde(skip_serializing)]
     pwhash: String,

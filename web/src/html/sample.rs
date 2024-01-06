@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -74,14 +75,21 @@ async fn list_samples(
     auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
-    let samples = Sample::fetch_all(None, &state.dbpool).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => auth.user,
-                                            samples => samples),
-    ))
+) -> impl IntoResponse {
+    if let Some(user) = auth.user {
+        match Sample::fetch_all(Some(Box::new(Filter::User(user.id))), &state.dbpool).await {
+            Ok(samples) => RenderHtml(
+                key,
+                state.tmpl.clone(),
+                context!(user => user,
+                         samples => samples),
+            )
+            .into_response(),
+            Err(e) => error::Error(e).into_response(),
+        }
+    } else {
+        StatusCode::UNAUTHORIZED.into_response()
+    }
 }
 
 async fn show_sample(
@@ -91,6 +99,10 @@ async fn show_sample(
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
+    match auth.user {
+        Some(ref user) if user.id == sample.user.id => (),
+        _ => return Ok(StatusCode::UNAUTHORIZED.into_response()),
+    }
     let collections: Vec<Collection> = sqlx::query_as(
         r#"SELECT C.id, C.name, C.description FROM sc_collections C INNER JOIN sc_collection_samples CS
         ON C.id == CS.collectionid WHERE CS.sampleid = ?"#)
@@ -109,7 +121,8 @@ async fn show_sample(
                  sample => sample,
                  locations => locations,
                  collections => collections),
-    ))
+    )
+    .into_response())
 }
 
 async fn new_sample(
@@ -154,9 +167,13 @@ fn validate_sample_params(params: &SampleParams) -> Result<(), anyhow::Error> {
 }
 
 async fn do_insert(
+    auth: AuthSession,
     params: &SampleParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
+    let user = auth
+        .user
+        .ok_or_else(|| anyhow!("no logged in user found"))?;
     validate_sample_params(params)?;
 
     let certainty = match params.uncertain {
@@ -164,8 +181,9 @@ async fn do_insert(
         _ => Certainty::Certain,
     };
 
-    sqlx::query("INSERT INTO sc_samples (tsn, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO sc_samples (tsn, userid, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(params.taxon)
+        .bind(user.id)
         .bind(params.location)
         .bind(params.month)
         .bind(params.year)
@@ -177,12 +195,13 @@ async fn do_insert(
 }
 
 async fn insert_sample(
+    auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations = Location::fetch_all(&state.dbpool).await?;
-    let (request, message) = match do_insert(&params, &state).await {
+    let (request, message) = match do_insert(auth, &params, &state).await {
         Err(e) => (
             Some(&params),
             Message {

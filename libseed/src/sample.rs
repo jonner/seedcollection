@@ -2,6 +2,7 @@ use crate::{
     filter::{Cmp, FilterPart},
     location::Location,
     taxonomy::Taxon,
+    user::User,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, FromRow, Pool, QueryBuilder, Row, Sqlite};
@@ -16,6 +17,7 @@ pub enum Certainty {
 #[derive(Deserialize, Serialize)]
 pub struct Sample {
     pub id: i64,
+    pub user: User,
     pub taxon: Taxon,
     pub location: Location,
     pub quantity: Option<i64>,
@@ -31,6 +33,7 @@ pub enum Filter {
     Location(Cmp, i64),
     Taxon(Cmp, i64),
     TaxonNameLike(String),
+    User(i64),
 }
 
 impl FilterPart for Filter {
@@ -62,6 +65,7 @@ impl FilterPart for Filter {
                     builder.push(") ");
                 }
             }
+            Self::User(id) => _ = builder.push("S.userid=").push_bind(*id),
         };
     }
 }
@@ -72,10 +76,12 @@ impl Sample {
             r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
                     quantity, month, year, notes, certainty,
-                    GROUP_CONCAT(V.vernacular_name, "@") as cnames
+                    GROUP_CONCAT(V.vernacular_name, "@") as cnames,
+                    U.id as userid, U.username
                     FROM sc_samples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
                     INNER JOIN sc_locations L on L.locid=S.collectedlocation
+                    INNER JOIN sc_users U on U.id=S.userid
                     LEFT JOIN (SELECT * FROM vernaculars WHERE
                     (language="English" or language="unspecified")) V on V.tsn=T.tsn
                     "#,
@@ -106,6 +112,7 @@ impl FromRow<'_, SqliteRow> for Sample {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Ok(Self {
             id: row.try_get("id")?,
+            user: User::from_row(row)?,
             taxon: Taxon::from_row(row)?,
             location: Location::from_row(row)?,
             quantity: row.try_get("quantity").unwrap_or(None),

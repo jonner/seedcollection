@@ -7,6 +7,7 @@ pub mod location;
 pub mod note;
 pub mod sample;
 pub mod taxonomy;
+pub mod user;
 
 pub fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
 where
