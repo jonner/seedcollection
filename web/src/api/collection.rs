@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
-use crate::{auth::AuthSession, error, state::AppState};
+use crate::{auth::SqliteUser, error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::{Html, IntoResponse, Json},
     routing::{delete, get, post},
     Form, Router,
@@ -12,6 +9,7 @@ use axum::{
 use libseed::collection::{Collection, Filter};
 use serde::Deserialize;
 use sqlx::{QueryBuilder, Sqlite};
+use std::sync::Arc;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -33,19 +31,16 @@ async fn root() -> Html<String> {
 }
 
 async fn list_collections(
-    auth: AuthSession,
+    user: SqliteUser,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    if let Some(user) = auth.user {
-        let collections =
-            Collection::fetch_all(Some(Arc::new(Filter::User(user.id))), &state.dbpool).await?;
-        Ok(Json(collections).into_response())
-    } else {
-        Ok(StatusCode::UNAUTHORIZED.into_response())
-    }
+    let collections =
+        Collection::fetch_all(Some(Arc::new(Filter::User(user.id))), &state.dbpool).await?;
+    Ok(Json(collections).into_response())
 }
 
 async fn show_collection(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {
@@ -61,6 +56,7 @@ struct ModifyProps {
 }
 
 async fn modify_collection(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<ModifyProps>,
@@ -85,6 +81,7 @@ async fn modify_collection(
 }
 
 async fn delete_collection(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
@@ -102,6 +99,7 @@ struct AddProps {
 }
 
 async fn add_collection(
+    _user: SqliteUser,
     Query(params): Query<AddProps>,
     State(state): State<AppState>,
 ) -> Result<Json<i64>, error::Error> {
@@ -124,6 +122,7 @@ struct RemoveSampleParams {
 }
 
 async fn remove_sample(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(RemoveSampleParams { id, sampleid }): Path<RemoveSampleParams>,
 ) -> Result<(), error::Error> {
@@ -141,6 +140,7 @@ struct AddSampleProps {
 }
 
 async fn add_sample(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<AddSampleProps>,

@@ -11,15 +11,24 @@ pub enum Error {
     DatabaseError(#[from] sqlx::Error),
     #[error("Other error")]
     OtherError(#[from] anyhow::Error),
+    #[error("Redirect to another url")]
+    Unauthorized(String),
 }
 
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Something went wrong: {}", self),
-        )
-            .into_response()
+        match self {
+            Self::Unauthorized(s) => (
+                StatusCode::UNAUTHORIZED,
+                format!("You don't have permission to see this page: {}", s),
+            )
+                .into_response(),
+            _ => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Something went wrong: {}", self),
+            )
+                .into_response(),
+        }
     }
 }

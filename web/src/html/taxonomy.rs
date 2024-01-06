@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, Request, State},
-    http::StatusCode,
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -20,7 +19,7 @@ use sqlx::Row;
 use strum::IntoEnumIterator;
 use tracing::debug;
 
-use crate::{auth::AuthSession, error, state::AppState, TemplateKey};
+use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -34,7 +33,7 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn root(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -42,7 +41,7 @@ async fn root(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth.user, ranks => ranks),
+        context!(user => user, ranks => ranks),
     ))
 }
 
@@ -54,7 +53,7 @@ struct ListParams {
 }
 
 async fn list_taxa(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(params): Query<ListParams>,
@@ -81,7 +80,7 @@ async fn list_taxa(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth.user,
+        context!(user => user,
                  taxa => taxa,
                  page => pg,
                  total_pages => total_pages,
@@ -90,7 +89,7 @@ async fn list_taxa(
 }
 
 async fn show_all_children(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -118,20 +117,17 @@ async fn show_all_children(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth.user,
-                     samples => samples),
+        context!(user => user,
+                 samples => samples),
     ))
 }
 
 async fn show_taxon(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let mut taxon = Taxon::fetch(id, &state.dbpool).await?;
     let hierarchy = taxon.fetch_hierarchy(&state.dbpool).await?;
     let children = taxon.fetch_children(&state.dbpool).await?;

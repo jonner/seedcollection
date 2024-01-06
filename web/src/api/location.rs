@@ -1,8 +1,7 @@
-use crate::{auth::AuthSession, error, state::AppState};
+use crate::{auth::SqliteUser, error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     response::{Html, IntoResponse, Json},
     routing::{get, post},
     Form, Router,
@@ -28,17 +27,15 @@ async fn root() -> Html<String> {
 }
 
 async fn list_locations(
-    auth: AuthSession,
+    user: SqliteUser,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
     Ok(Json(locations).into_response())
 }
 
 async fn show_location(
+    _user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<Json<Location>, error::Error> {
@@ -59,6 +56,7 @@ struct ModifyParams {
 }
 
 async fn modify_location(
+    _user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Form(params): Form<ModifyParams>,
@@ -101,6 +99,7 @@ struct AddResponse {
 }
 
 async fn add_location(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Form(params): Form<ModifyParams>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -130,6 +129,7 @@ async fn add_location(
 }
 
 async fn delete_location(
+    _user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {

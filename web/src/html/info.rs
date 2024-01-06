@@ -3,14 +3,14 @@ use axum_template::RenderHtml;
 use libseed::taxonomy::Germination;
 use minijinja::context;
 
-use crate::{auth::AuthSession, error, state::AppState, TemplateKey};
+use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/germination", get(germination))
 }
 
 async fn germination(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -20,7 +20,7 @@ async fn germination(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth.user,
+        context!(user => user,
                  germination => germination),
     ))
 }

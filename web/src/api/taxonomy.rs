@@ -1,4 +1,4 @@
-use crate::{error, state::AppState};
+use crate::{auth::SqliteUser, error, state::AppState};
 use axum::{
     extract::{Path, Query, State},
     response::{Html, Json},
@@ -32,6 +32,7 @@ struct TaxonomyFindParams {
 }
 
 async fn find_taxa(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Query(params): Query<TaxonomyFindParams>,
 ) -> Result<Json<Vec<Taxon>>, error::Error> {
@@ -52,6 +53,7 @@ async fn find_taxa(
 }
 
 async fn show_taxon(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Taxon>, error::Error> {
@@ -64,7 +66,7 @@ struct RanksResponse {
     ranks: Vec<String>,
 }
 
-async fn ranks() -> Result<Json<RanksResponse>, error::Error> {
+async fn ranks(_user: SqliteUser) -> Result<Json<RanksResponse>, error::Error> {
     let mut ranks = Vec::new();
     for val in taxonomy::Rank::iter() {
         ranks.push(val.to_string());

@@ -1,6 +1,7 @@
 use crate::error::{self, Error};
+use anyhow::anyhow;
 use argon2::Argon2;
-use axum::async_trait;
+use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 use axum_login::{AuthUser, AuthnBackend, UserId};
 use libseed::empty_string_as_none;
 use password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
@@ -98,3 +99,19 @@ impl SqliteAuthBackend {
 }
 
 pub type AuthSession = axum_login::AuthSession<SqliteAuthBackend>;
+
+#[async_trait]
+impl<S> FromRequestParts<S> for SqliteUser
+where
+    S: Send + Sync,
+{
+    type Rejection = Error;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let auth = AuthSession::from_request_parts(parts, _state)
+            .await
+            .map_err(|e| anyhow!(e.1))?;
+        auth.user
+            .ok_or_else(|| Error::Unauthorized("No logged in user".to_string()))
+    }
+}

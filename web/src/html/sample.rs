@@ -3,7 +3,6 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -20,13 +19,7 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{
-    app_url,
-    auth::{AuthSession, SqliteUser},
-    error,
-    state::AppState,
-    Message, MessageType, TemplateKey,
-};
+use crate::{app_url, auth::SqliteUser, error, state::AppState, Message, MessageType, TemplateKey};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -46,14 +39,11 @@ struct FilterParams {
 }
 
 async fn filter_samples(
-    auth: AuthSession,
+    user: SqliteUser,
     Query(FilterParams { fragment }): Query<FilterParams>,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let filter: Option<DynFilterPart> = match fragment.is_empty() {
         true => None,
         false => Some(Arc::new(Filter::TaxonNameLike(fragment))),
@@ -69,14 +59,10 @@ async fn filter_samples(
 }
 
 async fn list_samples(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    let Some(user) = auth.user else {
-        return StatusCode::UNAUTHORIZED.into_response();
-    };
-
     match Sample::fetch_all_user(user.id, None, &state.dbpool).await {
         Ok(samples) => RenderHtml(
             key,
@@ -90,15 +76,12 @@ async fn list_samples(
 }
 
 async fn show_sample(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let collections: Vec<Collection> = sqlx::query_as(
         r#"SELECT C.id, C.name, C.description FROM sc_collections C INNER JOIN sc_collection_samples CS
         ON C.id == CS.collectionid WHERE CS.sampleid = ?"#)
@@ -122,14 +105,10 @@ async fn show_sample(
 }
 
 async fn new_sample(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
-
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
@@ -193,14 +172,11 @@ async fn do_insert(
 }
 
 async fn insert_sample(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
     let (request, message) = match do_insert(&user, &params, &state).await {
         Err(e) => (
@@ -263,15 +239,12 @@ async fn do_update(
 }
 
 async fn update_sample(
-    auth: AuthSession,
+    user: SqliteUser,
     Path(id): Path<i64>,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
     let (request, message) = match do_update(id, &params, &state).await {
         Err(e) => (
@@ -304,14 +277,11 @@ async fn update_sample(
 }
 
 async fn delete_sample(
-    auth: AuthSession,
+    user: SqliteUser,
     Path(id): Path<i64>,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let context = match sqlx::query("DELETE FROM sc_samples WHERE id=?")
         .bind(id)
         .execute(&state.dbpool)

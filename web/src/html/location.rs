@@ -1,12 +1,8 @@
-use crate::{
-    app_url,
-    auth::{AuthSession, SqliteUser},
-    Message, MessageType, TemplateKey,
-};
+use crate::{app_url, auth::SqliteUser, Message, MessageType, TemplateKey};
 use anyhow::{anyhow, Context};
 use axum::{
     extract::{Path, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -40,13 +36,10 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn list_locations(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
@@ -57,27 +50,19 @@ async fn list_locations(
 }
 
 async fn add_location(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(ref user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
-
     Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
 }
 
 async fn show_location(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
-
     let loc = Location::fetch(id, &state.dbpool).await?;
     let samples = Sample::fetch_all_user(
         user.id,
@@ -131,15 +116,12 @@ async fn do_update(
 }
 
 async fn update_location(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let samples = Sample::fetch_all_user(
         user.id,
         Some(Arc::new(Filter::Location(Cmp::Equal, id))),
@@ -198,14 +180,11 @@ async fn do_insert(
 }
 
 async fn new_location(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let message;
     let mut request: Option<&LocationParams> = None;
     let mut headers = HeaderMap::new();

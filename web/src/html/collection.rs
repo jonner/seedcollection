@@ -1,10 +1,4 @@
-use crate::{
-    app_url,
-    auth::{AuthSession, SqliteUser},
-    error,
-    state::AppState,
-    Message, MessageType, TemplateKey,
-};
+use crate::{app_url, auth::SqliteUser, error, state::AppState, Message, MessageType, TemplateKey};
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
@@ -42,14 +36,10 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn list_collections(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(ref user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
-
     let collections = Collection::fetch_all(
         Some(Arc::new(collection::Filter::User(user.id))),
         &state.dbpool,
@@ -58,18 +48,18 @@ async fn list_collections(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth.user,
-                     collections => collections),
+        context!(user => user,
+                 collections => collections),
     )
     .into_response())
 }
 
 async fn new_collection(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => auth.user)).into_response())
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
 }
 
 #[derive(Deserialize, Serialize)]
@@ -97,14 +87,11 @@ async fn do_insert(
 }
 
 async fn insert_collection(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let (request, message) = match do_insert(user, &params, &state).await {
         Err(e) => (
             Some(&params),
@@ -139,14 +126,11 @@ async fn insert_collection(
 }
 
 async fn show_collection(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(ref user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let fb = FilterBuilder::new(FilterOp::And)
         .add(Arc::new(collection::Filter::Id(id)))
         .add(Arc::new(collection::Filter::User(user.id)));
@@ -159,7 +143,7 @@ async fn show_collection(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth.user,
+        context!(user => user,
                  collection => c),
     )
     .into_response())
@@ -183,15 +167,12 @@ async fn do_update(
 }
 
 async fn modify_collection(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let fb = FilterBuilder::new(FilterOp::And)
         .add(Arc::new(collection::Filter::Id(id)))
         .add(Arc::new(collection::Filter::User(user.id)));
@@ -228,14 +209,11 @@ async fn modify_collection(
 }
 
 async fn delete_collection(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let errmsg = match sqlx::query!(
         "DELETE FROM sc_collections WHERE id=? AND userid=?",
         id,
@@ -292,14 +270,11 @@ async fn add_sample_prep(
 }
 
 async fn show_add_sample(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let (c, samples) = add_sample_prep(&user, id, &state).await?;
     Ok(RenderHtml(
         key,
@@ -312,16 +287,12 @@ async fn show_add_sample(
 }
 
 async fn add_sample(
-    auth: AuthSession,
+    user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
-
     let toadd: Vec<i64> = params
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
@@ -376,22 +347,19 @@ async fn add_sample(
 }
 
 async fn remove_sample(
-    auth: AuthSession,
+    user: SqliteUser,
     State(state): State<AppState>,
     Path((_, csid)): Path<(i64, i64)>,
 ) -> impl IntoResponse {
-    match auth.user {
-        Some(user) => match sqlx::query!(
-            "DELETE FROM sc_collection_samples AS CS WHERE CS.id=? AND CS.collectionid IN (SELECT C.id FROM sc_collections AS C WHERE C.userid=?)",
-                         csid, user.id)
-            .execute(&state.dbpool)
-            .await {
-                Ok(_) => ().into_response(),
-                Err(e) => {
-                    warn!("Failed to remove sample {} from collection: {}", csid, e);
-                    StatusCode::INTERNAL_SERVER_ERROR.into_response()
-                },
-            }
-        None => StatusCode::UNAUTHORIZED.into_response(),
-    }
+    match sqlx::query!(
+        "DELETE FROM sc_collection_samples AS CS WHERE CS.id=? AND CS.collectionid IN (SELECT C.id FROM sc_collections AS C WHERE C.userid=?)",
+        csid, user.id)
+        .execute(&state.dbpool)
+        .await {
+            Ok(_) => ().into_response(),
+            Err(e) => {
+                warn!("Failed to remove sample {} from collection: {}", csid, e);
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            },
+        }
 }

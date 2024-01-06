@@ -1,8 +1,7 @@
-use crate::{auth::AuthSession, error, state::AppState};
+use crate::{auth::SqliteUser, error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     response::{Html, IntoResponse, Json},
     routing::{get, post},
     Form, Router,
@@ -28,17 +27,15 @@ async fn root(State(_state): State<AppState>) -> Html<String> {
 }
 
 async fn list_samples(
-    auth: AuthSession,
+    user: SqliteUser,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let Some(user) = auth.user else {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    };
     let samples = Sample::fetch_all_user(user.id, None, &state.dbpool).await?;
     Ok(Json(samples).into_response())
 }
 
 async fn show_sample(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<Sample>, error::Error> {
@@ -61,6 +58,7 @@ struct SampleParams {
 }
 
 async fn modify_sample(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<SampleParams>,
@@ -107,6 +105,7 @@ async fn modify_sample(
 }
 
 async fn new_sample(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<(), error::Error> {
@@ -129,6 +128,7 @@ async fn new_sample(
 }
 
 async fn delete_sample(
+    _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
