@@ -1,8 +1,12 @@
-use crate::{app_url, auth::AuthSession, Message, MessageType, TemplateKey};
+use crate::{
+    app_url,
+    auth::{AuthSession, SqliteUser},
+    Message, MessageType, TemplateKey,
+};
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
-    http::HeaderMap,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -36,38 +40,47 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn list_locations(
-    auth_session: AuthSession,
+    auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::fetch_all(&state.dbpool).await?;
+    let Some(user) = auth.user else {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    };
+    let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth_session.user, locations => locations),
-    ))
+        context!(user => user, locations => locations),
+    )
+    .into_response())
 }
 
 async fn add_location(
-    auth_session: AuthSession,
+    auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => auth_session.user),
-    ))
+    let Some(ref user) = auth.user else {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    };
+
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
 }
 
 async fn show_location(
-    auth_session: AuthSession,
+    auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let Some(user) = auth.user else {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    };
+
     let loc = Location::fetch(id, &state.dbpool).await?;
-    let samples = Sample::fetch_all(
+    let samples = Sample::fetch_all_user(
+        user.id,
         Some(Box::new(Filter::Location(Cmp::Equal, id))),
         &state.dbpool,
     )
@@ -75,11 +88,12 @@ async fn show_location(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth_session.user,
+        context!(user => user,
                  location => loc,
                  map_viewer => loc.map_viewer_uri(12.0),
                  samples => samples),
-    ))
+    )
+    .into_response())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -117,12 +131,17 @@ async fn do_update(
 }
 
 async fn update_location(
+    auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let samples = Sample::fetch_all(
+    let Some(user) = auth.user else {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    };
+    let samples = Sample::fetch_all_user(
+        user.id,
         Some(Box::new(Filter::Location(Cmp::Equal, id))),
         &state.dbpool,
     )
@@ -156,6 +175,7 @@ async fn update_location(
 }
 
 async fn do_insert(
+    user: &SqliteUser,
     params: &LocationParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
@@ -164,27 +184,32 @@ async fn do_insert(
     }
     sqlx::query(
         r#"INSERT INTO sc_locations
-          (name, description, latitude, longitude)
-          VALUES (?, ?, ?, ?)"#,
+          (name, description, latitude, longitude, userid)
+          VALUES (?, ?, ?, ?, ?)"#,
     )
     .bind(&params.name)
     .bind(&params.description)
     .bind(params.latitude)
     .bind(params.longitude)
+    .bind(user.id)
     .execute(&state.dbpool)
     .await
     .map_err(|e| e.into())
 }
 
 async fn new_location(
+    auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let Some(user) = auth.user else {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    };
     let message;
     let mut request: Option<&LocationParams> = None;
     let mut headers = HeaderMap::new();
-    match do_insert(&params, &state).await {
+    match do_insert(&user, &params, &state).await {
         Err(e) => {
             message = Some(Message {
                 r#type: MessageType::Error,

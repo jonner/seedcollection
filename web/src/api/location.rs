@@ -1,7 +1,8 @@
-use crate::{error, state::AppState};
+use crate::{auth::AuthSession, error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
+    http::StatusCode,
     response::{Html, IntoResponse, Json},
     routing::{get, post},
     Form, Router,
@@ -27,10 +28,14 @@ async fn root() -> Html<String> {
 }
 
 async fn list_locations(
+    auth: AuthSession,
     State(state): State<AppState>,
-) -> Result<Json<Vec<Location>>, error::Error> {
-    let locations = Location::fetch_all(&state.dbpool).await?;
-    Ok(Json(locations))
+) -> Result<impl IntoResponse, error::Error> {
+    let Some(user) = auth.user else {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    };
+    let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
+    Ok(Json(locations).into_response())
 }
 
 async fn show_location(

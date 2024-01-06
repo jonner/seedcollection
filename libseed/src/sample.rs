@@ -1,5 +1,5 @@
 use crate::{
-    filter::{Cmp, FilterPart},
+    filter::{Cmp, CompoundFilter, FilterOp, FilterPart},
     location::Location,
     taxonomy::Taxon,
     user::User,
@@ -92,6 +92,20 @@ impl Sample {
         }
         builder.push(" GROUP BY S.id, T.tsn ORDER BY phylo_sort_seq");
         builder
+    }
+
+    pub async fn fetch_all_user(
+        userid: i64,
+        filter: Option<Box<dyn FilterPart>>,
+        pool: &Pool<Sqlite>,
+    ) -> anyhow::Result<Vec<Sample>> {
+        let mut newfilter = CompoundFilter::new(FilterOp::And);
+        newfilter.add_filter(Box::new(Filter::User(userid)));
+        if let Some(f) = filter {
+            newfilter.add_filter(f);
+        }
+        let mut builder = Self::build_query(Some(Box::new(newfilter)));
+        Ok(builder.build_query_as().fetch_all(pool).await?)
     }
 
     pub async fn fetch_all(

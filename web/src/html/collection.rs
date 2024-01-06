@@ -283,10 +283,12 @@ async fn add_sample_prep(
     .fetch_all(&state.dbpool)
     .await?;
     let ids = ids_in_collection.iter().map(|row| row.sampleid).collect();
-    let mut filter = CompoundFilter::new(FilterOp::And);
-    filter.add_filter(Box::new(sample::Filter::SampleNotIn(ids)));
-    filter.add_filter(Box::new(sample::Filter::User(user.id)));
-    let samples = Sample::fetch_all(Some(Box::new(filter)), &state.dbpool).await?;
+    let samples = Sample::fetch_all_user(
+        user.id,
+        Some(Box::new(sample::Filter::SampleNotIn(ids))),
+        &state.dbpool,
+    )
+    .await?;
     Ok((c, samples))
 }
 

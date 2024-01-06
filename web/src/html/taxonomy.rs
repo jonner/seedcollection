@@ -1,5 +1,6 @@
 use axum::{
     extract::{Path, Query, Request, State},
+    http::StatusCode,
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -126,22 +127,30 @@ async fn show_taxon(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let Some(user) = auth.user else {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    };
     let mut taxon = Taxon::fetch(id, &state.dbpool).await?;
     let hierarchy = taxon.fetch_hierarchy(&state.dbpool).await?;
     let children = taxon.fetch_children(&state.dbpool).await?;
-    let samples =
-        Sample::fetch_all(Some(Box::new(Filter::Taxon(Cmp::Equal, id))), &state.dbpool).await?;
+    let samples = Sample::fetch_all_user(
+        user.id,
+        Some(Box::new(Filter::Taxon(Cmp::Equal, id))),
+        &state.dbpool,
+    )
+    .await?;
     taxon.fetch_germination_info(&state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => auth.user,
+        context!(user => user,
                  taxon => taxon,
                  parents => hierarchy,
                  children => children,
                  samples => samples),
-    ))
+    )
+    .into_response())
 }
 
 #[derive(Deserialize)]

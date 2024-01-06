@@ -1,8 +1,9 @@
-use crate::{error, state::AppState};
+use crate::{auth::AuthSession, error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
-    response::{Html, Json},
+    http::StatusCode,
+    response::{Html, IntoResponse, Json},
     routing::{get, post},
     Form, Router,
 };
@@ -26,9 +27,15 @@ async fn root(State(_state): State<AppState>) -> Html<String> {
     Html("Samples".to_string())
 }
 
-async fn list_samples(State(state): State<AppState>) -> Result<Json<Vec<Sample>>, error::Error> {
-    let samples = Sample::fetch_all(None, &state.dbpool).await?;
-    Ok(Json(samples))
+async fn list_samples(
+    auth: AuthSession,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, error::Error> {
+    let Some(user) = auth.user else {
+        return Ok(StatusCode::UNAUTHORIZED.into_response());
+    };
+    let samples = Sample::fetch_all_user(user.id, None, &state.dbpool).await?;
+    Ok(Json(samples).into_response())
 }
 
 async fn show_sample(
