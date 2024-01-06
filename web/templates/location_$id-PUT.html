@@ -6,7 +6,7 @@
     <div class="row mb-3">
         <button type="button"
                 class="btn btn-danger"
-                hx-delete="{{ ("/location/" ~ location.id) | api_url }}"
+                hx-delete="{{ ("/location/" ~ location.id) | app_url }}"
                 hx-confirm="Are you sure you wish to delete location {{location.id}}?"
                 hx-target="closest form"
                 >Delete</button>
