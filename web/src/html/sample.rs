@@ -27,7 +27,10 @@ pub fn router() -> Router<AppState> {
         .route("/list", get(list_samples))
         .route("/new", get(new_sample).post(insert_sample))
         .route("/filter", get(filter_samples))
-        .route("/:id", get(show_sample).put(update_sample))
+        .route(
+            "/:id",
+            get(show_sample).put(update_sample).delete(delete_sample),
+        )
         .route("/:id/edit", get(show_sample))
 }
 
@@ -272,4 +275,34 @@ async fn update_sample(
                      message => message,
                      request => request),
     ))
+}
+
+async fn delete_sample(
+    Path(id): Path<i64>,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, error::Error> {
+    let context = match sqlx::query("DELETE FROM sc_samples WHERE id=?")
+        .bind(id)
+        .execute(&state.dbpool)
+        .await
+    {
+        Err(e) => {
+            let locations = Location::fetch_all(&state.dbpool).await?;
+            let sample = Sample::fetch(id, &state.dbpool).await?;
+            context!(locations => locations,
+            sample => sample,
+            message => Message {
+                r#type: MessageType::Error,
+                msg: format!("Error deleting sample: {}", e),
+            })
+        }
+        Ok(_) => context!(deleted => true,
+        message => Message {
+            r#type: MessageType::Success,
+            msg: format!("Deleted sample {id}"),
+        }),
+    };
+
+    Ok(RenderHtml(key, state.tmpl.clone(), context))
 }

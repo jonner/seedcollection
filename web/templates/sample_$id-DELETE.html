@@ -1,0 +1,6 @@
+{% from "_macros.html" import sample_form, show_message %}
+{% if deleted %}
+{{ show_message(message) }}
+{% else %}
+{{ sample_form(locations, sample, none, message) }}
+{% endif %}
