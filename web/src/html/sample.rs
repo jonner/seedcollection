@@ -85,7 +85,7 @@ async fn list_samples(
                      samples => samples),
         )
         .into_response(),
-        Err(e) => error::Error(e).into_response(),
+        Err(e) => error::Error::from(e).into_response(),
     }
 }
 
@@ -207,7 +207,7 @@ async fn insert_sample(
             Some(&params),
             Message {
                 r#type: MessageType::Error,
-                msg: format!("Failed to save sample: {}", e.0),
+                msg: format!("Failed to save sample: {}", e),
             },
         ),
         Ok(result) => {
@@ -278,7 +278,7 @@ async fn update_sample(
             Some(params),
             Message {
                 r#type: MessageType::Error,
-                msg: format!("Failed to save sample: {}", e.0),
+                msg: format!("Failed to save sample: {}", e),
             },
         ),
         Ok(_) => (

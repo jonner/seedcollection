@@ -1,4 +1,4 @@
-use crate::error;
+use crate::error::{self, Error};
 use argon2::Argon2;
 use axum::async_trait;
 use axum_login::{AuthUser, AuthnBackend, UserId};
@@ -35,14 +35,6 @@ pub struct Credentials {
     pub next: Option<String>,
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum AuthenticationError {
-    #[error("password error")]
-    HashFailure(#[from] password_hash::errors::Error),
-    #[error("Database error")]
-    DatabaseError(#[from] sqlx::Error),
-}
-
 #[derive(Clone)]
 pub struct SqliteAuthBackend {
     db: SqlitePool,
@@ -52,7 +44,7 @@ pub struct SqliteAuthBackend {
 impl AuthnBackend for SqliteAuthBackend {
     type User = SqliteUser;
     type Credentials = Credentials;
-    type Error = AuthenticationError;
+    type Error = Error;
 
     async fn authenticate(
         &self,
@@ -62,8 +54,7 @@ impl AuthnBackend for SqliteAuthBackend {
         match user {
             Some(user) => {
                 let hasher = Argon2::default();
-                let expected_hash =
-                    PasswordHash::new(&user.pwhash).map_err(AuthenticationError::from)?;
+                let expected_hash = PasswordHash::new(&user.pwhash).map_err(Error::from)?;
                 hasher
                     .verify_password(credentials.password.as_bytes(), &expected_hash)
                     .map(|_| Some(user))

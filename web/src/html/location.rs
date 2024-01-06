@@ -3,7 +3,7 @@ use crate::{
     auth::{AuthSession, SqliteUser},
     Message, MessageType, TemplateKey,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -152,7 +152,7 @@ async fn update_location(
             request = Some(&params);
             Message {
                 r#type: MessageType::Error,
-                msg: e.0.to_string(),
+                msg: e.to_string(),
             }
         }
         Ok(_) => Message {
@@ -213,7 +213,7 @@ async fn new_location(
         Err(e) => {
             message = Some(Message {
                 r#type: MessageType::Error,
-                msg: e.0.to_string(),
+                msg: e.to_string(),
             });
             request = Some(&params)
         }
@@ -224,7 +224,12 @@ async fn new_location(
                 r#type: MessageType::Success,
                 msg: format!(r#"Successfully added location <a href="{url}">{newid}</a>"#),
             });
-            headers.append("HX-Trigger", "reload-locations".parse()?);
+            headers.append(
+                "HX-Trigger",
+                "reload-locations"
+                    .parse()
+                    .with_context(|| "Failed to parse header")?,
+            );
         }
     };
     Ok((

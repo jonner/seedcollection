@@ -110,7 +110,7 @@ async fn insert_collection(
             Some(&params),
             Message {
                 r#type: MessageType::Error,
-                msg: format!("Failed to save collection: {}", e.0),
+                msg: format!("Failed to save collection: {}", e),
             },
         ),
         Ok(result) => {
@@ -204,7 +204,7 @@ async fn modify_collection(
             Some(&params),
             Message {
                 r#type: MessageType::Error,
-                msg: e.0.to_string(),
+                msg: e.to_string(),
             },
         ),
         Ok(_) => (
