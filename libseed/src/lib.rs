@@ -4,6 +4,7 @@ use std::str::FromStr;
 pub mod collection;
 pub mod filter;
 pub mod location;
+pub mod note;
 pub mod sample;
 pub mod taxonomy;
 

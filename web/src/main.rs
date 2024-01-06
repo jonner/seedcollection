@@ -166,7 +166,7 @@ async fn main() -> Result<()> {
     .await?;
 
     let mut jinja = Environment::new();
-    jinja.set_loader(minijinja::path_loader("web/src/html/templates"));
+    jinja.set_loader(minijinja::path_loader("web/templates"));
     jinja.add_filter("app_url", app_url);
     jinja.add_filter("api_url", api_url);
     jinja.add_filter("append_query_param", append_query_param);
@@ -194,7 +194,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
-        .nest_service("/static", ServeDir::new("web/src/html/static"))
+        .nest_service("/static", ServeDir::new("web/static"))
         .nest(APP_PREFIX, html::router())
         .nest(API_PREFIX, api::router())
         .with_state(shared_state)
