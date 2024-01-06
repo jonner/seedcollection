@@ -122,26 +122,32 @@ async fn update_location(
     Path(id): Path<i64>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let loc = Location::fetch(id, &state.dbpool).await?;
+    if loc.userid != Some(user.id) {
+        return Err(error::Error::Unauthorized("Not yours".to_string()));
+    }
+    let (request, message) = match do_update(id, &params, &state).await {
+        Err(e) => (
+            Some(&params),
+            Message {
+                r#type: MessageType::Error,
+                msg: e.to_string(),
+            },
+        ),
+        Ok(_) => (
+            None,
+            Message {
+                r#type: MessageType::Success,
+                msg: "Successfully updated location".to_string(),
+            },
+        ),
+    };
     let samples = Sample::fetch_all_user(
         user.id,
         Some(Arc::new(Filter::Location(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;
-    let mut request: Option<&LocationParams> = None;
-    let message = match do_update(id, &params, &state).await {
-        Err(e) => {
-            request = Some(&params);
-            Message {
-                r#type: MessageType::Error,
-                msg: e.to_string(),
-            }
-        }
-        Ok(_) => Message {
-            r#type: MessageType::Success,
-            msg: "Successfully updated location".to_string(),
-        },
-    };
     let loc = Location::fetch(id, &state.dbpool).await?;
 
     Ok(RenderHtml(
@@ -225,9 +231,14 @@ async fn new_location(
 }
 
 async fn delete_location(
+    user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let loc = Location::fetch(id, &state.dbpool).await?;
+    if loc.userid != Some(user.id) {
+        return Err(error::Error::Unauthorized("Not yours".to_string()));
+    }
     sqlx::query("DELETE FROM sc_locations WHERE locid=?")
         .bind(id)
         .execute(&state.dbpool)

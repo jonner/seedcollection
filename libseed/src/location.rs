@@ -20,6 +20,7 @@ pub struct Location {
     pub latitude: Option<f64>,
     #[sqlx(default)]
     pub longitude: Option<f64>,
+    pub userid: Option<i64>,
 }
 
 #[derive(Clone)]

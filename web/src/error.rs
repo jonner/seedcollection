@@ -2,6 +2,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use tracing::warn;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -24,11 +25,14 @@ impl IntoResponse for Error {
                 format!("You don't have permission to see this page: {}", s),
             )
                 .into_response(),
-            _ => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Something went wrong: {}", self),
-            )
-                .into_response(),
+            _ => {
+                warn!("An error occurred: {:?}", self);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Something went wrong: {}", self),
+                )
+                    .into_response()
+            }
         }
     }
 }
