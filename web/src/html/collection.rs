@@ -122,7 +122,7 @@ async fn insert_collection(
     };
 
     Ok(RenderHtml(
-        key + ".partial",
+        key,
         state.tmpl.clone(),
         context!( message => message,
             request => request),
@@ -188,7 +188,7 @@ async fn modify_collection(
     };
     let c = Collection::fetch(id, &state.dbpool).await?;
     Ok(RenderHtml(
-        key + ".partial",
+        key,
         state.tmpl.clone(),
         context!(collection => c,
          message => message,
@@ -210,7 +210,7 @@ async fn delete_collection(
         Err(e) => {
             let c = Collection::fetch(id, &state.dbpool).await?;
             Ok(RenderHtml(
-                key + ".partial",
+                key,
                 state.tmpl.clone(),
                 context!(
                 collection => c,
@@ -222,12 +222,10 @@ async fn delete_collection(
             )
             .into_response())
         }
-        Ok(_) => Ok(RenderHtml(
-            key + ".partial",
-            state.tmpl.clone(),
-            context!(deleted => true, id => id),
-        )
-        .into_response()),
+        Ok(_) => Ok(
+            RenderHtml(key, state.tmpl.clone(), context!(deleted => true, id => id))
+                .into_response(),
+        ),
     }
 }
 
@@ -290,7 +288,7 @@ async fn add_sample(
 
     let (c, samples) = add_sample_prep(id, &state).await?;
     Ok(RenderHtml(
-        key + ".partial",
+        key,
         state.tmpl.clone(),
         context!(collection => c,
                  samples => samples),

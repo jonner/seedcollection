@@ -205,7 +205,7 @@ async fn insert_sample(
         }
     };
     Ok(RenderHtml(
-        key + ".partial",
+        key,
         state.tmpl.clone(),
         context!(locations => locations,
                      message => message,
@@ -265,7 +265,7 @@ async fn update_sample(
     let sample = Sample::fetch(id, &state.dbpool).await?;
 
     Ok(RenderHtml(
-        key + ".partial",
+        key,
         state.tmpl.clone(),
         context!(locations => locations,
                      sample => sample,

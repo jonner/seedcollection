@@ -1,17 +1,13 @@
-use crate::{
-    app_url,
-    auth::{AuthSession, SqliteAuthBackend},
-    Message, MessageType, TemplateKey,
-};
+use crate::{app_url, auth::AuthSession, Message, MessageType, TemplateKey};
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
     http::HeaderMap,
     response::IntoResponse,
-    routing::{get, post, put},
+    routing::get,
     Form, Router,
 };
-use axum_login::login_required;
+
 use axum_template::RenderHtml;
 use libseed::{empty_string_as_none, filter::Cmp};
 use libseed::{
@@ -26,20 +22,18 @@ use crate::{error, state::AppState};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/new", get(add_location))
-        .route("/new/modal", get(add_location))
-        .route("/new", post(new_location))
-        .route("/:id", put(update_location).delete(delete_location))
-        /* Anything above here is only available to logged-in users */
-        .route_layer(login_required!(
-            SqliteAuthBackend,
-            login_url = &app_url("/auth/login")
-        ))
         .route("/", get(root))
+        .route("/new", get(add_location).post(new_location))
+        .route("/new/modal", get(add_location))
+        .route(
+            "/:id",
+            get(show_location)
+                .put(update_location)
+                .delete(delete_location),
+        )
+        .route("/:id/edit", get(show_location))
         .route("/list", get(list_locations))
         .route("/list/options", get(list_locations))
-        .route("/:id", get(show_location))
-        .route("/:id/edit", get(show_location))
 }
 
 async fn root(
@@ -163,7 +157,7 @@ async fn update_location(
     let loc = Location::fetch(id, &state.dbpool).await?;
 
     Ok(RenderHtml(
-        key + ".partial",
+        key,
         state.tmpl.clone(),
         context!(location => loc,
          message => message,
@@ -224,7 +218,7 @@ async fn new_location(
     Ok((
         headers,
         RenderHtml(
-            key + ".partial",
+            key,
             state.tmpl.clone(),
             context!(message => message,
             request => request,

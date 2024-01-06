@@ -4,7 +4,7 @@ use axum::{
     error_handling::HandleErrorLayer,
     extract::{rejection::MatchedPathRejection, FromRequestParts, Host, MatchedPath},
     handler::HandlerWithoutStateExt,
-    http::{request::Parts, StatusCode, Uri},
+    http::{request::Parts, Method, StatusCode, Uri},
     response::{IntoResponse, Redirect},
     routing::get,
     BoxError, RequestPartsExt, Router,
@@ -73,6 +73,9 @@ where
 
         if key.is_empty() {
             key = "_INDEX".to_string();
+        }
+        if parts.method != Method::GET {
+            key.push_str(&format!("-{}", parts.method));
         }
         key.push_str(".html");
         Ok(TemplateKey(key))
