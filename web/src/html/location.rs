@@ -1,7 +1,7 @@
 use crate::{
     app_url,
     auth::{AuthSession, SqliteAuthBackend},
-    CustomKey, Message, MessageType,
+    Message, MessageType, TemplateKey,
 };
 use anyhow::anyhow;
 use axum::{
@@ -44,7 +44,7 @@ pub fn router() -> Router<AppState> {
 
 async fn root(
     auth_session: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(
@@ -56,7 +56,7 @@ async fn root(
 
 async fn list_locations(
     auth_session: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations = Location::fetch_all(&state.dbpool).await?;
@@ -69,7 +69,7 @@ async fn list_locations(
 
 async fn add_location(
     auth_session: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(
@@ -81,7 +81,7 @@ async fn add_location(
 
 async fn show_location(
     auth_session: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -136,7 +136,7 @@ async fn do_update(
 }
 
 async fn update_location(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<LocationParams>,
@@ -196,7 +196,7 @@ async fn do_insert(
 }
 
 async fn new_location(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<LocationParams>,
 ) -> Result<impl IntoResponse, error::Error> {

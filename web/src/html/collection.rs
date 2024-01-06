@@ -16,7 +16,9 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{app_url, auth::AuthSession, error, state::AppState, CustomKey, Message, MessageType};
+use crate::{
+    app_url, auth::AuthSession, error, state::AppState, Message, MessageType, TemplateKey,
+};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -36,7 +38,7 @@ pub fn router() -> Router<AppState> {
 
 async fn root(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(
@@ -48,7 +50,7 @@ async fn root(
 
 async fn list_collections(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let collections = Collection::fetch_all(&state.dbpool).await?;
@@ -62,7 +64,7 @@ async fn list_collections(
 
 async fn new_collection(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(key, state.tmpl.clone(), context!(user => auth.user)).into_response())
@@ -91,7 +93,7 @@ async fn do_insert(
 }
 
 async fn insert_collection(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -130,7 +132,7 @@ async fn insert_collection(
 
 async fn show_collection(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -163,7 +165,7 @@ async fn do_update(
 }
 
 async fn modify_collection(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Form(params): Form<CollectionParams>,
@@ -197,7 +199,7 @@ async fn modify_collection(
 }
 
 async fn delete_collection(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -249,7 +251,7 @@ async fn add_sample_prep(
 
 async fn show_add_sample(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -265,7 +267,7 @@ async fn show_add_sample(
 }
 
 async fn add_sample(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<Vec<(String, String)>>,

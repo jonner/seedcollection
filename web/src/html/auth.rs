@@ -15,7 +15,7 @@ use crate::{
     auth::{AuthSession, Credentials},
     error,
     state::AppState,
-    CustomKey, Message, MessageType,
+    Message, MessageType, TemplateKey,
 };
 
 pub fn router() -> Router<AppState> {
@@ -34,7 +34,7 @@ async fn register_user(
 
 #[allow(dead_code)]
 async fn show_register(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(key, state.tmpl.clone(), ()))
@@ -46,7 +46,7 @@ pub struct NextUrl {
 }
 
 async fn show_login(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     auth: AuthSession,
     State(state): State<AppState>,
     Query(NextUrl { next }): Query<NextUrl>,
@@ -59,7 +59,7 @@ async fn show_login(
 }
 
 async fn do_login(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     mut auth: AuthSession,
     State(state): State<AppState>,
     Form(creds): Form<Credentials>,

@@ -52,10 +52,10 @@ pub struct Message {
 // Because minijinja loads an entire folder, we need to remove the `/` prefix
 // and add a `.html` suffix. We can implement our own custom key extractor that
 // transform the key
-pub struct CustomKey(pub String);
+pub struct TemplateKey(pub String);
 
 #[async_trait]
-impl<S> FromRequestParts<S> for CustomKey
+impl<S> FromRequestParts<S> for TemplateKey
 where
     S: Send + Sync,
 {
@@ -75,7 +75,7 @@ where
             key = "_INDEX".to_string();
         }
         key.push_str(".html");
-        Ok(CustomKey(key))
+        Ok(TemplateKey(key))
     }
 }
 

@@ -17,7 +17,7 @@ use sqlx::Row;
 use strum::IntoEnumIterator;
 use tracing::debug;
 
-use crate::{auth::AuthSession, error, state::AppState, CustomKey};
+use crate::{auth::AuthSession, error, state::AppState, TemplateKey};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -32,7 +32,7 @@ pub fn router() -> Router<AppState> {
 
 async fn root(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let ranks: Vec<Rank> = Rank::iter().collect();
@@ -52,7 +52,7 @@ struct ListParams {
 
 async fn list_taxa(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(params): Query<ListParams>,
     req: Request,
@@ -88,7 +88,7 @@ async fn list_taxa(
 
 async fn show_all_children(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -122,7 +122,7 @@ async fn show_all_children(
 
 async fn show_taxon(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -150,7 +150,7 @@ struct DatalistParams {
 }
 
 async fn datalist(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(DatalistParams { taxon }): Query<DatalistParams>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -166,7 +166,7 @@ struct SearchParams {
 }
 
 async fn search(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(SearchParams {
         taxon,
@@ -211,7 +211,7 @@ async fn quickfind(
 }
 
 async fn editgerm(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let codes = sqlx::query_as!(Germination, "SELECT * FROM sc_germination_codes")

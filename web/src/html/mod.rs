@@ -3,7 +3,7 @@ use crate::{
     auth::{AuthSession, SqliteAuthBackend},
     error,
     state::AppState,
-    CustomKey,
+    TemplateKey,
 };
 use axum::{extract::State, response::IntoResponse, routing::get, Router};
 use axum_login::login_required;
@@ -35,7 +35,7 @@ pub fn router() -> Router<AppState> {
 
 async fn root(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(

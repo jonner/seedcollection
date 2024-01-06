@@ -17,7 +17,9 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{app_url, auth::AuthSession, error, state::AppState, CustomKey, Message, MessageType};
+use crate::{
+    app_url, auth::AuthSession, error, state::AppState, Message, MessageType, TemplateKey,
+};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -31,7 +33,7 @@ pub fn router() -> Router<AppState> {
 
 async fn sample_index(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     Ok(RenderHtml(
@@ -49,7 +51,7 @@ struct FilterParams {
 async fn filter_samples(
     auth: AuthSession,
     Query(FilterParams { fragment }): Query<FilterParams>,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let filter: Option<Box<dyn FilterPart>> = match fragment.is_empty() {
@@ -67,7 +69,7 @@ async fn filter_samples(
 
 async fn list_samples(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let samples = Sample::fetch_all(None, &state.dbpool).await?;
@@ -81,7 +83,7 @@ async fn list_samples(
 
 async fn show_sample(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -109,7 +111,7 @@ async fn show_sample(
 
 async fn new_sample(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations = Location::fetch_all(&state.dbpool).await?;
@@ -172,7 +174,7 @@ async fn do_insert(
 }
 
 async fn insert_sample(
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -238,7 +240,7 @@ async fn do_update(
 
 async fn update_sample(
     Path(id): Path<i64>,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {

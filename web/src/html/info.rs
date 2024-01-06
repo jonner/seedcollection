@@ -3,7 +3,7 @@ use axum_template::RenderHtml;
 use libseed::taxonomy::Germination;
 use minijinja::context;
 
-use crate::{auth::AuthSession, error, state::AppState, CustomKey};
+use crate::{auth::AuthSession, error, state::AppState, TemplateKey};
 
 pub fn router() -> Router<AppState> {
     Router::new().route("/germination", get(germination))
@@ -11,7 +11,7 @@ pub fn router() -> Router<AppState> {
 
 async fn germination(
     auth: AuthSession,
-    CustomKey(key): CustomKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let germination = sqlx::query_as!(Germination, "SELECT * FROM sc_germination_codes")
