@@ -1,6 +1,10 @@
-use crate::{filter::FilterPart, sample::Sample};
+use crate::{
+    filter::{DynFilterPart, FilterPart},
+    sample::Sample,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, FromRow, Pool, QueryBuilder, Row, Sqlite};
+use std::sync::Arc;
 
 #[derive(sqlx::FromRow, Deserialize, Serialize)]
 pub struct Collection {
@@ -12,6 +16,7 @@ pub struct Collection {
     pub samples: Vec<AssignedSample>,
 }
 
+#[derive(Clone)]
 pub enum AssignedSampleFilter {
     Id(i64),
     Collection(i64),
@@ -28,6 +33,7 @@ impl FilterPart for AssignedSampleFilter {
     }
 }
 
+#[derive(Clone)]
 pub enum Filter {
     Id(i64),
     User(i64),
@@ -43,8 +49,8 @@ impl FilterPart for Filter {
 }
 
 impl Collection {
-    fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
-        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        let mut builder = QueryBuilder::new(
             r#"SELECT C.id, C.name, C.description, C.userid, U.username
             FROM sc_collections C INNER JOIN sc_users U ON U.id=C.userid"#,
         );
@@ -56,14 +62,14 @@ impl Collection {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
-        Ok(Self::build_query(Some(Box::new(Filter::Id(id))))
+        Ok(Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
             .await?)
     }
 
     pub async fn fetch_all(
-        filter: Option<Box<dyn FilterPart>>,
+        filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> anyhow::Result<Vec<Self>> {
         Self::build_query(filter)
@@ -75,7 +81,7 @@ impl Collection {
 
     pub async fn fetch_samples(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
         self.samples = AssignedSample::fetch_all(
-            Some(Box::new(AssignedSampleFilter::Collection(self.id))),
+            Some(Arc::new(AssignedSampleFilter::Collection(self.id))),
             pool,
         )
         .await?;
@@ -90,7 +96,7 @@ pub struct AssignedSample {
 }
 
 impl AssignedSample {
-    pub fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
+    pub fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
             SELECT CS.id AS csid,
@@ -123,7 +129,7 @@ impl AssignedSample {
     }
 
     pub async fn fetch_all(
-        filter: Option<Box<dyn FilterPart>>,
+        filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Self>, sqlx::Error> {
         Self::build_query(filter)
@@ -133,7 +139,7 @@ impl AssignedSample {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
-        let mut builder = Self::build_query(Some(Box::new(AssignedSampleFilter::Id(id))));
+        let mut builder = Self::build_query(Some(Arc::new(AssignedSampleFilter::Id(id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 }

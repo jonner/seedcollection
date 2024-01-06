@@ -1,11 +1,11 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Pool, Row, Sqlite};
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 use strum_macros::{Display, EnumIter, EnumString, FromRepr};
 use tracing::debug;
 
-use crate::filter::{CompoundFilter, FilterOp, FilterPart};
+use crate::filter::{DynFilterPart, FilterBuilder, FilterOp, FilterPart};
 
 pub const KINGDOM_PLANTAE: i64 = 3;
 
@@ -173,44 +173,42 @@ pub fn filter_by(
     species: Option<String>,
     any: Option<String>,
     minnesota: Option<bool>,
-) -> Option<Box<dyn FilterPart>> {
-    let mut f = Box::new(CompoundFilter::new(FilterOp::And));
+) -> Option<DynFilterPart> {
+    let mut f = FilterBuilder::new(FilterOp::And);
     if let Some(id) = id {
-        f.add_filter(Box::new(FilterField::Id(id)));
+        f = f.add(Arc::new(FilterField::Id(id)));
     }
     if let Some(rank) = rank {
-        f.add_filter(Box::new(FilterField::Rank(rank)));
+        f = f.add(Arc::new(FilterField::Rank(rank)));
     }
     if let Some(genus) = genus {
-        f.add_filter(Box::new(FilterField::Genus(genus)));
+        f = f.add(Arc::new(FilterField::Genus(genus)));
     }
     if let Some(species) = species {
-        f.add_filter(Box::new(FilterField::Species(species)));
+        f = f.add(Arc::new(FilterField::Species(species)));
     }
     if let Some(s) = any {
-        f.add_filter(Box::new(any_filter(&s)));
+        f = f.add(any_filter(&s));
     }
     if let Some(val) = minnesota {
-        f.add_filter(Box::new(FilterField::Minnesota(val)));
+        f = f.add(Arc::new(FilterField::Minnesota(val)));
     }
 
-    Some(f)
+    Some(f.build())
 }
 
-pub fn any_filter(s: &str) -> CompoundFilter {
-    let mut f = CompoundFilter::new(FilterOp::Or);
-    f.add_filter(Box::new(FilterField::Name1(s.to_string())));
-    f.add_filter(Box::new(FilterField::Name2(s.to_string())));
-    f.add_filter(Box::new(FilterField::Name3(s.to_string())));
-    f.add_filter(Box::new(FilterField::Vernacular(s.to_string())));
-    f
+pub fn any_filter(s: &str) -> DynFilterPart {
+    FilterBuilder::new(FilterOp::Or)
+        .add(Arc::new(FilterField::Name1(s.to_string())))
+        .add(Arc::new(FilterField::Name2(s.to_string())))
+        .add(Arc::new(FilterField::Name3(s.to_string())))
+        .add(Arc::new(FilterField::Vernacular(s.to_string())))
+        .build()
 }
 
 pub struct LimitSpec(pub i32, pub Option<i32>);
 
-pub fn count_query(
-    filter: Option<Box<dyn FilterPart>>,
-) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
+pub fn count_query(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
         r#"SELECT COUNT(tsn) as count
             FROM taxonomic_units T
@@ -228,7 +226,7 @@ pub fn count_query(
 
 impl Taxon {
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut query = Taxon::build_query(Some(Box::new(FilterField::Id(id))), None);
+        let mut query = Taxon::build_query(Some(Arc::new(FilterField::Id(id))), None);
         Ok(query.build_query_as().fetch_one(pool).await?)
     }
 
@@ -250,13 +248,13 @@ impl Taxon {
     }
 
     pub async fn fetch_children(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
-        let filter: Option<Box<dyn FilterPart>> = Some(Box::new(FilterField::ParentId(self.id)));
+        let filter: Option<DynFilterPart> = Some(Arc::new(FilterField::ParentId(self.id)));
         let mut query = Taxon::build_query(filter, None);
         Ok(query.build_query_as().fetch_all(pool).await?)
     }
 
     fn build_query(
-        filter: Option<Box<dyn FilterPart>>,
+        filter: Option<DynFilterPart>,
         limit: Option<LimitSpec>,
     ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
         let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
@@ -290,7 +288,7 @@ impl Taxon {
     }
 
     pub async fn fetch_all(
-        filter: Option<Box<dyn FilterPart>>,
+        filter: Option<DynFilterPart>,
         limit: Option<LimitSpec>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Taxon>, sqlx::Error> {

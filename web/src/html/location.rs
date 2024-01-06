@@ -11,7 +11,6 @@ use axum::{
     routing::get,
     Form, Router,
 };
-
 use axum_template::RenderHtml;
 use libseed::{empty_string_as_none, filter::Cmp};
 use libseed::{
@@ -21,6 +20,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
+use std::sync::Arc;
 
 use crate::{error, state::AppState};
 
@@ -81,7 +81,7 @@ async fn show_location(
     let loc = Location::fetch(id, &state.dbpool).await?;
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Box::new(Filter::Location(Cmp::Equal, id))),
+        Some(Arc::new(Filter::Location(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;
@@ -142,7 +142,7 @@ async fn update_location(
     };
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Box::new(Filter::Location(Cmp::Equal, id))),
+        Some(Arc::new(Filter::Location(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;

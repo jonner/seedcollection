@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
@@ -10,7 +12,7 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
     empty_string_as_none,
-    filter::FilterPart,
+    filter::DynFilterPart,
     location::Location,
     sample::{Certainty, Filter, Sample},
 };
@@ -52,9 +54,9 @@ async fn filter_samples(
     let Some(user) = auth.user else {
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     };
-    let filter: Option<Box<dyn FilterPart>> = match fragment.is_empty() {
+    let filter: Option<DynFilterPart> = match fragment.is_empty() {
         true => None,
-        false => Some(Box::new(Filter::TaxonNameLike(fragment))),
+        false => Some(Arc::new(Filter::TaxonNameLike(fragment))),
     };
     let samples = Sample::fetch_all_user(user.id, filter, &state.dbpool).await?;
     Ok(RenderHtml(

@@ -1,8 +1,10 @@
+use crate::filter::DynFilterPart;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::Pool;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
+use std::sync::Arc;
 
 use crate::filter::FilterPart;
 
@@ -20,6 +22,7 @@ pub struct Location {
     pub longitude: Option<f64>,
 }
 
+#[derive(Clone)]
 pub enum Filter {
     Id(i64),
     User(i64),
@@ -37,7 +40,7 @@ impl FilterPart for Filter {
 const MAP_TILER_KEY: &str = "OfKZsQq0kXBWp83M3Wjx";
 
 impl Location {
-    fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
+    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut qb = QueryBuilder::new(
             r#"SELECT L.locid, L.name as locname, L.description, L.latitude, L.longitude,
             L.userid, U.username FROM sc_locations L
@@ -59,14 +62,14 @@ impl Location {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Location> {
-        Ok(Self::build_query(Some(Box::new(Filter::Id(id))))
+        Ok(Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
             .await?)
     }
 
     pub async fn fetch_all(
-        filter: Option<Box<dyn FilterPart>>,
+        filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> anyhow::Result<Vec<Location>> {
         Ok(Self::build_query(filter)
@@ -76,7 +79,7 @@ impl Location {
     }
 
     pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Location>> {
-        Ok(Self::build_query(Some(Box::new(Filter::User(userid))))
+        Ok(Self::build_query(Some(Arc::new(Filter::User(userid))))
             .build_query_as()
             .fetch_all(pool)
             .await?)

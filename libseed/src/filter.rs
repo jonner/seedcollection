@@ -1,14 +1,40 @@
+use std::sync::Arc;
+
+#[derive(Clone)]
 pub enum FilterOp {
     Or,
     And,
+}
+
+#[derive(Clone)]
+pub struct FilterBuilder {
+    top: CompoundFilter,
+}
+
+impl FilterBuilder {
+    pub fn new(op: FilterOp) -> Self {
+        Self {
+            top: CompoundFilter::new(op),
+        }
+    }
+
+    pub fn add(mut self, filter: DynFilterPart) -> Self {
+        self.top.add_filter(filter);
+        self
+    }
+
+    pub fn build(self) -> DynFilterPart {
+        Arc::new(self.top)
+    }
 }
 
 pub trait FilterPart: Send {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>);
 }
 
+#[derive(Clone)]
 pub struct CompoundFilter {
-    conditions: Vec<Box<dyn FilterPart>>,
+    conditions: Vec<DynFilterPart>,
     op: FilterOp,
 }
 
@@ -20,7 +46,7 @@ impl CompoundFilter {
         }
     }
 
-    pub fn add_filter(&mut self, filter: Box<dyn FilterPart>) {
+    pub fn add_filter(&mut self, filter: DynFilterPart) {
         self.conditions.push(filter);
     }
 }
@@ -46,6 +72,7 @@ impl FilterPart for CompoundFilter {
     }
 }
 
+#[derive(Clone)]
 pub enum Cmp {
     Equal,
     NotEqual,
@@ -69,3 +96,5 @@ impl std::fmt::Display for Cmp {
         }
     }
 }
+
+pub type DynFilterPart = Arc<dyn FilterPart + Sync>;

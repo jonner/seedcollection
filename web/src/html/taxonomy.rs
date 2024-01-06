@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     extract::{Path, Query, Request, State},
     http::StatusCode,
@@ -63,14 +65,14 @@ async fn list_taxa(
         None => Rank::Species,
     };
     let pg = params.page.unwrap_or(1);
-    let row = taxonomy::count_query(Some(Box::new(FilterField::Rank(rank.clone()))))
+    let row = taxonomy::count_query(Some(Arc::new(FilterField::Rank(rank.clone()))))
         .build()
         .fetch_one(&state.dbpool)
         .await?;
     let count = row.try_get::<i32, _>("count")?;
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
     let taxa: Vec<Taxon> = Taxon::fetch_all(
-        Some(Box::new(FilterField::Rank(rank))),
+        Some(Arc::new(FilterField::Rank(rank))),
         Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
         &state.dbpool,
     )
@@ -135,7 +137,7 @@ async fn show_taxon(
     let children = taxon.fetch_children(&state.dbpool).await?;
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Box::new(Filter::Taxon(Cmp::Equal, id))),
+        Some(Arc::new(Filter::Taxon(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;
@@ -199,17 +201,17 @@ async fn quickfind(
             let parts = taxon.split(' ');
             let mut filter = CompoundFilter::new(FilterOp::And);
             for part in parts {
-                filter.add_filter(Box::new(any_filter(part)));
+                filter.add_filter(any_filter(part));
             }
             if let Some(rank) = rank {
-                filter.add_filter(Box::new(FilterField::Rank(rank)));
+                filter.add_filter(Arc::new(FilterField::Rank(rank)));
             }
             if Some(true) == minnesota {
-                filter.add_filter(Box::new(FilterField::Minnesota(true)));
+                filter.add_filter(Arc::new(FilterField::Minnesota(true)));
             }
             /* FIXME: pagination for /search endpoing? */
             Taxon::fetch_all(
-                Some(Box::new(filter)),
+                Some(Arc::new(filter)),
                 Some(LimitSpec(200, None)),
                 &state.dbpool,
             )

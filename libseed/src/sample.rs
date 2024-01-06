@@ -1,11 +1,12 @@
 use crate::{
-    filter::{Cmp, CompoundFilter, FilterOp, FilterPart},
+    filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
     location::Location,
     taxonomy::Taxon,
     user::User,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteRow, FromRow, Pool, QueryBuilder, Row, Sqlite};
+use std::sync::Arc;
 
 #[derive(Deserialize, Serialize, Debug, sqlx::Type)]
 #[repr(i32)]
@@ -27,6 +28,7 @@ pub struct Sample {
     pub certainty: Certainty,
 }
 
+#[derive(Clone)]
 pub enum Filter {
     Sample(Cmp, i64),
     SampleNotIn(Vec<i64>),
@@ -71,7 +73,7 @@ impl FilterPart for Filter {
 }
 
 impl Sample {
-    fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
+    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
@@ -96,20 +98,20 @@ impl Sample {
 
     pub async fn fetch_all_user(
         userid: i64,
-        filter: Option<Box<dyn FilterPart>>,
+        filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> anyhow::Result<Vec<Sample>> {
-        let mut newfilter = CompoundFilter::new(FilterOp::And);
-        newfilter.add_filter(Box::new(Filter::User(userid)));
+        let mut fbuilder = FilterBuilder::new(FilterOp::And).add(Arc::new(Filter::User(userid)));
         if let Some(f) = filter {
-            newfilter.add_filter(f);
+            fbuilder = fbuilder.add(f);
         }
-        let mut builder = Self::build_query(Some(Box::new(newfilter)));
+        let newfilter = fbuilder.build();
+        let mut builder = Self::build_query(Some(newfilter));
         Ok(builder.build_query_as().fetch_all(pool).await?)
     }
 
     pub async fn fetch_all(
-        filter: Option<Box<dyn FilterPart>>,
+        filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> anyhow::Result<Vec<Sample>> {
         let mut builder = Self::build_query(filter);
@@ -117,7 +119,7 @@ impl Sample {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Sample> {
-        let mut builder = Self::build_query(Some(Box::new(Filter::Sample(Cmp::Equal, id))));
+        let mut builder = Self::build_query(Some(Arc::new(Filter::Sample(Cmp::Equal, id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 }

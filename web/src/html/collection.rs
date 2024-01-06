@@ -1,3 +1,10 @@
+use crate::{
+    app_url,
+    auth::{AuthSession, SqliteUser},
+    error,
+    state::AppState,
+    Message, MessageType, TemplateKey,
+};
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
@@ -10,22 +17,14 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::{self, Collection},
     empty_string_as_none,
-    filter::{CompoundFilter, FilterOp},
+    filter::{FilterBuilder, FilterOp},
     sample::{self, Sample},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqliteQueryResult;
-use sqlx::Row;
+use sqlx::{sqlite::SqliteQueryResult, Row};
+use std::sync::Arc;
 use tracing::warn;
-
-use crate::{
-    app_url,
-    auth::{AuthSession, SqliteUser},
-    error,
-    state::AppState,
-    Message, MessageType, TemplateKey,
-};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -52,7 +51,7 @@ async fn list_collections(
     };
 
     let collections = Collection::fetch_all(
-        Some(Box::new(collection::Filter::User(user.id))),
+        Some(Arc::new(collection::Filter::User(user.id))),
         &state.dbpool,
     )
     .await?;
@@ -148,10 +147,10 @@ async fn show_collection(
     let Some(ref user) = auth.user else {
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     };
-    let mut filter = CompoundFilter::new(FilterOp::And);
-    filter.add_filter(Box::new(collection::Filter::Id(id)));
-    filter.add_filter(Box::new(collection::Filter::User(user.id)));
-    let mut collections = Collection::fetch_all(Some(Box::new(filter)), &state.dbpool).await?;
+    let fb = FilterBuilder::new(FilterOp::And)
+        .add(Arc::new(collection::Filter::Id(id)))
+        .add(Arc::new(collection::Filter::User(user.id)));
+    let mut collections = Collection::fetch_all(Some(fb.build()), &state.dbpool).await?;
     let Some(mut c) = collections.pop() else {
         return Ok(StatusCode::NOT_FOUND.into_response());
     };
@@ -193,10 +192,10 @@ async fn modify_collection(
     let Some(user) = auth.user else {
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     };
-    let mut filter = CompoundFilter::new(FilterOp::And);
-    filter.add_filter(Box::new(collection::Filter::Id(id)));
-    filter.add_filter(Box::new(collection::Filter::User(user.id)));
-    let collections = Collection::fetch_all(Some(Box::new(filter)), &state.dbpool).await?;
+    let fb = FilterBuilder::new(FilterOp::And)
+        .add(Arc::new(collection::Filter::Id(id)))
+        .add(Arc::new(collection::Filter::User(user.id)));
+    let collections = Collection::fetch_all(Some(fb.build()), &state.dbpool).await?;
     if collections.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());
     };
@@ -285,7 +284,7 @@ async fn add_sample_prep(
     let ids = ids_in_collection.iter().map(|row| row.sampleid).collect();
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Box::new(sample::Filter::SampleNotIn(ids))),
+        Some(Arc::new(sample::Filter::SampleNotIn(ids))),
         &state.dbpool,
     )
     .await?;

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{auth::AuthSession, error, state::AppState};
 use anyhow::{anyhow, Result};
 use axum::{
@@ -36,7 +38,7 @@ async fn list_collections(
 ) -> Result<impl IntoResponse, error::Error> {
     if let Some(user) = auth.user {
         let collections =
-            Collection::fetch_all(Some(Box::new(Filter::User(user.id))), &state.dbpool).await?;
+            Collection::fetch_all(Some(Arc::new(Filter::User(user.id))), &state.dbpool).await?;
         Ok(Json(collections).into_response())
     } else {
         Ok(StatusCode::UNAUTHORIZED.into_response())
