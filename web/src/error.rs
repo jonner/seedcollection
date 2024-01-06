@@ -14,12 +14,19 @@ pub enum Error {
     OtherError(#[from] anyhow::Error),
     #[error("Redirect to another url")]
     Unauthorized(String),
+    #[error("Not Found")]
+    NotFound(String),
 }
 
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match self {
+            Self::NotFound(s) => (
+                StatusCode::NOT_FOUND,
+                format!("The resource you requested was not found: {}", s),
+            )
+                .into_response(),
             Self::Unauthorized(s) => (
                 StatusCode::UNAUTHORIZED,
                 format!("You don't have permission to see this page: {}", s),

@@ -14,6 +14,7 @@ pub struct Collection {
     #[sqlx(skip)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub samples: Vec<AssignedSample>,
+    pub userid: i64,
 }
 
 #[derive(Clone)]

@@ -1,4 +1,10 @@
-use crate::{app_url, auth::SqliteUser, error, state::AppState, Message, MessageType, TemplateKey};
+use crate::{
+    app_url,
+    auth::SqliteUser,
+    error::{self, Error},
+    state::AppState,
+    Message, MessageType, TemplateKey,
+};
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
@@ -136,7 +142,9 @@ async fn show_collection(
         .add(Arc::new(collection::Filter::User(user.id)));
     let mut collections = Collection::fetch_all(Some(fb.build()), &state.dbpool).await?;
     let Some(mut c) = collections.pop() else {
-        return Ok(StatusCode::NOT_FOUND.into_response());
+        return Err(Error::NotFound(
+            "That collection does not exist".to_string(),
+        ));
     };
     c.fetch_samples(&state.dbpool).await?;
 
@@ -214,6 +222,9 @@ async fn delete_collection(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let c = Collection::fetch(id, &state.dbpool)
+        .await
+        .map_err(|_| Error::NotFound("That collection does not exist".to_string()))?;
     let errmsg = match sqlx::query!(
         "DELETE FROM sc_collections WHERE id=? AND userid=?",
         id,
@@ -231,7 +242,6 @@ async fn delete_collection(
             )
         }
     };
-    let c = Collection::fetch(id, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -349,17 +359,24 @@ async fn add_sample(
 async fn remove_sample(
     user: SqliteUser,
     State(state): State<AppState>,
-    Path((_, csid)): Path<(i64, i64)>,
-) -> impl IntoResponse {
-    match sqlx::query!(
+    Path((id, csid)): Path<(i64, i64)>,
+) -> Result<impl IntoResponse, error::Error> {
+    let mut collections =
+        Collection::fetch_all(Some(Arc::new(collection::Filter::Id(id))), &state.dbpool).await?;
+    let Some(c) = collections.pop() else {
+        return Err(Error::NotFound(
+            "That collection does not exist".to_string(),
+        ));
+    };
+    if c.userid != user.id {
+        return Err(Error::NotFound(
+            "That collection does not exist".to_string(),
+        ));
+    }
+    sqlx::query!(
         "DELETE FROM sc_collection_samples AS CS WHERE CS.id=? AND CS.collectionid IN (SELECT C.id FROM sc_collections AS C WHERE C.userid=?)",
         csid, user.id)
         .execute(&state.dbpool)
-        .await {
-            Ok(_) => ().into_response(),
-            Err(e) => {
-                warn!("Failed to remove sample {} from collection: {}", csid, e);
-                StatusCode::INTERNAL_SERVER_ERROR.into_response()
-            },
-        }
+        .await?;
+    Ok(())
 }
