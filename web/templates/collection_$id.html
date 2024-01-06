@@ -6,9 +6,19 @@
 <h2>{{ self.title() }} <a href="{{ ("/collection/" ~ collection.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ collection.description }}</p>
 <h3>Samples in this collection <a class="ms-2" href="{{ ("/collection/" ~ collection.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
-<div id="sample-list">
-{% for csample in collection.samples %}
-{{ sample_item(csample.sample) }}
-{% endfor %}
+<div id="collection-sample-list">
+    {% for csample in collection.samples %}
+    <div class="d-flex align-items-center collection-sample-row">
+        {{ sample_item(csample.sample) }}
+        <div class="ms-3 flex-shrink-1 sample-remove">
+            <button type="button"
+                    class="btn btn-outline-danger"
+                    hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ csample.id) | app_url }}"
+                    hx-target="closest .collection-sample-row"
+                    hx-swap="outerHTML"
+                    hx-confirm="Are you sure you want to remove this sample from the collection?">{{ icon("x") }}</button>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}

@@ -69,9 +69,10 @@ td, th {
     border-radius: 0.5rem;
 }
 
-#collection-sample-list > li .bi {
+#collection-sample-list .collection-sample-row .sample-remove {
     display: none;
 }
-#collection-sample-list > li:hover .bi {
+
+#collection-sample-list .collection-sample-row:hover .sample-remove {
     display: inline-block;
 }

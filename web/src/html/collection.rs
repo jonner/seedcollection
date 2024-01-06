@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     response::IntoResponse,
     routing::{delete, get},
     Form, Router,
@@ -297,19 +296,11 @@ async fn add_sample(
 }
 
 async fn remove_sample(
-    auth: AuthSession,
     State(state): State<AppState>,
-    Path((id, sampleid)): Path<(i64, i64)>,
+    Path((_, csid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
-    if auth.user.is_none() {
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    }
-    sqlx::query!(
-        "DELETE FROM sc_collection_samples WHERE collectionid=? AND sampleid=?",
-        id,
-        sampleid
-    )
-    .execute(&state.dbpool)
-    .await?;
-    Ok(().into_response())
+    sqlx::query!("DELETE FROM sc_collection_samples WHERE id=?", csid)
+        .execute(&state.dbpool)
+        .await?;
+    Ok(())
 }
