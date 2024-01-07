@@ -113,15 +113,17 @@ pub fn append_query_param(
             .with_source(e)
     })?;
     let mut query: HashMap<_, _> = match uri.query() {
-        Some(q) => q.split('&').map(|s| s.split_once('=').unwrap()).collect(),
+        Some(q) => serde_urlencoded::from_str(q).map_err(|e| {
+            minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to decode query params")
+                .with_source(e)
+        })?,
         None => HashMap::new(),
     };
     query.insert(key.as_str(), value.as_str());
-    let querystring = query
-        .drain()
-        .map(|(k, v)| format!("{k}={v}"))
-        .collect::<Vec<_>>()
-        .join("&");
+    let querystring = serde_urlencoded::to_string(query).map_err(|e| {
+        minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to encode query params")
+            .with_source(e)
+    })?;
 
     Ok(format!("?{querystring}"))
 }
