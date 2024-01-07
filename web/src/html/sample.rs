@@ -178,39 +178,42 @@ async fn insert_sample(
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
-    let (request, message) = match do_insert(&user, &params, &state).await {
-        Err(e) => (
-            Some(&params),
-            Message {
-                r#type: MessageType::Error,
-                msg: format!("Failed to save sample: {}", e),
-            },
-        ),
+    match do_insert(&user, &params, &state).await {
+        Err(e) => Ok(RenderHtml(
+            key,
+            state.tmpl.clone(),
+            context!(locations => locations,
+                         message => Message {
+                             r#type: MessageType::Error,
+                             msg: format!("Failed to save sample: {}", e),
+                         },
+                         request => params),
+        )
+        .into_response()),
         Ok(result) => {
             let id = result.last_insert_rowid();
             let sample = Sample::fetch(id, &state.dbpool).await?;
 
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
-            (
-                None,
-                Message {
-                    r#type: MessageType::Success,
-                    msg: format!(
-                        "Added new sample <a href=\"{}\">{}: {}</a> to the database",
-                        sampleurl, sample.id, sample.taxon.complete_name
+            Ok((
+                [("HX-Redirect", sampleurl)],
+                RenderHtml(
+                    key,
+                    state.tmpl.clone(),
+                    context!(locations => locations,
+                    message => Message {
+                        r#type: MessageType::Success,
+                        msg: format!(
+                            "Added new sample {}: {} to the database",
+                            sample.id, sample.taxon.complete_name
+                            ),
+                    },
                     ),
-                },
+                ),
             )
+                .into_response())
         }
-    };
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(locations => locations,
-                     message => message,
-                     request => request),
-    )
-    .into_response())
+    }
 }
 
 async fn do_update(
@@ -282,7 +285,7 @@ async fn delete_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let context = match sqlx::query("DELETE FROM sc_samples WHERE id=?")
+    match sqlx::query("DELETE FROM sc_samples WHERE id=?")
         .bind(id)
         .execute(&state.dbpool)
         .await
@@ -290,19 +293,30 @@ async fn delete_sample(
         Err(e) => {
             let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
             let sample = Sample::fetch(id, &state.dbpool).await?;
-            context!(locations => locations,
-            sample => sample,
-            message => Message {
-                r#type: MessageType::Error,
-                msg: format!("Error deleting sample: {}", e),
-            })
+            Ok(RenderHtml(
+                key,
+                state.tmpl.clone(),
+                context!(locations => locations,
+                sample => sample,
+                message => Message {
+                    r#type: MessageType::Error,
+                    msg: format!("Error deleting sample: {}", e),
+                }),
+            )
+            .into_response())
         }
-        Ok(_) => context!(deleted => true,
-        message => Message {
-            r#type: MessageType::Success,
-            msg: format!("Deleted sample {id}"),
-        }),
-    };
-
-    Ok(RenderHtml(key, state.tmpl.clone(), context).into_response())
+        Ok(_) => Ok((
+            [("HX-Redirect", app_url("/sample/list"))],
+            RenderHtml(
+                key,
+                state.tmpl.clone(),
+                context!(deleted => true,
+                message => Message {
+                    r#type: MessageType::Success,
+                    msg: format!("Deleted sample {id}"),
+                }),
+            ),
+        )
+            .into_response()),
+    }
 }
