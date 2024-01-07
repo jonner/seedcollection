@@ -140,7 +140,7 @@
         <div class="text-secondary">
             <div class="d-flex flex-row flex-wrap column-gap-3">
                 {% if sample.year %}<div>{{ sample.year }}</div>{% endif %}
-                <div>{{ sample.location.name }}</div>
+                <div>{{ sample.location.name | truncate }}</div>
                 {% if sample.notes %}<div class="fst-italic">{{ sample.notes | truncate }}</div>{% endif %}
             </div>
         </div>
