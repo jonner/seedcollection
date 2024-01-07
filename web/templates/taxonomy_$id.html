@@ -1,8 +1,6 @@
 {% extends "root.html" %}
-{% from "_macros.html" import show_germination_list %}
-{% from "_macros.html" import show_vernacular_list %}
-{% from "_macros.html" import sample_list %}
-{% from "_macros.html" import native_status_badge %}
+{% from "_macros.html" import show_germination_list, show_vernacular_list, native_status_badge %}
+{% from "_sample_macros.html" import sample_list %}
 
 {% macro show_taxon(t) -%}
 <a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a>

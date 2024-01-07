@@ -1,6 +1,6 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon %}
-{% from "_macros.html" import sample_list %}
+{% from "_sample_macros.html" import sample_list %}
 {% block title %}{{ location.name or "Location Details" }} Details{% endblock %}
 {% block content %}
 <h2>{{ self.title() }} <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>

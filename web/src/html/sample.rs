@@ -83,7 +83,7 @@ async fn show_sample(
 ) -> Result<impl IntoResponse, error::Error> {
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
     let collections: Vec<Collection> = sqlx::query_as(
-        r#"SELECT C.id, C.name, C.description FROM sc_collections C INNER JOIN sc_collection_samples CS
+        r#"SELECT C.id, C.name, C.description, C.userid FROM sc_collections C INNER JOIN sc_collection_samples CS
         ON C.id == CS.collectionid WHERE CS.sampleid = ?"#)
         .bind(id)
         .fetch_all(&state.dbpool)

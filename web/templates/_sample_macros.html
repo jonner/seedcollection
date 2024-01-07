@@ -1,0 +1,162 @@
+{% from "_macros.html" import show_message %}
+
+{% macro month_options(selected) -%}
+<option value="">Choose a month...</option>
+<option value="1" {% if selected == 1 %}selected{% endif %}>January</option>
+<option value="2" {% if selected == 2 %}selected{% endif %}>February</option>
+<option value="3" {% if selected == 3 %}selected{% endif %}>March</option>
+<option value="4" {% if selected == 4 %}selected{% endif %}>April</option>
+<option value="5" {% if selected == 5 %}selected{% endif %}>May</option>
+<option value="6" {% if selected == 6 %}selected{% endif %}>June</option>
+<option value="7" {% if selected == 7 %}selected{% endif %}>July</option>
+<option value="8" {% if selected == 8 %}selected{% endif %}>August</option>
+<option value="9" {% if selected == 9 %}selected{% endif %}>September</option>
+<option value="10" {% if selected == 10 %}selected{% endif %}>October</option>
+<option value="11" {% if selected == 11 %}selected{% endif %}>November</option>
+<option value="12" {% if selected == 12 %}selected{% endif %}>December</option>
+{%- endmacro %}
+
+
+{% macro sample_form(locations, sample=none, request=none, message=none) -%}
+{% if sample %}
+<form hx-put="{{ ("/sample/" ~ sample.id) | app_url }}">
+{% else %}
+<form hx-post="{{ "/sample/new" | app_url }}">
+{% endif %}
+{{ show_message(message) }}
+    <div class="row g-6">
+        <div class="mb-3 col-12">
+            <label for="SampleTaxonInput" class="form-label">Taxon</label>
+            <div class="input-group">
+                <input id="SampleTaxonInput"
+                       class="form-control"
+                       type="text"
+                       name="taxon"
+                       placeholder="Type to search..."
+                       value="{% if request and request.taxon %}{{ request.taxon }}{% elif sample %}{{ sample.taxon.id }}{% endif %}" 
+                       list="taxonOptions"
+                       autofocus
+                       hx-get="{{ "/taxonomy/datalist" | app_url }}"
+                       hx-trigger="input changed delay:500ms"
+                       hx-target="#taxonOptions">
+                <datalist id="taxonOptions">
+                </datalist>
+                <div class="input-group-text">
+                    <input id="SampleUncertaintyInput" type="checkbox" class="form-check-input mt-0" value="true" name="uncertain" {% if sample.certainty == "Uncertain" %}checked{% endif %}>
+                    <label for="SampleUncertaintyInput" class="form-check-label">ID is uncertain</label>
+                </div>
+            </div>
+        </div>
+        <div class="mb-3 col-12">
+            <label for="SampleLocationInput" class="form-label">Location</label>
+            <div class="input-group">
+                <select id="SampleLocationInput" class="form-select" name="location"
+                                                                     hx-trigger="reload-locations from:body"
+                                                                     hx-get="{{ "/location/list/options" | app_url }}">
+                    <option value="">Choose a location...</option>
+                    {% for l in locations %}
+                    <option value="{{ l.id }}"
+                            {% if request and (request.location == l.id) %}selected{% elif sample and (l.id == sample.location.id) %}selected{% endif %}
+                            >{{ l.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="button"
+                        id="AddLocationButton" class="btn btn-outline-secondary"
+                                               hx-get="{{ "/location/new/modal" | app_url }}"
+                                               hx-target="#ModalContainer"
+                                               hx-trigger="click"
+                                               data-bs-toggle="modal"
+                                               data-bs-target="#ModalContainer">
+                    Add new location</button>
+            </div>
+        </div>
+        <div class="mb-3 col-4">
+            <label for="SampleMonthInput" class="form-label">Month</label>
+            <select id="SampleMonthInput"
+                    class="form-control"
+                    name="month"
+                    >
+                    {{ month_options(request.month if request else sample.month if sample) }}
+            </select>
+        </div>
+        <div class="mb-3 col-4">
+            <label for="SampleYearInput" class="form-label">Year</label>
+            <input id="SampleYearInput"
+                   class="form-control"
+                   type="number"
+                   name="year"
+                   value="{% if request %}{{ request.year }}{% elif sample %}{{ sample.year }}{% endif %}"/>
+        </div>
+        <div class="mb-3 col-4">
+            <label for="SampleQuantityInput" class="form-label">Quantity</label>
+            <input id="SampleQuantityInput"
+                   class="form-control"
+                   type="number"
+                   name="quantity"
+                   value="{% if request %}{{request.quantity }}{% elif sample %}{{ sample.quantity }}{% endif %}"/>
+        </div>
+        <div class="mb-3 col-12">
+            <label for="SampleNotesInput" class="form-label">Notes</label>
+            <textarea id="SampleNotesInput"
+                      rows="5"
+                      class="form-control"
+                      name="notes">{% if sample.notes %}{{ sample.notes if sample }}{% endif %}</textarea>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">{% if sample %}Update{% else %}Add{% endif %}</button>
+        </div>
+        {% if sample %}
+        <div class="mb-3">
+            <button type="button"
+                    class="btn btn-danger"
+                    hx-delete="{{ ("/sample/" ~ sample.id) | app_url }}"
+                    hx-confirm="Are you sure you want to delete sample {{ sample.id }}?"
+                    hx-target="closest form"
+                    hx-swap="outerHTML"
+                    >Delete</button>
+        </div>
+        {% endif %}
+    </div>
+</form>
+<div id="ModalContainer"
+     class="modal"
+     tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content"></div>
+    </div>
+</div>
+{%- endmacro %}
+
+
+{% macro sample_item(sample) -%}
+<div class="d-flex align-items-center flex-row mb-1 sample-item">
+    <div class="fs-3 align-middle p-1 text-end flex-shrink-0">
+        <a class="badge text-bg-light font-monospace"
+            href="{{ ("/sample/" ~ sample.id) | app_url}}">S{{ sample.id | idfmt }}</a>
+    </div>
+    <div class="flex-column flex-grow-1 p-1">
+        <div>{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}
+        </div>
+        <div class="text-secondary">
+            <div class="d-flex flex-row flex-wrap column-gap-3">
+                {% if sample.year %}<div>{{ sample.year }}</div>{% endif %}
+                <div>{{ sample.location.name }}</div>
+                {% if sample.notes %}<div class="fst-italic">{{ sample.notes | truncate }}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{%- endmacro %}
+
+
+{% macro sample_list(samples, cssid) -%}
+<div id="{{ cssid }}">
+{% for s in samples %}
+{{ sample_item(s) }}
+{% else %}
+<div class="alert alert-info">
+    No samples exist yet. Create one to get started.
+</div>
+{% endfor %}
+</div>
+{%- endmacro %}
