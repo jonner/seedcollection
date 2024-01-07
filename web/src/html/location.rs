@@ -91,6 +91,7 @@ struct LocationParams {
     latitude: Option<f64>,
     #[serde(deserialize_with = "empty_string_as_none")]
     longitude: Option<f64>,
+    modal: Option<i64>,
 }
 
 async fn do_update(
@@ -207,14 +208,21 @@ async fn new_location(
             let url = app_url(&format!("/location/{newid}"));
             message = Some(Message {
                 r#type: MessageType::Success,
-                msg: format!(r#"Successfully added location <a href="{url}">{newid}</a>"#),
+                msg: format!("Successfully added location {newid}"),
             });
-            headers.append(
-                "HX-Trigger",
-                "reload-locations"
-                    .parse()
-                    .with_context(|| "Failed to parse header")?,
-            );
+            if params.modal.is_some() {
+                headers.append(
+                    "HX-Trigger",
+                    "reload-locations"
+                        .parse()
+                        .with_context(|| "Failed to parse header")?,
+                );
+            } else {
+                headers.append(
+                    "HX-redirect",
+                    url.parse().with_context(|| "Failed to parse header")?,
+                );
+            }
         }
     };
     Ok((
@@ -243,5 +251,5 @@ async fn delete_location(
         .bind(id)
         .execute(&state.dbpool)
         .await?;
-    Ok([("HX-Trigger", "reload-locations")])
+    Ok([("HX-redirect", app_url("/location/list"))])
 }
