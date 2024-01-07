@@ -9,9 +9,9 @@ pub enum Error {
     #[error("Authentication error")]
     PasswordHashFailure(#[from] password_hash::errors::Error),
     #[error("Database error")]
-    DatabaseError(#[from] sqlx::Error),
+    Database(#[from] sqlx::Error),
     #[error("Other error")]
-    OtherError(#[from] anyhow::Error),
+    Other(#[from] anyhow::Error),
     #[error("Redirect to another url")]
     Unauthorized(String),
     #[error("Not Found")]
