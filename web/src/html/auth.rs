@@ -64,7 +64,6 @@ async fn do_login(
     State(state): State<AppState>,
     Form(creds): Form<Credentials>,
 ) -> impl IntoResponse {
-    let key = key;
     let res = match auth.authenticate(creds.clone()).await {
         Ok(authenticated) => match authenticated {
             Some(user) => match auth.login(&user).await {

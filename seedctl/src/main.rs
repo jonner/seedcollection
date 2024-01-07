@@ -227,7 +227,8 @@ async fn main() -> Result<()> {
                 }
                 println!();
                 let (builder, nitems) = collectioninfo.construct_table(full)?;
-                Ok(print_table(builder, nitems))
+                print_table(builder, nitems);
+                Ok(())
             }
         },
         Commands::Location { command } => match command {
@@ -333,7 +334,8 @@ async fn main() -> Result<()> {
             SampleCommands::List { full } => {
                 let samples = Sample::fetch_all(None, &dbpool).await?;
                 let (builder, nitems) = samples.construct_table(full)?;
-                Ok(print_table(builder, nitems))
+                print_table(builder, nitems);
+                Ok(())
             }
             SampleCommands::Add {
                 taxon,
