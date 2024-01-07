@@ -98,37 +98,40 @@ async fn insert_collection(
     State(state): State<AppState>,
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let (request, message) = match do_insert(user, &params, &state).await {
-        Err(e) => (
-            Some(&params),
-            Message {
-                r#type: MessageType::Error,
-                msg: format!("Failed to save collection: {}", e),
-            },
-        ),
+    match do_insert(user, &params, &state).await {
+        Err(e) => Ok(RenderHtml(
+            key,
+            state.tmpl.clone(),
+            context!( message => Message {
+                    r#type: MessageType::Error,
+                    msg: format!("Failed to save collection: {}", e),
+                },
+                request => params),
+        )
+        .into_response()),
         Ok(result) => {
             let id = result.last_insert_rowid();
             let collectionurl = app_url(&format!("/collection/{}", id));
-            (
-                None,
-                Message {
-                    r#type: MessageType::Success,
-                    msg: format!(
-                        r#"Added new collection <a href="{}">{}: {}</a> to the database"#,
-                        collectionurl, id, params.name
-                    ),
-                },
-            )
-        }
-    };
 
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!( message => message,
-            request => request),
-    )
-    .into_response())
+            Ok((
+                [("HX-Redirect", collectionurl)],
+                RenderHtml(
+                    key,
+                    state.tmpl.clone(),
+                    context!( message =>
+                    Message {
+                        r#type: MessageType::Success,
+                        msg: format!(
+                            r#"Added new collection {}: {} to the database"#,
+                            id, params.name
+                            )
+                    },
+                    ),
+                ),
+            )
+                .into_response())
+        }
+    }
 }
 
 async fn show_collection(
@@ -236,10 +239,11 @@ async fn delete_collection(
         Err(e) => e.to_string(),
         Ok(res) if (res.rows_affected() == 0) => "No collection found".to_string(),
         Ok(_) => {
-            return Ok(
-                RenderHtml(key, state.tmpl.clone(), context!(deleted => true, id => id))
-                    .into_response(),
+            return Ok((
+                [("HX-Redirect", app_url("/collection/list"))],
+                RenderHtml(key, state.tmpl.clone(), context!(deleted => true, id => id)),
             )
+                .into_response())
         }
     };
     Ok(RenderHtml(
