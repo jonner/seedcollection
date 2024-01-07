@@ -235,48 +235,6 @@
 </form>
 {%- endmacro %}
 
-{% macro collection_form(id, collection=none, message=none, request=none) -%}
-<form 
-{% if collection %}
-hx-put="{{ ("/collection/" ~ collection.id) | app_url }}"
-{% else %}
-hx-post="{{ "/collection/new" | app_url }}"
-{% endif %}
- hx-swap="outerHTML" id="{{ id }}">
-    {{ show_message(message) }}
-    <div class="row px-3 mb-3">
-        <label class="form-label" for="CollectionNameInput">Name</label>
-        <input id="CollectionNameInput"
-               form="{{ id }}"
-               class="form-control"
-               type="text"
-               value="{{ request.name or collection.name or "" }}"
-               name="name">
-    </div>
-    <div class="row px-3 mb-3">
-        <label class="form-label" for="CollectionDescInput">Description</label>
-        <textarea id="CollectionDescInput"
-                  form="{{ id }}"
-                  class="form-control"
-                  name="description">{{ request.description or collection.description or ""}}</textarea>
-    </div>
-    <div class="row px-3 mb-3">
-        <button class="btn btn-primary"
-                type="submit">{% if collection %}Update{% else %}Add{% endif %}</button>
-    </div>
-    {% if collection %}
-    <div class="row px-3 mb-3">
-        <button type="submit"
-                class="btn btn-danger"
-                hx-delete="{{ ("/collection/" ~ collection.id) | app_url }}"
-                hx-confirm="Are you sure you want to delete collection {{ collection.id }}?"
-                hx-target="closest form"
-                >Delete</button>
-    </div>
-    {% endif %}
-</form>
-{%- endmacro %}
-
 
 {% macro sample_item(sample) -%}
 <div class="d-flex align-items-center flex-row mb-1 sample-item">
@@ -336,34 +294,4 @@ hx-post="{{ "/collection/new" | app_url }}"
         {% endif %}
     </div>
     {% endfor %}
-{%- endmacro %}
-
-{% macro collection_list(filter=false) -%}
-    <div class="mb-3" id="collection-list">
-        {% for collection in collections %}
-        <div class="d-flex flex-row mb-1">
-            <div class="fs-3 align-middle p-1 text-end flex-shrink-0">
-                <a class="badge text-bg-light font-monospace"
-                   href="{{ ("/collection/" ~ collection.id) | app_url}}">C{{ collection.id | idfmt }}</a>
-            </div>
-            <div class="d-flex flex-column p-1">
-                <div>{{ collection.name }}
-                </div>
-                <div class="text-secondary">
-                    <div class="d-flex flex-row flex-wrap column-gap-3">
-                        {% if collection.description %}<div class="fst-italic">{{ collection.description | truncate }}</div>{% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% else %}
-        <div class="alert alert-info">
-            {% if filter %}
-            No collections match your search
-            {% else %}
-            No collections exist yet. Add one to get started.
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
 {%- endmacro %}

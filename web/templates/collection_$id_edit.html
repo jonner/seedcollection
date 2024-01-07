@@ -1,11 +1,7 @@
-{% from "_macros.html" import collection_form, collection_display %}
+{% from "_collection_macros.html" import collection_form %}
 {% extends "root.html" %}
 {% block title %}Collection {{ collection.id }}{% endblock %}
 {% block content %}
 <h2>Collection Details</h2>
-{% if user %}
 {{ collection_form("collection-form", collection, messages, request) }}
-{% else %}
-{{ collection_display(collection) }}
-{% endif %}
 {% endblock %}

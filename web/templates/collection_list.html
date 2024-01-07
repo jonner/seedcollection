@@ -1,5 +1,5 @@
 {% extends "root.html" %}
-{% from "_macros.html" import icon, collection_list %}
+{% from "_collection_macros.html" import icon, collection_list %}
 {% block title %}Collections{% endblock %}
 {% block content %}
 <h2><span class="me-2">{{ icon("collection") }}</span>Collections <a class="ms-2" href="{{ "/collection/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
