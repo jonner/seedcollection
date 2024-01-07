@@ -176,22 +176,22 @@ pub fn filter_by(
 ) -> Option<DynFilterPart> {
     let mut f = FilterBuilder::new(FilterOp::And);
     if let Some(id) = id {
-        f = f.add(Arc::new(FilterField::Id(id)));
+        f = f.push(Arc::new(FilterField::Id(id)));
     }
     if let Some(rank) = rank {
-        f = f.add(Arc::new(FilterField::Rank(rank)));
+        f = f.push(Arc::new(FilterField::Rank(rank)));
     }
     if let Some(genus) = genus {
-        f = f.add(Arc::new(FilterField::Genus(genus)));
+        f = f.push(Arc::new(FilterField::Genus(genus)));
     }
     if let Some(species) = species {
-        f = f.add(Arc::new(FilterField::Species(species)));
+        f = f.push(Arc::new(FilterField::Species(species)));
     }
     if let Some(s) = any {
-        f = f.add(any_filter(&s));
+        f = f.push(any_filter(&s));
     }
     if let Some(val) = minnesota {
-        f = f.add(Arc::new(FilterField::Minnesota(val)));
+        f = f.push(Arc::new(FilterField::Minnesota(val)));
     }
 
     Some(f.build())
@@ -199,10 +199,10 @@ pub fn filter_by(
 
 pub fn any_filter(s: &str) -> DynFilterPart {
     FilterBuilder::new(FilterOp::Or)
-        .add(Arc::new(FilterField::Name1(s.to_string())))
-        .add(Arc::new(FilterField::Name2(s.to_string())))
-        .add(Arc::new(FilterField::Name3(s.to_string())))
-        .add(Arc::new(FilterField::Vernacular(s.to_string())))
+        .push(Arc::new(FilterField::Name1(s.to_string())))
+        .push(Arc::new(FilterField::Name2(s.to_string())))
+        .push(Arc::new(FilterField::Name3(s.to_string())))
+        .push(Arc::new(FilterField::Vernacular(s.to_string())))
         .build()
 }
 

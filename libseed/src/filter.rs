@@ -18,7 +18,7 @@ impl FilterBuilder {
         }
     }
 
-    pub fn add(mut self, filter: DynFilterPart) -> Self {
+    pub fn push(mut self, filter: DynFilterPart) -> Self {
         self.top.add_filter(filter);
         self
     }

@@ -101,9 +101,9 @@ impl Sample {
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> anyhow::Result<Vec<Sample>> {
-        let mut fbuilder = FilterBuilder::new(FilterOp::And).add(Arc::new(Filter::User(userid)));
+        let mut fbuilder = FilterBuilder::new(FilterOp::And).push(Arc::new(Filter::User(userid)));
         if let Some(f) = filter {
-            fbuilder = fbuilder.add(f);
+            fbuilder = fbuilder.push(f);
         }
         let newfilter = fbuilder.build();
         let mut builder = Self::build_query(Some(newfilter));

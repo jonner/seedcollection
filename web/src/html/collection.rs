@@ -73,18 +73,18 @@ async fn filter_collections(
     Query(params): Query<FilterParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let namefilter = FilterBuilder::new(FilterOp::Or)
-        .add(Arc::new(collection::Filter::Name(
+        .push(Arc::new(collection::Filter::Name(
             Cmp::Like,
             params.fragment.clone(),
         )))
-        .add(Arc::new(collection::Filter::Description(
+        .push(Arc::new(collection::Filter::Description(
             Cmp::Like,
             params.fragment.clone(),
         )))
         .build();
     let filter = FilterBuilder::new(FilterOp::And)
-        .add(namefilter)
-        .add(Arc::new(collection::Filter::User(user.id)))
+        .push(namefilter)
+        .push(Arc::new(collection::Filter::User(user.id)))
         .build();
 
     let collections = Collection::fetch_all(Some(filter), &state.dbpool).await?;
@@ -178,8 +178,8 @@ async fn show_collection(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let fb = FilterBuilder::new(FilterOp::And)
-        .add(Arc::new(collection::Filter::Id(id)))
-        .add(Arc::new(collection::Filter::User(user.id)));
+        .push(Arc::new(collection::Filter::Id(id)))
+        .push(Arc::new(collection::Filter::User(user.id)));
     let mut collections = Collection::fetch_all(Some(fb.build()), &state.dbpool).await?;
     let Some(mut c) = collections.pop() else {
         return Err(Error::NotFound(
@@ -222,8 +222,8 @@ async fn modify_collection(
     Form(params): Form<CollectionParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let fb = FilterBuilder::new(FilterOp::And)
-        .add(Arc::new(collection::Filter::Id(id)))
-        .add(Arc::new(collection::Filter::User(user.id)));
+        .push(Arc::new(collection::Filter::Id(id)))
+        .push(Arc::new(collection::Filter::User(user.id)));
     let collections = Collection::fetch_all(Some(fb.build()), &state.dbpool).await?;
     if collections.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());

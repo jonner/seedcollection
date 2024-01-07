@@ -271,18 +271,18 @@ async fn filter_locations(
     Query(params): Query<FilterParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let namefilter = FilterBuilder::new(FilterOp::Or)
-        .add(Arc::new(location::Filter::Name(
+        .push(Arc::new(location::Filter::Name(
             Cmp::Like,
             params.fragment.clone(),
         )))
-        .add(Arc::new(location::Filter::Description(
+        .push(Arc::new(location::Filter::Description(
             Cmp::Like,
             params.fragment.clone(),
         )))
         .build();
     let filter = FilterBuilder::new(FilterOp::And)
-        .add(namefilter)
-        .add(Arc::new(location::Filter::User(user.id)))
+        .push(namefilter)
+        .push(Arc::new(location::Filter::User(user.id)))
         .build();
     let locations = Location::fetch_all(Some(filter), &state.dbpool).await?;
     Ok(RenderHtml(
