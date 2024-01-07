@@ -1,5 +1,5 @@
 use crate::{
-    filter::{DynFilterPart, FilterPart},
+    filter::{Cmp, DynFilterPart, FilterPart},
     sample::Sample,
 };
 use serde::{Deserialize, Serialize};
@@ -38,6 +38,8 @@ impl FilterPart for AssignedSampleFilter {
 pub enum Filter {
     Id(i64),
     User(i64),
+    Name(Cmp, String),
+    Description(Cmp, String),
 }
 
 impl FilterPart for Filter {
@@ -45,6 +47,20 @@ impl FilterPart for Filter {
         match self {
             Self::Id(id) => _ = builder.push(" C.id = ").push_bind(*id),
             Self::User(id) => _ = builder.push(" userid = ").push_bind(*id),
+            Self::Name(cmp, frag) => {
+                let s = match cmp {
+                    Cmp::Like => format!("%{frag}%"),
+                    _ => frag.to_string(),
+                };
+                builder.push(" C.name ").push(cmp).push_bind(s);
+            }
+            Self::Description(cmp, frag) => {
+                let s = match cmp {
+                    Cmp::Like => format!("%{frag}%"),
+                    _ => frag.to_string(),
+                };
+                builder.push(" C.description ").push(cmp).push_bind(s);
+            }
         }
     }
 }

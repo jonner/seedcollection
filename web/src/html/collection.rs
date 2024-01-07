@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get},
@@ -17,7 +17,7 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::{self, Collection},
     empty_string_as_none,
-    filter::{FilterBuilder, FilterOp},
+    filter::{Cmp, FilterBuilder, FilterOp},
     sample::{self, Sample},
 };
 use minijinja::context;
@@ -30,6 +30,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(new_collection).post(insert_collection))
         .route("/list", get(list_collections))
+        .route("/filter", get(filter_collections))
         .route(
             "/:id",
             get(show_collection)
@@ -51,6 +52,42 @@ async fn list_collections(
         &state.dbpool,
     )
     .await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => user,
+                 collections => collections),
+    )
+    .into_response())
+}
+
+#[derive(Deserialize)]
+struct FilterParams {
+    fragment: String,
+}
+
+async fn filter_collections(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Query(params): Query<FilterParams>,
+) -> Result<impl IntoResponse, error::Error> {
+    let namefilter = FilterBuilder::new(FilterOp::Or)
+        .add(Arc::new(collection::Filter::Name(
+            Cmp::Like,
+            params.fragment.clone(),
+        )))
+        .add(Arc::new(collection::Filter::Description(
+            Cmp::Like,
+            params.fragment.clone(),
+        )))
+        .build();
+    let filter = FilterBuilder::new(FilterOp::And)
+        .add(namefilter)
+        .add(Arc::new(collection::Filter::User(user.id)))
+        .build();
+
+    let collections = Collection::fetch_all(Some(filter), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
