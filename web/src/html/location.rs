@@ -1,14 +1,18 @@
 use crate::{app_url, auth::SqliteUser, Message, MessageType, TemplateKey};
 use anyhow::{anyhow, Context};
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::HeaderMap,
     response::IntoResponse,
     routing::get,
     Form, Router,
 };
 use axum_template::RenderHtml;
-use libseed::{empty_string_as_none, filter::Cmp};
+use libseed::{
+    empty_string_as_none,
+    filter::{Cmp, FilterBuilder, FilterOp},
+    location,
+};
 use libseed::{
     location::Location,
     sample::{Filter, Sample},
@@ -23,6 +27,7 @@ use crate::{error, state::AppState};
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(add_location).post(new_location))
+        .route("/filter", get(filter_locations))
         .route("/new/modal", get(add_location))
         .route(
             "/:id",
@@ -252,4 +257,38 @@ async fn delete_location(
         .execute(&state.dbpool)
         .await?;
     Ok([("HX-redirect", app_url("/location/list"))])
+}
+
+#[derive(Deserialize)]
+struct FilterParams {
+    fragment: String,
+}
+
+async fn filter_locations(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Query(params): Query<FilterParams>,
+) -> Result<impl IntoResponse, error::Error> {
+    let namefilter = FilterBuilder::new(FilterOp::Or)
+        .add(Arc::new(location::Filter::Name(
+            Cmp::Like,
+            params.fragment.clone(),
+        )))
+        .add(Arc::new(location::Filter::Description(
+            Cmp::Like,
+            params.fragment.clone(),
+        )))
+        .build();
+    let filter = FilterBuilder::new(FilterOp::And)
+        .add(namefilter)
+        .add(Arc::new(location::Filter::User(user.id)))
+        .build();
+    let locations = Location::fetch_all(Some(filter), &state.dbpool).await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => user, locations => locations),
+    )
+    .into_response())
 }

@@ -1,3 +1,4 @@
+use crate::filter::Cmp;
 use crate::filter::DynFilterPart;
 use serde::Deserialize;
 use serde::Serialize;
@@ -27,13 +28,29 @@ pub struct Location {
 pub enum Filter {
     Id(i64),
     User(i64),
+    Name(Cmp, String),
+    Description(Cmp, String),
 }
 
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(id) => _ = builder.push(" L.locid = ").push_bind(*id),
-            Filter::User(id) => _ = builder.push(" L.userid = ").push_bind(*id),
+            Self::User(id) => _ = builder.push(" L.userid = ").push_bind(*id),
+            Self::Name(cmp, frag) => {
+                let s = match cmp {
+                    Cmp::Like => format!("%{frag}%"),
+                    _ => frag.to_string(),
+                };
+                builder.push(" L.name ").push(cmp).push_bind(s);
+            }
+            Filter::Description(cmp, frag) => {
+                let s = match cmp {
+                    Cmp::Like => format!("%{frag}%"),
+                    _ => frag.to_string(),
+                };
+                builder.push(" L.description ").push(cmp).push_bind(s);
+            }
         }
     }
 }
