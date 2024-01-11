@@ -186,8 +186,8 @@ async fn main() -> Result<()> {
     let session_store = SqliteStore::new(shared_state.dbpool.clone());
     session_store.migrate().await?;
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(false)
-        .with_expiry(Expiry::OnInactivity(Duration::days(1)));
+        .with_secure(true)
+        .with_expiry(Expiry::OnInactivity(Duration::days(7)));
 
     let auth_backend = auth::SqliteAuthBackend::new(shared_state.dbpool.clone());
     let auth_service = ServiceBuilder::new()
