@@ -1,0 +1,5 @@
+dev:
+  database: seedcollection.sqlite.bak
+prod:
+  database: seedcollection.sqlite
+

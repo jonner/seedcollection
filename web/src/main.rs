@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use axum::{
     async_trait,
     error_handling::HandleErrorLayer,
@@ -23,7 +23,7 @@ use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
-use tracing::{debug, info};
+use tracing::info;
 use tracing_subscriber::filter::EnvFilter;
 
 mod api;
@@ -85,8 +85,14 @@ where
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub struct Cli {
-    #[arg(short, long, default_value = "seedcollection.sqlite")]
-    pub database: String,
+    #[arg(long, required(true))]
+    pub env: String,
+    #[arg(
+        long,
+        exclusive(true),
+        help = "shows all valid values for the --env option"
+    )]
+    pub list_envs: bool,
     #[arg(short, long, default_value = "localhost")]
     pub listen: String,
     #[arg(short, long, default_value = "8080")]
@@ -151,11 +157,33 @@ struct Ports {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let configyaml = tokio::fs::read_to_string("config.yaml").await?;
+    let config: HashMap<String, HashMap<String, String>> = serde_yaml::from_str(&configyaml)?;
+    let args = Cli::parse();
+
+    if args.list_envs {
+        for (key, _) in &config {
+            println!("{key}");
+        }
+    }
+
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_env("SEEDWEB_LOG"))
         .init();
-    let args = Cli::parse();
-    debug!("using database '{}'", args.database);
+
+    let env = config.get(&args.env).ok_or_else(|| {
+        anyhow!(
+            "Unknown environment '{}'. Possible values: {}",
+            &args.env,
+            config.keys().cloned().collect::<Vec<_>>().join(", ")
+        )
+    })?;
+    info!("Using environment '{}'", args.env);
+
+    let database = env
+        .get("database")
+        .ok_or_else(|| anyhow!("No database specified in environment {}", args.env))?;
+    info!("using database {database}");
 
     let ports = Ports {
         http: args.port,
@@ -178,7 +206,7 @@ async fn main() -> Result<()> {
     jinja.add_filter("truncate", truncate_text);
     jinja.add_filter("idfmt", format_id_number);
 
-    let shared_state = Arc::new(SharedState::new(args.database, Engine::from(jinja)).await?);
+    let shared_state = Arc::new(SharedState::new(database.to_string(), Engine::from(jinja)).await?);
     sqlx::migrate!("../db/migrations")
         .run(&shared_state.dbpool)
         .await?;
