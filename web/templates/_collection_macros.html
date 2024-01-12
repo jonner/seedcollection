@@ -1,4 +1,5 @@
-{% from "_macros.html" import show_message %}
+{% from "_macros.html" import show_message, icon %}
+{% from "_sample_macros.html" import sample_item %}
 
 {% macro collection_form(id, collection=none, message=none, request=none) -%}
 <form 
@@ -71,4 +72,24 @@ hx-post="{{ "/collection/new" | app_url }}"
         </div>
         {% endfor %}
     </div>
+{%- endmacro %}
+
+{% macro collection_sample_list(samples) -%}
+{% for csample in collection.samples %}
+<div class="d-flex align-items-center collection-sample-row">
+    {{ sample_item(csample.sample) }}
+    <div class="ms-3 flex-shrink-1 sample-remove">
+        <button type="button"
+                class="btn btn-outline-danger"
+                hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ csample.id) | app_url }}"
+                hx-target="closest .collection-sample-row"
+                hx-swap="outerHTML"
+                hx-confirm="Are you sure you want to remove this sample from the collection?">{{ icon("x") }}</button>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    No samples are a part of this collection yet. Add one to get started.
+</div>
+{% endfor %}
 {%- endmacro %}

@@ -45,7 +45,7 @@ async fn show_collection(
     Path(id): Path<i64>,
 ) -> Result<Json<Collection>, error::Error> {
     let mut collection = Collection::fetch(id, &state.dbpool).await?;
-    collection.fetch_samples(&state.dbpool).await?;
+    collection.fetch_samples(None, &state.dbpool).await?;
     Ok(Json(collection))
 }
 

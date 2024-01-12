@@ -1,5 +1,5 @@
 use crate::{
-    filter::{Cmp, DynFilterPart, FilterPart},
+    filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
     sample::Sample,
 };
 use serde::{Deserialize, Serialize};
@@ -96,12 +96,18 @@ impl Collection {
             .map_err(|e| e.into())
     }
 
-    pub async fn fetch_samples(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-        self.samples = AssignedSample::fetch_all(
-            Some(Arc::new(AssignedSampleFilter::Collection(self.id))),
-            pool,
-        )
-        .await?;
+    pub async fn fetch_samples(
+        &mut self,
+        filter: Option<DynFilterPart>,
+        pool: &Pool<Sqlite>,
+    ) -> anyhow::Result<()> {
+        let mut fbuilder = FilterBuilder::new(FilterOp::And)
+            .push(Arc::new(AssignedSampleFilter::Collection(self.id)));
+        if let Some(filter) = filter {
+            fbuilder = fbuilder.push(filter);
+        }
+
+        self.samples = AssignedSample::fetch_all(Some(fbuilder.build()), pool).await?;
         Ok(())
     }
 }
@@ -126,7 +132,7 @@ impl AssignedSample {
 
             L.locid, L.name as locname, T.complete_name,
 
-            U.id as userid, U.username
+            S.userid, U.username
 
             FROM sc_collection_samples CS
             INNER JOIN taxonomic_units T ON T.tsn=S.tsn

@@ -38,6 +38,7 @@ pub fn router() -> Router<AppState> {
                 .delete(delete_collection),
         )
         .route("/:id/edit", get(show_collection))
+        .route("/:id/filter", get(filter_collection_samples))
         .route("/:id/add", get(show_add_sample).post(add_sample))
         .route("/:id/sample/:sampleid", delete(remove_sample))
 }
@@ -186,7 +187,7 @@ async fn show_collection(
             "That collection does not exist".to_string(),
         ));
     };
-    c.fetch_samples(&state.dbpool).await?;
+    c.fetch_samples(None, &state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
@@ -425,4 +426,33 @@ async fn remove_sample(
         .execute(&state.dbpool)
         .await?;
     Ok(())
+}
+
+async fn filter_collection_samples(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Query(params): Query<FilterParams>,
+) -> Result<impl IntoResponse, error::Error> {
+    let fragment = params.fragment.trim();
+    let mut fbuilder =
+        FilterBuilder::new(FilterOp::And).push(Arc::new(sample::Filter::User(user.id)));
+    if !fragment.is_empty() {
+        fbuilder = fbuilder.push(Arc::new(sample::Filter::TaxonNameLike(
+            params.fragment.clone(),
+        )));
+    }
+
+    let mut collection = Collection::fetch(id, &state.dbpool).await?;
+    collection
+        .fetch_samples(Some(fbuilder.build()), &state.dbpool)
+        .await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => user,
+                 collection => collection),
+    )
+    .into_response())
 }

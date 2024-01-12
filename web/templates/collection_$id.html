@@ -1,28 +1,23 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon %}
-{% from "_sample_macros.html" import sample_item %}
+{% from "_collection_macros.html" import collection_sample_list %}
 {% block title %}{{ collection.name or "Collection Details" }}{% endblock %}
 {% block content %}
 <h2>{{ self.title() }} <a href="{{ ("/collection/" ~ collection.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ collection.description }}</p>
 <h3>Samples in this collection <a class="ms-2" href="{{ ("/collection/" ~ collection.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
+    <div class="mb-3">
+    <form
+           hx-target="#collection-sample-list"
+           hx-get="{{ ("/collection/" ~ collection.id ~ "/filter") | app_url }}"
+           hx-trigger="submit, input changed delay:500ms from:input">
+    <input type="text"
+           class="form-control"
+           placeholder="Filter list..."
+           name="fragment">
+    </form>
+    </div>
 <div id="collection-sample-list">
-    {% for csample in collection.samples %}
-    <div class="d-flex align-items-center collection-sample-row">
-        {{ sample_item(csample.sample) }}
-        <div class="ms-3 flex-shrink-1 sample-remove">
-            <button type="button"
-                    class="btn btn-outline-danger"
-                    hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ csample.id) | app_url }}"
-                    hx-target="closest .collection-sample-row"
-                    hx-swap="outerHTML"
-                    hx-confirm="Are you sure you want to remove this sample from the collection?">{{ icon("x") }}</button>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info">
-        No samples are a part of this collection yet. Add one to get started.
-    </div>
-    {% endfor %}
+    {{ collection_sample_list(collection.samples) }}
 </div>
 {% endblock %}
