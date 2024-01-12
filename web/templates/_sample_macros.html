@@ -129,21 +129,16 @@
 
 
 {% macro sample_item(sample) -%}
-<div class="d-flex rounded p-1 align-items-center flex-row mb-1 sample-item{% if sample.quantity == 0%} bg-body-tertiary opacity-25{% endif %}">
-    <div class="fs-4 align-middle p-1 text-end flex-shrink-0">
-        <a class="badge text-bg-light font-monospace"
+<div class="d-flex rounded align-items-baseline flex-grow-1 flex-row mb-1 sample-item{% if sample.quantity == 0%} bg-body-secondary opacity-50{% endif %}">
+    <div class="p-1 m-1 text-end bg-light text-primary flex-shrink-0 rounded">
+        <a class="fw-bold font-monospace"
             href="{{ ("/sample/" ~ sample.id) | app_url}}">S{{ sample.id | idfmt }}</a>
     </div>
-    <div class="flex-column flex-grow-1 p-1">
-        <div>{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}
-        </div>
-        <div class="text-body-tertiary">
-            <div class="d-flex flex-row flex-wrap column-gap-3">
-                {% if sample.year %}<div>{{ sample.year }}</div>{% endif %}
-                <div>{{ sample.location.name | truncate }}</div>
-                {% if sample.notes %}<div class="fst-italic">{{ sample.notes | truncate }}</div>{% endif %}
-            </div>
-        </div>
+    <div class="flex-grow-1 flex-row flex-wrap">
+        <span class="fw-bold">{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}</span>
+        <span class="text-body-tertiary mx-1">{{ sample.location.name | truncate(30) }}</span>
+        {% if sample.year %}<span class="text-body-tertiary mx-1">{{ sample.year }}</span>{% endif %}
+        {% if sample.notes %}<span class="text-body-tertiary fst-italic mx-1">{{ sample.notes | truncate(30) }}</span>{% endif %}
     </div>
 </div>
 {%- endmacro %}
