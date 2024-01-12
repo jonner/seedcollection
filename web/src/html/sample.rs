@@ -249,13 +249,14 @@ async fn update_sample(
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
-    let (request, message) = match do_update(id, &params, &state).await {
+    let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(params),
             Message {
                 r#type: MessageType::Error,
                 msg: format!("Failed to save sample: {}", e),
             },
+            None,
         ),
         Ok(_) => (
             None,
@@ -263,20 +264,24 @@ async fn update_sample(
                 r#type: MessageType::Success,
                 msg: format!("Updated sample {}", id),
             },
+            Some([("HX-Redirect", app_url(&format!("/sample/{id}")))]),
         ),
     };
 
     let sample = Sample::fetch(id, &state.dbpool).await?;
 
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(locations => locations,
+    Ok((
+        headers,
+        RenderHtml(
+            key,
+            state.tmpl.clone(),
+            context!(locations => locations,
                      sample => sample,
                      message => message,
                      request => request),
+        ),
     )
-    .into_response())
+        .into_response())
 }
 
 async fn delete_sample(

@@ -132,13 +132,14 @@ async fn update_location(
     if loc.userid != Some(user.id) {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
-    let (request, message) = match do_update(id, &params, &state).await {
+    let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(&params),
             Message {
                 r#type: MessageType::Error,
                 msg: e.to_string(),
             },
+            None,
         ),
         Ok(_) => (
             None,
@@ -146,6 +147,7 @@ async fn update_location(
                 r#type: MessageType::Success,
                 msg: "Successfully updated location".to_string(),
             },
+            Some([("HX-Redirect", app_url(&format!("/location/{id}")))]),
         ),
     };
     let samples = Sample::fetch_all_user(
@@ -156,16 +158,19 @@ async fn update_location(
     .await?;
     let loc = Location::fetch(id, &state.dbpool).await?;
 
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(location => loc,
-         message => message,
-         request => request,
-         samples => samples
-        ),
-    )
-    .into_response())
+    Ok((
+        headers,
+        RenderHtml(
+            key,
+            state.tmpl.clone(),
+            context!(location => loc,
+             message => message,
+             request => request,
+             samples => samples
+            ),
+        )
+        .into_response(),
+    ))
 }
 
 async fn do_insert(

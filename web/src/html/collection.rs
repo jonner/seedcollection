@@ -228,13 +228,14 @@ async fn modify_collection(
     if collections.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());
     };
-    let (request, message) = match do_update(id, &params, &state).await {
+    let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(&params),
             Message {
                 r#type: MessageType::Error,
                 msg: e.to_string(),
             },
+            None,
         ),
         Ok(_) => (
             None,
@@ -242,18 +243,22 @@ async fn modify_collection(
                 r#type: MessageType::Success,
                 msg: "Successfully updated collection".to_string(),
             },
+            Some([("HX-Redirect", app_url(&format!("/collection/{id}")))]),
         ),
     };
     let c = Collection::fetch(id, &state.dbpool).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(collection => c,
-         message => message,
-         request => request,
+    Ok((
+        headers,
+        RenderHtml(
+            key,
+            state.tmpl.clone(),
+            context!(collection => c,
+             message => message,
+             request => request,
+            ),
         ),
     )
-    .into_response())
+        .into_response())
 }
 
 async fn delete_collection(
