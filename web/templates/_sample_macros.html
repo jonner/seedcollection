@@ -1,4 +1,4 @@
-{% from "_macros.html" import show_message %}
+{% from "_macros.html" import icon, show_message %}
 
 {% macro month_options(selected) -%}
 <option value="">Choose a month...</option>
@@ -136,9 +136,9 @@
     </div>
     <div class="flex-grow-1 flex-row flex-wrap">
         <span class="fw-bold">{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}</span>
-        <span class="text-body-tertiary mx-1">{{ sample.location.name | truncate(30) }}</span>
-        {% if sample.year %}<span class="text-body-tertiary mx-1">{{ sample.year }}</span>{% endif %}
-        {% if sample.notes %}<span class="text-body-tertiary fst-italic mx-1">{{ sample.notes | truncate(30) }}</span>{% endif %}
+        <span class="text-body-tertiary ms-2">{{ icon("geo-alt") }} {{ sample.location.name | truncate(30) }}</span>
+        {% if sample.year %}<span class="text-body-tertiary ms-2">{{ icon("calendar3") }} {{ sample.year }}</span>{% endif %}
+        {% if sample.notes %}<span class="text-body-tertiary fst-italic ms-2">{{ icon("journal-text") }} {{ sample.notes | truncate(30) }}</span>{% endif %}
     </div>
 </div>
 {%- endmacro %}
