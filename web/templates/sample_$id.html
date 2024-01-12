@@ -22,7 +22,15 @@
 <h5>Collection Date</h5>
 <div class="mb-3 px-2">{% if sample.month %}{{ sample.month }}/{% endif %}{{ sample.year }}</div>
 <h5>Quantity</h5>
-<div class="mb-3 px-2">{{ sample.quantity }}</div>
+<div class="mb-3 px-2">
+    {% if sample.quantity is none %}
+    Unknown
+    {% elif sample.quantity == 0 %}
+    <div class="text-danger">0</div>
+    {% else %}
+    {{sample.quantity }}
+    {% endif %}
+</div>
 <h5>Certainty</h5>
 <div class="mb-3 px-2">
     <span

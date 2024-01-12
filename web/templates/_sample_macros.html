@@ -129,15 +129,15 @@
 
 
 {% macro sample_item(sample) -%}
-<div class="d-flex align-items-center flex-row mb-1 sample-item">
-    <div class="fs-3 align-middle p-1 text-end flex-shrink-0">
+<div class="d-flex rounded p-1 align-items-center flex-row mb-1 sample-item{% if sample.quantity == 0%} bg-body-tertiary opacity-25{% endif %}">
+    <div class="fs-4 align-middle p-1 text-end flex-shrink-0">
         <a class="badge text-bg-light font-monospace"
             href="{{ ("/sample/" ~ sample.id) | app_url}}">S{{ sample.id | idfmt }}</a>
     </div>
     <div class="flex-column flex-grow-1 p-1">
         <div>{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}
         </div>
-        <div class="text-secondary">
+        <div class="text-body-tertiary">
             <div class="d-flex flex-row flex-wrap column-gap-3">
                 {% if sample.year %}<div>{{ sample.year }}</div>{% endif %}
                 <div>{{ sample.location.name | truncate }}</div>
