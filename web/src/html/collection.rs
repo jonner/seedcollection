@@ -18,6 +18,7 @@ use libseed::{
     collection::{self, Collection},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
+    location,
     sample::{self, Sample},
 };
 use minijinja::context;
@@ -439,9 +440,20 @@ async fn filter_collection_samples(
     let mut fbuilder =
         FilterBuilder::new(FilterOp::And).push(Arc::new(sample::Filter::User(user.id)));
     if !fragment.is_empty() {
-        fbuilder = fbuilder.push(Arc::new(sample::Filter::TaxonNameLike(
-            params.fragment.clone(),
-        )));
+        let subfilter = FilterBuilder::new(FilterOp::Or)
+            .push(Arc::new(sample::Filter::TaxonNameLike(
+                params.fragment.clone(),
+            )))
+            .push(Arc::new(location::Filter::Name(
+                Cmp::Like,
+                params.fragment.clone(),
+            )))
+            .push(Arc::new(sample::Filter::Notes(
+                Cmp::Like,
+                params.fragment.clone(),
+            )))
+            .build();
+        fbuilder = fbuilder.push(subfilter);
     }
 
     let mut collection = Collection::fetch(id, &state.dbpool).await?;

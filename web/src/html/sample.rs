@@ -11,9 +11,9 @@ use axum_template::RenderHtml;
 use libseed::{
     collection::Collection,
     empty_string_as_none,
-    filter::DynFilterPart,
-    location::Location,
-    sample::{Certainty, Filter, Sample},
+    filter::{Cmp, FilterBuilder, FilterOp},
+    location::{self, Location},
+    sample::{self, Certainty, Sample},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -44,11 +44,20 @@ async fn filter_samples(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let filter: Option<DynFilterPart> = match fragment.is_empty() {
-        true => None,
-        false => Some(Arc::new(Filter::TaxonNameLike(fragment))),
+    let mut fbuilder =
+        FilterBuilder::new(FilterOp::And).push(Arc::new(sample::Filter::User(user.id)));
+    if !fragment.is_empty() {
+        let subfilter = FilterBuilder::new(FilterOp::Or)
+            .push(Arc::new(sample::Filter::TaxonNameLike(fragment.clone())))
+            .push(Arc::new(sample::Filter::Notes(Cmp::Like, fragment.clone())))
+            .push(Arc::new(location::Filter::Name(
+                Cmp::Like,
+                fragment.clone(),
+            )))
+            .build();
+        fbuilder = fbuilder.push(subfilter);
     };
-    let samples = Sample::fetch_all_user(user.id, filter, &state.dbpool).await?;
+    let samples = Sample::fetch_all_user(user.id, Some(fbuilder.build()), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),

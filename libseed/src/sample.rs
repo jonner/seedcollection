@@ -36,6 +36,7 @@ pub enum Filter {
     Taxon(Cmp, i64),
     TaxonNameLike(String),
     User(i64),
+    Notes(Cmp, String),
 }
 
 impl FilterPart for Filter {
@@ -68,6 +69,12 @@ impl FilterPart for Filter {
                 }
             }
             Self::User(id) => _ = builder.push("S.userid=").push_bind(*id),
+            Self::Notes(cmp, s) => {
+                _ = builder
+                    .push("S.notes")
+                    .push(cmp)
+                    .push_bind(format!("%{s}%"))
+            }
         };
     }
 }
