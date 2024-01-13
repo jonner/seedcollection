@@ -15,7 +15,7 @@
 <body>
     {% block body %}
         {% block header %}
-        <nav class="navbar {% if environment == "prod" %}bg-success{% else %}text-bg-danger{% endif %} navbar-expand-md px-3" data-bs-theme="dark">
+        <nav class="navbar sticky-lg-top {% if environment == "prod" %}bg-success{% else %}text-bg-danger{% endif %} navbar-expand-md px-md-3" data-bs-theme="dark">
             <div class="container-xxl">
             <a class="navbar-brand" href="{{ "/" | app_url }}">{{ icon("flower2", "body") }} SeedCollection</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,23 +62,23 @@
         </nav>
         {% endblock %}
     {% endblock %}
-    <div id="sc-content" class="container-xxl mt-3 mb-5">
+    <div id="sc-content" class="container-xxl px-md-3 mt-3 mb-5">
     {% block content %}
     {% endblock %}
     </div>
-    <footer id="sc-footer" class="pb-5 text-body-tertiary bg-body-tertiary">
-        <div class="container-xxl">
+    <footer id="sc-footer" class="px-md-3 text-body-tertiary bg-body-tertiary sticky-lg-bottom border-top">
     {% block footer %}
-    <div class="mb-3">
-        <div>This project is made possible by the following data sources:</div>
-        <ul>
-            <li><a href="https://www.itis.gov/index.html">ITIS</a></li>
-            <li><a href="https://www.dnr.state.mn.us/eco/mbs/plant-lists.html">MNTaxa</a></li>
-        </ul>
-    </div>
-    &copy; Jonathon Jongsma
-    {% endblock %}
+    <div class="container-xxl d-flex gap-3">
+        <div class="flex-expand-1 me-auto">
+            This project is made possible by 
+            <a href="https://www.itis.gov/index.html">ITIS</a> and
+            <a href="https://www.dnr.state.mn.us/eco/mbs/plant-lists.html">MNTaxa</a>
         </div>
+        <div>
+            &copy; Jonathon Jongsma
+        </div>
+    </div>
+    {% endblock %}
     </footer>
 </body>
 </html>
