@@ -128,20 +128,21 @@
 {%- endmacro %}
 
 
-{% macro sample_item(sample) -%}
-<div class="d-flex rounded align-items-baseline flex-grow-1 flex-row mb-1 sample-item{% if sample.quantity == 0%} bg-body-secondary opacity-50{% endif %}">
+{% macro sample_item(sample) %}
+<div class="d-flex rounded align-items-baseline flex-grow-1 flex-row mb-1 sample-item">
     <div class="p-1 m-1 text-end bg-light text-primary flex-shrink-0 rounded">
         <a class="fw-bold font-monospace"
             href="{{ ("/sample/" ~ sample.id) | app_url}}">S{{ sample.id | idfmt }}</a>
     </div>
-    <div class="flex-grow-1 flex-row flex-wrap">
+    <div class="flex-grow-1 flex-row flex-wrap{% if sample.quantity == 0%} opacity-50{% endif %}">
         <span class="fw-bold">{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}</span>
         <span class="text-body-tertiary ms-2">{{ icon("geo-alt") }} {{ sample.location.name | truncate(30) }}</span>
         {% if sample.year %}<span class="text-body-tertiary ms-2">{{ icon("calendar3") }} {{ sample.year }}</span>{% endif %}
         {% if sample.notes %}<span class="text-body-tertiary fst-italic ms-2">{{ icon("journal-text") }} {{ sample.notes | truncate(30) }}</span>{% endif %}
     </div>
+    {{ caller() if caller }}
 </div>
-{%- endmacro %}
+{% endmacro %}
 
 
 {% macro sample_list(samples, cssid) -%}
