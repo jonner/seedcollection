@@ -10,7 +10,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
-    routing::{delete, get},
+    routing::get,
     Form, Router,
 };
 use axum_template::RenderHtml;
@@ -19,7 +19,7 @@ use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     location,
-    note::NoteType,
+    note::{Note, NoteType},
     sample::{self, Sample},
 };
 use minijinja::context;
@@ -43,7 +43,10 @@ pub fn router() -> Router<AppState> {
         .route("/:id/edit", get(show_collection))
         .route("/:id/filter", get(filter_collection_samples))
         .route("/:id/add", get(show_add_sample).post(add_sample))
-        .route("/:id/sample/:sampleid", delete(remove_sample))
+        .route(
+            "/:id/sample/:sampleid",
+            get(show_collection_sample).delete(remove_sample),
+        )
         .route(
             "/:id/sample/:sampleid/note/new",
             get(show_add_sample_note).post(add_sample_note),
@@ -510,7 +513,8 @@ struct NoteParams {
     summary: String,
     date: time::Date,
     notetype: NoteType,
-    details: String,
+    #[serde(deserialize_with = "empty_string_as_none")]
+    details: Option<String>,
 }
 
 async fn add_sample_note(
@@ -533,20 +537,52 @@ async fn add_sample_note(
         &state.dbpool,
     )
     .await?;
-    match sqlx::query("INSERT INTO sc_collection_sample_notes (csid, date, kind, summary, details) VALUES (?, ?, ?, ?, ?)")
-        .bind(sampleid)
-        .bind(params.date)
-        .bind(params.notetype)
-        .bind(params.summary)
-        .bind(params.details)
-        .execute(&state.dbpool)
-        .await {
-            Ok(_) => (),
-            Err(_) => todo!(),
-        }
+    let note = Note {
+        id: -1,
+        csid: sampleid,
+        date: params.date,
+        kind: params.notetype,
+        summary: params.summary,
+        details: params.details,
+    };
+    match note.insert(&state.dbpool).await {
+        Ok(_) => (),
+        Err(_) => todo!(),
+    }
 
     Ok(Redirect::temporary(&app_url(&format!(
         "/collection/{}/sample/{}",
         collectionid, sampleid
     ))))
+}
+
+async fn show_collection_sample(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Path((collectionid, sampleid)): Path<(i64, i64)>,
+) -> Result<impl IntoResponse, error::Error> {
+    let collection = Collection::fetch(collectionid, &state.dbpool).await?;
+    // make sure that this is our sample
+    let mut sample = AssignedSample::fetch_one(
+        Some(
+            FilterBuilder::new(FilterOp::And)
+                .push(Arc::new(AssignedSampleFilter::Id(sampleid)))
+                .push(Arc::new(AssignedSampleFilter::User(user.id)))
+                .push(Arc::new(AssignedSampleFilter::Collection(collectionid)))
+                .build(),
+        ),
+        &state.dbpool,
+    )
+    .await?;
+
+    sample.fetch_notes(&state.dbpool).await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => user,
+                 collection => collection,
+                 sample => sample),
+    )
+    .into_response())
 }

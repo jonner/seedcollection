@@ -206,6 +206,7 @@ async fn main() -> Result<()> {
     jinja.add_filter("truncate", truncate_text);
     jinja.add_filter("idfmt", format_id_number);
     jinja.add_global("environment", args.env);
+    minijinja_contrib::add_to_environment(&mut jinja);
 
     let shared_state = Arc::new(SharedState::new(database.to_string(), Engine::from(jinja)).await?);
     sqlx::migrate!("../db/migrations")

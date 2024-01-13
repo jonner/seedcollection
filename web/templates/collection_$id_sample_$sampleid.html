@@ -1,0 +1,16 @@
+{% extends "root.html" %}
+{% block title %}Collection sample {{ sample.id }}{% endblock %}
+{% block content %}
+<h2>{{ self.title() }}</h2>
+<p>Part of collection {{ collection.name }}</p>
+<h3>Details</h3>
+{{ sample.sample.taxon.complete_name }}
+<h3>Notes</h3>
+{% for note in sample.notes %}
+<div class="d-flex">
+    <h4>{{ note.summary }}</h4>
+    <div>Date: {{ note.date |dateformat(format="short") }}</div>
+    <p>{{ note.details or "" }}</p>
+</div>
+{% endfor %}
+{% endblock %}

@@ -7,7 +7,7 @@
      <label for="SampleNoteSummary" class="form-label">Summary</label>
      <input type="text" id="SampleNoteSummary" name="summary" class="form-control mb-2">
      <label for="SampleNoteDate" class="form-label">Date</label>
-     <input type="date" id="SampleNoteDate" name="date" class="form-control mb-2">
+     <input type="date" id="SampleNoteDate" name="date" class="form-control mb-2" value="{{ now() |dateformat(format="short") }}">
      <label for="SampleNoteType" class="form-label">Note Type</label>
      <select id="SampleNoteType" name="notetype" class="form-select mb-2">
          {% for t in note_types %}
