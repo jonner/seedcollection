@@ -20,6 +20,7 @@ pub struct Collection {
 #[derive(Clone)]
 pub enum AssignedSampleFilter {
     Id(i64),
+    User(i64),
     Collection(i64),
     Sample(i64),
 }
@@ -28,6 +29,7 @@ impl FilterPart for AssignedSampleFilter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(id) => _ = builder.push(" csid = ").push_bind(*id),
+            Self::User(id) => _ = builder.push(" S.userid = ").push_bind(*id),
             Self::Collection(id) => _ = builder.push(" CS.collectionid = ").push_bind(*id),
             Self::Sample(id) => _ = builder.push(" CS.sampleid = ").push_bind(*id),
         }
@@ -158,6 +160,16 @@ impl AssignedSample {
         Self::build_query(filter)
             .build_query_as()
             .fetch_all(pool)
+            .await
+    }
+
+    pub async fn fetch_one(
+        filter: Option<DynFilterPart>,
+        pool: &Pool<Sqlite>,
+    ) -> Result<Self, sqlx::Error> {
+        Self::build_query(filter)
+            .build_query_as()
+            .fetch_one(pool)
             .await
     }
 

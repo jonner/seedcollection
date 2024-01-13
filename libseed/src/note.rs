@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
 use sqlx::{Pool, QueryBuilder, Sqlite};
+use strum_macros::{EnumIter, EnumString, FromRepr};
 use time::Date;
 
 use crate::filter::FilterPart;
 
-#[derive(sqlx::Type, Copy, Clone)]
+#[derive(sqlx::Type, Copy, Clone, Serialize, Deserialize, EnumString, EnumIter, FromRepr)]
 pub enum NoteType {
     Preparation = 1,
     Germination = 2,

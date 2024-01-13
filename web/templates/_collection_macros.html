@@ -82,6 +82,9 @@ hx-post="{{ "/collection/new" | app_url }}"
     <div class="dropdown">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ icon("three-dots-vertical") }}</button>
         <ul class="dropdown-menu dropdown-menu-end">
+            <li><a href="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ csample.id ~ "/note/new") | app_url }}"
+                   class="dropdown-item">{{ icon("card-text") }} Add a note</a>
+            </li>
             <li><button type="button"
                     class="dropdown-item btn-danger"
                     hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ csample.id) | app_url }}"
