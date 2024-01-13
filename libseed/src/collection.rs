@@ -1,5 +1,6 @@
 use crate::{
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
+    note::{self, Note},
     sample::Sample,
 };
 use serde::{Deserialize, Serialize};
@@ -118,6 +119,7 @@ impl Collection {
 pub struct AssignedSample {
     pub id: i64,
     pub sample: Sample,
+    pub notes: Vec<Note>,
 }
 
 impl AssignedSample {
@@ -177,6 +179,15 @@ impl AssignedSample {
         let mut builder = Self::build_query(Some(Arc::new(AssignedSampleFilter::Id(id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
+
+    pub async fn fetch_notes(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+        self.notes = Note::fetch_all(
+            Some(Arc::new(note::FilterField::CollectionSample(self.id))),
+            pool,
+        )
+        .await?;
+        Ok(())
+    }
 }
 
 impl FromRow<'_, SqliteRow> for AssignedSample {
@@ -184,6 +195,7 @@ impl FromRow<'_, SqliteRow> for AssignedSample {
         Ok(Self {
             id: row.try_get("csid")?,
             sample: Sample::from_row(row)?,
+            notes: Default::default(),
         })
     }
 }

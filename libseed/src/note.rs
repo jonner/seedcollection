@@ -1,11 +1,15 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, QueryBuilder, Sqlite};
 use strum_macros::{EnumIter, EnumString, FromRepr};
 use time::Date;
 
-use crate::filter::FilterPart;
+use crate::filter::{DynFilterPart, FilterPart};
 
-#[derive(sqlx::Type, Copy, Clone, Serialize, Deserialize, EnumString, EnumIter, FromRepr)]
+#[derive(
+    sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumString, EnumIter, FromRepr,
+)]
 pub enum NoteType {
     Preparation = 1,
     Germination = 2,
@@ -20,14 +24,14 @@ pub enum FilterField {
     CollectionSample(i64),
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, Deserialize, Serialize, Debug)]
 pub struct Note {
-    id: i64,
-    csid: i64,
-    date: Date,
-    kind: NoteType,
-    summary: String,
-    details: Option<String>,
+    pub id: i64,
+    pub csid: i64,
+    pub date: Date,
+    pub kind: NoteType,
+    pub summary: String,
+    pub details: Option<String>,
 }
 
 impl FilterPart for FilterField {
@@ -40,9 +44,9 @@ impl FilterPart for FilterField {
 }
 
 impl Note {
-    fn build_query(filter: Option<Box<dyn FilterPart>>) -> QueryBuilder<'static, Sqlite> {
+    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
-            r#"SELECT id, csid, date, type, summary, details FROM sc_collection_sample_notes"#,
+            r#"SELECT id, csid, date, kind, summary, details FROM sc_collection_sample_notes"#,
         );
         if let Some(f) = filter {
             builder.push(" WHERE ");
@@ -53,14 +57,17 @@ impl Note {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
-        Self::build_query(Some(Box::new(FilterField::Id(id))))
+        Self::build_query(Some(Arc::new(FilterField::Id(id))))
             .build_query_as()
             .fetch_one(pool)
             .await
     }
 
-    pub async fn fetch_all(id: i64, pool: &Pool<Sqlite>) -> Result<Vec<Note>, sqlx::Error> {
-        Self::build_query(Some(Box::new(FilterField::CollectionSample(id))))
+    pub async fn fetch_all(
+        filter: Option<DynFilterPart>,
+        pool: &Pool<Sqlite>,
+    ) -> Result<Vec<Note>, sqlx::Error> {
+        Self::build_query(filter)
             .build_query_as()
             .fetch_all(pool)
             .await
@@ -69,7 +76,7 @@ impl Note {
     pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
         sqlx::query_as(
             r#"INSERT INTO sc_collection_sample_notes
-            (csid, date, type, summary, details)
+            (csid, date, kind, summary, details)
             VALUES (?, ?, ?, ?, ?) RETURNING *"#,
         )
         .bind(self.csid)
@@ -84,7 +91,7 @@ impl Note {
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         sqlx::query(
             r#"UPDATE sc_collection_sample_notes
-            SET csid=?, date=?, type=?, summary=?, details=? WHERE id=?"#,
+            SET csid=?, date=?, kind=?, summary=?, details=? WHERE id=?"#,
         )
         .bind(self.csid)
         .bind(self.date)
