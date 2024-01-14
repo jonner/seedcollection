@@ -219,7 +219,7 @@ async fn main() -> Result<()> {
             }
             CollectionCommands::Show { id, full } => {
                 let mut collectioninfo = Collection::fetch(id, &dbpool).await?;
-                collectioninfo.fetch_samples(&dbpool).await?;
+                collectioninfo.fetch_samples(None, &dbpool).await?;
                 println!("Collection ID: {}", id);
                 println!("Collection name: {}", collectioninfo.name);
                 if let Some(desc) = &collectioninfo.description {
