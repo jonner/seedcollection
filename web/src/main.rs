@@ -144,9 +144,10 @@ pub fn truncate_text(mut s: String, chars: Option<usize>) -> String {
     }
 }
 
-pub fn format_id_number(id: i64, width: Option<usize>) -> String {
+pub fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> String {
     let width = width.unwrap_or(4);
-    format!("{:0>width$}", id, width = width)
+    let prefix = prefix.unwrap_or("");
+    format!("{}{:0>width$}", prefix, id, width = width)
 }
 
 #[derive(Clone, Copy)]

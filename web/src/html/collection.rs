@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::{IntoResponse, Redirect},
+    response::IntoResponse,
     routing::get,
     Form, Router,
 };
@@ -519,14 +519,14 @@ struct NoteParams {
 
 async fn add_sample_note(
     user: SqliteUser,
-    TemplateKey(_key): TemplateKey,
+    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((collectionid, sampleid)): Path<(i64, i64)>,
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let _ = Collection::fetch(collectionid, &state.dbpool).await?;
     // make sure that this is our sample
-    let _ = AssignedSample::fetch_one(
+    let sample = AssignedSample::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(AssignedSampleFilter::Id(sampleid)))
@@ -545,15 +545,27 @@ async fn add_sample_note(
         summary: params.summary,
         details: params.details,
     };
-    match note.insert(&state.dbpool).await {
-        Ok(_) => (),
-        Err(_) => todo!(),
-    }
-
-    Ok(Redirect::temporary(&app_url(&format!(
-        "/collection/{}/sample/{}",
-        collectionid, sampleid
-    ))))
+    Ok(match note.insert(&state.dbpool).await {
+        Ok(_) => {
+            let url = app_url(&format!("/collection/{}/sample/{}", collectionid, sampleid));
+            [("HX-Redirect", url)].into_response()
+        }
+        Err(e) => {
+            let note_types: Vec<NoteType> = NoteType::iter().collect();
+            RenderHtml(
+                key,
+                state.tmpl.clone(),
+                context!(user => user,
+                note_types => note_types,
+                sample => sample,
+                message => Message {
+                    r#type: MessageType::Error,
+                    msg: format!("Failed to save note: {}", e),
+                }),
+            )
+            .into_response()
+        }
+    })
 }
 
 async fn show_collection_sample(

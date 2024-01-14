@@ -105,3 +105,24 @@ hx-post="{{ "/collection/new" | app_url }}"
 </div>
 {% endfor %}
 {% endmacro %}
+
+{% macro collection_sample_note_form(sample, message=none) -%}
+{% from "_macros.html" import show_message %}
+<form hx-post=""
+    hx-swap="outerHTML">
+    {{ show_message(message) }}
+     <label for="SampleNoteSummary" class="form-label">Summary</label>
+     <input type="text" id="SampleNoteSummary" name="summary" class="form-control mb-2">
+     <label for="SampleNoteDate" class="form-label">Date</label>
+     <input type="date" id="SampleNoteDate" name="date" class="form-control mb-2" value="{{ now() |dateformat(format="short") }}">
+     <label for="SampleNoteType" class="form-label">Note Type</label>
+     <select id="SampleNoteType" name="notetype" class="form-select mb-2">
+         {% for t in note_types %}
+         <option>{{ t }}</option>
+         {% endfor %}
+     </select>
+     <label for="SampleNoteDetails" class="form-label">Details</label>
+     <textarea id="SampleNoteDetails" rows="5" name="details" class="form-control mb-2"></textarea>
+     <button class="btn btn-primary" type="submit">Add</button>
+</form>
+{%- endmacro %}
