@@ -3,7 +3,7 @@ use clap::Parser;
 use cli::*;
 use libseed::{
     collection::{AssignedSample, Collection},
-    location,
+    location::{self, Location},
     sample::Sample,
     taxonomy::{self, filter_by, Taxon},
 };
@@ -269,18 +269,11 @@ async fn main() -> Result<()> {
                 description,
                 latitude,
                 longitude,
+                userid,
             } => {
-                let newid = sqlx::query!(
-                    r#"INSERT INTO sc_locations (name, description, latitude, longitude)
-                VALUES (?1, ?2, ?3, ?4)"#,
-                    name,
-                    description,
-                    latitude,
-                    longitude
-                )
-                .execute(&dbpool)
-                .await?
-                .last_insert_rowid();
+                let location = Location::new(name, description, latitude, longitude, userid);
+
+                let newid = location.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added location {newid} to database");
                 Ok(())
             }
