@@ -190,14 +190,9 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             CollectionCommands::AddSample { collection, sample } => {
-                sqlx::query!(
-                    r#"INSERT INTO sc_collection_samples (collectionid, sampleid) 
-                    VALUES (?, ?)"#,
-                    collection,
-                    sample,
-                )
-                .execute(&dbpool)
-                .await?;
+                let mut collection = Collection::fetch(collection, &dbpool).await?;
+                let sample = Sample::new_id_only(sample);
+                collection.assign_sample(sample, &dbpool).await?;
                 println!("Added sample to collection");
                 Ok(())
             }
