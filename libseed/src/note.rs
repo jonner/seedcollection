@@ -1,7 +1,7 @@
-use std::sync::Arc;
-
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, QueryBuilder, Sqlite};
+use std::sync::Arc;
 use strum_macros::{EnumIter, EnumString, FromRepr};
 use time::Date;
 
@@ -10,6 +10,7 @@ use crate::filter::{DynFilterPart, FilterPart};
 #[derive(
     sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumString, EnumIter, FromRepr,
 )]
+#[repr(i64)]
 pub enum NoteType {
     Preparation = 1,
     Germination = 2,
@@ -73,7 +74,10 @@ impl Note {
             .await
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<Note> {
+        if self.summary.is_empty() {
+            return Err(anyhow!("No summary specified"));
+        }
         sqlx::query_as(
             r#"INSERT INTO sc_collection_sample_notes
             (csid, date, kind, summary, details)
@@ -81,26 +85,27 @@ impl Note {
         )
         .bind(self.csid)
         .bind(self.date)
-        .bind(self.kind)
+        .bind(self.kind as i64)
         .bind(&self.summary)
         .bind(&self.details)
         .fetch_one(pool)
         .await
+        .map_err(|e| e.into())
     }
 
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
-        sqlx::query(
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
+        sqlx::query_as(
             r#"UPDATE sc_collection_sample_notes
-            SET csid=?, date=?, kind=?, summary=?, details=? WHERE id=?"#,
+            SET csid=?, date=?, kind=?, summary=?, details=? WHERE id=?
+            RETURNING *"#,
         )
         .bind(self.csid)
         .bind(self.date)
-        .bind(self.kind)
+        .bind(self.kind as i64)
         .bind(&self.summary)
         .bind(&self.details)
         .bind(self.id)
-        .execute(pool)
+        .fetch_one(pool)
         .await
-        .map(|_| ())
     }
 }
