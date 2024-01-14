@@ -166,8 +166,8 @@ impl Sample {
     ) -> Self {
         Self {
             id: -1,
-            user: User::new(userid),
-            taxon: Taxon::new(taxonid),
+            user: User::new_id_only(userid),
+            taxon: Taxon::new_id_only(taxonid),
             location: Location::new_id_only(locationid),
             quantity,
             month,

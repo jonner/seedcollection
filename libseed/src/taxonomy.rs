@@ -312,4 +312,23 @@ impl Taxon {
         );
         Ok(())
     }
+
+    // this just creates a placeholder object to hold an ID so that another object (e.g. sample)
+    // that contains a Taxon object can still exist without loading the entire taxon from the
+    // database
+    pub fn new_id_only(id: i64) -> Self {
+        Taxon {
+            id,
+            rank: Rank::Unknown,
+            name1: None,
+            name2: None,
+            name3: None,
+            complete_name: Default::default(),
+            vernaculars: Default::default(),
+            native_status: None,
+            parentid: None,
+            seq: None,
+            germination: None,
+        }
+    }
 }

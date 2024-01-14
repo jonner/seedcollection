@@ -25,4 +25,14 @@ impl User {
                 .await?,
         )
     }
+
+    // this just creates a placeholder object to hold an ID so that another object (e.g. sample)
+    // that contains a Taxon object can still exist without loading the entire taxon from the
+    // database
+    pub fn new_id_only(id: i64) -> Self {
+        User {
+            id,
+            username: Default::default(),
+        }
+    }
 }
