@@ -77,7 +77,7 @@ hx-post="{{ "/collection/new" | app_url }}"
 {% from "_macros.html" import icon %}
 {% from "_sample_macros.html" import sample_item %}
 {% for csample in collection.samples %}
-<div class="collection-sample-row">
+<div class="collection-sample-row {{ loop.cycle("bg-body-tertiary", "") }}">
     {% call sample_item(csample.sample) %}
     <div class="dropdown">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ icon("three-dots-vertical") }}</button>
