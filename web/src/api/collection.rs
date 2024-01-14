@@ -6,7 +6,10 @@ use axum::{
     routing::{delete, get, post},
     Form, Router,
 };
-use libseed::collection::{Collection, Filter};
+use libseed::{
+    collection::{Collection, Filter},
+    sample::Sample,
+};
 use serde::Deserialize;
 use sqlx::{QueryBuilder, Sqlite};
 use std::sync::Arc;
@@ -145,12 +148,11 @@ async fn add_sample(
     Path(id): Path<i64>,
     Form(params): Form<AddSampleProps>,
 ) -> Result<Json<i64>, error::Error> {
-    let id =
-        sqlx::query("INSERT INTO sc_collection_samples (collectionid, sampleid) VALUES (?, ?)")
-            .bind(id)
-            .bind(params.sample)
-            .execute(&state.dbpool)
-            .await?
-            .last_insert_rowid();
+    let mut collection = Collection::fetch(id, &state.dbpool).await?;
+    let sample = Sample::new_id_only(params.sample);
+    let id = collection
+        .assign_sample(sample, &state.dbpool)
+        .await?
+        .last_insert_rowid();
     Ok(Json(id))
 }

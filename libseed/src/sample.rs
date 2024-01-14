@@ -176,6 +176,20 @@ impl Sample {
             certainty,
         }
     }
+
+    pub fn new_id_only(id: i64) -> Self {
+        Self {
+            id,
+            user: User::new_id_only(-1),
+            taxon: Taxon::new_id_only(-1),
+            location: Location::new_id_only(-1),
+            month: None,
+            year: None,
+            quantity: None,
+            notes: None,
+            certainty: Certainty::Uncertain,
+        }
+    }
 }
 
 impl FromRow<'_, SqliteRow> for Sample {

@@ -4,7 +4,10 @@ use crate::{
     sample::Sample,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteRow, FromRow, Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{
+    sqlite::{SqliteQueryResult, SqliteRow},
+    FromRow, Pool, QueryBuilder, Row, Sqlite,
+};
 use std::sync::Arc;
 
 #[derive(sqlx::FromRow, Deserialize, Serialize)]
@@ -112,6 +115,19 @@ impl Collection {
 
         self.samples = AssignedSample::fetch_all(Some(fbuilder.build()), pool).await?;
         Ok(())
+    }
+
+    pub async fn assign_sample(
+        &mut self,
+        sample: Sample,
+        pool: &Pool<Sqlite>,
+    ) -> anyhow::Result<SqliteQueryResult> {
+        sqlx::query("INSERT INTO sc_collection_samples (collectionid, sampleid) VALUES (?, ?)")
+            .bind(self.id)
+            .bind(sample.id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 

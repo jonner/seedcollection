@@ -395,12 +395,10 @@ async fn add_sample(
         }
     });
 
+    let mut collection = Collection::fetch(id, &state.dbpool).await?;
     for sample in valid_samples {
-        sqlx::query("INSERT INTO sc_collection_samples (collectionid, sampleid) VALUES (?, ?)")
-            .bind(id)
-            .bind(sample)
-            .execute(&state.dbpool)
-            .await?;
+        let s = Sample::new_id_only(sample);
+        collection.assign_sample(s, &state.dbpool).await?;
     }
 
     let (c, samples) = add_sample_prep(&user, id, &state).await?;
