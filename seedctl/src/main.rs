@@ -119,12 +119,7 @@ async fn main() -> Result<()> {
     match args.command {
         Commands::Collection { command } => match command {
             CollectionCommands::List { full } => {
-                let collections: Vec<Collection> = sqlx::query_as(
-                    r#"SELECT L.id, L.name, L.description
-                                      FROM sc_collections L"#,
-                )
-                .fetch_all(&dbpool)
-                .await?;
+                let collections = Collection::fetch_all(None, &dbpool).await?;
                 let mut tbuilder = tabled::builder::Builder::new();
                 let mut header = vec!["ID", "Name"];
                 if full {
