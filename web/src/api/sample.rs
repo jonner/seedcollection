@@ -55,6 +55,7 @@ struct SampleParams {
     quantity: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none")]
     notes: Option<String>,
+    uncertain: bool,
 }
 
 async fn modify_sample(
@@ -105,25 +106,29 @@ async fn modify_sample(
 }
 
 async fn new_sample(
-    _user: SqliteUser,
+    user: SqliteUser,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<(), error::Error> {
     if params.taxon.is_none() && params.location.is_none() {
         return Err(anyhow!("Taxon and Location are required").into());
     }
-    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-        "INSERT INTO sc_samples (tsn, collectedlocation, month, year, quantity, notes) values (",
+    let sample = Sample::new(
+        params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?,
+        user.id,
+        params
+            .location
+            .ok_or_else(|| anyhow!("No location specified"))?,
+        params.month,
+        params.year,
+        params.quantity,
+        params.notes,
+        match params.uncertain {
+            true => libseed::sample::Certainty::Uncertain,
+            false => libseed::sample::Certainty::Certain,
+        },
     );
-    let mut sep = builder.separated(", ");
-    sep.push_bind(params.taxon);
-    sep.push_bind(params.location);
-    sep.push_bind(params.month);
-    sep.push_bind(params.year);
-    sep.push_bind(params.quantity);
-    sep.push_bind(params.notes);
-    builder.push(")");
-    builder.build().execute(&state.dbpool).await?;
+    sample.insert(&state.dbpool).await?;
     Ok(())
 }
 
