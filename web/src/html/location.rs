@@ -178,22 +178,19 @@ async fn do_insert(
     params: &LocationParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    if params.name.is_none() {
-        return Err(anyhow!("No name was given").into());
-    }
-    sqlx::query(
-        r#"INSERT INTO sc_locations
-          (name, description, latitude, longitude, userid)
-          VALUES (?, ?, ?, ?, ?)"#,
-    )
-    .bind(&params.name)
-    .bind(&params.description)
-    .bind(params.latitude)
-    .bind(params.longitude)
-    .bind(user.id)
-    .execute(&state.dbpool)
-    .await
-    .map_err(|e| e.into())
+    let location = Location {
+        id: -1,
+        name: params
+            .name
+            .as_ref()
+            .ok_or(anyhow!("No name was given"))?
+            .clone(),
+        description: params.description.as_ref().cloned(),
+        latitude: params.latitude,
+        longitude: params.longitude,
+        userid: Some(user.id),
+    };
+    location.insert(&state.dbpool).await.map_err(|e| e.into())
 }
 
 async fn new_location(

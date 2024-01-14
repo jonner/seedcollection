@@ -50,9 +50,9 @@ struct ModifyParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     description: Option<String>,
     #[serde(deserialize_with = "empty_string_as_none")]
-    latitude: Option<f32>,
+    latitude: Option<f64>,
     #[serde(deserialize_with = "empty_string_as_none")]
-    longitude: Option<f32>,
+    longitude: Option<f64>,
 }
 
 async fn modify_location(
@@ -99,7 +99,7 @@ struct AddResponse {
 }
 
 async fn add_location(
-    _user: SqliteUser,
+    user: SqliteUser,
     State(state): State<AppState>,
     Form(params): Form<ModifyParams>,
 ) -> Result<impl IntoResponse, error::Error> {
@@ -110,18 +110,14 @@ async fn add_location(
     {
         return Err(anyhow!("No parameters given").into());
     }
-    let id = sqlx::query(
-        r#"INSERT INTO sc_locations
-          (name, description, latitude, longitude)
-          VALUES (?, ?, ?, ?)"#,
-    )
-    .bind(params.name)
-    .bind(params.description)
-    .bind(params.latitude)
-    .bind(params.longitude)
-    .execute(&state.dbpool)
-    .await?
-    .last_insert_rowid();
+    let location = Location::new(
+        params.name.ok_or(anyhow!("No name given"))?,
+        params.description,
+        params.latitude,
+        params.longitude,
+        Some(user.id),
+    );
+    let id = location.insert(&state.dbpool).await?.last_insert_rowid();
     Ok((
         [("HX-Trigger", "reload-locations")],
         Json(AddResponse { success: true, id }),
