@@ -1,7 +1,9 @@
 use crate::filter::Cmp;
 use crate::filter::DynFilterPart;
+use anyhow::anyhow;
 use serde::Deserialize;
 use serde::Serialize;
+use sqlx::sqlite::SqliteQueryResult;
 use sqlx::Pool;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
@@ -101,5 +103,53 @@ impl Location {
             .build_query_as()
             .fetch_all(pool)
             .await?)
+    }
+
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        if self.id != -1 {
+            return Err(anyhow!("Location is is not -1, cannot insert a new item"));
+        }
+
+        sqlx::query(
+            r#"INSERT INTO sc_locations
+          (name, description, latitude, longitude, userid)
+          VALUES (?, ?, ?, ?, ?)"#,
+        )
+        .bind(&self.name)
+        .bind(&self.description)
+        .bind(self.latitude)
+        .bind(self.longitude)
+        .bind(self.userid)
+        .execute(pool)
+        .await
+        .map_err(|e| e.into())
+    }
+
+    pub fn new(
+        name: String,
+        description: Option<String>,
+        latitude: Option<f64>,
+        longitude: Option<f64>,
+        userid: Option<i64>,
+    ) -> Self {
+        Self {
+            id: -1,
+            name,
+            description,
+            latitude,
+            longitude,
+            userid,
+        }
+    }
+
+    pub fn new_id_only(id: i64) -> Self {
+        Self {
+            id,
+            name: Default::default(),
+            description: None,
+            latitude: None,
+            longitude: None,
+            userid: None,
+        }
     }
 }

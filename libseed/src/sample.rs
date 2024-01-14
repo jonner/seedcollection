@@ -168,7 +168,7 @@ impl Sample {
             id: -1,
             user: User::new(userid),
             taxon: Taxon::new(taxonid),
-            location: Location::new(locationid),
+            location: Location::new_id_only(locationid),
             quantity,
             month,
             year,
