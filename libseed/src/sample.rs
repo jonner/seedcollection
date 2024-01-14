@@ -4,8 +4,12 @@ use crate::{
     taxonomy::Taxon,
     user::User,
 };
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteRow, FromRow, Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{
+    sqlite::{SqliteQueryResult, SqliteRow},
+    FromRow, Pool, QueryBuilder, Row, Sqlite,
+};
 use std::sync::Arc;
 
 #[derive(Deserialize, Serialize, Debug, sqlx::Type)]
@@ -128,6 +132,49 @@ impl Sample {
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Sample> {
         let mut builder = Self::build_query(Some(Arc::new(Filter::Sample(Cmp::Equal, id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
+    }
+
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        if self.id != -1 {
+            return Err(anyhow!(
+                "Sample already has an id assigned ({}), can't insert a new item",
+                self.id
+            ));
+        }
+        sqlx::query("INSERT INTO sc_samples (tsn, userid, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(self.taxon.id)
+        .bind(self.user.id)
+        .bind(self.location.id)
+        .bind(self.month)
+        .bind(self.year)
+        .bind(self.quantity)
+        .bind(&self.notes)
+        .bind(&self.certainty)
+        .execute(pool)
+        .await.map_err(|e| e.into())
+    }
+
+    pub fn new(
+        taxonid: i64,
+        userid: i64,
+        locationid: i64,
+        month: Option<u32>,
+        year: Option<u32>,
+        quantity: Option<i64>,
+        notes: Option<String>,
+        certainty: Certainty,
+    ) -> Self {
+        Self {
+            id: -1,
+            user: User::new(userid),
+            taxon: Taxon::new(taxonid),
+            location: Location::new(locationid),
+            quantity,
+            month,
+            year,
+            notes,
+            certainty,
+        }
     }
 }
 

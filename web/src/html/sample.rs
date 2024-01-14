@@ -167,17 +167,17 @@ async fn do_insert(
         _ => Certainty::Certain,
     };
 
-    sqlx::query("INSERT INTO sc_samples (tsn, userid, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-        .bind(params.taxon)
-        .bind(user.id)
-        .bind(params.location)
-        .bind(params.month)
-        .bind(params.year)
-        .bind(params.quantity)
-        .bind(&params.notes)
-        .bind(certainty)
-        .execute(&state.dbpool)
-        .await.map_err(|e| e.into())
+    let sample = Sample::new(
+        params.taxon.ok_or(anyhow!("No taxon provided"))?,
+        user.id,
+        params.location.ok_or(anyhow!("No location provided"))?,
+        params.month,
+        params.year,
+        params.quantity,
+        params.notes.clone(),
+        certainty,
+    );
+    sample.insert(&state.dbpool).await.map_err(|e| e.into())
 }
 
 async fn insert_sample(
