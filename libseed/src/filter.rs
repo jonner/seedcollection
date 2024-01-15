@@ -53,6 +53,11 @@ impl CompoundFilter {
 
 impl FilterPart for CompoundFilter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
+        if self.conditions.is_empty() {
+            builder.push("TRUE");
+            return;
+        }
+
         let mut first = true;
         builder.push(" (");
         let separator = match self.op {
