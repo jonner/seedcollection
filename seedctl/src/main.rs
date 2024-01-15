@@ -441,9 +441,11 @@ async fn main() -> Result<()> {
                 username,
                 passwordfile,
             } => {
-                let password =
-                    get_password(passwordfile, Some(format!("New password for '{username}'")))
-                        .await?;
+                let password = get_password(
+                    passwordfile,
+                    Some(format!("New password for '{username}': ")),
+                )
+                .await?;
                 // hash the password
                 let pwhash = User::hash_password(&password)?;
                 let user = User::new(username.clone(), pwhash);
