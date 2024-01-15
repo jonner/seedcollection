@@ -275,17 +275,16 @@ async fn delete_collection(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let c = Collection::fetch(id, &state.dbpool)
+    let mut c = Collection::fetch(id, &state.dbpool)
         .await
         .map_err(|_| Error::NotFound("That collection does not exist".to_string()))?;
-    let errmsg = match sqlx::query!(
-        "DELETE FROM sc_collections WHERE id=? AND userid=?",
-        id,
-        user.id
-    )
-    .execute(&state.dbpool)
-    .await
-    {
+    if c.userid != user.id {
+        return Err(Error::Unauthorized(
+            "No permission to delete this collection".to_string(),
+        ));
+    }
+
+    let errmsg = match c.delete(&state.dbpool).await {
         Err(e) => e.to_string(),
         Ok(res) if (res.rows_affected() == 0) => "No collection found".to_string(),
         Ok(_) => {

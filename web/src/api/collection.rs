@@ -87,14 +87,20 @@ async fn modify_collection(
 }
 
 async fn delete_collection(
-    _user: SqliteUser,
+    user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
-    sqlx::query("DELETE FROM sc_collections WHERE id=?")
-        .bind(id)
-        .execute(&state.dbpool)
-        .await?;
+    let mut c = Collection::fetch(id, &state.dbpool)
+        .await
+        .map_err(|_| Error::NotFound("That collection does not exist".to_string()))?;
+    if c.userid != user.id {
+        return Err(Error::Unauthorized(
+            "No permission to delete this collection".to_string(),
+        ));
+    }
+
+    c.delete(&state.dbpool).await?;
     Ok(())
 }
 

@@ -164,9 +164,8 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             CollectionCommands::Remove { id } => {
-                sqlx::query!(r#"DELETE FROM sc_collections WHERE id=?"#, id)
-                    .execute(&dbpool)
-                    .await?;
+                let mut collection = Collection::new_id_only(id);
+                collection.delete(&dbpool).await?;
                 println!("Removed collection {id}");
                 Ok(())
             }

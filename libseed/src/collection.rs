@@ -158,6 +158,32 @@ impl Collection {
             .map_err(|e| e.into())
     }
 
+    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        if self.id < 0 {
+            return Err(anyhow!("id not set, cannot delete collection"));
+        }
+
+        sqlx::query("DELETE FROM sc_collections WHERE id=?")
+            .bind(self.id)
+            .execute(pool)
+            .await
+            .and_then(|r| {
+                self.id = -1;
+                Ok(r)
+            })
+            .map_err(|e| e.into())
+    }
+
+    pub fn new_id_only(id: i64) -> Self {
+        Self {
+            id,
+            name: Default::default(),
+            description: None,
+            userid: -1,
+            samples: Default::default(),
+        }
+    }
+
     pub fn new(name: String, description: Option<String>, userid: i64) -> Self {
         Self {
             id: -1,
