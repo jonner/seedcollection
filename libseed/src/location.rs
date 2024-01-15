@@ -1,6 +1,8 @@
 use crate::filter::Cmp;
 use crate::filter::DynFilterPart;
+use crate::loadable::Loadable;
 use anyhow::anyhow;
+use async_trait::async_trait;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::sqlite::SqliteQueryResult;
@@ -24,6 +26,47 @@ pub struct Location {
     #[sqlx(default)]
     pub longitude: Option<f64>,
     pub userid: Option<i64>,
+    #[sqlx(skip)]
+    pub loaded: bool,
+}
+
+impl Default for Location {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            name: Default::default(),
+            description: None,
+            latitude: None,
+            longitude: None,
+            userid: None,
+            loaded: false,
+        }
+    }
+}
+
+#[async_trait]
+impl Loadable for Location {
+    type Id = i64;
+
+    fn new_loadable(id: Self::Id) -> Self {
+        let mut loc: Self = Default::default();
+        loc.id = id;
+        loc
+    }
+
+    fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
+    fn is_loadable(&self) -> bool {
+        self.id > 0
+    }
+
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+        let loc = Location::fetch(self.id, pool).await?;
+        *self = loc;
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -169,20 +212,7 @@ impl Location {
             latitude,
             longitude,
             userid,
-        }
-    }
-
-    // this just creates a placeholder object to hold an ID so that another object (e.g. sample)
-    // that contains a Taxon object can still exist without loading the entire taxon from the
-    // database
-    pub fn new_id_only(id: i64) -> Self {
-        Self {
-            id,
-            name: Default::default(),
-            description: None,
-            latitude: None,
-            longitude: None,
-            userid: None,
+            loaded: false,
         }
     }
 }

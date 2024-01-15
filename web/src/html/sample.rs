@@ -12,6 +12,7 @@ use libseed::{
     collection::Collection,
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
+    loadable::Loadable,
     location::{self, Location},
     sample::{self, Certainty, Sample},
     taxonomy::Taxon,
@@ -231,7 +232,7 @@ async fn do_update(
     };
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
     sample.taxon = Taxon::new_id_only(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
-    sample.location = Location::new_id_only(
+    sample.location = Location::new_loadable(
         params
             .location
             .ok_or_else(|| anyhow!("No location specified"))?,

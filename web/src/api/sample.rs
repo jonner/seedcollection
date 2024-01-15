@@ -12,6 +12,7 @@ use axum::{
 };
 use libseed::{
     empty_string_as_none,
+    loadable::Loadable,
     location::Location,
     sample::{Certainty, Sample},
     taxonomy::Taxon,
@@ -86,7 +87,7 @@ async fn modify_sample(
         sample.taxon = Taxon::new_id_only(taxon);
     }
     if let Some(location) = params.location {
-        sample.location = Location::new_id_only(location);
+        sample.location = Location::new_loadable(location);
     }
     if let Some(month) = params.month {
         sample.month = Some(month);

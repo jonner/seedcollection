@@ -365,7 +365,7 @@ async fn main() -> Result<()> {
                     sample.taxon = Taxon::new_id_only(taxon);
                 }
                 if let Some(location) = location {
-                    sample.location = Location::new_id_only(location);
+                    sample.location = Location::new_loadable(location);
                 }
                 if let Some(month) = month {
                     sample.month = Some(month.into());

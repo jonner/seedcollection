@@ -174,18 +174,17 @@ async fn do_insert(
     params: &LocationParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    let location = Location {
-        id: -1,
-        name: params
+    let location = Location::new(
+        params
             .name
             .as_ref()
             .ok_or(anyhow!("No name was given"))?
             .clone(),
-        description: params.description.as_ref().cloned(),
-        latitude: params.latitude,
-        longitude: params.longitude,
-        userid: Some(user.id),
-    };
+        params.description.as_ref().cloned(),
+        params.latitude,
+        params.longitude,
+        Some(user.id),
+    );
     location.insert(&state.dbpool).await.map_err(|e| e.into())
 }
 
