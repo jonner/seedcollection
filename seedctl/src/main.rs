@@ -268,9 +268,9 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             LocationCommands::Remove { id } => {
-                sqlx::query!(r#"DELETE FROM sc_locations WHERE locid=?1"#, id)
-                    .execute(&dbpool)
-                    .await?;
+                let mut location = Location::fetch(id, &dbpool).await?;
+                location.delete(&dbpool).await?;
+                println!("Removed location {id} from database");
                 Ok(())
             }
             LocationCommands::Modify {

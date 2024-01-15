@@ -143,6 +143,18 @@ impl Location {
         .map_err(|e| e.into())
     }
 
+    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        sqlx::query(r#"DELETE FROM sc_locations WHERE locid=?1"#)
+            .bind(self.id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
+            .and_then(|r| {
+                self.id = -1;
+                Ok(r)
+            })
+    }
+
     pub fn new(
         name: String,
         description: Option<String>,
