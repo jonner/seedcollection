@@ -231,7 +231,7 @@ async fn do_update(
         _ => Certainty::Certain,
     };
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
-    sample.taxon = Taxon::new_id_only(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
+    sample.taxon = Taxon::new_loadable(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
     sample.location = Location::new_loadable(
         params
             .location

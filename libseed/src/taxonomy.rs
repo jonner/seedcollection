@@ -1,11 +1,15 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Pool, Row, Sqlite};
 use std::{str::FromStr, sync::Arc};
 use strum_macros::{Display, EnumIter, EnumString, FromRepr};
 use tracing::debug;
 
-use crate::filter::{DynFilterPart, FilterBuilder, FilterOp, FilterPart};
+use crate::{
+    filter::{DynFilterPart, FilterBuilder, FilterOp, FilterPart},
+    loadable::Loadable,
+};
 
 pub const KINGDOM_PLANTAE: i64 = 3;
 
@@ -66,6 +70,51 @@ pub struct Taxon {
     pub parentid: Option<i64>,
     pub seq: Option<i64>,
     pub germination: Option<Vec<Germination>>,
+    pub loaded: bool,
+}
+
+impl Default for Taxon {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            rank: Rank::Unknown,
+            name1: Default::default(),
+            name2: Default::default(),
+            name3: Default::default(),
+            complete_name: Default::default(),
+            vernaculars: Default::default(),
+            native_status: Default::default(),
+            parentid: Default::default(),
+            seq: Default::default(),
+            germination: Default::default(),
+            loaded: false,
+        }
+    }
+}
+
+#[async_trait]
+impl Loadable for Taxon {
+    type Id = i64;
+
+    fn new_loadable(id: Self::Id) -> Self {
+        let mut taxon: Self = Default::default();
+        taxon.id = id;
+        taxon
+    }
+
+    fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
+    fn is_loadable(&self) -> bool {
+        self.id > 0
+    }
+
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+        let taxon = Taxon::fetch(self.id, pool).await?;
+        *self = taxon;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -120,6 +169,7 @@ impl FromRow<'_, SqliteRow> for Taxon {
             parentid: row.try_get("parentid")?,
             seq: row.try_get("seq").unwrap_or(None),
             germination: None,
+            loaded: true,
         })
     }
 }
@@ -311,24 +361,5 @@ impl Taxon {
             .await?,
         );
         Ok(())
-    }
-
-    // this just creates a placeholder object to hold an ID so that another object (e.g. sample)
-    // that contains a Taxon object can still exist without loading the entire taxon from the
-    // database
-    pub fn new_id_only(id: i64) -> Self {
-        Taxon {
-            id,
-            rank: Rank::Unknown,
-            name1: None,
-            name2: None,
-            name3: None,
-            complete_name: Default::default(),
-            vernaculars: Default::default(),
-            native_status: None,
-            parentid: None,
-            seq: None,
-            germination: None,
-        }
     }
 }

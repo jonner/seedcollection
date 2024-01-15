@@ -84,7 +84,7 @@ async fn modify_sample(
     }
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
     if let Some(taxon) = params.taxon {
-        sample.taxon = Taxon::new_id_only(taxon);
+        sample.taxon = Taxon::new_loadable(taxon);
     }
     if let Some(location) = params.location {
         sample.location = Location::new_loadable(location);

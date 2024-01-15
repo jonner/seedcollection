@@ -52,7 +52,7 @@ impl Default for Sample {
         Self {
             id: -1,
             user: User::default(),
-            taxon: Taxon::new_id_only(-1),
+            taxon: Taxon::default(),
             location: Location::default(),
             quantity: None,
             month: None,
@@ -250,7 +250,7 @@ impl Sample {
         Self {
             id: -1,
             user: User::new_loadable(userid),
-            taxon: Taxon::new_id_only(taxonid),
+            taxon: Taxon::new_loadable(taxonid),
             location: Location::new_loadable(locationid),
             quantity,
             month,

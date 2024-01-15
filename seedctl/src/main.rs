@@ -362,7 +362,7 @@ async fn main() -> Result<()> {
                 }
                 let mut sample = Sample::fetch(id, &dbpool).await?;
                 if let Some(taxon) = taxon {
-                    sample.taxon = Taxon::new_id_only(taxon);
+                    sample.taxon = Taxon::new_loadable(taxon);
                 }
                 if let Some(location) = location {
                     sample.location = Location::new_loadable(location);
