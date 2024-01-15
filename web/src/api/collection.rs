@@ -1,4 +1,8 @@
-use crate::{auth::SqliteUser, error, state::AppState};
+use crate::{
+    auth::SqliteUser,
+    error::{self, Error},
+    state::AppState,
+};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, Query, State},
@@ -11,7 +15,6 @@ use libseed::{
     sample::Sample,
 };
 use serde::Deserialize;
-use sqlx::{QueryBuilder, Sqlite};
 use std::sync::Arc;
 
 pub fn router() -> Router<AppState> {
@@ -59,7 +62,7 @@ struct ModifyProps {
 }
 
 async fn modify_collection(
-    _user: SqliteUser,
+    user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<ModifyProps>,
@@ -67,19 +70,19 @@ async fn modify_collection(
     if params.name.is_none() && params.description.is_none() {
         return Err(anyhow!("No params to modify").into());
     }
-    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE sc_collections SET ");
-    let mut sep = builder.separated(", ");
+    let mut collection = Collection::fetch(id, &state.dbpool).await?;
+    if collection.userid != user.id {
+        return Err(Error::Unauthorized(
+            "No permission to modify this collection".to_string(),
+        ));
+    }
     if let Some(name) = params.name {
-        sep.push(" name=");
-        sep.push_bind_unseparated(name);
+        collection.name = name;
     }
     if let Some(desc) = params.description {
-        sep.push(" description=");
-        sep.push_bind_unseparated(desc);
+        collection.description = Some(desc);
     }
-    builder.push(" WHERE id=");
-    builder.push_bind(id);
-    builder.build().execute(&state.dbpool).await?;
+    collection.update(&state.dbpool).await?;
     Ok(())
 }
 

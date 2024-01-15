@@ -216,13 +216,10 @@ async fn do_update(
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
-    sqlx::query("UPDATE sc_collections SET name=?, description=? WHERE id=?")
-        .bind(params.name.clone())
-        .bind(params.description.clone())
-        .bind(id)
-        .execute(&state.dbpool)
-        .await
-        .map_err(|e| e.into())
+    let mut collection = Collection::fetch(id, &state.dbpool).await?;
+    collection.name = params.name.clone();
+    collection.description = params.description.clone();
+    collection.update(&state.dbpool).await.map_err(|e| e.into())
 }
 
 async fn modify_collection(
