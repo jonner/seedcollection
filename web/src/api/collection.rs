@@ -12,6 +12,7 @@ use axum::{
 };
 use libseed::{
     collection::{Collection, Filter},
+    loadable::Loadable,
     sample::Sample,
 };
 use serde::Deserialize;
@@ -151,7 +152,7 @@ async fn add_sample(
     Form(params): Form<AddSampleProps>,
 ) -> Result<Json<i64>, error::Error> {
     let mut collection = Collection::fetch(id, &state.dbpool).await?;
-    let sample = Sample::new_id_only(params.sample);
+    let sample = Sample::new_loadable(params.sample);
     let id = collection
         .assign_sample(sample, &state.dbpool)
         .await?

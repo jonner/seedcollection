@@ -1,3 +1,4 @@
+use libseed::loadable::Loadable;
 use std::io::stdin;
 use std::io::stdout;
 use std::io::Write;
@@ -193,7 +194,7 @@ async fn main() -> Result<()> {
             }
             CollectionCommands::AddSample { collection, sample } => {
                 let mut collection = Collection::fetch(collection, &dbpool).await?;
-                let sample = Sample::new_id_only(sample);
+                let sample = Sample::new_loadable(sample);
                 collection.assign_sample(sample, &dbpool).await?;
                 println!("Added sample to collection");
                 Ok(())
@@ -337,7 +338,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Remove { id } => {
-                let sample = Sample::new_id_only(id);
+                let sample = Sample::new_loadable(id);
                 sample.delete(&dbpool).await?.rows_affected();
                 Ok(())
             }
@@ -453,7 +454,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             UserCommands::Remove { id } => {
-                let mut user = User::new_id_only(id);
+                let mut user = User::new_loadable(id);
                 user.delete(&dbpool).await.map(|_| ())
             }
             UserCommands::Modify {

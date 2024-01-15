@@ -18,6 +18,7 @@ use libseed::{
     collection::{self, AssignedSample, AssignedSampleFilter, Collection},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
+    loadable::Loadable,
     location,
     note::{Note, NoteType},
     sample::{self, Sample},
@@ -400,7 +401,7 @@ async fn add_sample(
 
     let mut collection = Collection::fetch(id, &state.dbpool).await?;
     for sample in valid_samples {
-        let s = Sample::new_id_only(sample);
+        let s = Sample::new_loadable(sample);
         collection.assign_sample(s, &state.dbpool).await?;
     }
 

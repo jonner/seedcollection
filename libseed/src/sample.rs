@@ -6,6 +6,7 @@ use crate::{
     user::User,
 };
 use anyhow::anyhow;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{
     sqlite::{SqliteQueryResult, SqliteRow},
@@ -31,6 +32,8 @@ pub struct Sample {
     pub year: Option<u32>,
     pub notes: Option<String>,
     pub certainty: Certainty,
+    #[serde(skip_serializing)]
+    pub loaded: bool,
 }
 
 #[derive(Clone)]
@@ -42,6 +45,48 @@ pub enum Filter {
     TaxonNameLike(String),
     User(i64),
     Notes(Cmp, String),
+}
+
+impl Default for Sample {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            user: User::default(),
+            taxon: Taxon::new_id_only(-1),
+            location: Location::new_id_only(-1),
+            quantity: None,
+            month: None,
+            year: None,
+            notes: None,
+            certainty: Certainty::Uncertain,
+            loaded: false,
+        }
+    }
+}
+
+#[async_trait]
+impl Loadable for Sample {
+    type Id = i64;
+
+    fn new_loadable(id: Self::Id) -> Self {
+        let mut s: Sample = Default::default();
+        s.id = id;
+        s
+    }
+
+    fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
+    fn is_loadable(&self) -> bool {
+        todo!()
+    }
+
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+        let s = Sample::fetch(self.id, pool).await?;
+        *self = s;
+        Ok(())
+    }
 }
 
 impl FilterPart for Filter {
@@ -212,20 +257,7 @@ impl Sample {
             year,
             notes,
             certainty,
-        }
-    }
-
-    pub fn new_id_only(id: i64) -> Self {
-        Self {
-            id,
-            user: Default::default(),
-            taxon: Taxon::new_id_only(-1),
-            location: Location::new_id_only(-1),
-            month: None,
-            year: None,
-            quantity: None,
-            notes: None,
-            certainty: Certainty::Uncertain,
+            loaded: false,
         }
     }
 }
@@ -242,6 +274,7 @@ impl FromRow<'_, SqliteRow> for Sample {
             year: row.try_get("year").unwrap_or(None),
             notes: row.try_get("notes").unwrap_or(None),
             certainty: row.try_get("certainty").unwrap_or(Certainty::Uncertain),
+            loaded: true,
         })
     }
 }
