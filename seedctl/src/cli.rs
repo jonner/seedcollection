@@ -33,6 +33,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: SampleCommands,
     },
+    #[command(about = "Manage users")]
+    User {
+        #[command(subcommand)]
+        command: UserCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -201,5 +206,39 @@ pub enum TaxonomyCommands {
         any: Option<String>,
         #[arg(long, help = "Show only taxa found in Minnesota")]
         minnesota: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum UserCommands {
+    #[command(about = "List all users")]
+    List {
+        #[arg(short, long)]
+        full: bool,
+    },
+    #[command(about = "Add a new location to the database")]
+    Add {
+        #[arg(long)]
+        username: String,
+        #[arg(long)]
+        pwhash: String,
+    },
+    #[command(about = "Remove an existing location from the database")]
+    Remove { id: i64 },
+    #[command(
+        about="Modify properties about a location",
+        group(
+            clap::ArgGroup::new("modify")
+                .required(true)
+                .multiple(true)
+                .args(&["username", "pwhash"]),
+        ))]
+    Modify {
+        #[arg(long)]
+        id: i64,
+        #[arg(long)]
+        username: Option<String>,
+        #[arg(long)]
+        pwhash: Option<String>,
     },
 }

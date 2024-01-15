@@ -404,5 +404,15 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
+        Commands::User { command } => match command {
+            UserCommands::List { full } => todo!(),
+            UserCommands::Add { username, pwhash } => todo!(),
+            UserCommands::Remove { id } => todo!(),
+            UserCommands::Modify {
+                id,
+                username,
+                pwhash,
+            } => todo!(),
+        },
     }
 }
