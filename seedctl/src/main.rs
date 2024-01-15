@@ -1,6 +1,7 @@
 use std::io::stdin;
 use std::io::stdout;
 use std::io::Write;
+use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
@@ -112,6 +113,21 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
             .with(Modify::new(Segment::all()).with(Width::wrap(60)))
     );
     println!("{} records found", nrecs);
+}
+
+async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow::Result<String> {
+    let password = match path {
+        None => {
+            /* read from stdin*/
+            let mut s = String::new();
+            print!("{}", message.unwrap_or("New password: ".to_string()));
+            stdout().flush()?;
+            stdin().read_line(&mut s)?;
+            s
+        }
+        Some(f) => fs::read_to_string(f).await?,
+    };
+    Ok(password.trim().to_string())
 }
 
 #[tokio::main]
@@ -411,7 +427,7 @@ async fn main() -> Result<()> {
             }
         },
         Commands::User { command } => match command {
-            UserCommands::List { full } => {
+            UserCommands::List {} => {
                 let users = User::fetch_all(&dbpool).await?;
                 let mut tbuilder = tabled::builder::Builder::new();
                 tbuilder.set_header(["ID", "Username"]);
@@ -425,19 +441,11 @@ async fn main() -> Result<()> {
                 username,
                 passwordfile,
             } => {
-                let password = match passwordfile {
-                    None => {
-                        /* read from stdin*/
-                        let mut s = String::new();
-                        print!("New password for '{username}': ");
-                        stdout().flush()?;
-                        stdin().read_line(&mut s)?;
-                        s
-                    }
-                    Some(f) => fs::read_to_string(f).await?,
-                };
+                let password =
+                    get_password(passwordfile, Some(format!("New password for '{username}'")))
+                        .await?;
                 // hash the password
-                let pwhash = User::hash_password(password.trim())?;
+                let pwhash = User::hash_password(&password)?;
                 let user = User::new(username.clone(), pwhash);
                 let id = user.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added user to database:");
@@ -451,8 +459,19 @@ async fn main() -> Result<()> {
             UserCommands::Modify {
                 id,
                 username,
-                pwhash,
-            } => todo!(),
+                change_password,
+                password_file,
+            } => {
+                let mut user = User::fetch(id, &dbpool).await?;
+                if let Some(username) = username {
+                    user.username = username;
+                }
+                if change_password {
+                    let password = get_password(password_file, None).await?;
+                    user.change_password(&password)?;
+                }
+                user.update(&dbpool).await.map(|_| ())
+            }
         },
     }
 }

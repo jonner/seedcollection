@@ -212,10 +212,7 @@ pub enum TaxonomyCommands {
 #[derive(Subcommand, Debug)]
 pub enum UserCommands {
     #[command(about = "List all users")]
-    List {
-        #[arg(short, long)]
-        full: bool,
-    },
+    List {},
     #[command(about = "Add a new location to the database")]
     Add {
         #[arg(long)]
@@ -231,14 +228,16 @@ pub enum UserCommands {
             clap::ArgGroup::new("modify")
                 .required(true)
                 .multiple(true)
-                .args(&["username", "pwhash"]),
+                .args(&["username", "change_password"]),
         ))]
     Modify {
         #[arg(long)]
         id: i64,
         #[arg(long)]
         username: Option<String>,
-        #[arg(long)]
-        pwhash: Option<String>,
+        #[arg(long, short = 'p')]
+        change_password: bool,
+        #[arg(long, short = 'f', requires("change_password"))]
+        password_file: Option<PathBuf>,
     },
 }
