@@ -1,7 +1,5 @@
 use anyhow::anyhow;
-use argon2::Argon2;
-use argon2::PasswordHasher;
-use argon2::PasswordVerifier;
+use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use password_hash::{rand_core::OsRng, PasswordHash, SaltString};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite};
