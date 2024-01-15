@@ -8,7 +8,7 @@ use clap::Parser;
 use cli::*;
 use libseed::{
     collection::{AssignedSample, Collection},
-    location::{self, Location},
+    location::Location,
     sample::Sample,
     taxonomy::{self, filter_by, Taxon},
     user::User,
@@ -225,9 +225,7 @@ async fn main() -> Result<()> {
         },
         Commands::Location { command } => match command {
             LocationCommands::List { full } => {
-                let locations: Vec<location::Location> = sqlx::query_as("SELECT locid, name as locname, description, latitude, longitude FROM sc_locations")
-                    .fetch_all(&dbpool)
-                    .await?;
+                let locations = Location::fetch_all(None, &dbpool).await?;
                 let mut tbuilder = tabled::builder::Builder::new();
                 let mut header = vec!["ID", "Name"];
                 if full {
