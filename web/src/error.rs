@@ -6,8 +6,6 @@ use tracing::warn;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Authentication error")]
-    PasswordHashFailure(#[from] password_hash::errors::Error),
     #[error("Database error")]
     Database(#[from] sqlx::Error),
     #[error("Other error")]
