@@ -14,6 +14,7 @@ use libseed::{
     filter::{Cmp, FilterBuilder, FilterOp},
     location::{self, Location},
     sample::{self, Certainty, Sample},
+    taxonomy::Taxon,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -145,23 +146,11 @@ struct SampleParams {
     uncertain: Option<bool>,
 }
 
-fn validate_sample_params(params: &SampleParams) -> Result<(), anyhow::Error> {
-    if params.taxon.is_none() {
-        return Err(anyhow!("No taxon specified"));
-    }
-    if params.location.is_none() {
-        return Err(anyhow!("No location specified"));
-    }
-    Ok(())
-}
-
 async fn do_insert(
     user: &SqliteUser,
     params: &SampleParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    validate_sample_params(params)?;
-
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
@@ -230,24 +219,23 @@ async fn do_update(
     params: &SampleParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    validate_sample_params(params)?;
-
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
     };
-
-    sqlx::query("Update sc_samples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE id=?")
-        .bind(params.taxon)
-        .bind(params.location)
-        .bind(params.month)
-        .bind(params.year)
-        .bind(params.quantity)
-        .bind(&params.notes)
-        .bind(certainty)
-        .bind(id)
-        .execute(&state.dbpool)
-        .await.map_err(|e| e.into())
+    let mut sample = Sample::fetch(id, &state.dbpool).await?;
+    sample.taxon = Taxon::new_id_only(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
+    sample.location = Location::new_id_only(
+        params
+            .location
+            .ok_or_else(|| anyhow!("No location specified"))?,
+    );
+    sample.month = params.month;
+    sample.year = params.year;
+    sample.quantity = params.quantity;
+    sample.notes = params.notes.as_ref().cloned();
+    sample.certainty = certainty;
+    sample.update(&state.dbpool).await.map_err(|e| e.into())
 }
 
 async fn update_sample(

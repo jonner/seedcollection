@@ -8,7 +8,6 @@ use libseed::{
     taxonomy::{self, filter_by, Taxon},
 };
 use sqlx::SqlitePool;
-use tracing::debug;
 
 trait ConstructTableRow {
     fn row_values(&self, full: bool) -> Vec<String>;
@@ -343,36 +342,26 @@ async fn main() -> Result<()> {
                 {
                     return Err(anyhow!("Cannot modify without new values"));
                 }
-                let mut builder = sqlx::QueryBuilder::new("UPDATE sc_samples SET ");
-                let mut sep = builder.separated(", ");
+                let mut sample = Sample::fetch(id, &dbpool).await?;
                 if let Some(taxon) = taxon {
-                    sep.push("tsn = ");
-                    sep.push_bind_unseparated(taxon);
+                    sample.taxon = Taxon::new_id_only(taxon);
                 }
                 if let Some(location) = location {
-                    sep.push("collectedlocation = ");
-                    sep.push_bind_unseparated(location);
+                    sample.location = Location::new_id_only(location);
                 }
                 if let Some(month) = month {
-                    sep.push("month = ");
-                    sep.push_bind_unseparated(month);
+                    sample.month = Some(month.into());
                 }
                 if let Some(year) = year {
-                    sep.push("year = ");
-                    sep.push_bind_unseparated(year);
+                    sample.year = Some(year.into());
                 }
                 if let Some(notes) = notes {
-                    sep.push("notes = ");
-                    sep.push_bind_unseparated(notes);
+                    sample.notes = Some(notes);
                 }
                 if let Some(quantity) = quantity {
-                    sep.push("quantity = ");
-                    sep.push_bind_unseparated(quantity);
+                    sample.quantity = Some(quantity.into());
                 }
-                builder.push(" WHERE id=");
-                builder.push_bind(id);
-                debug!("sql: <<{}>>", builder.sql());
-                let _res = builder.build().execute(&dbpool).await?;
+                sample.update(&dbpool).await?;
                 println!("Modified collection...");
                 Ok(())
             }

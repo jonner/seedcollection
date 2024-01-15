@@ -154,6 +154,30 @@ impl Sample {
         .await.map_err(|e| e.into())
     }
 
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        if self.id < 0 {
+            return Err(anyhow!("No id set, cannot update"));
+        }
+        if self.taxon.id < 0 {
+            return Err(anyhow!("No taxon set, cannot update"));
+        }
+        if self.location.id < 0 {
+            return Err(anyhow!("No location set, cannot update"));
+        }
+
+        sqlx::query("Update sc_samples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE id=?")
+            .bind(self.taxon.id)
+            .bind(self.location.id)
+            .bind(self.month)
+            .bind(self.year)
+            .bind(self.quantity)
+            .bind(&self.notes)
+            .bind(&self.certainty)
+            .bind(self.id)
+            .execute(pool)
+            .await.map_err(|e| e.into())
+    }
+
     pub fn new(
         taxonid: i64,
         userid: i64,

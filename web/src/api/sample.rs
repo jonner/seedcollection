@@ -6,10 +6,13 @@ use axum::{
     routing::{get, post},
     Form, Router,
 };
-use libseed::{empty_string_as_none, sample::Sample};
+use libseed::{
+    empty_string_as_none,
+    location::Location,
+    sample::{Certainty, Sample},
+    taxonomy::Taxon,
+};
 use serde::Deserialize;
-use sqlx::QueryBuilder;
-use sqlx::Sqlite;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -55,7 +58,7 @@ struct SampleParams {
     quantity: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none")]
     notes: Option<String>,
-    uncertain: bool,
+    certainty: Option<Certainty>,
 }
 
 async fn modify_sample(
@@ -70,38 +73,33 @@ async fn modify_sample(
         && params.month.is_none()
         && params.year.is_none()
         && params.notes.is_none()
+        && params.certainty.is_none()
     {
         return Err(anyhow!("No params specified").into());
     }
-    let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("UPDATE sc_samples SET ");
-    let mut sep = builder.separated(", ");
-    if let Some(t) = params.taxon {
-        sep.push(" tsn=");
-        sep.push_bind_unseparated(t);
+    let mut sample = Sample::fetch(id, &state.dbpool).await?;
+    if let Some(taxon) = params.taxon {
+        sample.taxon = Taxon::new_id_only(taxon);
     }
-    if let Some(l) = params.location {
-        sep.push(" collectedlocation=");
-        sep.push_bind_unseparated(l);
+    if let Some(location) = params.location {
+        sample.location = Location::new_id_only(location);
     }
-    if let Some(m) = params.month {
-        sep.push(" month=");
-        sep.push_bind_unseparated(m);
+    if let Some(month) = params.month {
+        sample.month = Some(month);
     }
-    if let Some(y) = params.year {
-        sep.push(" year=");
-        sep.push_bind_unseparated(y);
-    }
-    if let Some(n) = params.quantity {
-        sep.push(" quantity=");
-        sep.push_bind_unseparated(n);
+    if let Some(year) = params.year {
+        sample.year = Some(year);
     }
     if let Some(notes) = params.notes {
-        sep.push(" notes=");
-        sep.push_bind_unseparated(notes);
+        sample.notes = Some(notes);
     }
-    builder.push(" WHERE id=");
-    builder.push_bind(id);
-    builder.build().execute(&state.dbpool).await?;
+    if let Some(quantity) = params.quantity {
+        sample.quantity = Some(quantity);
+    }
+    if let Some(certainty) = params.certainty {
+        sample.certainty = certainty;
+    }
+    sample.update(&state.dbpool).await?;
     Ok(())
 }
 
@@ -123,10 +121,7 @@ async fn new_sample(
         params.year,
         params.quantity,
         params.notes,
-        match params.uncertain {
-            true => libseed::sample::Certainty::Uncertain,
-            false => libseed::sample::Certainty::Certain,
-        },
+        params.certainty.unwrap_or(Certainty::Certain),
     );
     sample.insert(&state.dbpool).await?;
     Ok(())
