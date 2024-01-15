@@ -20,7 +20,13 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{app_url, auth::SqliteUser, error, state::AppState, Message, MessageType, TemplateKey};
+use crate::{
+    app_url,
+    auth::SqliteUser,
+    error::{self, Error},
+    state::AppState,
+    Message, MessageType, TemplateKey,
+};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -287,11 +293,13 @@ async fn delete_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    match sqlx::query("DELETE FROM sc_samples WHERE id=?")
-        .bind(id)
-        .execute(&state.dbpool)
-        .await
-    {
+    let sample = Sample::fetch(id, &state.dbpool).await?;
+    if sample.user.id != user.id {
+        return Err(Error::Unauthorized(
+            "No permission to delete sample".to_string(),
+        ));
+    }
+    match sample.delete(&state.dbpool).await {
         Err(e) => {
             let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
             let sample = Sample::fetch(id, &state.dbpool).await?;

@@ -318,10 +318,8 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Remove { id } => {
-                sqlx::query!("DELETE FROM sc_samples WHERE id=?", id,)
-                    .execute(&dbpool)
-                    .await?
-                    .rows_affected();
+                let sample = Sample::new_id_only(id);
+                sample.delete(&dbpool).await?.rows_affected();
                 Ok(())
             }
             SampleCommands::Modify {

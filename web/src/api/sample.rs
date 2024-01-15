@@ -1,4 +1,8 @@
-use crate::{auth::SqliteUser, error, state::AppState};
+use crate::{
+    auth::SqliteUser,
+    error::{self, Error},
+    state::AppState,
+};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
@@ -128,13 +132,16 @@ async fn new_sample(
 }
 
 async fn delete_sample(
-    _user: SqliteUser,
+    user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
-    sqlx::query("DELETE FROM sc_samples WHERE id=?")
-        .bind(id)
-        .execute(&state.dbpool)
-        .await?;
+    let sample = Sample::fetch(id, &state.dbpool).await?;
+    if sample.user.id != user.id {
+        return Err(Error::Unauthorized(
+            "No permission to delete sample".to_string(),
+        ));
+    }
+    sample.delete(&state.dbpool).await?;
     Ok(())
 }

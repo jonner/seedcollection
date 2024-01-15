@@ -178,6 +178,19 @@ impl Sample {
             .await.map_err(|e| e.into())
     }
 
+    // consumes self
+    pub async fn delete(self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        if self.id < 0 {
+            return Err(anyhow!("Id is not set, cannot delete"));
+        }
+
+        sqlx::query("DELETE FROM sc_samples WHERE id=?")
+            .bind(self.id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
+    }
+
     pub fn new(
         taxonid: i64,
         userid: i64,
