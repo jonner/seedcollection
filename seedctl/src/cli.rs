@@ -113,7 +113,7 @@ pub enum LocationCommands {
         latitude: Option<f64>,
         #[arg(long = "long")]
         longitude: Option<f64>,
-        #[arg(long = "long")]
+        #[arg(long)]
         userid: Option<i64>,
     },
     #[command(about = "Remove an existing location from the database")]
