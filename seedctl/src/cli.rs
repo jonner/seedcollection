@@ -221,7 +221,7 @@ pub enum UserCommands {
         #[arg(long)]
         username: String,
         #[arg(long)]
-        pwhash: String,
+        passwordfile: Option<PathBuf>,
     },
     #[command(about = "Remove an existing location from the database")]
     Remove { id: i64 },

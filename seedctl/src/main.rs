@@ -1,3 +1,7 @@
+use std::io::stdin;
+use std::io::stdout;
+use std::io::Write;
+
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::*;
@@ -9,6 +13,7 @@ use libseed::{
     user::User,
 };
 use sqlx::SqlitePool;
+use tokio::fs;
 
 trait ConstructTableRow {
     fn row_values(&self, full: bool) -> Vec<String>;
@@ -416,8 +421,33 @@ async fn main() -> Result<()> {
                 print_table(tbuilder, users.len());
                 Ok(())
             }
-            UserCommands::Add { username, pwhash } => todo!(),
-            UserCommands::Remove { id } => todo!(),
+            UserCommands::Add {
+                username,
+                passwordfile,
+            } => {
+                let password = match passwordfile {
+                    None => {
+                        /* read from stdin*/
+                        let mut s = String::new();
+                        print!("New password for '{username}': ");
+                        stdout().flush()?;
+                        stdin().read_line(&mut s)?;
+                        s
+                    }
+                    Some(f) => fs::read_to_string(f).await?,
+                };
+                // hash the password
+                let pwhash = User::hash_password(password.trim())?;
+                let user = User::new(username.clone(), pwhash);
+                let id = user.insert(&dbpool).await?.last_insert_rowid();
+                println!("Added user to database:");
+                println!("{}: {}", id, username);
+                Ok(())
+            }
+            UserCommands::Remove { id } => {
+                let mut user = User::new_id_only(id);
+                user.delete(&dbpool).await.map(|_| ())
+            }
             UserCommands::Modify {
                 id,
                 username,
