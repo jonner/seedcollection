@@ -10,6 +10,7 @@ pub struct User {
     pub id: i64,
     pub username: String,
     #[serde(skip_serializing)]
+    #[sqlx(default)]
     pub pwhash: String,
 }
 
