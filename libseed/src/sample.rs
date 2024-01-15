@@ -1,5 +1,6 @@
 use crate::{
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
+    loadable::Loadable,
     location::Location,
     taxonomy::Taxon,
     user::User,
@@ -203,7 +204,7 @@ impl Sample {
     ) -> Self {
         Self {
             id: -1,
-            user: User::new_id_only(userid),
+            user: User::new_loadable(userid),
             taxon: Taxon::new_id_only(taxonid),
             location: Location::new_id_only(locationid),
             quantity,
@@ -217,7 +218,7 @@ impl Sample {
     pub fn new_id_only(id: i64) -> Self {
         Self {
             id,
-            user: User::new_id_only(-1),
+            user: Default::default(),
             taxon: Taxon::new_id_only(-1),
             location: Location::new_id_only(-1),
             month: None,

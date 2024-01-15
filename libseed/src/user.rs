@@ -1,8 +1,11 @@
 use anyhow::anyhow;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
+use async_trait::async_trait;
 use password_hash::{rand_core::OsRng, PasswordHash, SaltString};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite};
+
+use crate::loadable::Loadable;
 
 #[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -12,6 +15,37 @@ pub struct User {
     #[serde(skip_serializing)]
     #[sqlx(default)]
     pub pwhash: String,
+    #[serde(skip_serializing)]
+    #[sqlx(skip)]
+    loaded: bool,
+}
+
+#[async_trait]
+impl Loadable for User {
+    type Id = i64;
+
+    fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
+    fn is_loadable(&self) -> bool {
+        self.id > 0
+    }
+
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+        let u = User::fetch(self.id, pool).await?;
+        *self = u;
+        Ok(())
+    }
+
+    fn new_loadable(id: Self::Id) -> Self {
+        User {
+            id,
+            username: Default::default(),
+            pwhash: Default::default(),
+            loaded: false,
+        }
+    }
 }
 
 impl User {
@@ -20,7 +54,14 @@ impl User {
             "SELECT id as userid, username, pwhash FROM sc_users ORDER BY username ASC",
         )
         .fetch_all(pool)
-        .await?)
+        .await
+        .and_then(|mut v| {
+            let _ = v.iter_mut().map(|u: &mut User| {
+                u.loaded = true;
+                u
+            });
+            Ok(v)
+        })?)
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<User> {
@@ -28,7 +69,11 @@ impl User {
             sqlx::query_as("SELECT id as userid, username, pwhash FROM sc_users WHERE id=?")
                 .bind(id)
                 .fetch_one(pool)
-                .await?,
+                .await
+                .and_then(|mut u: Self| {
+                    u.loaded = true;
+                    Ok(u)
+                })?,
         )
     }
 
@@ -36,12 +81,17 @@ impl User {
         username: &str,
         pool: &Pool<Sqlite>,
     ) -> anyhow::Result<Option<User>> {
-        Ok(
-            sqlx::query_as("SELECT id as userid, username, pwhash FROM sc_users WHERE username=?")
-                .bind(username)
-                .fetch_optional(pool)
-                .await?,
-        )
+        sqlx::query_as("SELECT id as userid, username, pwhash FROM sc_users WHERE username=?")
+            .bind(username)
+            .fetch_optional(pool)
+            .await
+            .and_then(|opt| {
+                Ok(opt.map(|mut u: User| {
+                    u.loaded = true;
+                    u
+                }))
+            })
+            .map_err(|e| e.into())
     }
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
@@ -98,17 +148,7 @@ impl User {
             id: -1,
             username,
             pwhash,
-        }
-    }
-
-    // this just creates a placeholder object to hold an ID so that another object (e.g. sample)
-    // that contains a Taxon object can still exist without loading the entire taxon from the
-    // database
-    pub fn new_id_only(id: i64) -> Self {
-        User {
-            id,
-            username: Default::default(),
-            pwhash: Default::default(),
+            loaded: false,
         }
     }
 
@@ -119,5 +159,16 @@ impl User {
             .execute(pool)
             .await
             .map_err(|e| e.into())
+    }
+}
+
+impl Default for User {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            username: Default::default(),
+            pwhash: Default::default(),
+            loaded: Default::default(),
+        }
     }
 }

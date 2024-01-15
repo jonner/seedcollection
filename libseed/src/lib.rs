@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 pub mod collection;
 pub mod filter;
+mod loadable;
 pub mod location;
 pub mod note;
 pub mod sample;
