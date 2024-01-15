@@ -187,7 +187,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             CollectionCommands::Remove { id } => {
-                let mut collection = Collection::new_id_only(id);
+                let mut collection = Collection::new_loadable(id);
                 collection.delete(&dbpool).await?;
                 println!("Removed collection {id}");
                 Ok(())

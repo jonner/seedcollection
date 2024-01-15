@@ -1,9 +1,11 @@
 use crate::{
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
+    loadable::Loadable,
     note::{self, Note},
     sample::Sample,
 };
 use anyhow::anyhow;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{
     sqlite::{SqliteQueryResult, SqliteRow},
@@ -20,6 +22,47 @@ pub struct Collection {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub samples: Vec<AssignedSample>,
     pub userid: i64,
+    #[serde(skip_serializing)]
+    #[sqlx(skip)]
+    loaded: bool,
+}
+
+impl Default for Collection {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            name: Default::default(),
+            description: None,
+            samples: Default::default(),
+            userid: -1,
+            loaded: false,
+        }
+    }
+}
+
+#[async_trait]
+impl Loadable for Collection {
+    type Id = i64;
+
+    fn new_loadable(id: Self::Id) -> Self {
+        let mut c: Collection = Default::default();
+        c.id = id;
+        c
+    }
+
+    fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
+    fn is_loadable(&self) -> bool {
+        self.id > 0
+    }
+
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+        let c = Collection::fetch(self.id, pool).await?;
+        *self = c;
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -89,7 +132,11 @@ impl Collection {
         Ok(Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
-            .await?)
+            .await
+            .and_then(|mut c: Self| {
+                c.loaded = true;
+                Ok(c)
+            })?)
     }
 
     pub async fn fetch_all(
@@ -100,6 +147,13 @@ impl Collection {
             .build_query_as()
             .fetch_all(pool)
             .await
+            .and_then(|mut v| {
+                let _ = v.iter_mut().map(|c: &mut Collection| {
+                    c.loaded = true;
+                    c
+                });
+                Ok(v)
+            })
             .map_err(|e| e.into())
     }
 
@@ -174,16 +228,6 @@ impl Collection {
             .map_err(|e| e.into())
     }
 
-    pub fn new_id_only(id: i64) -> Self {
-        Self {
-            id,
-            name: Default::default(),
-            description: None,
-            userid: -1,
-            samples: Default::default(),
-        }
-    }
-
     pub fn new(name: String, description: Option<String>, userid: i64) -> Self {
         Self {
             id: -1,
@@ -191,6 +235,7 @@ impl Collection {
             description,
             userid,
             samples: Default::default(),
+            loaded: false,
         }
     }
 }
@@ -276,6 +321,7 @@ impl FromRow<'_, SqliteRow> for AssignedSample {
             id: row.try_get("csid")?,
             sample: Sample::from_row(row)?,
             notes: Default::default(),
+            loaded: true,
         })
     }
 }
