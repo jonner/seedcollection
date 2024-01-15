@@ -327,6 +327,13 @@ async fn add_sample_prep(
     .fetch_all(&state.dbpool)
     .await?;
     let ids = ids_in_collection.iter().map(|row| row.sampleid).collect();
+
+    /* FIXME: make this more efficient by changeing it to filter by
+     *  'WHERE NOT IN (SELECT ids from...)'
+     * instead of
+     * [ query ids first ], then
+     *  'WHERE NOT IN (1, 2, 3, 4, 5...)'
+     */
     let samples = Sample::fetch_all_user(
         user.id,
         Some(Arc::new(sample::Filter::SampleNotIn(ids))),
