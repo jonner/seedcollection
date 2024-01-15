@@ -65,9 +65,10 @@ impl AuthnBackend for SqliteAuthBackend {
     }
 
     async fn get_user(&self, username: &UserId<Self>) -> Result<Option<Self::User>, Self::Error> {
-        Ok(Some(SqliteUser(
-            User::fetch_by_username(username, &self.db).await?,
-        )))
+        User::fetch_by_username(username, &self.db)
+            .await
+            .map(|o| o.map(|u| SqliteUser(u)))
+            .map_err(|e| e.into())
     }
 }
 

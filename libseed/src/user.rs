@@ -33,11 +33,14 @@ impl User {
         )
     }
 
-    pub async fn fetch_by_username(username: &str, pool: &Pool<Sqlite>) -> anyhow::Result<User> {
+    pub async fn fetch_by_username(
+        username: &str,
+        pool: &Pool<Sqlite>,
+    ) -> anyhow::Result<Option<User>> {
         Ok(
             sqlx::query_as("SELECT id as userid, username, pwhash FROM sc_users WHERE username=?")
                 .bind(username)
-                .fetch_one(pool)
+                .fetch_optional(pool)
                 .await?,
         )
     }
