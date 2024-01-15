@@ -131,13 +131,13 @@ async fn do_insert(
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
-    sqlx::query("INSERT INTO sc_collections (name, description, userid) VALUES (?, ?, ?)")
-        .bind(params.name.clone())
-        .bind(params.description.clone())
-        .bind(user.id)
-        .execute(&state.dbpool)
-        .await
-        .map_err(|e| e.into())
+
+    let collection = Collection::new(
+        params.name.clone(),
+        params.description.as_ref().cloned(),
+        user.id,
+    );
+    collection.insert(&state.dbpool).await.map_err(|e| e.into())
 }
 
 async fn insert_collection(

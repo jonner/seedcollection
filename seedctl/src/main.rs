@@ -136,16 +136,13 @@ async fn main() -> Result<()> {
                 print_table(tbuilder, collections.len());
                 Ok(())
             }
-            CollectionCommands::Add { name, description } => {
-                let id = sqlx::query!(
-                    r#"INSERT INTO sc_collections (name, description)
-                VALUES (?1, ?2)"#,
-                    name,
-                    description,
-                )
-                .execute(&dbpool)
-                .await?
-                .last_insert_rowid();
+            CollectionCommands::Add {
+                name,
+                description,
+                userid,
+            } => {
+                let collection = Collection::new(name, description, userid);
+                let id = collection.insert(&&dbpool).await?.last_insert_rowid();
                 let row = sqlx::query!(
                     r#"SELECT L.id, L.name, L.description
                                       FROM sc_collections L WHERE id=?"#,

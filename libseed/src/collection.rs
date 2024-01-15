@@ -129,6 +129,26 @@ impl Collection {
             .await
             .map_err(|e| e.into())
     }
+
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        sqlx::query("INSERT INTO sc_collections (name, description, userid) VALUES (?, ?, ?)")
+            .bind(self.name.clone())
+            .bind(self.description.clone())
+            .bind(self.userid)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
+    }
+
+    pub fn new(name: String, description: Option<String>, userid: i64) -> Self {
+        Self {
+            id: -1,
+            name,
+            description,
+            userid,
+            samples: Default::default(),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]

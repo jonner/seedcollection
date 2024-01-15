@@ -102,19 +102,12 @@ struct AddProps {
 }
 
 async fn add_collection(
-    _user: SqliteUser,
+    user: SqliteUser,
     Query(params): Query<AddProps>,
     State(state): State<AppState>,
 ) -> Result<Json<i64>, error::Error> {
-    let id = sqlx::query(
-        "INSERT INTO sc_collections (name, description) VALUES (?,
-    ?)",
-    )
-    .bind(params.name)
-    .bind(params.description)
-    .execute(&state.dbpool)
-    .await?
-    .last_insert_rowid();
+    let collection = Collection::new(params.name, params.description, user.id);
+    let id = collection.insert(&state.dbpool).await?.last_insert_rowid();
     Ok(Json(id))
 }
 

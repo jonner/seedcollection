@@ -48,6 +48,8 @@ pub enum CollectionCommands {
         name: String,
         #[arg(short, long)]
         description: Option<String>,
+        #[arg(short, long)]
+        userid: i64,
     },
     #[command(
         about="Modify properties of a collection",
