@@ -245,6 +245,48 @@ pub struct AssignedSample {
     pub id: i64,
     pub sample: Sample,
     pub notes: Vec<Note>,
+    pub loaded: bool,
+}
+
+impl Default for AssignedSample {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            sample: Default::default(),
+            notes: Default::default(),
+            loaded: false,
+        }
+    }
+}
+
+#[async_trait]
+impl Loadable for AssignedSample {
+    type Id = i64;
+
+    fn new_loadable(id: Self::Id) -> Self {
+        let mut a: AssignedSample = Default::default();
+        a.id = id;
+        a
+    }
+
+    fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
+    fn is_loadable(&self) -> bool {
+        self.id > 0
+    }
+
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+        let a = AssignedSample::fetch(self.id, pool)
+            .await
+            .and_then(|mut a| {
+                a.loaded = true;
+                Ok(a)
+            })?;
+        *self = a;
+        Ok(())
+    }
 }
 
 impl AssignedSample {
