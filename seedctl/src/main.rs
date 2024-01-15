@@ -6,6 +6,7 @@ use libseed::{
     location::{self, Location},
     sample::Sample,
     taxonomy::{self, filter_by, Taxon},
+    user::User,
 };
 use sqlx::SqlitePool;
 
@@ -405,7 +406,16 @@ async fn main() -> Result<()> {
             }
         },
         Commands::User { command } => match command {
-            UserCommands::List { full } => todo!(),
+            UserCommands::List { full } => {
+                let users = User::fetch_all(&dbpool).await?;
+                let mut tbuilder = tabled::builder::Builder::new();
+                tbuilder.set_header(["ID", "Username"]);
+                for user in &users {
+                    tbuilder.push_record([user.id.to_string(), user.username.clone()]);
+                }
+                print_table(tbuilder, users.len());
+                Ok(())
+            }
             UserCommands::Add { username, pwhash } => todo!(),
             UserCommands::Remove { id } => todo!(),
             UserCommands::Modify {
