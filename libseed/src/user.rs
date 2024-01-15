@@ -45,6 +45,20 @@ impl User {
         )
     }
 
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        if self.id < 0 {
+            return Err(anyhow!("No id set, cannot update"));
+        }
+
+        sqlx::query("UPDATE sc_users SET username=?, pwhash=? WHERE id=?")
+            .bind(&self.username)
+            .bind(&self.pwhash)
+            .bind(self.id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
+    }
+
     pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(anyhow!("No id set, cannot delete"));
@@ -73,6 +87,11 @@ impl User {
         hasher
             .verify_password(pw.as_bytes(), &expected_hash)
             .map_err(|e| e.into())
+    }
+
+    pub fn change_password(&mut self, pw: &str) -> anyhow::Result<()> {
+        self.pwhash = Self::hash_password(pw)?;
+        Ok(())
     }
 
     pub fn new(username: String, pwhash: String) -> Self {
