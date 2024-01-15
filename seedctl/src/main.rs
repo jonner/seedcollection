@@ -269,28 +269,20 @@ async fn main() -> Result<()> {
                 {
                     return Err(anyhow!("Cannot modify location without new values"));
                 }
-                let mut builder = sqlx::QueryBuilder::new("UPDATE sc_locations SET ");
-                let mut sep = builder.separated(", ");
+                let mut loc = Location::fetch(id, &dbpool).await?;
                 if let Some(name) = name {
-                    sep.push("name = ");
-                    sep.push_bind_unseparated(name);
+                    loc.name = name;
                 }
                 if let Some(description) = description {
-                    sep.push("description = ");
-                    sep.push_bind_unseparated(description);
+                    loc.description = Some(description);
                 }
                 if let Some(latitude) = latitude {
-                    sep.push("latitude = ");
-                    sep.push_bind_unseparated(latitude);
+                    loc.latitude = Some(latitude);
                 }
                 if let Some(longitude) = longitude {
-                    sep.push("longitude = ");
-                    sep.push_bind_unseparated(longitude);
+                    loc.longitude = Some(longitude);
                 }
-                builder.push(" WHERE locid=");
-                builder.push_bind(id);
-                debug!("sql: <<{}>>", builder.sql());
-                let _res = builder.build().execute(&dbpool).await?;
+                loc.update(&dbpool).await?;
                 println!("Modified collection...");
                 Ok(())
             }

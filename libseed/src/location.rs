@@ -125,6 +125,24 @@ impl Location {
         .map_err(|e| e.into())
     }
 
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        if self.id < 0 {
+            return Err(anyhow!("Id is not set, cannot update"));
+        }
+
+        sqlx::query(
+            "UPDATE sc_locations SET name=?, description=?, latitude=?, longitude=? WHERE locid=?",
+        )
+        .bind(self.name.clone())
+        .bind(self.description.as_ref().cloned())
+        .bind(self.latitude)
+        .bind(self.longitude)
+        .bind(self.id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.into())
+    }
+
     pub fn new(
         name: String,
         description: Option<String>,

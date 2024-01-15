@@ -104,21 +104,17 @@ async fn do_update(
     params: &LocationParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    if params.name.is_none() {
-        return Err(anyhow!("No name specified").into());
-    }
+    let mut loc = Location::fetch(id, &state.dbpool).await?;
+    loc.name = params
+        .name
+        .as_ref()
+        .ok_or_else(|| anyhow!("No name specified"))?
+        .to_string();
+    loc.description = params.description.as_ref().cloned();
+    loc.latitude = params.latitude;
+    loc.longitude = params.longitude;
 
-    sqlx::query(
-        "UPDATE sc_locations SET name=?, description=?, latitude=?, longitude=? WHERE locid=?",
-    )
-    .bind(params.name.clone())
-    .bind(params.description.clone())
-    .bind(params.latitude)
-    .bind(params.longitude)
-    .bind(id)
-    .execute(&state.dbpool)
-    .await
-    .map_err(|e| e.into())
+    loc.update(&state.dbpool).await.map_err(|e| e.into())
 }
 
 async fn update_location(

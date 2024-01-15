@@ -1,4 +1,8 @@
-use crate::{auth::SqliteUser, error, state::AppState};
+use crate::{
+    auth::SqliteUser,
+    error::{self, Error},
+    state::AppState,
+};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
@@ -56,7 +60,7 @@ struct ModifyParams {
 }
 
 async fn modify_location(
-    _user: SqliteUser,
+    user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Form(params): Form<ModifyParams>,
@@ -68,27 +72,26 @@ async fn modify_location(
     {
         return Err(anyhow!("No parameters given").into());
     }
-    let mut builder = sqlx::QueryBuilder::<sqlx::Sqlite>::new("UPDATE sc_locations SET ");
-    let mut sep = builder.separated(", ");
+    let mut loc = Location::fetch(id, &state.dbpool).await?;
+    if loc.userid != Some(user.id) {
+        return Err(Error::Unauthorized(
+            "No permission to modify this location".to_string(),
+        ));
+    }
+
     if let Some(name) = params.name {
-        sep.push(" name=");
-        sep.push_bind_unseparated(name);
+        loc.name = name;
     }
     if let Some(desc) = params.description {
-        sep.push(" description=");
-        sep.push_bind_unseparated(desc);
+        loc.description = Some(desc);
     }
     if let Some(n) = params.latitude {
-        sep.push(" latitude=");
-        sep.push_bind_unseparated(n);
+        loc.latitude = Some(n);
     }
     if let Some(n) = params.longitude {
-        sep.push(" longitude=");
-        sep.push_bind_unseparated(n);
+        loc.longitude = Some(n);
     }
-    builder.push(" WHERE locid=");
-    builder.push_bind(id);
-    builder.build().execute(&state.dbpool).await?;
+    loc.update(&state.dbpool).await?;
     Ok(())
 }
 
