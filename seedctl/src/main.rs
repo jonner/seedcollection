@@ -142,16 +142,10 @@ async fn main() -> Result<()> {
                 userid,
             } => {
                 let collection = Collection::new(name, description, userid);
-                let id = collection.insert(&&dbpool).await?.last_insert_rowid();
-                let row = sqlx::query!(
-                    r#"SELECT L.id, L.name, L.description
-                                      FROM sc_collections L WHERE id=?"#,
-                    id
-                )
-                .fetch_one(&dbpool)
-                .await?;
+                let id = collection.insert(&dbpool).await?.last_insert_rowid();
+                let collection = Collection::fetch(id, &dbpool).await?;
                 println!("Added collection to database:");
-                println!("{}: {}", row.id, row.name);
+                println!("{}: {}", collection.id, collection.name);
                 Ok(())
             }
             CollectionCommands::Modify {
@@ -159,23 +153,14 @@ async fn main() -> Result<()> {
                 name,
                 description,
             } => {
-                if name.is_none() && description.is_none() {
-                    return Err(anyhow!("Cannot modify without new values"));
-                }
-                let mut builder = sqlx::QueryBuilder::new("UPDATE sc_collections SET ");
-                let mut sep = builder.separated(", ");
+                let mut collection = Collection::fetch(id, &dbpool).await?;
                 if let Some(name) = name {
-                    sep.push("name = ");
-                    sep.push_bind_unseparated(name);
+                    collection.name = name
                 }
                 if let Some(description) = description {
-                    sep.push("description = ");
-                    sep.push_bind_unseparated(description);
+                    collection.description = Some(description);
                 }
-                builder.push(" WHERE id=");
-                builder.push_bind(id);
-                debug!("sql: <<{}>>", builder.sql());
-                let _res = builder.build().execute(&dbpool).await?;
+                collection.update(&dbpool).await?;
                 println!("Modified collection...");
                 Ok(())
             }

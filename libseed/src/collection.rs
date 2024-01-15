@@ -3,6 +3,7 @@ use crate::{
     note::{self, Note},
     sample::Sample,
 };
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use sqlx::{
     sqlite::{SqliteQueryResult, SqliteRow},
@@ -135,6 +136,23 @@ impl Collection {
             .bind(self.name.clone())
             .bind(self.description.clone())
             .bind(self.userid)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
+    }
+
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+        if self.name.is_empty() {
+            return Err(anyhow!("No name specified"));
+        }
+        if self.id < 0 {
+            return Err(anyhow!("No id set"));
+        }
+        sqlx::query("UPDATE sc_collections SET name=?, description=?, userid=? WHERE id=?")
+            .bind(self.name.clone())
+            .bind(self.description.as_ref().cloned())
+            .bind(self.userid)
+            .bind(self.id)
             .execute(pool)
             .await
             .map_err(|e| e.into())
