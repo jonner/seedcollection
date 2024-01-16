@@ -163,7 +163,7 @@ async fn do_insert(
         _ => Certainty::Certain,
     };
 
-    let sample = Sample::new(
+    let mut sample = Sample::new(
         params.taxon.ok_or(anyhow!("No taxon provided"))?,
         user.id,
         params.location.ok_or(anyhow!("No location provided"))?,

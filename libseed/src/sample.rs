@@ -79,7 +79,7 @@ impl Loadable for Sample {
     }
 
     fn is_loadable(&self) -> bool {
-        todo!()
+        self.id > 0
     }
 
     async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
@@ -178,7 +178,7 @@ impl Sample {
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
             return Err(Error::InvalidData(format!(
                 "Sample already has an id assigned ({}), can't insert a new item",
@@ -195,7 +195,9 @@ impl Sample {
         .bind(&self.notes)
         .bind(&self.certainty)
         .execute(pool)
-        .await.map_err(|e| e.into())
+        .await
+        .map(|r| { self.id = r.last_insert_rowid(); self.loaded = true; r})
+        .map_err(|e| e.into())
     }
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
@@ -280,5 +282,74 @@ impl FromRow<'_, SqliteRow> for Sample {
             certainty: row.try_get("certainty").unwrap_or(Certainty::Uncertain),
             loaded: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_log::test;
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("users", "locations", "taxa"))
+    ))]
+    async fn insert_samples(pool: Pool<Sqlite>) {
+        async fn check(
+            pool: &Pool<Sqlite>,
+            taxon: i64,
+            user: i64,
+            location: i64,
+            quantity: Option<i64>,
+            month: Option<u32>,
+            year: Option<u32>,
+            notes: Option<String>,
+            certainty: Certainty,
+        ) {
+            let mut sample = Sample::new(
+                taxon, user, location, month, year, quantity, notes, certainty,
+            );
+            let res = sample.insert(pool).await;
+            let res = res.expect("Failed to insert sample");
+            let mut loaded = Sample::new_loadable(res.last_insert_rowid());
+            loaded
+                .load(pool)
+                .await
+                .expect("Failed to load sample from database");
+            assert_eq!(sample.id, loaded.id);
+            assert_eq!(sample.loaded, loaded.loaded);
+            assert_eq!(sample.user.id, loaded.user.id);
+            assert_eq!(sample.taxon.id, loaded.taxon.id);
+            assert_eq!(sample.location.id, loaded.location.id);
+            assert_eq!(sample.month, loaded.month);
+            assert_eq!(sample.year, loaded.year);
+            assert_eq!(sample.quantity, loaded.quantity);
+            assert_eq!(sample.notes, loaded.notes);
+            assert_eq!(sample.certainty, loaded.certainty);
+        }
+        check(
+            &pool,
+            40683,
+            1,
+            1,
+            None,
+            None,
+            None,
+            None,
+            Certainty::Uncertain,
+        )
+        .await;
+        check(
+            &pool,
+            40683,
+            1,
+            1,
+            Some(100),
+            Some(12),
+            Some(2023),
+            Some("these are notes".to_string()),
+            Certainty::Certain,
+        )
+        .await;
     }
 }

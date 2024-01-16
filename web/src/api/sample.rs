@@ -116,7 +116,7 @@ async fn new_sample(
     if params.taxon.is_none() && params.location.is_none() {
         return Err(anyhow!("Taxon and Location are required").into());
     }
-    let sample = Sample::new(
+    let mut sample = Sample::new(
         params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?,
         user.id,
         params
