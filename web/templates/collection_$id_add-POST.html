@@ -1,5 +1,10 @@
-    {% if samples %}
-    <form hx-post="{{ ("/collection/" ~ collection.id ~ "/add") | app_url }}">
+{% from "_macros.html" import show_message %}
+{% if samples %}
+<form hx-post="{{ ("/collection/" ~ collection.id ~ "/add") | app_url }}">
+    {% for msg in messages %}
+    {{ show_message(msg) }}
+    {% endfor %}
+    <div>
         {% for sample in samples %}
         <div class="form-check">
             <input class="form-check-input"
@@ -8,16 +13,26 @@
                    value="{{sample.id}}"
                    id="sample-{{sample.id}}">
             <label class="form-check-label" for="sample-{{sample.id}}">
-                {{ sample.id }}: <b>{{ sample.taxon.complete_name }}</b> from {{ sample.location.name }} ({{ sample.year }}) - {{ sample.notes }}
+                <span class="font-monospace">{{ sample.id | idfmt("S") }}</span>: <b>{{ sample.taxon.complete_name }}</b>
+                <span class="text-body-tertiary">
+                from {{ sample.location.name }}
+                {% if sample.year %}
+                ({{ sample.year }})
+                {% endif %}
+                {% if sample.notes %}
+                - {{ sample.notes }}
+                {% endif %}
+                </span>
             </label>
         </div>
         {% endfor %}
-        <div class="row mb-3">
-            <button type="submit" class="btn btn-primary">Add</button>
-        </div>
-    </form>
-    {% else %}
-    <div class="alert alert-warning">No samples available to add. 
-        <a href="{{ "/sample/new" | app_url }}">Add a new sample to the database first</a>.
     </div>
-    {% endif %}
+    <div class="row mb-3">
+        <button type="submit" class="btn btn-primary">Add</button>
+    </div>
+</form>
+{% else %}
+<div class="alert alert-warning">No samples available to add. 
+    <a href="{{ "/sample/new" | app_url }}">Add a new sample to the database first</a>.
+</div>
+{% endif %}

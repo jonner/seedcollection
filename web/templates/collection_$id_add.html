@@ -1,6 +1,8 @@
 {% extends "root.html" %}
+{% from "_macros.html" import icon %}
 {% block title %}Add samples to collection{% endblock %}
 {% block content %}
+<div><a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ icon("chevron-double-left") }} Back to collection</a></div>
 <h2>{{ self.title() }}</h2>
 <p>Choose samples to add to the collection <i>{{ collection.name }}</p>
 {% include "collection_$id_add-POST.html" %}

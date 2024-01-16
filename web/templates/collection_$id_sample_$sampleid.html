@@ -1,6 +1,7 @@
 {% extends "root.html" %}
 {% block title %}Collection sample {{ sample.id }}{% endblock %}
 {% block content %}
+<div><a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ icon("chevron-double-left") }} Back to collection</a></div>
 <h2>{{ self.title() }}</h2>
 <p>Part of collection {{ collection.name }}</p>
 <h3>Details</h3>

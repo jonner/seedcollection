@@ -2,6 +2,7 @@ use crate::{
     app_url,
     auth::SqliteUser,
     error::{self, Error},
+    format_id_number,
     state::AppState,
     Message, MessageType, TemplateKey,
 };
@@ -400,9 +401,31 @@ async fn add_sample(
     });
 
     let mut collection = Collection::fetch(id, &state.dbpool).await?;
+    let mut n_inserted = 0;
+    let mut messages = Vec::new();
     for sample in valid_samples {
         let s = Sample::new_loadable(sample);
-        collection.assign_sample(s, &state.dbpool).await?;
+        match collection.assign_sample(s, &state.dbpool).await {
+            Err(e) => messages.push(Message {
+                r#type: MessageType::Error,
+                msg: format!(
+                    "Failed to add sample {}: {}",
+                    format_id_number(sample, Some("S"), None),
+                    e.to_string()
+                ),
+            }),
+            Ok(res) => n_inserted += res.rows_affected(),
+        }
+    }
+
+    if n_inserted > 0 {
+        messages.insert(
+            0,
+            Message {
+                r#type: MessageType::Success,
+                msg: format!("Assigned {n_inserted} samples to this collection"),
+            },
+        );
     }
 
     let (c, samples) = add_sample_prep(&user, id, &state).await?;
@@ -410,6 +433,7 @@ async fn add_sample(
         key,
         state.tmpl.clone(),
         context!(collection => c,
+                 messages => messages,
                  samples => samples),
     )
     .into_response())
