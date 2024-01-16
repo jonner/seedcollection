@@ -113,7 +113,7 @@ async fn add_location(
     {
         return Err(anyhow!("No parameters given").into());
     }
-    let location = Location::new(
+    let mut location = Location::new(
         params.name.ok_or(anyhow!("No name given"))?,
         params.description,
         params.latitude,

@@ -174,7 +174,7 @@ async fn do_insert(
     params: &LocationParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    let location = Location::new(
+    let mut location = Location::new(
         params
             .name
             .as_ref()

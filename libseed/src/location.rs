@@ -122,30 +122,40 @@ impl Location {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Location> {
-        Ok(Self::build_query(Some(Arc::new(Filter::Id(id))))
+        Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
-            .await?)
+            .await
+            .map(|mut l: Location| {
+                l.loaded = true;
+                l
+            })
+            .map_err(|e| e.into())
     }
 
     pub async fn fetch_all(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Location>> {
-        Ok(Self::build_query(filter)
+        Self::build_query(filter)
             .build_query_as()
             .fetch_all(pool)
-            .await?)
+            .await
+            .map(|mut v| {
+                let _ = v.iter_mut().map(|l: &mut Location| {
+                    l.loaded = true;
+                    l
+                });
+                v
+            })
+            .map_err(|e| e.into())
     }
 
     pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Location>> {
-        Ok(Self::build_query(Some(Arc::new(Filter::User(userid))))
-            .build_query_as()
-            .fetch_all(pool)
-            .await?)
+        Self::fetch_all(Some(Arc::new(Filter::User(userid))), pool).await
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
             return Err(Error::InvalidData(
                 "Location is is not -1, cannot insert a new item".to_string(),
@@ -164,6 +174,11 @@ impl Location {
         .bind(self.userid)
         .execute(pool)
         .await
+        .map(|r| {
+            self.id = r.last_insert_rowid();
+            self.loaded = true;
+            r
+        })
         .map_err(|e| e.into())
     }
 
@@ -215,5 +230,69 @@ impl Location {
             userid,
             loaded: false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_log::test;
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("users"))
+    ))]
+    async fn test_insert_locations(pool: Pool<Sqlite>) {
+        async fn check(
+            pool: &Pool<Sqlite>,
+            name: String,
+            desc: Option<String>,
+            lat: Option<f64>,
+            lon: Option<f64>,
+            userid: Option<i64>,
+        ) {
+            let mut loc = Location::new(name, desc, lat, lon, userid);
+            // full data
+            let res = loc.insert(&pool).await.expect("failed to insert");
+            assert_eq!(res.rows_affected(), 1);
+            let mut locload = Location::new_loadable(res.last_insert_rowid());
+            let res = locload.load(&pool).await;
+
+            if let Err(e) = res {
+                println!("{e:?}");
+                panic!();
+            }
+            assert_eq!(loc, locload);
+        }
+
+        check(
+            &pool,
+            "test name".to_string(),
+            Some("Test description".to_string()),
+            Some(39.7870909115992),
+            Some(-75.64827694159666),
+            Some(1),
+        )
+        .await;
+        check(
+            &pool,
+            "test name".to_string(),
+            Some("Test description".to_string()),
+            Some(39.7870909115992),
+            None,
+            Some(1),
+        )
+        .await;
+        check(
+            &pool,
+            "test name".to_string(),
+            Some("Test description".to_string()),
+            None,
+            None,
+            Some(1),
+        )
+        .await;
+        check(&pool, "test name".to_string(), None, None, None, Some(1)).await;
+        check(&pool, "".to_string(), None, None, None, Some(1)).await;
     }
 }

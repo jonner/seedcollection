@@ -262,7 +262,7 @@ async fn main() -> Result<()> {
                 longitude,
                 userid,
             } => {
-                let location = Location::new(name, description, latitude, longitude, userid);
+                let mut location = Location::new(name, description, latitude, longitude, userid);
 
                 let newid = location.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added location {newid} to database");
