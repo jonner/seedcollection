@@ -370,3 +370,34 @@ impl FromRow<'_, SqliteRow> for AssignedSample {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_log::test;
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("users"))
+    ))]
+    async fn test_insert_collections(pool: Pool<Sqlite>) {
+        async fn check(pool: &Pool<Sqlite>, name: String, desc: Option<String>, userid: i64) {
+            let mut c = Collection::new(name, desc, userid);
+            let res = c.insert(&pool).await.expect("failed to insert");
+            assert_eq!(res.rows_affected(), 1);
+            let mut cload = Collection::new_loadable(res.last_insert_rowid());
+            cload.load(&pool).await.expect("Failed to load collection");
+            assert_eq!(c, cload);
+        }
+
+        check(
+            &pool,
+            "test name".to_string(),
+            Some("Test description".to_string()),
+            1,
+        )
+        .await;
+
+        check(&pool, "test name".to_string(), None, 1).await;
+    }
+}
