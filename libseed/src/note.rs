@@ -1,11 +1,15 @@
 use anyhow::anyhow;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, QueryBuilder, Sqlite};
 use std::sync::Arc;
 use strum_macros::{EnumIter, EnumString, FromRepr};
 use time::Date;
 
-use crate::filter::{DynFilterPart, FilterPart};
+use crate::{
+    filter::{DynFilterPart, FilterPart},
+    loadable::Loadable,
+};
 
 #[derive(
     sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumString, EnumIter, FromRepr,
@@ -33,6 +37,45 @@ pub struct Note {
     pub kind: NoteType,
     pub summary: String,
     pub details: Option<String>,
+    #[sqlx(skip)]
+    pub loaded: bool,
+}
+
+impl Default for Note {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            csid: -1,
+            date: Date::MIN,
+            kind: NoteType::Other,
+            summary: Default::default(),
+            details: None,
+            loaded: false,
+        }
+    }
+}
+
+#[async_trait]
+impl Loadable for Note {
+    type Id = i64;
+
+    fn new_loadable(id: Self::Id) -> Self {
+        let mut note = Self::default();
+        note.id = id;
+        note
+    }
+
+    fn is_loaded(&self) -> bool {
+        self.loaded
+    }
+
+    fn is_loadable(&self) -> bool {
+        self.id > 0
+    }
+
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+        Note::fetch(self.id, pool).await.map_err(|e| e.into())
+    }
 }
 
 impl FilterPart for FilterField {
@@ -45,6 +88,23 @@ impl FilterPart for FilterField {
 }
 
 impl Note {
+    pub fn new(
+        csid: i64,
+        date: Date,
+        kind: NoteType,
+        summary: String,
+        details: Option<String>,
+    ) -> Self {
+        Self {
+            id: -1,
+            csid,
+            date,
+            kind,
+            summary,
+            details,
+            loaded: false,
+        }
+    }
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT id, csid, date, kind, summary, details FROM sc_collection_sample_notes"#,
@@ -62,6 +122,10 @@ impl Note {
             .build_query_as()
             .fetch_one(pool)
             .await
+            .map(|mut n: Note| {
+                n.loaded = true;
+                n
+            })
     }
 
     pub async fn fetch_all(
@@ -72,6 +136,13 @@ impl Note {
             .build_query_as()
             .fetch_all(pool)
             .await
+            .map(|mut v| {
+                let _ = v.iter_mut().map(|n: &mut Note| {
+                    n.loaded = true;
+                    n
+                });
+                v
+            })
     }
 
     pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<Note> {
@@ -90,6 +161,10 @@ impl Note {
         .bind(&self.details)
         .fetch_one(pool)
         .await
+        .map(|mut n: Note| {
+            n.loaded = true;
+            n
+        })
         .map_err(|e| e.into())
     }
 

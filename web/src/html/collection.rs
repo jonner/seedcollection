@@ -539,14 +539,13 @@ async fn add_sample_note(
         &state.dbpool,
     )
     .await?;
-    let note = Note {
-        id: -1,
-        csid: sampleid,
-        date: params.date,
-        kind: params.notetype,
-        summary: params.summary,
-        details: params.details,
-    };
+    let note = Note::new(
+        sampleid,
+        params.date,
+        params.notetype,
+        params.summary,
+        params.details,
+    );
     Ok(match note.insert(&state.dbpool).await {
         Ok(_) => {
             let url = app_url(&format!("/collection/{}/sample/{}", collectionid, sampleid));
