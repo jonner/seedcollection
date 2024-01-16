@@ -32,10 +32,8 @@ impl Loadable for User {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-        let u = User::fetch(self.id, pool).await?;
-        *self = u;
-        Ok(())
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+        User::fetch(self.id, pool).await
     }
 
     fn new_loadable(id: Self::Id) -> Self {

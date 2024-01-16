@@ -9,13 +9,15 @@ pub trait Loadable: Default {
     fn new_loadable(id: Self::Id) -> Self;
     fn is_loaded(&self) -> bool;
     fn is_loadable(&self) -> bool;
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()>;
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self>;
 
     async fn load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
         if !self.is_loadable() {
             return Err(anyhow!("object cannot be loaded"));
         }
-        self.do_load(pool).await
+        let x = self.do_load(pool).await?;
+        *self = x;
+        Ok(())
     }
 
     /*

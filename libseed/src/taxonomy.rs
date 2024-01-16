@@ -110,10 +110,8 @@ impl Loadable for Taxon {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-        let taxon = Taxon::fetch(self.id, pool).await?;
-        *self = taxon;
-        Ok(())
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+        Taxon::fetch(self.id, pool).await
     }
 }
 

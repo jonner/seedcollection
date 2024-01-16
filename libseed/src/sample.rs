@@ -82,10 +82,8 @@ impl Loadable for Sample {
         todo!()
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-        let s = Sample::fetch(self.id, pool).await?;
-        *self = s;
-        Ok(())
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+        Sample::fetch(self.id, pool).await
     }
 }
 

@@ -62,10 +62,8 @@ impl Loadable for Location {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-        let loc = Location::fetch(self.id, pool).await?;
-        *self = loc;
-        Ok(())
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+        Location::fetch(self.id, pool).await
     }
 }
 

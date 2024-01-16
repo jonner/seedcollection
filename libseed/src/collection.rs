@@ -58,10 +58,8 @@ impl Loadable for Collection {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-        let c = Collection::fetch(self.id, pool).await?;
-        *self = c;
-        Ok(())
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+        Collection::fetch(self.id, pool).await
     }
 }
 
@@ -277,15 +275,13 @@ impl Loadable for AssignedSample {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
-        let a = AssignedSample::fetch(self.id, pool)
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+        AssignedSample::fetch(self.id, pool)
             .await
             .and_then(|mut a| {
                 a.loaded = true;
                 Ok(a)
-            })?;
-        *self = a;
-        Ok(())
+            })
     }
 }
 
