@@ -12,7 +12,7 @@ use sqlx::QueryBuilder;
 use sqlx::Sqlite;
 use std::sync::Arc;
 
-#[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq)]
 pub struct Location {
     #[sqlx(rename = "locid")]
     pub id: i64,

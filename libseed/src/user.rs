@@ -9,7 +9,7 @@ use crate::{
     loadable::Loadable,
 };
 
-#[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User {
     #[sqlx(rename = "userid")]
     pub id: i64,

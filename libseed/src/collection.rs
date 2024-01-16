@@ -13,7 +13,7 @@ use sqlx::{
 };
 use std::sync::Arc;
 
-#[derive(sqlx::FromRow, Deserialize, Serialize)]
+#[derive(sqlx::FromRow, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Collection {
     pub id: i64,
     pub name: String,
@@ -240,7 +240,7 @@ impl Collection {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct AssignedSample {
     pub id: i64,
     pub sample: Sample,

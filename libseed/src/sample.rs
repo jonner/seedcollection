@@ -14,14 +14,14 @@ use sqlx::{
 };
 use std::sync::Arc;
 
-#[derive(Deserialize, Serialize, Debug, sqlx::Type)]
+#[derive(Deserialize, Serialize, Debug, sqlx::Type, PartialEq)]
 #[repr(i32)]
 pub enum Certainty {
     Certain = 1,
     Uncertain = 2,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Sample {
     pub id: i64,
     pub user: User,

@@ -12,7 +12,16 @@ use crate::{
 };
 
 #[derive(
-    sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumString, EnumIter, FromRepr,
+    sqlx::Type,
+    Debug,
+    Copy,
+    Clone,
+    Serialize,
+    Deserialize,
+    EnumString,
+    EnumIter,
+    FromRepr,
+    PartialEq,
 )]
 #[repr(i64)]
 pub enum NoteType {
@@ -29,7 +38,7 @@ pub enum FilterField {
     CollectionSample(i64),
 }
 
-#[derive(sqlx::FromRow, Deserialize, Serialize, Debug)]
+#[derive(sqlx::FromRow, Deserialize, Serialize, Debug, PartialEq)]
 pub struct Note {
     pub id: i64,
     pub csid: i64,

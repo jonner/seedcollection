@@ -13,7 +13,9 @@ use crate::{
 
 pub const KINGDOM_PLANTAE: i64 = 3;
 
-#[derive(Debug, Clone, Display, EnumString, EnumIter, FromRepr, Deserialize, Serialize)]
+#[derive(
+    Debug, Clone, Display, EnumString, EnumIter, FromRepr, Deserialize, Serialize, PartialEq,
+)]
 #[strum(ascii_case_insensitive)]
 pub enum Rank {
     Unknown = 0,
@@ -47,7 +49,7 @@ pub enum Rank {
     Subform = 270,
 }
 
-#[derive(Debug, Display, EnumString, FromRepr, Serialize, Deserialize)]
+#[derive(Debug, Display, EnumString, FromRepr, Serialize, Deserialize, PartialEq)]
 pub enum NativeStatus {
     #[strum(serialize = "Native", serialize = "N")]
     Native,
@@ -57,7 +59,7 @@ pub enum NativeStatus {
     Unknown,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Taxon {
     pub id: i64,
     pub rank: Rank,
@@ -115,7 +117,7 @@ impl Loadable for Taxon {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Germination {
     pub id: i64,
     pub code: String,
