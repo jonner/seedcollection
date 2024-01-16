@@ -12,6 +12,8 @@ pub enum Error {
     Other(#[from] anyhow::Error),
     #[error("Redirect to another url")]
     Unauthorized(String),
+    #[error("Library error")]
+    Libseed(#[from] libseed::Error),
     #[error("Not Found")]
     NotFound(String),
 }

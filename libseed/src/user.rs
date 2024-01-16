@@ -1,11 +1,13 @@
-use anyhow::anyhow;
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
 use password_hash::{rand_core::OsRng, PasswordHash, SaltString};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite};
 
-use crate::loadable::Loadable;
+use crate::{
+    error::{Error, Result},
+    loadable::Loadable,
+};
 
 #[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -32,7 +34,7 @@ impl Loadable for User {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
         User::fetch(self.id, pool).await
     }
 
@@ -47,7 +49,7 @@ impl Loadable for User {
 }
 
 impl User {
-    pub async fn fetch_all(pool: &Pool<Sqlite>) -> anyhow::Result<Vec<User>> {
+    pub async fn fetch_all(pool: &Pool<Sqlite>) -> Result<Vec<User>> {
         Ok(sqlx::query_as(
             "SELECT id as userid, username, pwhash FROM sc_users ORDER BY username ASC",
         )
@@ -62,7 +64,7 @@ impl User {
         })?)
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<User> {
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<User> {
         Ok(
             sqlx::query_as("SELECT id as userid, username, pwhash FROM sc_users WHERE id=?")
                 .bind(id)
@@ -75,10 +77,7 @@ impl User {
         )
     }
 
-    pub async fn fetch_by_username(
-        username: &str,
-        pool: &Pool<Sqlite>,
-    ) -> anyhow::Result<Option<User>> {
+    pub async fn fetch_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
         sqlx::query_as("SELECT id as userid, username, pwhash FROM sc_users WHERE username=?")
             .bind(username)
             .fetch_optional(pool)
@@ -92,9 +91,9 @@ impl User {
             .map_err(|e| e.into())
     }
 
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(anyhow!("No id set, cannot update"));
+            return Err(Error::InvalidData("No id set, cannot update".to_string()));
         }
 
         sqlx::query("UPDATE sc_users SET username=?, pwhash=? WHERE id=?")
@@ -106,9 +105,9 @@ impl User {
             .map_err(|e| e.into())
     }
 
-    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(anyhow!("No id set, cannot delete"));
+            return Err(Error::InvalidData("No id set, cannot delete".to_string()));
         }
 
         sqlx::query("DELETE FROM sc_users WHERE id=?")
@@ -122,13 +121,13 @@ impl User {
             })
     }
 
-    pub fn hash_password(pw: &str) -> anyhow::Result<String> {
+    pub fn hash_password(pw: &str) -> Result<String> {
         let salt = SaltString::generate(&mut OsRng);
         let hasher = Argon2::default();
         Ok(hasher.hash_password(pw.as_bytes(), &salt)?.to_string())
     }
 
-    pub fn verify_password(&self, pw: &str) -> anyhow::Result<()> {
+    pub fn verify_password(&self, pw: &str) -> Result<()> {
         let hasher = Argon2::default();
         let expected_hash = PasswordHash::new(&self.pwhash)?;
         hasher
@@ -136,7 +135,7 @@ impl User {
             .map_err(|e| e.into())
     }
 
-    pub fn change_password(&mut self, pw: &str) -> anyhow::Result<()> {
+    pub fn change_password(&mut self, pw: &str) -> Result<()> {
         self.pwhash = Self::hash_password(pw)?;
         Ok(())
     }
@@ -150,7 +149,7 @@ impl User {
         }
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         sqlx::query("INSERT INTO sc_users (username, pwhash) VALUES (?, ?)")
             .bind(&self.username)
             .bind(&self.pwhash)

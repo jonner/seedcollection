@@ -1,7 +1,8 @@
-use crate::filter::Cmp;
-use crate::filter::DynFilterPart;
-use crate::loadable::Loadable;
-use anyhow::anyhow;
+use crate::{
+    error::{Error, Result},
+    filter::{Cmp, DynFilterPart, FilterPart},
+    loadable::Loadable,
+};
 use async_trait::async_trait;
 use serde::Deserialize;
 use serde::Serialize;
@@ -10,8 +11,6 @@ use sqlx::Pool;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
 use std::sync::Arc;
-
-use crate::filter::FilterPart;
 
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize)]
 pub struct Location {
@@ -62,7 +61,7 @@ impl Loadable for Location {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
         Location::fetch(self.id, pool).await
     }
 }
@@ -122,7 +121,7 @@ impl Location {
         }
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Location> {
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Location> {
         Ok(Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
@@ -132,23 +131,25 @@ impl Location {
     pub async fn fetch_all(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
-    ) -> anyhow::Result<Vec<Location>> {
+    ) -> Result<Vec<Location>> {
         Ok(Self::build_query(filter)
             .build_query_as()
             .fetch_all(pool)
             .await?)
     }
 
-    pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Vec<Location>> {
+    pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Location>> {
         Ok(Self::build_query(Some(Arc::new(Filter::User(userid))))
             .build_query_as()
             .fetch_all(pool)
             .await?)
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
-            return Err(anyhow!("Location is is not -1, cannot insert a new item"));
+            return Err(Error::InvalidData(
+                "Location is is not -1, cannot insert a new item".to_string(),
+            ));
         }
 
         sqlx::query(
@@ -166,9 +167,11 @@ impl Location {
         .map_err(|e| e.into())
     }
 
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(anyhow!("Id is not set, cannot update"));
+            return Err(Error::InvalidData(
+                "Id is not set, cannot update".to_string(),
+            ));
         }
 
         sqlx::query(
@@ -184,7 +187,7 @@ impl Location {
         .map_err(|e| e.into())
     }
 
-    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         sqlx::query(r#"DELETE FROM sc_locations WHERE locid=?1"#)
             .bind(self.id)
             .execute(pool)

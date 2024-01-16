@@ -1,11 +1,11 @@
 use crate::{
+    error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
     loadable::Loadable,
     location::Location,
     taxonomy::Taxon,
     user::User,
 };
-use anyhow::anyhow;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -82,7 +82,7 @@ impl Loadable for Sample {
         todo!()
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
         Sample::fetch(self.id, pool).await
     }
 }
@@ -155,7 +155,7 @@ impl Sample {
         userid: i64,
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
-    ) -> anyhow::Result<Vec<Sample>> {
+    ) -> Result<Vec<Sample>> {
         let mut fbuilder = FilterBuilder::new(FilterOp::And).push(Arc::new(Filter::User(userid)));
         if let Some(f) = filter {
             fbuilder = fbuilder.push(f);
@@ -168,22 +168,22 @@ impl Sample {
     pub async fn fetch_all(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
-    ) -> anyhow::Result<Vec<Sample>> {
+    ) -> Result<Vec<Sample>> {
         let mut builder = Self::build_query(filter);
         Ok(builder.build_query_as().fetch_all(pool).await?)
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Sample> {
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Sample> {
         let mut builder = Self::build_query(Some(Arc::new(Filter::Sample(Cmp::Equal, id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
-            return Err(anyhow!(
+            return Err(Error::InvalidData(format!(
                 "Sample already has an id assigned ({}), can't insert a new item",
                 self.id
-            ));
+            )));
         }
         sqlx::query("INSERT INTO sc_samples (tsn, userid, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(self.taxon.id)
@@ -198,15 +198,19 @@ impl Sample {
         .await.map_err(|e| e.into())
     }
 
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(anyhow!("No id set, cannot update"));
+            return Err(Error::InvalidData("No id set, cannot update".to_string()));
         }
         if self.taxon.id < 0 {
-            return Err(anyhow!("No taxon set, cannot update"));
+            return Err(Error::InvalidData(
+                "No taxon set, cannot update".to_string(),
+            ));
         }
         if self.location.id < 0 {
-            return Err(anyhow!("No location set, cannot update"));
+            return Err(Error::InvalidData(
+                "No location set, cannot update".to_string(),
+            ));
         }
 
         sqlx::query("Update sc_samples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE id=?")
@@ -223,9 +227,11 @@ impl Sample {
     }
 
     // consumes self
-    pub async fn delete(self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn delete(self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(anyhow!("Id is not set, cannot delete"));
+            return Err(Error::InvalidData(
+                "Id is not set, cannot delete".to_string(),
+            ));
         }
 
         sqlx::query("DELETE FROM sc_samples WHERE id=?")

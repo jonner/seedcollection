@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use crate::error::{self, Error};
 use anyhow::anyhow;
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
@@ -7,6 +5,7 @@ use axum_login::{AuthUser, AuthnBackend, UserId};
 use libseed::{empty_string_as_none, user::User};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
+use std::ops::Deref;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SqliteUser(User);

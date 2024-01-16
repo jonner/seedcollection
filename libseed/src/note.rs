@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, QueryBuilder, Sqlite};
@@ -7,6 +6,7 @@ use strum_macros::{EnumIter, EnumString, FromRepr};
 use time::Date;
 
 use crate::{
+    error::{Error, Result},
     filter::{DynFilterPart, FilterPart},
     loadable::Loadable,
 };
@@ -73,7 +73,7 @@ impl Loadable for Note {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
         Note::fetch(self.id, pool).await.map_err(|e| e.into())
     }
 }
@@ -145,9 +145,9 @@ impl Note {
             })
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<Note> {
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<Note> {
         if self.summary.is_empty() {
-            return Err(anyhow!("No summary specified"));
+            return Err(Error::InvalidData("No summary specified".to_string()));
         }
         sqlx::query_as(
             r#"INSERT INTO sc_collection_sample_notes

@@ -1,4 +1,3 @@
-use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Pool, Row, Sqlite};
@@ -7,6 +6,7 @@ use strum_macros::{Display, EnumIter, EnumString, FromRepr};
 use tracing::debug;
 
 use crate::{
+    error::Result,
     filter::{DynFilterPart, FilterBuilder, FilterOp, FilterPart},
     loadable::Loadable,
 };
@@ -110,7 +110,7 @@ impl Loadable for Taxon {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
         Taxon::fetch(self.id, pool).await
     }
 }
@@ -346,7 +346,7 @@ impl Taxon {
             .await
     }
 
-    pub async fn fetch_germination_info(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+    pub async fn fetch_germination_info(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
         self.germination = Some(
             sqlx::query_as!(
                 Germination,

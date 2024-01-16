@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use crate::error::{Error, Result};
 use async_trait::async_trait;
 use sqlx::{Pool, Sqlite};
 
@@ -9,11 +9,11 @@ pub trait Loadable: Default {
     fn new_loadable(id: Self::Id) -> Self;
     fn is_loaded(&self) -> bool;
     fn is_loadable(&self) -> bool;
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self>;
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self>;
 
-    async fn load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+    async fn load(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
         if !self.is_loadable() {
-            return Err(anyhow!("object cannot be loaded"));
+            return Err(Error::InvalidData("object cannot be loaded".to_string()));
         }
         let x = self.do_load(pool).await?;
         *self = x;
@@ -21,10 +21,10 @@ pub trait Loadable: Default {
     }
 
     /*
-    async fn do_delete(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()>;
-    async fn delete(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+    async fn do_delete(&mut self, pool: &Pool<Sqlite>) -> Result<()>;
+    async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
         if !self.is_loadable() {
-            return Err(anyhow!("object cannot be deleted"));
+            return Err(Error::InvalidData("object cannot be deleted".to_string()));
         }
         self.do_delete(pool).await
     }

@@ -1,10 +1,10 @@
 use crate::{
+    error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
     loadable::Loadable,
     note::{self, Note},
     sample::Sample,
 };
-use anyhow::anyhow;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -58,7 +58,7 @@ impl Loadable for Collection {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
         Collection::fetch(self.id, pool).await
     }
 }
@@ -126,7 +126,7 @@ impl Collection {
         builder
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
         Ok(Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
@@ -140,7 +140,7 @@ impl Collection {
     pub async fn fetch_all(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
-    ) -> anyhow::Result<Vec<Self>> {
+    ) -> Result<Vec<Self>> {
         Self::build_query(filter)
             .build_query_as()
             .fetch_all(pool)
@@ -159,7 +159,7 @@ impl Collection {
         &mut self,
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<()> {
         let mut fbuilder = FilterBuilder::new(FilterOp::And)
             .push(Arc::new(AssignedSampleFilter::Collection(self.id)));
         if let Some(filter) = filter {
@@ -174,7 +174,7 @@ impl Collection {
         &mut self,
         sample: Sample,
         pool: &Pool<Sqlite>,
-    ) -> anyhow::Result<SqliteQueryResult> {
+    ) -> Result<SqliteQueryResult> {
         sqlx::query("INSERT INTO sc_collection_samples (collectionid, sampleid) VALUES (?, ?)")
             .bind(self.id)
             .bind(sample.id)
@@ -183,7 +183,7 @@ impl Collection {
             .map_err(|e| e.into())
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         sqlx::query("INSERT INTO sc_collections (name, description, userid) VALUES (?, ?, ?)")
             .bind(self.name.clone())
             .bind(self.description.clone())
@@ -193,12 +193,12 @@ impl Collection {
             .map_err(|e| e.into())
     }
 
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.name.is_empty() {
-            return Err(anyhow!("No name specified"));
+            return Err(Error::InvalidData("No name specified".to_string()));
         }
         if self.id < 0 {
-            return Err(anyhow!("No id set"));
+            return Err(Error::InvalidData("No id set".to_string()));
         }
         sqlx::query("UPDATE sc_collections SET name=?, description=?, userid=? WHERE id=?")
             .bind(self.name.clone())
@@ -210,9 +210,11 @@ impl Collection {
             .map_err(|e| e.into())
     }
 
-    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<SqliteQueryResult> {
+    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(anyhow!("id not set, cannot delete collection"));
+            return Err(Error::InvalidData(
+                "id not set, cannot delete collection".to_string(),
+            ));
         }
 
         sqlx::query("DELETE FROM sc_collections WHERE id=?")
@@ -275,7 +277,7 @@ impl Loadable for AssignedSample {
         self.id > 0
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
         AssignedSample::fetch(self.id, pool)
             .await
             .and_then(|mut a| {
@@ -338,12 +340,12 @@ impl AssignedSample {
             .await
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> anyhow::Result<Self> {
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
         let mut builder = Self::build_query(Some(Arc::new(AssignedSampleFilter::Id(id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
-    pub async fn fetch_notes(&mut self, pool: &Pool<Sqlite>) -> anyhow::Result<()> {
+    pub async fn fetch_notes(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
         self.notes = Note::fetch_all(
             Some(Arc::new(note::FilterField::CollectionSample(self.id))),
             pool,

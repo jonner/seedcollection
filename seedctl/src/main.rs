@@ -475,4 +475,5 @@ async fn main() -> Result<()> {
             }
         },
     }
+    .map_err(|e| e.into())
 }
