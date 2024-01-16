@@ -363,3 +363,60 @@ impl Taxon {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_log::test;
+
+    const CANADA_WILD_RYE: i64 = 40683;
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("taxa"))
+    ))]
+    async fn fetch_taxon(pool: Pool<Sqlite>) {
+        let taxon = Taxon::fetch(CANADA_WILD_RYE, &pool)
+            .await
+            .expect("Unable to load taxon");
+        assert_eq!(taxon.name1, Some("Elymus".to_string()));
+        assert_eq!(taxon.name2, Some("canadensis".to_string()));
+        assert_eq!(taxon.rank, Rank::Species);
+        assert!(taxon
+            .vernaculars
+            .iter()
+            .find(|v| v == &"Canada wildrye")
+            .is_some());
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("taxa"))
+    ))]
+    async fn fetch_many(pool: Pool<Sqlite>) {
+        let taxa = Taxon::fetch_all(
+            Some(Arc::new(FilterField::Genus("Elymus".to_string()))),
+            None,
+            &pool,
+        )
+        .await
+        .expect("Unable to load taxon");
+        assert_eq!(taxa.len(), 2);
+        assert_eq!(taxa[0].name1, Some("Elymus".to_string()));
+        assert_eq!(taxa[0].name2, None);
+        assert_eq!(taxa[0].rank, Rank::Genus);
+        assert!(taxa[0]
+            .vernaculars
+            .iter()
+            .find(|v| v == &"wildrye")
+            .is_some());
+        assert_eq!(taxa[1].name1, Some("Elymus".to_string()));
+        assert_eq!(taxa[1].name2, Some("canadensis".to_string()));
+        assert_eq!(taxa[1].rank, Rank::Species);
+        assert!(taxa[1]
+            .vernaculars
+            .iter()
+            .find(|v| v == &"Canada wildrye")
+            .is_some());
+    }
+}
