@@ -74,7 +74,7 @@ impl AuthnBackend for SqliteAuthBackend {
 impl SqliteAuthBackend {
     pub async fn register(&self, username: String, password: String) -> Result<(), error::Error> {
         let password_hash = User::hash_password(&password)?;
-        let user = User::new(username, password_hash);
+        let mut user = User::new(username, password_hash);
         user.insert(&self.db).await?;
         Ok(())
     }

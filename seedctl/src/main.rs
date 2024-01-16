@@ -447,7 +447,7 @@ async fn main() -> Result<()> {
                 .await?;
                 // hash the password
                 let pwhash = User::hash_password(&password)?;
-                let user = User::new(username.clone(), pwhash);
+                let mut user = User::new(username.clone(), pwhash);
                 let id = user.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added user to database:");
                 println!("{}: {}", id, username);

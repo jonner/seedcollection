@@ -149,12 +149,17 @@ impl User {
         }
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         sqlx::query("INSERT INTO sc_users (username, pwhash) VALUES (?, ?)")
             .bind(&self.username)
             .bind(&self.pwhash)
             .execute(pool)
             .await
+            .map(|r| {
+                self.id = r.last_insert_rowid();
+                self.loaded = true;
+                r
+            })
             .map_err(|e| e.into())
     }
 }
@@ -167,5 +172,59 @@ impl Default for User {
             pwhash: Default::default(),
             loaded: Default::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_log::test;
+
+    #[test(sqlx::test(migrations = "../db/migrations/",))]
+    async fn register_user(pool: Pool<Sqlite>) {
+        const PASSWORD: &str = "my-super-secret-password";
+        let hash = User::hash_password(PASSWORD).expect("Failed to hash password");
+        let mut user = User::new("my-user-name".to_string(), hash);
+        let res = user.insert(&pool).await.expect("Failed to insert user");
+        let userid = res.last_insert_rowid();
+
+        let mut loaded = User::new_loadable(userid);
+        loaded.load(&pool).await.expect("Unable to load new user");
+        assert_eq!(user, loaded);
+        assert!(loaded.verify_password(PASSWORD).is_ok());
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("users"))
+    ))]
+    async fn modify_user(pool: Pool<Sqlite>) {
+        const NEWNAME: &str = "TestUsername84902";
+        let mut user = User::fetch(1, &pool)
+            .await
+            .expect("Failed to fetch user from database");
+        user.username = NEWNAME.to_string();
+        user.update(&pool).await.expect("Unable to update user");
+        assert!(user.insert(&pool).await.is_err());
+
+        let mut loaded = User::new_loadable(1);
+        loaded
+            .load(&pool)
+            .await
+            .expect("Unable to load updated user");
+        assert_eq!(user, loaded);
+        assert_eq!(&loaded.username, NEWNAME);
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("users"))
+    ))]
+    async fn delete_user(pool: Pool<Sqlite>) {
+        assert!(User::fetch(1, &pool).await.is_ok());
+
+        let mut user = User::new_loadable(1);
+        user.delete(&pool).await.expect("Failed to delete user");
+        assert!(User::fetch(1, &pool).await.is_err());
     }
 }
