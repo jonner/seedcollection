@@ -163,7 +163,7 @@ async fn main() -> Result<()> {
                 description,
                 userid,
             } => {
-                let collection = Collection::new(name, description, userid);
+                let mut collection = Collection::new(name, description, userid);
                 let id = collection.insert(&dbpool).await?.last_insert_rowid();
                 let collection = Collection::fetch(id, &dbpool).await?;
                 println!("Added collection to database:");

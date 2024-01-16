@@ -133,7 +133,7 @@ async fn do_insert(
         return Err(anyhow!("No name specified").into());
     }
 
-    let collection = Collection::new(
+    let mut collection = Collection::new(
         params.name.clone(),
         params.description.as_ref().cloned(),
         user.id,

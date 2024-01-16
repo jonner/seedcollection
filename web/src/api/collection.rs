@@ -116,7 +116,7 @@ async fn add_collection(
     Query(params): Query<AddProps>,
     State(state): State<AppState>,
 ) -> Result<Json<i64>, error::Error> {
-    let collection = Collection::new(params.name, params.description, user.id);
+    let mut collection = Collection::new(params.name, params.description, user.id);
     let id = collection.insert(&state.dbpool).await?.last_insert_rowid();
     Ok(Json(id))
 }

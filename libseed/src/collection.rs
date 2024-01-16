@@ -183,13 +183,18 @@ impl Collection {
             .map_err(|e| e.into())
     }
 
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         sqlx::query("INSERT INTO sc_collections (name, description, userid) VALUES (?, ?, ?)")
             .bind(self.name.clone())
             .bind(self.description.clone())
             .bind(self.userid)
             .execute(pool)
             .await
+            .map(|r| {
+                self.id = r.last_insert_rowid();
+                self.loaded = true;
+                r
+            })
             .map_err(|e| e.into())
     }
 
