@@ -26,27 +26,24 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route("/:alloc", get(show_allocation).delete(remove_allocation))
         .route(
-            "/:sampleid",
-            get(show_collection_sample).delete(remove_sample),
-        )
-        .route(
-            "/:sampleid/note/new",
-            get(show_add_sample_note).post(add_sample_note),
+            "/:alloc/note/new",
+            get(show_add_allocation_note).post(add_allocation_note),
         )
 }
 
-async fn show_collection_sample(
+async fn show_allocation(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, sampleid)): Path<(i64, i64)>,
+    Path((collectionid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure that this is our sample
     let mut allocation = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AllocationFilter::Id(sampleid)))
+                .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
                 .push(Arc::new(AllocationFilter::Collection(collectionid)))
                 .build(),
@@ -74,18 +71,18 @@ struct NoteParams {
     details: Option<String>,
 }
 
-async fn add_sample_note(
+async fn add_allocation_note(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, sampleid)): Path<(i64, i64)>,
+    Path((collectionid, allocid)): Path<(i64, i64)>,
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure that this is our sample
-    let sample = Allocation::fetch_one(
+    let alloc = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AllocationFilter::Id(sampleid)))
+                .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
                 .push(Arc::new(AllocationFilter::Collection(collectionid)))
                 .build(),
@@ -94,7 +91,7 @@ async fn add_sample_note(
     )
     .await?;
     let note = Note::new(
-        sampleid,
+        allocid,
         params.date,
         params.notetype,
         params.summary,
@@ -102,7 +99,7 @@ async fn add_sample_note(
     );
     Ok(match note.insert(&state.dbpool).await {
         Ok(_) => {
-            let url = app_url(&format!("/collection/{}/sample/{}", collectionid, sampleid));
+            let url = app_url(&format!("/collection/{}/sample/{}", collectionid, allocid));
             [("HX-Redirect", url)].into_response()
         }
         Err(e) => {
@@ -112,7 +109,7 @@ async fn add_sample_note(
                 state.tmpl.clone(),
                 context!(user => user,
                 note_types => note_types,
-                sample => sample,
+                allocation => alloc,
                 message => Message {
                     r#type: MessageType::Error,
                     msg: format!("Failed to save note: {}", e),
@@ -123,16 +120,16 @@ async fn add_sample_note(
     })
 }
 
-async fn show_add_sample_note(
+async fn show_add_allocation_note(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, sampleid)): Path<(i64, i64)>,
+    Path((collectionid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     let allocation = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AllocationFilter::Id(sampleid)))
+                .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
                 .push(Arc::new(AllocationFilter::Collection(collectionid)))
                 .build(),
@@ -151,7 +148,7 @@ async fn show_add_sample_note(
     .into_response())
 }
 
-async fn remove_sample(
+async fn remove_allocation(
     user: SqliteUser,
     State(state): State<AppState>,
     Path((id, csid)): Path<(i64, i64)>,
