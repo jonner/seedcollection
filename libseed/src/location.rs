@@ -104,7 +104,7 @@ impl Location {
         let mut qb = QueryBuilder::new(
             r#"SELECT L.locid, L.name as locname, L.description, L.latitude, L.longitude,
             L.userid, U.username FROM sc_locations L
-            INNER JOIN sc_users U ON U.id=L.userid"#,
+            INNER JOIN sc_users U ON U.userid=L.userid"#,
         );
         if let Some(f) = filter {
             qb.push(" WHERE ");

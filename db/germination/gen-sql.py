@@ -113,11 +113,11 @@ def find_possibilities(cursor, name1, name2, name3, rank):
 
 
 def get_germ_code_id(cursor, germcode):
-    res = cursor.execute('''SELECT id FROM sc_germination_codes WHERE code=?''', (germcode,))
+    res = cursor.execute('''SELECT germid FROM sc_germination_codes WHERE code=?''', (germcode,))
     row = res.fetchone()
 
     if row is not None:
-        return row['id']
+        return row['germid']
     return None
 
 
@@ -238,12 +238,12 @@ if __name__ == "__main__":
         outcursor = outdb.cursor()
         outcursor.execute('''
             CREATE TABLE IF NOT EXISTS "sc_taxon_germination" (
-                "id"	INTEGER NOT NULL UNIQUE,
+                "taxongermid"	INTEGER NOT NULL UNIQUE,
                 "tsn"	INTEGER NOT NULL,
                 "germid"	INTEGER NOT NULL,
-                PRIMARY KEY("id" AUTOINCREMENT),
+                PRIMARY KEY("taxongermid" AUTOINCREMENT),
                 FOREIGN KEY("tsn") REFERENCES "taxonomic_units"("tsn"),
-                FOREIGN KEY("germid") REFERENCES "germinationcodes"("id"),
+                FOREIGN KEY("germid") REFERENCES "germinationcodes"("germid"),
                 UNIQUE("germid","tsn") ON CONFLICT IGNORE
             )''')
         outcursor.executemany("INSERT INTO sc_taxon_germination ('tsn', 'germid') VALUES (?, ?)",

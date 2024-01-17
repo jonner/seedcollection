@@ -40,6 +40,7 @@ pub enum FilterField {
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Debug, PartialEq)]
 pub struct Note {
+    #[sqlx(rename = "csnoteid")]
     pub id: i64,
     pub csid: i64,
     pub date: Date,
@@ -90,7 +91,7 @@ impl Loadable for Note {
 impl FilterPart for FilterField {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(i) => _ = builder.push(" id=").push_bind(*i),
+            Self::Id(i) => _ = builder.push(" csnoteid=").push_bind(*i),
             Self::CollectionSample(i) => _ = builder.push(" csid=").push_bind(*i),
         }
     }
@@ -116,7 +117,7 @@ impl Note {
     }
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
-            r#"SELECT id, csid, date, kind, summary, details FROM sc_collection_sample_notes"#,
+            r#"SELECT csnoteid, csid, date, kind, summary, details FROM sc_collection_sample_notes"#,
         );
         if let Some(f) = filter {
             builder.push(" WHERE ");
@@ -180,7 +181,7 @@ impl Note {
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
         sqlx::query_as(
             r#"UPDATE sc_collection_sample_notes
-            SET csid=?, date=?, kind=?, summary=?, details=? WHERE id=?
+            SET csid=?, date=?, kind=?, summary=?, details=? WHERE csnoteid=?
             RETURNING *"#,
         )
         .bind(self.csid)

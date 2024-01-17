@@ -50,23 +50,23 @@ impl Loadable for User {
 
 impl User {
     pub async fn fetch_all(pool: &Pool<Sqlite>) -> Result<Vec<User>> {
-        Ok(sqlx::query_as(
-            "SELECT id as userid, username, pwhash FROM sc_users ORDER BY username ASC",
+        Ok(
+            sqlx::query_as("SELECT userid, username, pwhash FROM sc_users ORDER BY username ASC")
+                .fetch_all(pool)
+                .await
+                .and_then(|mut v| {
+                    let _ = v.iter_mut().map(|u: &mut User| {
+                        u.loaded = true;
+                        u
+                    });
+                    Ok(v)
+                })?,
         )
-        .fetch_all(pool)
-        .await
-        .and_then(|mut v| {
-            let _ = v.iter_mut().map(|u: &mut User| {
-                u.loaded = true;
-                u
-            });
-            Ok(v)
-        })?)
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<User> {
         Ok(
-            sqlx::query_as("SELECT id as userid, username, pwhash FROM sc_users WHERE id=?")
+            sqlx::query_as("SELECT userid, username, pwhash FROM sc_users WHERE userid=?")
                 .bind(id)
                 .fetch_one(pool)
                 .await
@@ -78,7 +78,7 @@ impl User {
     }
 
     pub async fn fetch_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
-        sqlx::query_as("SELECT id as userid, username, pwhash FROM sc_users WHERE username=?")
+        sqlx::query_as("SELECT userid, username, pwhash FROM sc_users WHERE username=?")
             .bind(username)
             .fetch_optional(pool)
             .await
@@ -96,7 +96,7 @@ impl User {
             return Err(Error::InvalidData("No id set, cannot update".to_string()));
         }
 
-        sqlx::query("UPDATE sc_users SET username=?, pwhash=? WHERE id=?")
+        sqlx::query("UPDATE sc_users SET username=?, pwhash=? WHERE userid=?")
             .bind(&self.username)
             .bind(&self.pwhash)
             .bind(self.id)
@@ -110,7 +110,7 @@ impl User {
             return Err(Error::InvalidData("No id set, cannot delete".to_string()));
         }
 
-        sqlx::query("DELETE FROM sc_users WHERE id=?")
+        sqlx::query("DELETE FROM sc_users WHERE userid=?")
             .bind(self.id)
             .execute(pool)
             .await

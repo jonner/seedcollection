@@ -105,11 +105,11 @@ async fn show_all_children(
         FROM taxonomic_units TT, CTE
         WHERE TT.parent_tsn = CTE.tsn)
         SELECT CTE.tsn, CTE.parent_tsn as parentid, CTE.complete_name, CTE.unit_name1, CTE.unit_name2, CTE.unit_name3, CTE.phylo_sort_seq as seq, top_parent, top_parent_name,
-        M.native_status, S.id, S.userid, U.username, L.locid, L.name as locname, quantity, month, year, notes, certainty
+        M.native_status, S.sampleid, S.userid, U.username, L.locid, L.name as locname, quantity, month, year, notes, certainty
         FROM CTE
         INNER JOIN sc_samples S ON CTE.tsn=S.tsn
         INNER JOIN sc_locations L on L.locid=S.collectedlocation
-        INNER JOIN sc_users U on U.id=S.userid
+        INNER JOIN sc_users U on U.userid=S.userid
         LEFT JOIN mntaxa M on CTE.tsn=M.tsn 
         WHERE S.userid=?
         ORDER BY seq"#)
@@ -224,7 +224,7 @@ async fn editgerm(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let codes = sqlx::query_as!(Germination, "SELECT * FROM sc_germination_codes")
+    let codes: Vec<Germination> = sqlx::query_as("SELECT * FROM sc_germination_codes")
         .fetch_all(&state.dbpool)
         .await?;
     Ok(RenderHtml(

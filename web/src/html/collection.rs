@@ -372,13 +372,14 @@ async fn add_sample(
             _ => None,
         })
         .collect();
-    let res = sqlx::query!("SELECT userid FROM sc_collections WHERE id=?", id)
+    let res = sqlx::query!("SELECT userid FROM sc_collections WHERE collectionid=?", id)
         .fetch_one(&state.dbpool)
         .await?;
     if res.userid != Some(user.id) {
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
-    let mut qb = sqlx::QueryBuilder::new("SELECT id, userid FROM sc_samples WHERE id IN (");
+    let mut qb =
+        sqlx::QueryBuilder::new("SELECT sampleid, userid FROM sc_samples WHERE sampleid IN (");
     let mut sep = qb.separated(", ");
     for id in toadd {
         sep.push_bind(id);
@@ -388,7 +389,7 @@ async fn add_sample(
     let valid_samples = res.iter().filter_map(|row| {
         let userid: Option<i64> = row.try_get("userid").ok()?;
         let userid = userid?;
-        let id: i64 = row.try_get("id").ok()?;
+        let id: i64 = row.try_get("sampleid").ok()?;
         if userid == user.id {
             Some(id)
         } else {
@@ -457,7 +458,7 @@ async fn remove_sample(
         ));
     }
     sqlx::query!(
-        "DELETE FROM sc_collection_samples AS CS WHERE CS.id=? AND CS.collectionid IN (SELECT C.id FROM sc_collections AS C WHERE C.userid=?)",
+        "DELETE FROM sc_collection_samples AS CS WHERE CS.csid=? AND CS.collectionid IN (SELECT C.collectionid FROM sc_collections AS C WHERE C.userid=?)",
         csid, user.id)
         .execute(&state.dbpool)
         .await?;

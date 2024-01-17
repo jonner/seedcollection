@@ -90,9 +90,9 @@ impl Loadable for Sample {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Sample(cmp, id) => _ = builder.push("S.id").push(cmp).push_bind(*id),
+            Self::Sample(cmp, id) => _ = builder.push("S.sampleid").push(cmp).push_bind(*id),
             Self::SampleNotIn(list) => {
-                _ = builder.push("S.id NOT IN (");
+                _ = builder.push("S.sampleid NOT IN (");
                 let mut sep = builder.separated(", ");
                 for id in list {
                     sep.push_bind(*id);
@@ -130,15 +130,15 @@ impl FilterPart for Filter {
 impl Sample {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-            r#"SELECT S.id, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
+            r#"SELECT S.sampleid, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
         T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
                     quantity, month, year, notes, certainty,
                     GROUP_CONCAT(V.vernacular_name, "@") as cnames,
-                    U.id as userid, U.username
+                    U.userid as userid, U.username
                     FROM sc_samples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
                     INNER JOIN sc_locations L on L.locid=S.collectedlocation
-                    INNER JOIN sc_users U on U.id=S.userid
+                    INNER JOIN sc_users U on U.userid=S.userid
                     LEFT JOIN (SELECT * FROM vernaculars WHERE
                     (language="English" or language="unspecified")) V on V.tsn=T.tsn
                     "#,
@@ -147,7 +147,7 @@ impl Sample {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" GROUP BY S.id, T.tsn ORDER BY phylo_sort_seq");
+        builder.push(" GROUP BY S.sampleid, T.tsn ORDER BY phylo_sort_seq");
         builder
     }
 
@@ -215,7 +215,7 @@ impl Sample {
             ));
         }
 
-        sqlx::query("Update sc_samples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE id=?")
+        sqlx::query("Update sc_samples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")
             .bind(self.taxon.id)
             .bind(self.location.id)
             .bind(self.month)
@@ -236,7 +236,7 @@ impl Sample {
             ));
         }
 
-        sqlx::query("DELETE FROM sc_samples WHERE id=?")
+        sqlx::query("DELETE FROM sc_samples WHERE sampleid=?")
             .bind(self.id)
             .execute(pool)
             .await
@@ -271,7 +271,7 @@ impl Sample {
 impl FromRow<'_, SqliteRow> for Sample {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Ok(Self {
-            id: row.try_get("id")?,
+            id: row.try_get("sampleid")?,
             user: User::from_row(row)?,
             taxon: Taxon::from_row(row)?,
             location: Location::from_row(row)?,

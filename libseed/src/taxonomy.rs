@@ -117,8 +117,9 @@ impl Loadable for Taxon {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(FromRow, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Germination {
+    #[sqlx(rename = "germid")]
     pub id: i64,
     pub code: String,
     pub summary: Option<String>,
@@ -350,13 +351,12 @@ impl Taxon {
 
     pub async fn fetch_germination_info(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
         self.germination = Some(
-            sqlx::query_as!(
-                Germination,
+            sqlx::query_as(
                 r#"SELECT G.* from sc_germination_codes G
-            INNER JOIN sc_taxon_germination TG ON TG.germid=G.id
+            INNER JOIN sc_taxon_germination TG ON TG.germid=G.germid
             WHERE TG.tsn=?"#,
-                self.id
             )
+            .bind(self.id)
             .fetch_all(pool)
             .await?,
         );

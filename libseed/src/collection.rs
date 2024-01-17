@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Collection {
+    #[sqlx(rename = "collectionid")]
     pub id: i64,
     pub name: String,
     pub description: Option<String>,
@@ -93,8 +94,8 @@ pub enum Filter {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(id) => _ = builder.push(" C.id = ").push_bind(*id),
-            Self::User(id) => _ = builder.push(" userid = ").push_bind(*id),
+            Self::Id(id) => _ = builder.push(" C.collectionid = ").push_bind(*id),
+            Self::User(id) => _ = builder.push(" C.userid = ").push_bind(*id),
             Self::Name(cmp, frag) => {
                 let s = match cmp {
                     Cmp::Like => format!("%{frag}%"),
@@ -116,8 +117,8 @@ impl FilterPart for Filter {
 impl Collection {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
-            r#"SELECT C.id, C.name, C.description, C.userid, U.username
-            FROM sc_collections C INNER JOIN sc_users U ON U.id=C.userid"#,
+            r#"SELECT C.collectionid, C.name, C.description, C.userid, U.username
+            FROM sc_collections C INNER JOIN sc_users U ON U.userid=C.userid"#,
         );
         if let Some(f) = filter {
             builder.push(" WHERE ");
@@ -205,14 +206,16 @@ impl Collection {
         if self.id < 0 {
             return Err(Error::InvalidData("No id set".to_string()));
         }
-        sqlx::query("UPDATE sc_collections SET name=?, description=?, userid=? WHERE id=?")
-            .bind(self.name.clone())
-            .bind(self.description.as_ref().cloned())
-            .bind(self.userid)
-            .bind(self.id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
+        sqlx::query(
+            "UPDATE sc_collections SET name=?, description=?, userid=? WHERE collectionid=?",
+        )
+        .bind(self.name.clone())
+        .bind(self.description.as_ref().cloned())
+        .bind(self.userid)
+        .bind(self.id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.into())
     }
 
     pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
@@ -222,7 +225,7 @@ impl Collection {
             ));
         }
 
-        sqlx::query("DELETE FROM sc_collections WHERE id=?")
+        sqlx::query("DELETE FROM sc_collections WHERE collectionid=?")
             .bind(self.id)
             .execute(pool)
             .await
@@ -296,9 +299,9 @@ impl AssignedSample {
     pub fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
-            SELECT CS.id AS csid,
+            SELECT CS.csid,
 
-            S.id, quantity, month, year, notes, certainty,
+            S.sampleid, quantity, month, year, notes, certainty,
 
             T.tsn, T.parent_tsn as parentid,
             T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
@@ -311,8 +314,8 @@ impl AssignedSample {
             FROM sc_collection_samples CS
             INNER JOIN taxonomic_units T ON T.tsn=S.tsn
             INNER JOIN sc_locations L on L.locid=S.collectedlocation
-            INNER JOIN sc_samples S ON CS.sampleid=S.id
-            INNER JOIN sc_users U on U.id=S.userid
+            INNER JOIN sc_samples S ON CS.sampleid=S.sampleid
+            INNER JOIN sc_users U on U.userid=S.userid
             LEFT JOIN (SELECT * FROM vernaculars WHERE
             (language="English" or language="unspecified")) V on V.tsn=T.tsn
             "#,
@@ -321,7 +324,7 @@ impl AssignedSample {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" GROUP BY S.id, T.tsn ORDER BY phylo_sort_seq");
+        builder.push(" GROUP BY S.sampleid, T.tsn ORDER BY phylo_sort_seq");
         builder
     }
 
