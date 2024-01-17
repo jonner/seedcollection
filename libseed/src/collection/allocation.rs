@@ -107,8 +107,10 @@ impl Allocation {
             INNER JOIN sc_samples S ON CS.sampleid=S.sampleid
             INNER JOIN sc_users U on U.userid=S.userid
             INNER JOIN sc_collections C on C.collectionid=CS.collectionid
-            LEFT JOIN ( SELECT * FROM (SELECT *, MAX(date) OVER (PARTITION BY csid) as maxdate from sc_collection_sample_notes)
-            WHERE date = maxdate) N ON N.csid = CS.csid
+            LEFT JOIN ( SELECT * FROM
+            (SELECT *, ROW_NUMBER() OVER (PARTITION BY csid ORDER BY DATE(date) DESC, csnoteid DESC) AS rownr
+            FROM sc_collection_sample_notes ORDER BY csnoteid DESC)
+            WHERE rownr = 1) N ON N.csid = CS.csid
             LEFT JOIN (SELECT * FROM vernaculars WHERE
             (language="English" or language="unspecified")) V on V.tsn=T.tsn
             "#,
