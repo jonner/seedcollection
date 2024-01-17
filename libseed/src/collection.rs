@@ -75,7 +75,7 @@ pub enum AllocationFilter {
 impl FilterPart for AllocationFilter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(id) => _ = builder.push(" csid = ").push_bind(*id),
+            Self::Id(id) => _ = builder.push(" CS.csid = ").push_bind(*id),
             Self::User(id) => _ = builder.push(" S.userid = ").push_bind(*id),
             Self::Collection(id) => _ = builder.push(" CS.collectionid = ").push_bind(*id),
             Self::Sample(id) => _ = builder.push(" CS.sampleid = ").push_bind(*id),

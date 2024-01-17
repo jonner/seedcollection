@@ -81,6 +81,13 @@ hx-post="{{ "/collection/new" | app_url }}"
 {% for alloc in collection.allocations %}
 <div class="collection-sample-row {{ loop.cycle("bg-body-tertiary", "") }}">
     {% call sample_item(alloc.sample) %}
+    {% if alloc.notes %}
+    {% for note in alloc.notes %}
+    <div class="flex-shrink-0 badge {{ note.kind | lower }}">
+        {{ note.kind }}
+    </div>
+    {% endfor %}
+    {% endif %}
     <div class="dropdown">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ icon("three-dots-vertical") }}</button>
         <ul class="dropdown-menu dropdown-menu-end">
