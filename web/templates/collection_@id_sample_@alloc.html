@@ -25,6 +25,9 @@
     <div class="dropdown flex-shrink-1 ms-auto">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ icon("three-dots-vertical") }}</button>
         <ul class="dropdown-menu dropdown-menu-end">
+            <li><a href="{{ ("/collection/" ~ allocation.collection.id ~ "/sample/" ~ allocation.id ~ "/note/" ~ note.id ~ "/edit") | app_url }}"
+                   class="dropdown-item">{{ icon("pencil") }} Edit</a>
+            </li>
             <li><button type="button"
                     class="dropdown-item btn-danger"
                     hx-delete="{{ ("/collection/" ~ allocation.collection.id ~ "/sample/" ~ allocation.id ~ "/note/" ~ note.id) | app_url }}"

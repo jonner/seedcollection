@@ -68,7 +68,7 @@ where
             // Cargo doesn't allow `:` as a file name
             .as_str()
             .trim_start_matches(APP_PREFIX)
-            .replace(':', "$")
+            .replace(':', "@")
             .replace('/', "_");
 
         if key.is_empty() {
