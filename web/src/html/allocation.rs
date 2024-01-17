@@ -81,7 +81,6 @@ async fn add_sample_note(
     Path((collectionid, sampleid)): Path<(i64, i64)>,
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let _ = Collection::fetch(collectionid, &state.dbpool).await?;
     // make sure that this is our sample
     let sample = Allocation::fetch_one(
         Some(
