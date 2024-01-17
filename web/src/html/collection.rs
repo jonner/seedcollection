@@ -16,7 +16,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::{self, AssignedSample, AssignedSampleFilter, Collection},
+    collection::{self, Allocation, AllocationFilter, Collection},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
@@ -406,7 +406,7 @@ async fn add_sample(
     let mut messages = Vec::new();
     for sample in valid_samples {
         let s = Sample::new_loadable(sample);
-        match collection.assign_sample(s, &state.dbpool).await {
+        match collection.allocate_sample(s, &state.dbpool).await {
             Err(e) => messages.push(Message {
                 r#type: MessageType::Error,
                 msg: format!(
@@ -511,13 +511,12 @@ async fn show_add_sample_note(
     State(state): State<AppState>,
     Path((collectionid, sampleid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let collection = Collection::fetch(collectionid, &state.dbpool).await?;
-    let sample = AssignedSample::fetch_one(
+    let allocation = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AssignedSampleFilter::Id(sampleid)))
-                .push(Arc::new(AssignedSampleFilter::User(user.id)))
-                .push(Arc::new(AssignedSampleFilter::Collection(collectionid)))
+                .push(Arc::new(AllocationFilter::Id(sampleid)))
+                .push(Arc::new(AllocationFilter::User(user.id)))
+                .push(Arc::new(AllocationFilter::Collection(collectionid)))
                 .build(),
         ),
         &state.dbpool,
@@ -528,9 +527,8 @@ async fn show_add_sample_note(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collection => collection,
                  note_types => note_types,
-                 sample => sample),
+                 allocation => allocation),
     )
     .into_response())
 }
@@ -553,12 +551,12 @@ async fn add_sample_note(
 ) -> Result<impl IntoResponse, error::Error> {
     let _ = Collection::fetch(collectionid, &state.dbpool).await?;
     // make sure that this is our sample
-    let sample = AssignedSample::fetch_one(
+    let sample = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AssignedSampleFilter::Id(sampleid)))
-                .push(Arc::new(AssignedSampleFilter::User(user.id)))
-                .push(Arc::new(AssignedSampleFilter::Collection(collectionid)))
+                .push(Arc::new(AllocationFilter::Id(sampleid)))
+                .push(Arc::new(AllocationFilter::User(user.id)))
+                .push(Arc::new(AllocationFilter::Collection(collectionid)))
                 .build(),
         ),
         &state.dbpool,
@@ -601,24 +599,24 @@ async fn show_collection_sample(
     Path((collectionid, sampleid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure that this is our sample
-    let mut sample = AssignedSample::fetch_one(
+    let mut allocation = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AssignedSampleFilter::Id(sampleid)))
-                .push(Arc::new(AssignedSampleFilter::User(user.id)))
-                .push(Arc::new(AssignedSampleFilter::Collection(collectionid)))
+                .push(Arc::new(AllocationFilter::Id(sampleid)))
+                .push(Arc::new(AllocationFilter::User(user.id)))
+                .push(Arc::new(AllocationFilter::Collection(collectionid)))
                 .build(),
         ),
         &state.dbpool,
     )
     .await?;
 
-    sample.fetch_notes(&state.dbpool).await?;
+    allocation.fetch_notes(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 sample => sample),
+                 allocation => allocation),
     )
     .into_response())
 }

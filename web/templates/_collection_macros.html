@@ -76,21 +76,21 @@ hx-post="{{ "/collection/new" | app_url }}"
 {% macro collection_sample_list(collection) %}
 {% from "_macros.html" import icon %}
 {% from "_sample_macros.html" import sample_item %}
-{% for csample in collection.samples %}
+{% for alloc in collection.allocations %}
 <div class="collection-sample-row {{ loop.cycle("bg-body-tertiary", "") }}">
-    {% call sample_item(csample.sample) %}
+    {% call sample_item(alloc.sample) %}
     <div class="dropdown">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ icon("three-dots-vertical") }}</button>
         <ul class="dropdown-menu dropdown-menu-end">
-            <li><a href="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ csample.id) | app_url }}"
+            <li><a href="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ alloc.id) | app_url }}"
                    class="dropdown-item">{{ icon("info-circle") }} Details</a>
             </li>
-            <li><a href="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ csample.id ~ "/note/new") | app_url }}"
+            <li><a href="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ alloc.id ~ "/note/new") | app_url }}"
                    class="dropdown-item">{{ icon("card-text") }} Add a note</a>
             </li>
             <li><button type="button"
                     class="dropdown-item btn-danger"
-                    hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ csample.id) | app_url }}"
+                    hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ alloc.id) | app_url }}"
                     hx-target="closest .collection-sample-row"
                     hx-swap="outerHTML"
                     hx-confirm="Are you sure you want to remove this sample from the collection?">{{ icon("x") }} Remove from collection</button>
@@ -106,7 +106,7 @@ hx-post="{{ "/collection/new" | app_url }}"
 {% endfor %}
 {% endmacro %}
 
-{% macro collection_sample_note_form(sample, message=none) -%}
+{% macro allocation_note_form(sample, message=none) -%}
 {% from "_macros.html" import show_message %}
 <form hx-post=""
     hx-swap="outerHTML">

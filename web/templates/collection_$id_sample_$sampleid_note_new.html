@@ -1,18 +1,18 @@
 {% extends "root.html" %}
 {% from "_macros.html" import breadcrumbs %}
-{% from "_collection_macros.html" import collection_sample_note_form %}
+{% from "_collection_macros.html" import allocation_note_form %}
 {% block title %}Add a new note{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
 {"name": "Collections", "link": ("/collection/list" | app_url) },
-{"name": sample.collection.id | idfmt("C"), "link": ("/collection/" ~ sample.collection.id) | app_url },
-{"name": sample.sample.id | idfmt("S"), "link": ("/collection/" ~ sample.collection.id ~ "/sample/" ~ sample.id) | app_url },
+{"name": allocation.collection.id | idfmt("C"), "link": ("/collection/" ~ allocation.collection.id) | app_url },
+{"name": allocation.sample.id | idfmt("S"), "link": ("/collection/" ~ allocation.collection.id ~ "/sample/" ~ allocation.id) | app_url },
 {"name": "Add Note", "active": true },
 ]) }}
 <h2>{{ self.title() }}</h2>
-<div>Sample {{ sample.sample.id | idfmt("S") }}: {{ sample.sample.taxon.complete_name }}</div>
-<div>Collection {{ collection.id | idfmt("C") }}: {{ collection.name }}</div>
-{{ collection_sample_note_form(sample, message) }}
+<div>Sample {{ allocation.sample.id | idfmt("S") }}: {{ allocation.sample.taxon.complete_name }}</div>
+<div>Collection {{ allocation.collection.id | idfmt("C") }}: {{ allocation.collection.name }}</div>
+{{ allocation_note_form(allocation, message) }}
 {% endblock %}
 

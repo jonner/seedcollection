@@ -8,7 +8,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::*;
 use libseed::{
-    collection::{AssignedSample, Collection},
+    collection::{Allocation, Collection},
     location::Location,
     sample::Sample,
     taxonomy::{self, filter_by, Taxon},
@@ -42,7 +42,7 @@ impl ConstructTableRow for Sample {
     }
 }
 
-impl ConstructTableRow for AssignedSample {
+impl ConstructTableRow for Allocation {
     fn row_values(&self, full: bool) -> Vec<String> {
         let mut vals = vec![self.id.to_string()];
         vals.append(&mut self.sample.row_values(full));
@@ -88,7 +88,7 @@ impl ConstructTable for Vec<Sample> {
 }
 
 impl ConstructTable for Collection {
-    type Item = AssignedSample;
+    type Item = Allocation;
 
     fn table_headers(&self, full: bool) -> Vec<&'static str> {
         let mut headers = sample_headers(full);
@@ -98,7 +98,7 @@ impl ConstructTable for Collection {
     }
 
     fn items(&self) -> impl Iterator<Item = &Self::Item> {
-        self.samples.iter()
+        self.allocations.iter()
     }
 }
 
@@ -195,7 +195,7 @@ async fn main() -> Result<()> {
             CollectionCommands::AddSample { collection, sample } => {
                 let mut collection = Collection::fetch(collection, &dbpool).await?;
                 let sample = Sample::new_loadable(sample);
-                collection.assign_sample(sample, &dbpool).await?;
+                collection.allocate_sample(sample, &dbpool).await?;
                 println!("Added sample to collection");
                 Ok(())
             }

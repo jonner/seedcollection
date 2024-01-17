@@ -21,7 +21,7 @@ pub struct Collection {
     pub description: Option<String>,
     #[sqlx(skip)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub samples: Vec<AssignedSample>,
+    pub allocations: Vec<Allocation>,
     pub userid: i64,
     #[serde(skip_serializing)]
     #[sqlx(skip)]
@@ -34,7 +34,7 @@ impl Default for Collection {
             id: -1,
             name: Default::default(),
             description: None,
-            samples: Default::default(),
+            allocations: Default::default(),
             userid: -1,
             loaded: false,
         }
@@ -65,14 +65,14 @@ impl Loadable for Collection {
 }
 
 #[derive(Clone)]
-pub enum AssignedSampleFilter {
+pub enum AllocationFilter {
     Id(i64),
     User(i64),
     Collection(i64),
     Sample(i64),
 }
 
-impl FilterPart for AssignedSampleFilter {
+impl FilterPart for AllocationFilter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(id) => _ = builder.push(" csid = ").push_bind(*id),
@@ -161,17 +161,17 @@ impl Collection {
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> Result<()> {
-        let mut fbuilder = FilterBuilder::new(FilterOp::And)
-            .push(Arc::new(AssignedSampleFilter::Collection(self.id)));
+        let mut fbuilder =
+            FilterBuilder::new(FilterOp::And).push(Arc::new(AllocationFilter::Collection(self.id)));
         if let Some(filter) = filter {
             fbuilder = fbuilder.push(filter);
         }
 
-        self.samples = AssignedSample::fetch_all(Some(fbuilder.build()), pool).await?;
+        self.allocations = Allocation::fetch_all(Some(fbuilder.build()), pool).await?;
         Ok(())
     }
 
-    pub async fn assign_sample(
+    pub async fn allocate_sample(
         &mut self,
         sample: Sample,
         pool: &Pool<Sqlite>,
@@ -242,14 +242,14 @@ impl Collection {
             name,
             description,
             userid,
-            samples: Default::default(),
+            allocations: Default::default(),
             loaded: false,
         }
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub struct AssignedSample {
+pub struct Allocation {
     pub id: i64,
     pub sample: Sample,
     pub collection: Collection,
@@ -257,7 +257,7 @@ pub struct AssignedSample {
     pub loaded: bool,
 }
 
-impl Default for AssignedSample {
+impl Default for Allocation {
     fn default() -> Self {
         Self {
             id: -1,
@@ -270,11 +270,11 @@ impl Default for AssignedSample {
 }
 
 #[async_trait]
-impl Loadable for AssignedSample {
+impl Loadable for Allocation {
     type Id = i64;
 
     fn new_loadable(id: Self::Id) -> Self {
-        let mut a: AssignedSample = Default::default();
+        let mut a: Allocation = Default::default();
         a.id = id;
         a
     }
@@ -288,16 +288,14 @@ impl Loadable for AssignedSample {
     }
 
     async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        AssignedSample::fetch(self.id, pool)
-            .await
-            .and_then(|mut a| {
-                a.loaded = true;
-                Ok(a)
-            })
+        Allocation::fetch(self.id, pool).await.and_then(|mut a| {
+            a.loaded = true;
+            Ok(a)
+        })
     }
 }
 
-impl AssignedSample {
+impl Allocation {
     pub fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
@@ -354,7 +352,7 @@ impl AssignedSample {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut builder = Self::build_query(Some(Arc::new(AssignedSampleFilter::Id(id))));
+        let mut builder = Self::build_query(Some(Arc::new(AllocationFilter::Id(id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
@@ -368,7 +366,7 @@ impl AssignedSample {
     }
 }
 
-impl FromRow<'_, SqliteRow> for AssignedSample {
+impl FromRow<'_, SqliteRow> for Allocation {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Ok(Self {
             id: row.try_get("csid")?,
@@ -424,7 +422,7 @@ mod tests {
         )
     ))]
     async fn assigned_samples(pool: Pool<Sqlite>) {
-        async fn check_sample(a: &AssignedSample, pool: &Pool<Sqlite>) {
+        async fn check_sample(a: &Allocation, pool: &Pool<Sqlite>) {
             tracing::debug!("loading sample");
             let mut s = Sample::new_loadable(a.sample.id);
             s.load(pool).await.expect("Failed to load sample");
@@ -436,7 +434,7 @@ mod tests {
         }
 
         let assigned =
-            AssignedSample::fetch_all(Some(Arc::new(AssignedSampleFilter::Collection(1))), &pool)
+            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Collection(1))), &pool)
                 .await
                 .expect("Failed to load assigned samples for first collection");
 
@@ -453,7 +451,7 @@ mod tests {
         check_sample(&assigned[1], &pool).await;
 
         let assigned =
-            AssignedSample::fetch_all(Some(Arc::new(AssignedSampleFilter::Collection(2))), &pool)
+            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Collection(2))), &pool)
                 .await
                 .expect("Failed to load assigned samples for first collection");
 

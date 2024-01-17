@@ -154,7 +154,7 @@ async fn add_sample(
     let mut collection = Collection::fetch(id, &state.dbpool).await?;
     let sample = Sample::new_loadable(params.sample);
     let id = collection
-        .assign_sample(sample, &state.dbpool)
+        .allocate_sample(sample, &state.dbpool)
         .await?
         .last_insert_rowid();
     Ok(Json(id))

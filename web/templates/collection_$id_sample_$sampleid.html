@@ -1,16 +1,16 @@
 {% extends "root.html" %}
 {% from "_macros.html" import breadcrumbs, icon %}
-{% block title %}Collection Sample Details{% endblock %}
+{% block title %}Collection Allocation Details{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
 {"name": "Collections", "link": ("/collection/list" | app_url) },
-{"name": sample.collection.id | idfmt("C"), "link": ("/collection/" ~ sample.collection.id) | app_url },
-{"name": sample.sample.id | idfmt("S"), "active": true },
+{"name": allocation.collection.id | idfmt("C"), "link": ("/collection/" ~ allocation.collection.id) | app_url },
+{"name": allocation.sample.id | idfmt("S"), "active": true },
 ]) }}
 
-<h4>Notes <a class="ms-2" href="{{ ("/collection/" ~ sample.collection.id ~ "/sample/" ~ sample.id ~ "/note/new") | app_url }}">{{ icon("plus-square") }}</a></h4>
-{% for note in sample.notes %}
+<h4>Notes <a class="ms-2" href="{{ ("/collection/" ~ allocation.collection.id ~ "/sample/" ~ allocation.id ~ "/note/new") | app_url }}">{{ icon("plus-square") }}</a></h4>
+{% for note in allocation.notes %}
 <div class="d-flex column-gap-3">
     <div class="">
         <span class="badge {{ note.kind | lower }}">{{ note.kind }}</span>

@@ -9,7 +9,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::{AssignedSample, AssignedSampleFilter},
+    collection::{Allocation, AllocationFilter},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
@@ -104,13 +104,10 @@ async fn show_sample(
     // needed for edit form
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
 
-    let mut csamples = AssignedSample::fetch_all(
-        Some(Arc::new(AssignedSampleFilter::Sample(id))),
-        &state.dbpool,
-    )
-    .await?;
-    for cs in csamples.iter_mut() {
-        cs.fetch_notes(&state.dbpool).await?;
+    let mut allocations =
+        Allocation::fetch_all(Some(Arc::new(AllocationFilter::Sample(id))), &state.dbpool).await?;
+    for alloc in allocations.iter_mut() {
+        alloc.fetch_notes(&state.dbpool).await?;
     }
 
     Ok(RenderHtml(
@@ -119,7 +116,7 @@ async fn show_sample(
         context!(user => user,
                  sample => sample,
                  locations => locations,
-                 assignments => csamples),
+                 allocations => allocations),
     )
     .into_response())
 }
