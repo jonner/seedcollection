@@ -94,7 +94,7 @@ impl Allocation {
             T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
             GROUP_CONCAT(V.vernacular_name, "@") as cnames,
 
-            L.locid, L.name as locname, L.description as locdescription, T.complete_name,
+            L.srcid, L.srcname, L.srcdesc, T.complete_name,
 
             S.userid, U.username,
 
@@ -103,7 +103,7 @@ impl Allocation {
 
             FROM sc_collection_samples CS
             INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-            INNER JOIN sc_locations L on L.locid=S.collectedlocation
+            INNER JOIN sc_sources L on L.srcid=S.srcid
             INNER JOIN sc_samples S ON CS.sampleid=S.sampleid
             INNER JOIN sc_users U on U.userid=S.userid
             INNER JOIN sc_collections C on C.collectionid=CS.collectionid
@@ -192,7 +192,7 @@ mod tests {
         migrations = "../db/migrations/",
         fixtures(
             path = "../../../db/fixtures",
-            scripts("users", "locations", "taxa", "assigned-samples")
+            scripts("users", "sources", "taxa", "assigned-samples")
         )
     ))]
     async fn fetch_allocations(pool: Pool<Sqlite>) {

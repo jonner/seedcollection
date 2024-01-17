@@ -99,7 +99,7 @@ impl FilterPart for Filter {
                 }
                 builder.push(")");
             }
-            Self::Source(cmp, id) => _ = builder.push("L.locid").push(cmp).push_bind(*id),
+            Self::Source(cmp, id) => _ = builder.push("L.srcid").push(cmp).push_bind(*id),
             Self::Taxon(cmp, id) => _ = builder.push("S.tsn").push(cmp).push_bind(*id),
             Self::TaxonNameLike(s) => {
                 if !s.is_empty() {
@@ -130,14 +130,14 @@ impl FilterPart for Filter {
 impl Sample {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-            r#"SELECT S.sampleid, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, L.description as locdescription,
+            r#"SELECT S.sampleid, T.tsn, T.parent_tsn as parentid, L.srcid, L.srcname, L.srcdesc,
             T.complete_name, T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
                     quantity, month, year, notes, certainty,
                     GROUP_CONCAT(V.vernacular_name, "@") as cnames,
                     U.userid as userid, U.username
                     FROM sc_samples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-                    INNER JOIN sc_locations L on L.locid=S.collectedlocation
+                    INNER JOIN sc_sources L on L.srcid=S.srcid
                     INNER JOIN sc_users U on U.userid=S.userid
                     LEFT JOIN (SELECT * FROM vernaculars WHERE
                     (language="English" or language="unspecified")) V on V.tsn=T.tsn

@@ -125,7 +125,7 @@ async fn delete_source(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    sqlx::query("DELETE FROM sc_locations WHERE locid=?")
+    sqlx::query("DELETE FROM sc_sources WHERE srcid=?")
         .bind(id)
         .execute(&state.dbpool)
         .await?;

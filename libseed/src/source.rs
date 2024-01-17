@@ -14,11 +14,11 @@ use std::sync::Arc;
 
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq)]
 pub struct Source {
-    #[sqlx(rename = "locid")]
+    #[sqlx(rename = "srcid")]
     pub id: i64,
-    #[sqlx(rename = "locname")]
+    #[sqlx(rename = "srcname")]
     pub name: String,
-    #[sqlx(rename = "locdescription")]
+    #[sqlx(rename = "srcdesc")]
     pub description: Option<String>,
     #[sqlx(default)]
     pub latitude: Option<f64>,
@@ -77,14 +77,14 @@ pub enum Filter {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(id) => _ = builder.push(" L.locid = ").push_bind(*id),
+            Self::Id(id) => _ = builder.push(" L.srcid = ").push_bind(*id),
             Self::User(id) => _ = builder.push(" L.userid = ").push_bind(*id),
             Self::Name(cmp, frag) => {
                 let s = match cmp {
                     Cmp::Like => format!("%{frag}%"),
                     _ => frag.to_string(),
                 };
-                builder.push(" L.name ").push(cmp).push_bind(s);
+                builder.push(" L.srcname ").push(cmp).push_bind(s);
             }
             Filter::Description(cmp, frag) => {
                 let s = match cmp {
@@ -102,15 +102,15 @@ const MAP_TILER_KEY: &str = "OfKZsQq0kXBWp83M3Wjx";
 impl Source {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut qb = QueryBuilder::new(
-            r#"SELECT L.locid, L.name as locname, L.description as locdescription, L.latitude, L.longitude,
-            L.userid, U.username FROM sc_locations L
+            r#"SELECT L.srcid, L.srcname, L.srcdesc, L.latitude, L.longitude,
+            L.userid, U.username FROM sc_sources L
             INNER JOIN sc_users U ON U.userid=L.userid"#,
         );
         if let Some(f) = filter {
             qb.push(" WHERE ");
             f.add_to_query(&mut qb);
         }
-        qb.push(" ORDER BY name ASC");
+        qb.push(" ORDER BY srcname ASC");
         qb
     }
 
@@ -163,8 +163,8 @@ impl Source {
         }
 
         sqlx::query(
-            r#"INSERT INTO sc_locations
-          (name, description, latitude, longitude, userid)
+            r#"INSERT INTO sc_sources
+          (srcname, srcdesc, latitude, longitude, userid)
           VALUES (?, ?, ?, ?, ?)"#,
         )
         .bind(&self.name)
@@ -190,7 +190,7 @@ impl Source {
         }
 
         sqlx::query(
-            "UPDATE sc_locations SET name=?, description=?, latitude=?, longitude=? WHERE locid=?",
+            "UPDATE sc_sources SET srcname=?, srcdesc=?, latitude=?, longitude=? WHERE srcid=?",
         )
         .bind(self.name.clone())
         .bind(self.description.as_ref().cloned())
@@ -203,7 +203,7 @@ impl Source {
     }
 
     pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        sqlx::query(r#"DELETE FROM sc_locations WHERE locid=?1"#)
+        sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
             .bind(self.id)
             .execute(pool)
             .await

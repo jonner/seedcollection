@@ -247,7 +247,7 @@ async fn delete_source(
     if src.userid != Some(user.id) {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
-    sqlx::query("DELETE FROM sc_locations WHERE locid=?")
+    sqlx::query("DELETE FROM sc_sources WHERE srcid=?")
         .bind(id)
         .execute(&state.dbpool)
         .await?;

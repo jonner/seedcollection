@@ -322,7 +322,7 @@ async fn main() -> Result<()> {
                 notes,
             } => {
                 let newid = sqlx::query!(
-                    r#"INSERT INTO sc_samples (tsn, month, year, collectedlocation, quantity, notes)
+                    r#"INSERT INTO sc_samples (tsn, month, year, srcid, quantity, notes)
                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#,
                     taxon,
                     month,
