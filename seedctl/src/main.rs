@@ -9,8 +9,8 @@ use cli::*;
 use libseed::{
     collection::{Allocation, Collection},
     loadable::Loadable,
-    location::Location,
     sample::Sample,
+    source::Source,
     taxonomy::{self, filter_by, Taxon},
     user::User,
 };
@@ -26,7 +26,7 @@ impl ConstructTableRow for Sample {
         let mut vals = vec![
             self.id.to_string(),
             self.taxon.complete_name.clone(),
-            self.location.name.clone(),
+            self.source.name.clone(),
         ];
         if full {
             vals.push(self.month.map(|x| x.to_string()).unwrap_or("".to_string()));
@@ -68,7 +68,7 @@ trait ConstructTable {
 }
 
 fn sample_headers(full: bool) -> Vec<&'static str> {
-    let mut headers = vec!["ID", "Taxon", "Location"];
+    let mut headers = vec!["ID", "Taxon", "Source"];
     if full {
         headers.extend_from_slice(&["Month", "Year", "Qty", "Notes"]);
     }
@@ -224,9 +224,9 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
-        Commands::Location { command } => match command {
-            LocationCommands::List { full } => {
-                let locations = Location::fetch_all(None, &dbpool).await?;
+        Commands::Source { command } => match command {
+            SourceCommands::List { full } => {
+                let sources = Source::fetch_all(None, &dbpool).await?;
                 let mut tbuilder = tabled::builder::Builder::new();
                 let mut header = vec!["ID", "Name"];
                 if full {
@@ -235,46 +235,46 @@ async fn main() -> Result<()> {
                     header.push("longitude");
                 };
                 tbuilder.set_header(header);
-                for loc in &locations {
-                    let mut vals = vec![loc.id.to_string(), loc.name.clone()];
+                for src in &sources {
+                    let mut vals = vec![src.id.to_string(), src.name.clone()];
                     if full {
-                        vals.push(loc.description.clone().unwrap_or("".to_string()));
+                        vals.push(src.description.clone().unwrap_or("".to_string()));
                         vals.push(
-                            loc.latitude
+                            src.latitude
                                 .map(|n| n.to_string())
                                 .unwrap_or("".to_string()),
                         );
                         vals.push(
-                            loc.longitude
+                            src.longitude
                                 .map(|n| n.to_string())
                                 .unwrap_or("".to_string()),
                         );
                     }
                     tbuilder.push_record(vals);
                 }
-                print_table(tbuilder, locations.len());
+                print_table(tbuilder, sources.len());
                 Ok(())
             }
-            LocationCommands::Add {
+            SourceCommands::Add {
                 name,
                 description,
                 latitude,
                 longitude,
                 userid,
             } => {
-                let mut location = Location::new(name, description, latitude, longitude, userid);
+                let mut source = Source::new(name, description, latitude, longitude, userid);
 
-                let newid = location.insert(&dbpool).await?.last_insert_rowid();
-                println!("Added location {newid} to database");
+                let newid = source.insert(&dbpool).await?.last_insert_rowid();
+                println!("Added source {newid} to database");
                 Ok(())
             }
-            LocationCommands::Remove { id } => {
-                let mut location = Location::fetch(id, &dbpool).await?;
-                location.delete(&dbpool).await?;
-                println!("Removed location {id} from database");
+            SourceCommands::Remove { id } => {
+                let mut source = Source::fetch(id, &dbpool).await?;
+                source.delete(&dbpool).await?;
+                println!("Removed source {id} from database");
                 Ok(())
             }
-            LocationCommands::Modify {
+            SourceCommands::Modify {
                 id,
                 name,
                 description,
@@ -286,22 +286,22 @@ async fn main() -> Result<()> {
                     && latitude.is_none()
                     && longitude.is_none()
                 {
-                    return Err(anyhow!("Cannot modify location without new values"));
+                    return Err(anyhow!("Cannot modify source without new values"));
                 }
-                let mut loc = Location::fetch(id, &dbpool).await?;
+                let mut src = Source::fetch(id, &dbpool).await?;
                 if let Some(name) = name {
-                    loc.name = name;
+                    src.name = name;
                 }
                 if let Some(description) = description {
-                    loc.description = Some(description);
+                    src.description = Some(description);
                 }
                 if let Some(latitude) = latitude {
-                    loc.latitude = Some(latitude);
+                    src.latitude = Some(latitude);
                 }
                 if let Some(longitude) = longitude {
-                    loc.longitude = Some(longitude);
+                    src.longitude = Some(longitude);
                 }
-                loc.update(&dbpool).await?;
+                src.update(&dbpool).await?;
                 println!("Modified collection...");
                 Ok(())
             }
@@ -315,7 +315,7 @@ async fn main() -> Result<()> {
             }
             SampleCommands::Add {
                 taxon,
-                location,
+                source,
                 month,
                 year,
                 quantity,
@@ -327,7 +327,7 @@ async fn main() -> Result<()> {
                     taxon,
                     month,
                     year,
-                    location,
+                    source,
                     quantity,
                     notes,
                 )
@@ -345,14 +345,14 @@ async fn main() -> Result<()> {
             SampleCommands::Modify {
                 id,
                 taxon,
-                location,
+                source,
                 month,
                 year,
                 quantity,
                 notes,
             } => {
                 if taxon.is_none()
-                    && location.is_none()
+                    && source.is_none()
                     && month.is_none()
                     && year.is_none()
                     && quantity.is_none()
@@ -364,8 +364,8 @@ async fn main() -> Result<()> {
                 if let Some(taxon) = taxon {
                     sample.taxon = Taxon::new_loadable(taxon);
                 }
-                if let Some(location) = location {
-                    sample.location = Location::new_loadable(location);
+                if let Some(source) = source {
+                    sample.source = Source::new_loadable(source);
                 }
                 if let Some(month) = month {
                     sample.month = Some(month.into());

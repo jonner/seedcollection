@@ -23,10 +23,10 @@ pub enum Commands {
         #[command(subcommand)]
         command: CollectionCommands,
     },
-    #[command(about = "Manage locations")]
-    Location {
+    #[command(about = "Manage sources")]
+    Source {
         #[command(subcommand)]
-        command: LocationCommands,
+        command: SourceCommands,
     },
     #[command(about = "Manage samples")]
     Sample {
@@ -97,13 +97,13 @@ pub enum CollectionCommands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum LocationCommands {
-    #[command(about = "List all locations")]
+pub enum SourceCommands {
+    #[command(about = "List all sources")]
     List {
         #[arg(short, long)]
         full: bool,
     },
-    #[command(about = "Add a new location to the database")]
+    #[command(about = "Add a new source to the database")]
     Add {
         #[arg(long)]
         name: String,
@@ -116,10 +116,10 @@ pub enum LocationCommands {
         #[arg(long)]
         userid: Option<i64>,
     },
-    #[command(about = "Remove an existing location from the database")]
+    #[command(about = "Remove an existing source from the database")]
     Remove { id: i64 },
     #[command(
-        about="Modify properties about a location",
+        about="Modify properties of a source",
         group(
             clap::ArgGroup::new("modify")
                 .required(true)
@@ -152,7 +152,7 @@ pub enum SampleCommands {
         #[arg(short, long)]
         taxon: i64,
         #[arg(short, long)]
-        location: Option<i64>,
+        source: Option<i64>,
         #[arg(short, long)]
         month: Option<u16>,
         #[arg(short, long)]
@@ -169,7 +169,7 @@ pub enum SampleCommands {
             clap::ArgGroup::new("modify")
                 .required(true)
                 .multiple(true)
-                .args(&["taxon", "location", "month", "year", "quantity", "notes"]),
+                .args(&["taxon", "source", "month", "year", "quantity", "notes"]),
         ),
         about="Modify properties of a sample")]
     Modify {
@@ -178,7 +178,7 @@ pub enum SampleCommands {
         #[arg(long)]
         taxon: Option<i64>,
         #[arg(long)]
-        location: Option<i64>,
+        source: Option<i64>,
         #[arg(short, long)]
         month: Option<u16>,
         #[arg(short, long)]
@@ -213,17 +213,17 @@ pub enum TaxonomyCommands {
 pub enum UserCommands {
     #[command(about = "List all users")]
     List {},
-    #[command(about = "Add a new location to the database")]
+    #[command(about = "Add a new user to the database")]
     Add {
         #[arg(long)]
         username: String,
         #[arg(long)]
         passwordfile: Option<PathBuf>,
     },
-    #[command(about = "Remove an existing location from the database")]
+    #[command(about = "Remove an existing user from the database")]
     Remove { id: i64 },
     #[command(
-        about="Modify properties about a location",
+        about="Modify properties about a user",
         group(
             clap::ArgGroup::new("modify")
                 .required(true)

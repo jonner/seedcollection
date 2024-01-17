@@ -1,0 +1,18 @@
+{% extends "root.html" %}
+{% from "_macros.html" import icon, breadcrumbs %}
+{% from "_sample_macros.html" import sample_list %}
+{% block title %}{{ source.name or "Source Details" }} Details{% endblock %}
+{% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Sources", "link": ("/source/list" | app_url) },
+{"name": source.id | idfmt("L"), "active": true },
+]) }}
+<h2>{{ self.title() }} <a href="{{ ("/source/" ~ source.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
+<p>{{ source.description }}</p>
+{%if map_viewer %}
+<iframe class="mb-3" width="500", height="300" src="{{ map_viewer }}"></iframe>
+{% endif %}
+<h3>{{ samples | count }} Samples from this source</h3>
+{{ sample_list(samples, "sample-list") }}
+{% endblock %}

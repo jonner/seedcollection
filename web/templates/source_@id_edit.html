@@ -1,0 +1,13 @@
+{% extends "root.html" %}
+{% from "_macros.html" import breadcrumbs %}
+{% block title %}{{ source.name }} Details{% endblock %}
+{% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Sources", "link": ("/source/list" | app_url) },
+{"name": source.id | idfmt("L"), "link": ("/source/" ~ source.id) | app_url },
+{"name": "Edit", "active": true }
+]) }}
+<h2>Source Details</h2>
+{% include "source_@id-PUT.html" %}
+{% endblock %}

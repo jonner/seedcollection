@@ -1,19 +1,19 @@
-{% from "_location_macros.html" import location_form %}
+{% from "_source_macros.html" import source_form %}
 <div class="modal-dialog modal-dialog-centered">
   <div class="modal-content">
     <div class="modal-header">
-      <h5 class="modal-title">New Location</h5>
+      <h5 class="modal-title">New Source</h5>
       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
     </div>
     <div class="modal-body">
-        {% call location_form("new-location-modal-form") %}
+        {% call source_form("new-source-modal-form") %}
         <input name="modal" value="1" type="hidden">
         {% endcall %}
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      <input id="AddLocationSubmit" type="submit" class="btn btn-primary" data-bs-dismiss="modal"
-          form="new-location-modal-form" value="Add">
+      <input id="AddSourceSubmit" type="submit" class="btn btn-primary" data-bs-dismiss="modal"
+          form="new-source-modal-form" value="Add">
     </div>
   </div>
 </div>

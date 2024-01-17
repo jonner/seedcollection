@@ -2,7 +2,7 @@ use crate::{
     error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
     loadable::Loadable,
-    location::Location,
+    source::Source,
     taxonomy::Taxon,
     user::User,
 };
@@ -26,7 +26,7 @@ pub struct Sample {
     pub id: i64,
     pub user: User,
     pub taxon: Taxon,
-    pub location: Location,
+    pub source: Source,
     pub quantity: Option<i64>,
     pub month: Option<u32>,
     pub year: Option<u32>,
@@ -40,7 +40,7 @@ pub struct Sample {
 pub enum Filter {
     Sample(Cmp, i64),
     SampleNotIn(Vec<i64>),
-    Location(Cmp, i64),
+    Source(Cmp, i64),
     Taxon(Cmp, i64),
     TaxonNameLike(String),
     User(i64),
@@ -53,7 +53,7 @@ impl Default for Sample {
             id: -1,
             user: User::default(),
             taxon: Taxon::default(),
-            location: Location::default(),
+            source: Source::default(),
             quantity: None,
             month: None,
             year: None,
@@ -99,7 +99,7 @@ impl FilterPart for Filter {
                 }
                 builder.push(")");
             }
-            Self::Location(cmp, id) => _ = builder.push("L.locid").push(cmp).push_bind(*id),
+            Self::Source(cmp, id) => _ = builder.push("L.locid").push(cmp).push_bind(*id),
             Self::Taxon(cmp, id) => _ = builder.push("S.tsn").push(cmp).push_bind(*id),
             Self::TaxonNameLike(s) => {
                 if !s.is_empty() {
@@ -188,7 +188,7 @@ impl Sample {
         sqlx::query("INSERT INTO sc_samples (tsn, userid, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(self.taxon.id)
         .bind(self.user.id)
-        .bind(self.location.id)
+        .bind(self.source.id)
         .bind(self.month)
         .bind(self.year)
         .bind(self.quantity)
@@ -209,15 +209,15 @@ impl Sample {
                 "No taxon set, cannot update".to_string(),
             ));
         }
-        if self.location.id < 0 {
+        if self.source.id < 0 {
             return Err(Error::InvalidData(
-                "No location set, cannot update".to_string(),
+                "No source set, cannot update".to_string(),
             ));
         }
 
         sqlx::query("Update sc_samples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")
             .bind(self.taxon.id)
-            .bind(self.location.id)
+            .bind(self.source.id)
             .bind(self.month)
             .bind(self.year)
             .bind(self.quantity)
@@ -246,7 +246,7 @@ impl Sample {
     pub fn new(
         taxonid: i64,
         userid: i64,
-        locationid: i64,
+        sourceid: i64,
         month: Option<u32>,
         year: Option<u32>,
         quantity: Option<i64>,
@@ -257,7 +257,7 @@ impl Sample {
             id: -1,
             user: User::new_loadable(userid),
             taxon: Taxon::new_loadable(taxonid),
-            location: Location::new_loadable(locationid),
+            source: Source::new_loadable(sourceid),
             quantity,
             month,
             year,
@@ -274,7 +274,7 @@ impl FromRow<'_, SqliteRow> for Sample {
             id: row.try_get("sampleid")?,
             user: User::from_row(row)?,
             taxon: Taxon::from_row(row)?,
-            location: Location::from_row(row)?,
+            source: Source::from_row(row)?,
             quantity: row.try_get("quantity").unwrap_or(None),
             month: row.try_get("month").unwrap_or(None),
             year: row.try_get("year").unwrap_or(None),
@@ -299,16 +299,15 @@ mod tests {
             pool: &Pool<Sqlite>,
             taxon: i64,
             user: i64,
-            location: i64,
+            source: i64,
             quantity: Option<i64>,
             month: Option<u32>,
             year: Option<u32>,
             notes: Option<String>,
             certainty: Certainty,
         ) {
-            let mut sample = Sample::new(
-                taxon, user, location, month, year, quantity, notes, certainty,
-            );
+            let mut sample =
+                Sample::new(taxon, user, source, month, year, quantity, notes, certainty);
             let res = sample.insert(pool).await;
             let res = res.expect("Failed to insert sample");
             let mut loaded = Sample::new_loadable(res.last_insert_rowid());
@@ -320,7 +319,7 @@ mod tests {
             assert_eq!(sample.loaded, loaded.loaded);
             assert_eq!(sample.user.id, loaded.user.id);
             assert_eq!(sample.taxon.id, loaded.taxon.id);
-            assert_eq!(sample.location.id, loaded.location.id);
+            assert_eq!(sample.source.id, loaded.source.id);
             assert_eq!(sample.month, loaded.month);
             assert_eq!(sample.year, loaded.year);
             assert_eq!(sample.quantity, loaded.quantity);

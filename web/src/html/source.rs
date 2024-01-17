@@ -11,11 +11,11 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
-    location,
+    source,
 };
 use libseed::{
-    location::Location,
     sample::{Filter, Sample},
+    source::Source,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -26,35 +26,33 @@ use crate::{error, state::AppState};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/new", get(add_location).post(new_location))
-        .route("/filter", get(filter_locations))
-        .route("/new/modal", get(add_location))
+        .route("/new", get(add_source).post(new_source))
+        .route("/filter", get(filter_sources))
+        .route("/new/modal", get(add_source))
         .route(
             "/:id",
-            get(show_location)
-                .put(update_location)
-                .delete(delete_location),
+            get(show_source).put(update_source).delete(delete_source),
         )
-        .route("/:id/edit", get(show_location))
-        .route("/list", get(list_locations))
-        .route("/list/options", get(list_locations))
+        .route("/:id/edit", get(show_source))
+        .route("/list", get(list_sources))
+        .route("/list/options", get(list_sources))
 }
 
-async fn list_locations(
+async fn list_sources(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => user, locations => locations),
+        context!(user => user, sources => sources),
     )
     .into_response())
 }
 
-async fn add_location(
+async fn add_source(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
@@ -62,16 +60,16 @@ async fn add_location(
     Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
 }
 
-async fn show_location(
+async fn show_source(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let loc = Location::fetch(id, &state.dbpool).await?;
+    let src = Source::fetch(id, &state.dbpool).await?;
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Arc::new(Filter::Location(Cmp::Equal, id))),
+        Some(Arc::new(Filter::Source(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;
@@ -79,15 +77,15 @@ async fn show_location(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 location => loc,
-                 map_viewer => loc.map_viewer_uri(12.0),
+                 source => src,
+                 map_viewer => src.map_viewer_uri(12.0),
                  samples => samples),
     )
     .into_response())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct LocationParams {
+struct SourceParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     name: Option<String>,
     #[serde(deserialize_with = "empty_string_as_none")]
@@ -101,31 +99,31 @@ struct LocationParams {
 
 async fn do_update(
     id: i64,
-    params: &LocationParams,
+    params: &SourceParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    let mut loc = Location::fetch(id, &state.dbpool).await?;
-    loc.name = params
+    let mut src = Source::fetch(id, &state.dbpool).await?;
+    src.name = params
         .name
         .as_ref()
         .ok_or_else(|| anyhow!("No name specified"))?
         .to_string();
-    loc.description = params.description.as_ref().cloned();
-    loc.latitude = params.latitude;
-    loc.longitude = params.longitude;
+    src.description = params.description.as_ref().cloned();
+    src.latitude = params.latitude;
+    src.longitude = params.longitude;
 
-    loc.update(&state.dbpool).await.map_err(|e| e.into())
+    src.update(&state.dbpool).await.map_err(|e| e.into())
 }
 
-async fn update_location(
+async fn update_source(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
-    Form(params): Form<LocationParams>,
+    Form(params): Form<SourceParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let loc = Location::fetch(id, &state.dbpool).await?;
-    if loc.userid != Some(user.id) {
+    let src = Source::fetch(id, &state.dbpool).await?;
+    if src.userid != Some(user.id) {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
     let (request, message, headers) = match do_update(id, &params, &state).await {
@@ -141,25 +139,25 @@ async fn update_location(
             None,
             Message {
                 r#type: MessageType::Success,
-                msg: "Successfully updated location".to_string(),
+                msg: "Successfully updated source".to_string(),
             },
-            Some([("HX-Redirect", app_url(&format!("/location/{id}")))]),
+            Some([("HX-Redirect", app_url(&format!("/source/{id}")))]),
         ),
     };
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Arc::new(Filter::Location(Cmp::Equal, id))),
+        Some(Arc::new(Filter::Source(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;
-    let loc = Location::fetch(id, &state.dbpool).await?;
+    let src = Source::fetch(id, &state.dbpool).await?;
 
     Ok((
         headers,
         RenderHtml(
             key,
             state.tmpl.clone(),
-            context!(location => loc,
+            context!(source => src,
              message => message,
              request => request,
              samples => samples
@@ -171,10 +169,10 @@ async fn update_location(
 
 async fn do_insert(
     user: &SqliteUser,
-    params: &LocationParams,
+    params: &SourceParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    let mut location = Location::new(
+    let mut source = Source::new(
         params
             .name
             .as_ref()
@@ -185,17 +183,17 @@ async fn do_insert(
         params.longitude,
         Some(user.id),
     );
-    location.insert(&state.dbpool).await.map_err(|e| e.into())
+    source.insert(&state.dbpool).await.map_err(|e| e.into())
 }
 
-async fn new_location(
+async fn new_source(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Form(params): Form<LocationParams>,
+    Form(params): Form<SourceParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let message;
-    let mut request: Option<&LocationParams> = None;
+    let mut request: Option<&SourceParams> = None;
     let mut headers = HeaderMap::new();
     match do_insert(&user, &params, &state).await {
         Err(e) => {
@@ -207,15 +205,15 @@ async fn new_location(
         }
         Ok(result) => {
             let newid = result.last_insert_rowid();
-            let url = app_url(&format!("/location/{newid}"));
+            let url = app_url(&format!("/source/{newid}"));
             message = Some(Message {
                 r#type: MessageType::Success,
-                msg: format!("Successfully added location {newid}"),
+                msg: format!("Successfully added source {newid}"),
             });
             if params.modal.is_some() {
                 headers.append(
                     "HX-Trigger",
-                    "reload-locations"
+                    "reload-sources"
                         .parse()
                         .with_context(|| "Failed to parse header")?,
                 );
@@ -240,20 +238,20 @@ async fn new_location(
         .into_response())
 }
 
-async fn delete_location(
+async fn delete_source(
     user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let loc = Location::fetch(id, &state.dbpool).await?;
-    if loc.userid != Some(user.id) {
+    let src = Source::fetch(id, &state.dbpool).await?;
+    if src.userid != Some(user.id) {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
     sqlx::query("DELETE FROM sc_locations WHERE locid=?")
         .bind(id)
         .execute(&state.dbpool)
         .await?;
-    Ok([("HX-redirect", app_url("/location/list"))])
+    Ok([("HX-redirect", app_url("/source/list"))])
 }
 
 #[derive(Deserialize)]
@@ -261,31 +259,31 @@ struct FilterParams {
     fragment: String,
 }
 
-async fn filter_locations(
+async fn filter_sources(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(params): Query<FilterParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let namefilter = FilterBuilder::new(FilterOp::Or)
-        .push(Arc::new(location::Filter::Name(
+        .push(Arc::new(source::Filter::Name(
             Cmp::Like,
             params.fragment.clone(),
         )))
-        .push(Arc::new(location::Filter::Description(
+        .push(Arc::new(source::Filter::Description(
             Cmp::Like,
             params.fragment.clone(),
         )))
         .build();
     let filter = FilterBuilder::new(FilterOp::And)
         .push(namefilter)
-        .push(Arc::new(location::Filter::User(user.id)))
+        .push(Arc::new(source::Filter::User(user.id)))
         .build();
-    let locations = Location::fetch_all(Some(filter), &state.dbpool).await?;
+    let sources = Source::fetch_all(Some(filter), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => user, locations => locations),
+        context!(user => user, sources => sources),
     )
     .into_response())
 }

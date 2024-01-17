@@ -19,8 +19,8 @@
     None
     {% endif %}
 </div>
-<h5>Location</h5>
-<div class="mb-3 px-2"><a href="{{ ( "/location/" ~ sample.location.id) | app_url }}">{{ sample.location.name }}</a></div>
+<h5>Source</h5>
+<div class="mb-3 px-2"><a href="{{ ( "/source/" ~ sample.source.id) | app_url }}">{{ sample.source.name }}</a></div>
 <h5>Collection Date</h5>
 <div class="mb-3 px-2">{% if sample.month %}{{ sample.month }}/{% endif %}{{ sample.year }}</div>
 <h5>Quantity</h5>

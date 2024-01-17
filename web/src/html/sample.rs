@@ -13,8 +13,8 @@ use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
-    location::{self, Location},
     sample::{self, Certainty, Sample},
+    source::{self, Source},
     taxonomy::Taxon,
 };
 use minijinja::context;
@@ -58,10 +58,7 @@ async fn filter_samples(
         let subfilter = FilterBuilder::new(FilterOp::Or)
             .push(Arc::new(sample::Filter::TaxonNameLike(fragment.clone())))
             .push(Arc::new(sample::Filter::Notes(Cmp::Like, fragment.clone())))
-            .push(Arc::new(location::Filter::Name(
-                Cmp::Like,
-                fragment.clone(),
-            )))
+            .push(Arc::new(source::Filter::Name(Cmp::Like, fragment.clone())))
             .build();
         fbuilder = fbuilder.push(subfilter);
     };
@@ -102,7 +99,7 @@ async fn show_sample(
     sample.taxon.fetch_germination_info(&state.dbpool).await?;
 
     // needed for edit form
-    let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
 
     let mut allocations =
         Allocation::fetch_all(Some(Arc::new(AllocationFilter::Sample(id))), &state.dbpool).await?;
@@ -115,7 +112,7 @@ async fn show_sample(
         state.tmpl.clone(),
         context!(user => user,
                  sample => sample,
-                 locations => locations,
+                 sources => sources,
                  allocations => allocations),
     )
     .into_response())
@@ -126,12 +123,12 @@ async fn new_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 locations => locations),
+                 sources => sources),
     )
     .into_response())
 }
@@ -141,7 +138,7 @@ struct SampleParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     taxon: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none")]
-    location: Option<i64>,
+    source: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none")]
     month: Option<u32>,
     #[serde(deserialize_with = "empty_string_as_none")]
@@ -166,7 +163,7 @@ async fn do_insert(
     let mut sample = Sample::new(
         params.taxon.ok_or(anyhow!("No taxon provided"))?,
         user.id,
-        params.location.ok_or(anyhow!("No location provided"))?,
+        params.source.ok_or(anyhow!("No source provided"))?,
         params.month,
         params.year,
         params.quantity,
@@ -182,12 +179,12 @@ async fn insert_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
     match do_insert(&user, &params, &state).await {
         Err(e) => Ok(RenderHtml(
             key,
             state.tmpl.clone(),
-            context!(locations => locations,
+            context!(sources => sources,
                          message => Message {
                              r#type: MessageType::Error,
                              msg: format!("Failed to save sample: {}", e),
@@ -205,7 +202,7 @@ async fn insert_sample(
                 RenderHtml(
                     key,
                     state.tmpl.clone(),
-                    context!(locations => locations,
+                    context!(sources => sources,
                     message => Message {
                         r#type: MessageType::Success,
                         msg: format!(
@@ -232,10 +229,10 @@ async fn do_update(
     };
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
     sample.taxon = Taxon::new_loadable(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
-    sample.location = Location::new_loadable(
+    sample.source = Source::new_loadable(
         params
-            .location
-            .ok_or_else(|| anyhow!("No location specified"))?,
+            .source
+            .ok_or_else(|| anyhow!("No source specified"))?,
     );
     sample.month = params.month;
     sample.year = params.year;
@@ -252,7 +249,7 @@ async fn update_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
     let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(params),
@@ -279,7 +276,7 @@ async fn update_sample(
         RenderHtml(
             key,
             state.tmpl.clone(),
-            context!(locations => locations,
+            context!(sources => sources,
                      sample => sample,
                      message => message,
                      request => request),
@@ -302,12 +299,12 @@ async fn delete_sample(
     }
     match sample.delete(&state.dbpool).await {
         Err(e) => {
-            let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
+            let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
             let sample = Sample::fetch(id, &state.dbpool).await?;
             Ok(RenderHtml(
                 key,
                 state.tmpl.clone(),
-                context!(locations => locations,
+                context!(sources => sources,
                 sample => sample,
                 message => Message {
                     r#type: MessageType::Error,

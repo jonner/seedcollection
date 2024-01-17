@@ -13,8 +13,8 @@ use axum::{
 use libseed::{
     empty_string_as_none,
     loadable::Loadable,
-    location::Location,
     sample::{Certainty, Sample},
+    source::Source,
     taxonomy::Taxon,
 };
 use serde::Deserialize;
@@ -54,7 +54,7 @@ async fn show_sample(
 #[derive(Deserialize)]
 struct SampleParams {
     taxon: Option<i64>,
-    location: Option<i64>,
+    source: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none")]
     month: Option<u32>,
     #[serde(deserialize_with = "empty_string_as_none")]
@@ -73,7 +73,7 @@ async fn modify_sample(
     Form(params): Form<SampleParams>,
 ) -> Result<(), error::Error> {
     if params.taxon.is_none()
-        && params.location.is_none()
+        && params.source.is_none()
         && params.quantity.is_none()
         && params.month.is_none()
         && params.year.is_none()
@@ -86,8 +86,8 @@ async fn modify_sample(
     if let Some(taxon) = params.taxon {
         sample.taxon = Taxon::new_loadable(taxon);
     }
-    if let Some(location) = params.location {
-        sample.location = Location::new_loadable(location);
+    if let Some(source) = params.source {
+        sample.source = Source::new_loadable(source);
     }
     if let Some(month) = params.month {
         sample.month = Some(month);
@@ -113,15 +113,15 @@ async fn new_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<(), error::Error> {
-    if params.taxon.is_none() && params.location.is_none() {
-        return Err(anyhow!("Taxon and Location are required").into());
+    if params.taxon.is_none() && params.source.is_none() {
+        return Err(anyhow!("Taxon and Source are required").into());
     }
     let mut sample = Sample::new(
         params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?,
         user.id,
         params
-            .location
-            .ok_or_else(|| anyhow!("No location specified"))?,
+            .source
+            .ok_or_else(|| anyhow!("No source specified"))?,
         params.month,
         params.year,
         params.quantity,

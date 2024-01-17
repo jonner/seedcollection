@@ -17,7 +17,7 @@
 {%- endmacro %}
 
 
-{% macro sample_form(locations, sample=none, request=none, message=none) -%}
+{% macro sample_form(sources, sample=none, request=none, message=none) -%}
 {% if sample %}
 <form hx-put="{{ ("/sample/" ~ sample.id) | app_url }}">
 {% else %}
@@ -48,26 +48,26 @@
             </div>
         </div>
         <div class="mb-3 col-12">
-            <label for="SampleLocationInput" class="form-label">Location</label>
+            <label for="SampleSourceInput" class="form-label">Source</label>
             <div class="input-group">
-                <select id="SampleLocationInput" class="form-select" name="location"
-                                                                     hx-trigger="reload-locations from:body"
-                                                                     hx-get="{{ "/location/list/options" | app_url }}">
-                    <option value="">Choose a location...</option>
-                    {% for l in locations %}
-                    <option value="{{ l.id }}"
-                            {% if request and (request.location == l.id) %}selected{% elif sample and (l.id == sample.location.id) %}selected{% endif %}
-                            >{{ l.name }}</option>
+                <select id="SampleSourceInput" class="form-select" name="source"
+                                                                   hx-trigger="reload-sources from:body"
+                                                                   hx-get="{{ "/source/list/options" | app_url }}">
+                    <option value="">Choose a source...</option>
+                    {% for src in sources %}
+                    <option value="{{ src.id }}"
+                            {% if request and (request.source == src.id) %}selected{% elif sample and (src.id == sample.source.id) %}selected{% endif %}
+                            >{{ src.name }}</option>
                     {% endfor %}
                 </select>
                 <button type="button"
-                        id="AddLocationButton" class="btn btn-outline-secondary"
-                                               hx-get="{{ "/location/new/modal" | app_url }}"
+                        id="AddSourceButton" class="btn btn-outline-secondary"
+                                               hx-get="{{ "/source/new/modal" | app_url }}"
                                                hx-target="#ModalContainer"
                                                hx-trigger="click"
                                                data-bs-toggle="modal"
                                                data-bs-target="#ModalContainer">
-                    Add new location</button>
+                    Add new source</button>
             </div>
         </div>
         <div class="mb-3 col-4">
@@ -136,7 +136,7 @@
     </div>
     <div class="flex-grow-1 flex-row flex-wrap{% if sample.quantity == 0%} opacity-50{% endif %}">
         <span class="fw-bold">{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}</span>
-        <span class="text-body-tertiary ms-2">{{ icon("geo-alt") }} {{ sample.location.name | truncate(30) }}</span>
+        <span class="text-body-tertiary ms-2">{{ icon("geo-alt") }} {{ sample.source.name | truncate(30) }}</span>
         {% if sample.year %}<span class="text-body-tertiary ms-2">{{ icon("calendar3") }} {{ sample.year }}</span>{% endif %}
         {% if sample.notes %}<span class="text-body-tertiary fst-italic ms-2">{{ icon("journal-text") }} {{ sample.notes | truncate(30) }}</span>{% endif %}
     </div>

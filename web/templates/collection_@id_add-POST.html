@@ -15,7 +15,7 @@
             <label class="form-check-label" for="sample-{{sample.id}}">
                 <span class="font-monospace">{{ sample.id | idfmt("S") }}</span>: <b>{{ sample.taxon.complete_name }}</b>
                 <span class="text-body-tertiary">
-                from {{ sample.location.name }}
+                from {{ sample.source.name }}
                 {% if sample.year %}
                 ({{ sample.year }})
                 {% endif %}

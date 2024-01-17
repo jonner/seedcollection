@@ -1,46 +1,46 @@
 {% from "_macros.html" import show_message %}
 
-{% macro location_form(id, loc=none, message=none, request=none) -%}
+{% macro source_form(id, source=none, message=none, request=none) -%}
 <div id="delete-error-display"></div>
-{% if loc %}
-<form hx-put="{{ ("/location/" ~ loc.id) | app_url }}" id="{{ id }}">
+{% if source %}
+<form hx-put="{{ ("/source/" ~ source.id) | app_url }}" id="{{ id }}">
 {% else %}
-<form hx-post="{{ "/location/new" | app_url }}" id="{{ id }}">
+<form hx-post="{{ "/source/new" | app_url }}" id="{{ id }}">
 {% endif %}
     {{ show_message(message) }}
     <div class="row g-6">
         <div class="mb-3 col-12">
-            <label class="form-label" for="LocationNameInput">Name</label>
-            <input id="LocationNameInput"
+            <label class="form-label" for="SourceNameInput">Name</label>
+            <input id="SourceNameInput"
                    class="form-control"
                    type="text"
                    name="name"
-                   value="{{ request.name or loc.name or "" }}">
+                   value="{{ request.name or source.name or "" }}">
         </div>
         <div class="mb-3 col-6">
-            <label class="form-label" for="LocationLatitudeInput">Latitude</label>
-            <input id="LocationLatitudeInput"
+            <label class="form-label" for="SourceLatitudeInput">Latitude</label>
+            <input id="SourceLatitudeInput"
                    class="form-control"
                    type="number"
                    step="any"
                    name="latitude"
-                   value="{{ request.latitude or loc.latitude or "" }}">
+                   value="{{ request.latitude or source.latitude or "" }}">
         </div>
         <div class="mb-3 col-6">
-            <label class="form-label" for="LocationLongitudeInput">Longitude</label>
-            <input id="LocationLongitudeInput"
+            <label class="form-label" for="SourceLongitudeInput">Longitude</label>
+            <input id="SourceLongitudeInput"
                    class="form-control"
                    type="number"
                    step="any"
                    name="longitude"
-                   value="{{ request.longitude or loc.longitude or "" }}">
+                   value="{{ request.longitude or source.longitude or "" }}">
         </div>
         <div class="mb-3 col-12">
-            <label class="form-label" for="LocationDescInput">Description</label>
-            <textarea id="LocationDescInput"
+            <label class="form-label" for="SourceDescInput">Description</label>
+            <textarea id="SourceDescInput"
                       rows="5"
                       class="form-control"
-                      name="description">{{ request.description or loc.description or "" }}</textarea>
+                      name="description">{{ request.description or source.description or "" }}</textarea>
         </div>
     </div>
     {{ caller() }}
@@ -48,20 +48,20 @@
 {%- endmacro %}
 
 
-{% macro location_list(filter=false) -%}
-{% for l in locations %}
+{% macro source_list(filter=false) -%}
+{% for src in sources %}
 <div class="{{ loop.cycle("bg-body-tertiary", "") }}">
     <div class="d-flex rounded align-items-baseline flex-grow-1 flex-row mb-1 sample-item">
         <div class="p-1 m-1 text-end bg-light text-primary flex-shrink-0 rounded">
             <a class="fw-bold font-monospace"
-               href="{{ ("/location/" ~ l.id) | app_url}}">{{ l.id | idfmt("L") }}</a>
+               href="{{ ("/source/" ~ src.id) | app_url}}">{{ src.id | idfmt("L") }}</a>
         </div>
         <div class="d-flex flex-column p-1">
-            <div>{{ l.name |truncate }}
+            <div>{{ src.name |truncate }}
             </div>
             <div class="text-secondary">
                 <div class="d-flex flex-row flex-wrap column-gap-3">
-                    {% if l.description %}<div class="fst-italic">{{ l.description | truncate }}</div>{% endif %}
+                    {% if src.description %}<div class="fst-italic">{{ src.description | truncate }}</div>{% endif %}
                 </div>
             </div>
         </div>
@@ -70,9 +70,9 @@
 {% else %}
 <div class="alert alert-info">
     {% if filter %}
-    No locations exist yet. Create one to get started.
+    No sources exist yet. Create one to get started.
     {% else %}
-    No locations match your search
+    No sources match your search
     {% endif %}
 </div>
 {% endfor %}

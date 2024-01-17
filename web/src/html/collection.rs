@@ -20,8 +20,8 @@ use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
-    location,
     sample::{self, Sample},
+    source,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -446,7 +446,7 @@ async fn filter_collection_samples(
             .push(Arc::new(sample::Filter::TaxonNameLike(
                 params.fragment.clone(),
             )))
-            .push(Arc::new(location::Filter::Name(
+            .push(Arc::new(source::Filter::Name(
                 Cmp::Like,
                 params.fragment.clone(),
             )))

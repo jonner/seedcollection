@@ -13,7 +13,7 @@ use sqlx::Sqlite;
 use std::sync::Arc;
 
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq)]
-pub struct Location {
+pub struct Source {
     #[sqlx(rename = "locid")]
     pub id: i64,
     #[sqlx(rename = "locname")]
@@ -29,7 +29,7 @@ pub struct Location {
     pub loaded: bool,
 }
 
-impl Default for Location {
+impl Default for Source {
     fn default() -> Self {
         Self {
             id: -1,
@@ -44,13 +44,13 @@ impl Default for Location {
 }
 
 #[async_trait]
-impl Loadable for Location {
+impl Loadable for Source {
     type Id = i64;
 
     fn new_loadable(id: Self::Id) -> Self {
-        let mut loc: Self = Default::default();
-        loc.id = id;
-        loc
+        let mut src: Self = Default::default();
+        src.id = id;
+        src
     }
 
     fn is_loaded(&self) -> bool {
@@ -62,7 +62,7 @@ impl Loadable for Location {
     }
 
     async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        Location::fetch(self.id, pool).await
+        Source::fetch(self.id, pool).await
     }
 }
 
@@ -99,7 +99,7 @@ impl FilterPart for Filter {
 
 const MAP_TILER_KEY: &str = "OfKZsQq0kXBWp83M3Wjx";
 
-impl Location {
+impl Source {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut qb = QueryBuilder::new(
             r#"SELECT L.locid, L.name as locname, L.description as locdescription, L.latitude, L.longitude,
@@ -121,12 +121,12 @@ impl Location {
         }
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Location> {
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Source> {
         Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
             .await
-            .map(|mut l: Location| {
+            .map(|mut l: Source| {
                 l.loaded = true;
                 l
             })
@@ -136,13 +136,13 @@ impl Location {
     pub async fn fetch_all(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
-    ) -> Result<Vec<Location>> {
+    ) -> Result<Vec<Source>> {
         Self::build_query(filter)
             .build_query_as()
             .fetch_all(pool)
             .await
             .map(|mut v| {
-                let _ = v.iter_mut().map(|l: &mut Location| {
+                let _ = v.iter_mut().map(|l: &mut Source| {
                     l.loaded = true;
                     l
                 });
@@ -151,7 +151,7 @@ impl Location {
             .map_err(|e| e.into())
     }
 
-    pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Location>> {
+    pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Source>> {
         Self::fetch_all(Some(Arc::new(Filter::User(userid))), pool).await
     }
 
@@ -242,7 +242,7 @@ mod tests {
         migrations = "../db/migrations/",
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
-    async fn test_insert_locations(pool: Pool<Sqlite>) {
+    async fn test_insert_sources(pool: Pool<Sqlite>) {
         async fn check(
             pool: &Pool<Sqlite>,
             name: String,
@@ -251,18 +251,18 @@ mod tests {
             lon: Option<f64>,
             userid: Option<i64>,
         ) {
-            let mut loc = Location::new(name, desc, lat, lon, userid);
+            let mut src = Source::new(name, desc, lat, lon, userid);
             // full data
-            let res = loc.insert(&pool).await.expect("failed to insert");
+            let res = src.insert(&pool).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
-            let mut locload = Location::new_loadable(res.last_insert_rowid());
-            let res = locload.load(&pool).await;
+            let mut srcloaded = Source::new_loadable(res.last_insert_rowid());
+            let res = srcloaded.load(&pool).await;
 
             if let Err(e) = res {
                 println!("{e:?}");
                 panic!();
             }
-            assert_eq!(loc, locload);
+            assert_eq!(src, srcloaded);
         }
 
         check(

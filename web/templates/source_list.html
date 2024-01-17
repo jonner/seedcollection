@@ -1,0 +1,22 @@
+{% from "_macros.html" import icon %}
+{% from "_source_macros.html" import source_list %}
+{% extends "root.html" %}
+{% block title %}Source List{% endblock %}
+{% block content %}
+<h2><span class="me-2">{{ icon("geo-alt") }}</span>Source <a class="ms-2" href="{{ "/source/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
+    <div class="mb-3">
+    <form 
+           hx-target="#source-list"
+           hx-get="{{ "/source/filter" | app_url }}"
+           hx-trigger="submit, input changed delay:500ms from:input">
+    <input type="text"
+           class="form-control"
+           autofocus
+           placeholder="Filter list..."
+           name="fragment">
+    </form>
+    </div>
+<div class="mb-3" id="source-list">
+    {{ source_list() }}
+</div>
+{% endblock %}

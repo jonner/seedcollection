@@ -14,14 +14,14 @@ mod allocation;
 mod auth;
 mod collection;
 mod info;
-mod location;
 mod sample;
+mod source;
 mod taxonomy;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .nest("/collection/", collection::router())
-        .nest("/location/", location::router())
+        .nest("/source/", source::router())
         .nest("/sample/", sample::router())
         .nest("/taxonomy/", taxonomy::router())
         .nest("/info/", info::router())

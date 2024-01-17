@@ -1,13 +1,13 @@
-{% from "_location_macros.html" import location_form %}
-{% call location_form("location-edit", location, message, request) %}
+{% from "_source_macros.html" import source_form %}
+{% call source_form("source-edit", source, message, request) %}
     <div class="row mb-3">
         <button type="submit" name="submit" class="btn btn-primary">Update</button>
     </div>
     <div class="row mb-3">
         <button type="button"
                 class="btn btn-danger"
-                hx-delete="{{ ("/location/" ~ location.id) | app_url }}"
-                hx-confirm="Are you sure you wish to delete location {{location.id}}?"
+                hx-delete="{{ ("/source/" ~ source.id) | app_url }}"
+                hx-confirm="Are you sure you wish to delete source {{source.id}}?"
                 hx-target="closest form"
                 >Delete</button>
     </div>

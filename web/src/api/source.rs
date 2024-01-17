@@ -6,45 +6,38 @@ use crate::{
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, State},
-    response::{Html, IntoResponse, Json},
+    response::{IntoResponse, Json},
     routing::{get, post},
     Form, Router,
 };
-use libseed::{empty_string_as_none, location::Location};
+use libseed::{empty_string_as_none, source::Source};
 use serde::{Deserialize, Serialize};
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(root))
-        .route("/list", get(list_locations))
-        .route("/new", post(add_location))
+        .route("/list", get(list_sources))
+        .route("/new", post(add_source))
         .route(
             "/:id",
-            get(show_location)
-                .put(modify_location)
-                .delete(delete_location),
+            get(show_source).put(modify_source).delete(delete_source),
         )
 }
 
-async fn root() -> Html<String> {
-    Html("Locations".to_string())
-}
-
-async fn list_locations(
+async fn list_sources(
     user: SqliteUser,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
-    Ok(Json(locations).into_response())
+    let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
+    Ok(Json(sources).into_response())
 }
 
-async fn show_location(
+async fn show_source(
     _user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<Json<Location>, error::Error> {
-    let location = Location::fetch(id, &state.dbpool).await?;
-    Ok(Json(location))
+) -> Result<Json<Source>, error::Error> {
+    let source = Source::fetch(id, &state.dbpool).await?;
+    Ok(Json(source))
 }
 
 #[derive(Deserialize)]
@@ -59,7 +52,7 @@ struct ModifyParams {
     longitude: Option<f64>,
 }
 
-async fn modify_location(
+async fn modify_source(
     user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
@@ -72,26 +65,26 @@ async fn modify_location(
     {
         return Err(anyhow!("No parameters given").into());
     }
-    let mut loc = Location::fetch(id, &state.dbpool).await?;
-    if loc.userid != Some(user.id) {
+    let mut src = Source::fetch(id, &state.dbpool).await?;
+    if src.userid != Some(user.id) {
         return Err(Error::Unauthorized(
-            "No permission to modify this location".to_string(),
+            "No permission to modify this source".to_string(),
         ));
     }
 
     if let Some(name) = params.name {
-        loc.name = name;
+        src.name = name;
     }
     if let Some(desc) = params.description {
-        loc.description = Some(desc);
+        src.description = Some(desc);
     }
     if let Some(n) = params.latitude {
-        loc.latitude = Some(n);
+        src.latitude = Some(n);
     }
     if let Some(n) = params.longitude {
-        loc.longitude = Some(n);
+        src.longitude = Some(n);
     }
-    loc.update(&state.dbpool).await?;
+    src.update(&state.dbpool).await?;
     Ok(())
 }
 
@@ -101,7 +94,7 @@ struct AddResponse {
     id: i64,
 }
 
-async fn add_location(
+async fn add_source(
     user: SqliteUser,
     State(state): State<AppState>,
     Form(params): Form<ModifyParams>,
@@ -113,21 +106,21 @@ async fn add_location(
     {
         return Err(anyhow!("No parameters given").into());
     }
-    let mut location = Location::new(
+    let mut source = Source::new(
         params.name.ok_or(anyhow!("No name given"))?,
         params.description,
         params.latitude,
         params.longitude,
         Some(user.id),
     );
-    let id = location.insert(&state.dbpool).await?.last_insert_rowid();
+    let id = source.insert(&state.dbpool).await?.last_insert_rowid();
     Ok((
-        [("HX-Trigger", "reload-locations")],
+        [("HX-Trigger", "reload-sources")],
         Json(AddResponse { success: true, id }),
     ))
 }
 
-async fn delete_location(
+async fn delete_source(
     _user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
@@ -136,5 +129,5 @@ async fn delete_location(
         .bind(id)
         .execute(&state.dbpool)
         .await?;
-    Ok([("HX-Trigger", "reload-locations")])
+    Ok([("HX-Trigger", "reload-sources")])
 }

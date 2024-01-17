@@ -2,15 +2,15 @@ use crate::state::AppState;
 use axum::{response::Html, routing::get, Router};
 
 mod collection;
-mod location;
 mod sample;
+mod source;
 mod taxonomy;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .nest("/collection/", collection::router())
-        .nest("/location/", location::router())
+        .nest("/source/", source::router())
         .nest("/sample/", sample::router())
         .nest("/taxonomy/", taxonomy::router())
 }
