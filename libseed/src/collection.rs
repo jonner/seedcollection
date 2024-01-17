@@ -327,7 +327,7 @@ impl Allocation {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" GROUP BY S.sampleid, T.tsn ORDER BY phylo_sort_seq");
+        builder.push(" GROUP BY CS.csid, T.tsn ORDER BY phylo_sort_seq");
         builder
     }
 
@@ -433,6 +433,7 @@ mod tests {
             assert_eq!(a.collection, c);
         }
 
+        // check allocations for collection 1
         let assigned =
             Allocation::fetch_all(Some(Arc::new(AllocationFilter::Collection(1))), &pool)
                 .await
@@ -450,15 +451,35 @@ mod tests {
         assert_eq!(assigned[1].collection.id, 1);
         check_sample(&assigned[1], &pool).await;
 
+        // check allocations for collection 2
         let assigned =
             Allocation::fetch_all(Some(Arc::new(AllocationFilter::Collection(2))), &pool)
                 .await
                 .expect("Failed to load assigned samples for first collection");
 
-        assert_eq!(assigned.len(), 1);
+        assert_eq!(assigned.len(), 2);
 
-        assert_eq!(assigned[0].sample.id, 3);
+        assert_eq!(assigned[0].sample.id, 1);
         assert_eq!(assigned[0].collection.id, 2);
         check_sample(&assigned[0], &pool).await;
+
+        assert_eq!(assigned[1].sample.id, 3);
+        assert_eq!(assigned[1].collection.id, 2);
+        check_sample(&assigned[1], &pool).await;
+
+        // check allocations for sample 1
+        let assigned = Allocation::fetch_all(Some(Arc::new(AllocationFilter::Sample(1))), &pool)
+            .await
+            .expect("Failed to load assigned samples for first collection");
+
+        assert_eq!(assigned.len(), 2);
+
+        assert_eq!(assigned[0].sample.id, 1);
+        assert_eq!(assigned[0].collection.id, 1);
+        check_sample(&assigned[0], &pool).await;
+
+        assert_eq!(assigned[1].sample.id, 1);
+        assert_eq!(assigned[1].collection.id, 2);
+        check_sample(&assigned[1], &pool).await;
     }
 }

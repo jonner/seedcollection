@@ -7,5 +7,6 @@ INSERT INTO "sc_samples" VALUES(3, 43254, 1, NULL, 2022, 2, NULL, 240, 1);
 INSERT INTO "sc_collection_samples" VALUES(1, 1, 1);
 INSERT INTO "sc_collection_samples" VALUES(2, 1, 2);
 INSERT INTO "sc_collection_samples" VALUES(3, 2, 3);
+INSERT INTO "sc_collection_samples" VALUES(4, 2, 1);
 COMMIT;
 
