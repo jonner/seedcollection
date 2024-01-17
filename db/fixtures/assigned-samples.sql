@@ -8,5 +8,7 @@ INSERT INTO "sc_collection_samples" VALUES(1, 1, 1);
 INSERT INTO "sc_collection_samples" VALUES(2, 1, 2);
 INSERT INTO "sc_collection_samples" VALUES(3, 2, 3);
 INSERT INTO "sc_collection_samples" VALUES(4, 2, 1);
+INSERT INTO "sc_collection_sample_notes" VALUES(1, 1, "2023-12-25", 1, "Note summary 1", "note details 1");
+INSERT INTO "sc_collection_sample_notes" VALUES(2, 1, "2023-12-27", 1, "Note summary 2", "note details 2");
 COMMIT;
 

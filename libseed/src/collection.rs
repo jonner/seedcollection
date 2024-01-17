@@ -311,7 +311,8 @@ impl Allocation {
 
             S.userid, U.username,
 
-            C.collectionid, C.name, C.description
+            C.collectionid, C.name, C.description,
+            N.csnoteid, N.date, N.kind, N.summary, N.details
 
             FROM sc_collection_samples CS
             INNER JOIN taxonomic_units T ON T.tsn=S.tsn
@@ -319,6 +320,8 @@ impl Allocation {
             INNER JOIN sc_samples S ON CS.sampleid=S.sampleid
             INNER JOIN sc_users U on U.userid=S.userid
             INNER JOIN sc_collections C on C.collectionid=CS.collectionid
+            LEFT JOIN ( SELECT * FROM (SELECT *, MAX(date) OVER (PARTITION BY csid) as maxdate from sc_collection_sample_notes)
+            WHERE date = maxdate) N ON N.csid = CS.csid
             LEFT JOIN (SELECT * FROM vernaculars WHERE
             (language="English" or language="unspecified")) V on V.tsn=T.tsn
             "#,
@@ -368,6 +371,11 @@ impl Allocation {
 
 impl FromRow<'_, SqliteRow> for Allocation {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        // querying for allocation will try to return the latest note if any exist
+        let mut notes = Vec::new();
+        if let Ok(n) = Note::from_row(row) {
+            notes.push(n);
+        }
         Ok(Self {
             id: row.try_get("csid")?,
             sample: Sample::from_row(row).map(|mut s| {
@@ -378,7 +386,7 @@ impl FromRow<'_, SqliteRow> for Allocation {
                 c.loaded = true;
                 c
             })?,
-            notes: Default::default(),
+            notes,
             loaded: true,
         })
     }
@@ -388,6 +396,7 @@ impl FromRow<'_, SqliteRow> for Allocation {
 mod tests {
     use super::*;
     use test_log::test;
+    use time::Month;
 
     #[test(sqlx::test(
         migrations = "../db/migrations/",
@@ -444,6 +453,17 @@ mod tests {
         tracing::debug!("{:?}", assigned[0]);
         assert_eq!(assigned[0].sample.id, 1);
         assert_eq!(assigned[0].collection.id, 1);
+        // querying allocations should also load the latest note
+        assert_eq!(assigned[0].notes.len(), 1);
+        assert_eq!(assigned[0].notes[0].id, 2);
+        assert_eq!(assigned[0].notes[0].date.year(), 2023);
+        assert_eq!(assigned[0].notes[0].date.month(), Month::December);
+        assert_eq!(assigned[0].notes[0].date.day(), 27);
+        assert_eq!(assigned[0].notes[0].summary, "Note summary 2");
+        assert_eq!(
+            assigned[0].notes[0].details,
+            Some("note details 2".to_string())
+        );
         check_sample(&assigned[0], &pool).await;
 
         tracing::debug!("{:?}", assigned[1]);
