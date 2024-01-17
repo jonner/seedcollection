@@ -1,5 +1,5 @@
 {% extends "root.html" %}
-{% from "_macros.html" import breadcrumbs %}
+{% from "_macros.html" import breadcrumbs, icon %}
 {% block title %}Collection Sample Details{% endblock %}
 {% block content %}
 {{ breadcrumbs([
@@ -9,7 +9,7 @@
 {"name": sample.sample.id | idfmt("S"), "active": true },
 ]) }}
 
-<h4>Notes</h4>
+<h4>Notes <a class="ms-2" href="{{ ("/collection/" ~ sample.collection.id ~ "/sample/" ~ sample.id ~ "/note/new") | app_url }}">{{ icon("plus-square") }}</a></h4>
 {% for note in sample.notes %}
 <div class="d-flex column-gap-3">
     <div class="">
