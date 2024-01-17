@@ -124,6 +124,7 @@ impl Note {
             f.add_to_query(&mut builder);
         }
         builder.push(" ORDER BY csid, date");
+        tracing::debug!("GENERATED SQL: {}", builder.sql());
         builder
     }
 
@@ -192,5 +193,51 @@ impl Note {
         .bind(self.id)
         .fetch_one(pool)
         .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_log::test;
+    use time::Month;
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../db/fixtures",
+            scripts("users", "locations", "taxa", "csnotes")
+        )
+    ))]
+    async fn test_query_notes(pool: Pool<Sqlite>) {
+        let mut note = Note::fetch(3, &pool).await.expect("Failed to load notes");
+        tracing::debug!("{note:?}");
+        assert_eq!(note.id, 3);
+        assert_eq!(note.csid, 2);
+        assert_eq!(note.date.year(), 2024);
+        assert_eq!(note.date.month(), Month::January);
+        assert_eq!(note.date.day(), 16);
+        assert_eq!(note.kind, NoteType::Preparation);
+        assert_eq!(note.summary, "summary 3");
+        assert_eq!(note.details, Some("details 3".to_string()));
+        assert_eq!(note.loaded, true);
+
+        note.summary = "I changed the summary".to_string();
+        note.details = None;
+        note.date = note.date.replace_year(2019).expect("Unable to update date");
+        note.update(&pool).await.expect("Couldn't update the note");
+        let mut loaded = Note::new_loadable(note.id);
+        loaded.load(&pool).await.expect("Failed to load new note");
+        assert_eq!(note, loaded);
+
+        // fetch all notes for a sample
+        let notes = Note::fetch_all(Some(Arc::new(FilterField::CollectionSample(1))), &pool)
+            .await
+            .expect("Unable to load notes for sample");
+        assert_eq!(notes.len(), 2);
+        // they should be sorted by date
+        assert_eq!(notes[0].id, 2);
+        assert_eq!(notes[1].id, 1);
+        assert!(notes[0].date < notes[1].date);
     }
 }
