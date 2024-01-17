@@ -1,6 +1,12 @@
 {% extends "root.html" %}
+{% from "_macros.html" import breadcrumbs %}
 {% block title %}New Location{% endblock %}
 {% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Locations", "link": ("/location/list" | app_url) },
+{"name": "New Location", "active": true },
+]) }}
 <h2>{{ self.title() }}</h2>
 {% include "location_new-POST.html" %}
 {% endblock %}

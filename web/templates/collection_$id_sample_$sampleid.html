@@ -1,12 +1,13 @@
 {% extends "root.html" %}
+{% from "_macros.html" import breadcrumbs %}
 {% block title %}Collection Sample Details{% endblock %}
 {% block content %}
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="{{ ("/collection/" ~ sample.collection.id) | app_url }}">{{ sample.collection.name }}</a></li>
-      <li class="breadcrumb-item active" aria-current="page">{{ sample.sample.id | idfmt("S") }} {{ sample.sample.taxon.complete_name }}</li>
-  </ol>
-</nav>
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Collections", "link": ("/collection/list" | app_url) },
+{"name": sample.collection.id | idfmt("C"), "link": ("/collection/" ~ sample.collection.id) | app_url },
+{"name": sample.sample.id | idfmt("S"), "active": true },
+]) }}
 
 <h4>Notes</h4>
 {% for note in sample.notes %}

@@ -1,7 +1,13 @@
 {% from "_collection_macros.html" import collection_form %}
+{% from "_macros.html" import breadcrumbs %}
 {% extends "root.html" %}
 {% block title %}New Collection{% endblock %}
 {% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Collections", "link": ("/collection/list" | app_url) },
+{"name": "New Collection", "active": true },
+]) }}
 <h2>{{ self.title() }}</h2>
 {{ collection_form("new-collection-form") }}
 {% endblock %}

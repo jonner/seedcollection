@@ -12,6 +12,20 @@
 <i class="bi bi-{{ icon_name }}{% if color %} text-{{ color }}{% endif %}"></i>
 {%- endmacro %}
 
+{% macro breadcrumbs(elements) %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+      {% for elt in elements %}
+      {% if elt.active %}
+      <li class="breadcrumb-item active" aria-current="page">{{ elt.name }}</li>
+      {% else %}
+      <li class="breadcrumb-item"><a href="{{ elt.link }}">{{ elt.name }}</a></li>
+      {% endif %}
+      {% endfor %}
+  </ol>
+</nav>
+{% endmacro %}
+
 {% macro show_germination_item(germination, list) -%}
 <{% if list %}li{% else %}div{% endif %} class="d-flex flex-row gap-2 align-items-start mb-3">
         <a href="{{ ("/info/germination#germ-code-" ~ germination.id ) | app_url}}" class="badge text-bg-light border border-light-subtle">{{ germination.code }}</a><span>{{ germination.summary }}</span>

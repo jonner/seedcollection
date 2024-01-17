@@ -1,7 +1,13 @@
 {% extends "root.html" %}
 {% from "_sample_macros.html" import sample_form %}
+{% from "_macros.html" import breadcrumbs %}
 {% block title %}Add a New Sample{% endblock %}
 {% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Samples", "link": ("/sample/list" | app_url) },
+{"name": "New Sample", "active": true },
+]) }}
 <h2>{{ self.title() }}</h2>
 {{ sample_form(locations) }}
 {% endblock %}

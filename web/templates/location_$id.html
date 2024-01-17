@@ -1,8 +1,13 @@
 {% extends "root.html" %}
-{% from "_macros.html" import icon %}
+{% from "_macros.html" import icon, breadcrumbs %}
 {% from "_sample_macros.html" import sample_list %}
 {% block title %}{{ location.name or "Location Details" }} Details{% endblock %}
 {% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Locations", "link": ("/location/list" | app_url) },
+{"name": location.id | idfmt("L"), "active": true },
+]) }}
 <h2>{{ self.title() }} <a href="{{ ("/location/" ~ location.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ location.description }}</p>
 {%if map_viewer %}

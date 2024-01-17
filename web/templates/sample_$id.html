@@ -1,14 +1,16 @@
 {% extends "root.html" %}
-{% from "_macros.html" import show_germination_list %}
-{% from "_macros.html" import show_vernacular_list %}
-{% from "_macros.html" import icon %}
+{% from "_macros.html" import show_germination_list, show_vernacular_list, icon, breadcrumbs %}
 {% block title %}Sample S{{ sample.id | idfmt }}{% endblock %}
 {% block content %}
-<h2>{{ self.title() }} <a href="{{ ("/sample/" ~ sample.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
-<h5>Taxon</h5>
-<div class="mb-3 px-2">
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Samples", "link": ("/sample/list" | app_url) },
+{"name": sample.id | idfmt("S"), "active": true }]) }}
+
+<h2>
     <a href="{{ ("/taxonomy/" ~ sample.taxon.id) | app_url }}">{{ sample.taxon.complete_name }}</a>
-</div>
+    <a href="{{ ("/sample/" ~ sample.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a>
+</h2>
 <h5>Common Names</h5>
 <div class="mb-3 px-2">
     {% if sample.taxon.vernaculars %}
