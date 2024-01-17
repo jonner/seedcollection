@@ -10,6 +10,7 @@ use axum_login::login_required;
 use axum_template::RenderHtml;
 use minijinja::context;
 
+mod allocation;
 mod auth;
 mod collection;
 mod info;
