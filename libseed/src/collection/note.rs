@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, QueryBuilder, Sqlite};
+use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Sqlite};
 use std::sync::Arc;
 use strum_macros::{EnumIter, EnumString, FromRepr};
 use time::Date;
@@ -193,6 +193,20 @@ impl Note {
         .bind(self.id)
         .fetch_one(pool)
         .await
+    }
+
+    pub async fn delete(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        if self.id < 0 {
+            return Err(Error::InvalidData(
+                "Id is not set, cannot delete".to_string(),
+            ));
+        }
+
+        sqlx::query("DELETE FROM sc_collection_sample_notes WHERE csnoteid=?")
+            .bind(self.id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 

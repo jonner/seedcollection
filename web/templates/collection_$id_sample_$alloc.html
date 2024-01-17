@@ -11,7 +11,7 @@
 
 <h4>Notes <a class="ms-2" href="{{ ("/collection/" ~ allocation.collection.id ~ "/sample/" ~ allocation.id ~ "/note/new") | app_url }}">{{ icon("plus-square") }}</a></h4>
 {% for note in allocation.notes %}
-<div class="d-flex column-gap-3">
+<div class="d-flex column-gap-3 allocation-note-row">
     <div class="">
         <span class="badge {{ note.kind | lower }}">{{ note.kind }}</span>
     </div>
@@ -21,6 +21,18 @@
     <div class="flex-shrink-0">
         {{ icon("calendar") }}
         {{ note.date | dateformat(format="short") }}
+    </div>
+    <div class="dropdown flex-shrink-1 ms-auto">
+        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ icon("three-dots-vertical") }}</button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><button type="button"
+                    class="dropdown-item btn-danger"
+                    hx-delete="{{ ("/collection/" ~ allocation.collection.id ~ "/sample/" ~ allocation.id ~ "/note/" ~ note.id) | app_url }}"
+                    hx-target="closest .allocation-note-row"
+                    hx-swap="outerHTML"
+                    hx-confirm="Are you sure you want to remove this note?">{{ icon("x") }} Remove note</button>
+            </li>
+        </ul>
     </div>
 </div>
 <div class="text-body-tertiary">

@@ -1,10 +1,11 @@
+use anyhow::anyhow;
 use std::sync::Arc;
 use strum::IntoEnumIterator;
 
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
-    routing::get,
+    routing::{delete, get},
     Form, Router,
 };
 use axum_template::RenderHtml;
@@ -27,6 +28,7 @@ use crate::{
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/:alloc", get(show_allocation).delete(remove_allocation))
+        .route("/:alloc/note/:noteid", delete(delete_note))
         .route(
             "/:alloc/note/new",
             get(show_add_allocation_note).post(add_allocation_note),
@@ -170,5 +172,27 @@ async fn remove_allocation(
         csid, user.id)
         .execute(&state.dbpool)
         .await?;
+    Ok(())
+}
+
+async fn delete_note(
+    user: SqliteUser,
+    TemplateKey(_key): TemplateKey,
+    State(state): State<AppState>,
+    Path((collectionid, allocid, noteid)): Path<(i64, i64, i64)>,
+) -> Result<impl IntoResponse, error::Error> {
+    // make sure this is a note the user can delete
+    let note = Note::fetch(noteid, &state.dbpool).await?;
+    let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
+    if note.csid != allocid || allocation.collection.id != collectionid {
+        return Err(Into::into(anyhow!("Bad request")));
+    }
+    if allocation.sample.user.id != user.id {
+        return Err(Error::Unauthorized(
+            "No permission to delete this note".to_string(),
+        ));
+    }
+
+    note.delete(&state.dbpool).await?;
     Ok(())
 }
