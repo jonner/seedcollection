@@ -132,7 +132,7 @@
 <div class="d-flex rounded align-items-baseline flex-grow-1 flex-row mb-1 sample-item">
     <div class="p-1 m-1 text-end bg-light text-primary flex-shrink-0 rounded">
         <a class="fw-bold font-monospace"
-            href="{{ ("/sample/" ~ sample.id) | app_url}}">S{{ sample.id | idfmt }}</a>
+            href="{{ ("/sample/" ~ sample.id) | app_url}}">{{ sample.id | idfmt("S") }}</a>
     </div>
     <div class="flex-grow-1 flex-row flex-wrap{% if sample.quantity == 0%} opacity-50{% endif %}">
         <span class="fw-bold">{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}</span>
@@ -148,7 +148,9 @@
 {% macro sample_list(samples, cssid) -%}
 <div id="{{ cssid }}">
 {% for s in samples %}
+<div class="{{ loop.cycle("bg-body-tertiary", "") }}">
 {{ sample_item(s) }}
+</div>
 {% else %}
 <div class="alert alert-info">
     No samples exist yet. Create one to get started.
