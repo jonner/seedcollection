@@ -600,7 +600,6 @@ async fn show_collection_sample(
     State(state): State<AppState>,
     Path((collectionid, sampleid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let collection = Collection::fetch(collectionid, &state.dbpool).await?;
     // make sure that this is our sample
     let mut sample = AssignedSample::fetch_one(
         Some(
@@ -619,7 +618,6 @@ async fn show_collection_sample(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collection => collection,
                  sample => sample),
     )
     .into_response())

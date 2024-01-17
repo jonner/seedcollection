@@ -48,10 +48,13 @@
 </div>
 <h5>Notes</h5>
 <div class="mb-3 px-2">{{ sample.notes }}</div>
-<h5>Included in</h5>
+<h5>Assignments</h5>
 <ul>
-    {% for collection in collections %}
-    <li><a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ collection.name }}</a></li>
+    {% for a in assignments %}
+    <li><a href="{{ ("/collection/" ~ a.collection.id ~ "/sample/" ~ a.id) | app_url }}">{{ a.id }}: {{ a.collection.name }}</a>
+    </li>
+    {% else %}
+    <li>None</li>
     {% endfor %}
 </ul>
 {% endblock %}

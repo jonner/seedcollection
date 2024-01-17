@@ -47,3 +47,23 @@ td, th {
     padding-top: 2em;
     padding-bottom: 2em;
 }
+
+.badge.planting {
+    background-color: var(--bs-orange);
+}
+
+.badge.germination {
+    background-color: var(--bs-teal);
+}
+
+.badge.preparation {
+    background-color: var(--bs-yellow);
+}
+
+.badge.growing {
+    background-color: var(--bs-green);
+}
+
+.badge.other {
+    background-color: var(--bs-pink);
+}

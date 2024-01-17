@@ -9,7 +9,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::Collection,
+    collection::{AssignedSample, AssignedSampleFilter},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
@@ -99,17 +99,19 @@ async fn show_sample(
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
-    // fix: use assigned samples API
-    let collections: Vec<Collection> = sqlx::query_as(
-        r#"SELECT C.collectionid, C.name, C.description, C.userid FROM sc_collections C INNER JOIN sc_collection_samples CS
-        ON C.collectionid == CS.collectionid WHERE CS.sampleid = ?"#)
-        .bind(id)
-        .fetch_all(&state.dbpool)
-        .await?;
     sample.taxon.fetch_germination_info(&state.dbpool).await?;
 
     // needed for edit form
     let locations = Location::fetch_all_user(user.id, &state.dbpool).await?;
+
+    let mut csamples = AssignedSample::fetch_all(
+        Some(Arc::new(AssignedSampleFilter::Sample(id))),
+        &state.dbpool,
+    )
+    .await?;
+    for cs in csamples.iter_mut() {
+        cs.fetch_notes(&state.dbpool).await?;
+    }
 
     Ok(RenderHtml(
         key,
@@ -117,7 +119,7 @@ async fn show_sample(
         context!(user => user,
                  sample => sample,
                  locations => locations,
-                 collections => collections),
+                 assignments => csamples),
     )
     .into_response())
 }

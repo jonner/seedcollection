@@ -1,17 +1,29 @@
 {% extends "root.html" %}
-{% block title %}Collection sample {{ sample.id }}{% endblock %}
+{% block title %}Collection Sample Details{% endblock %}
 {% block content %}
-<div><a href="{{ ("/collection/" ~ collection.id) | app_url }}">{{ icon("chevron-double-left") }} Back to collection</a></div>
-<h2>{{ self.title() }}</h2>
-<p>Part of collection {{ collection.name }}</p>
-<h3>Details</h3>
-{{ sample.sample.taxon.complete_name }}
-<h3>Notes</h3>
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ ("/collection/" ~ sample.collection.id) | app_url }}">{{ sample.collection.name }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">{{ sample.sample.id | idfmt("S") }} {{ sample.sample.taxon.complete_name }}</li>
+  </ol>
+</nav>
+
+<h4>Notes</h4>
 {% for note in sample.notes %}
-<div class="d-flex">
-    <h4>{{ note.summary }}</h4>
-    <div>Date: {{ note.date |dateformat(format="short") }}</div>
-    <p>{{ note.details or "" }}</p>
+<div class="d-flex column-gap-3">
+    <div class="">
+        <span class="badge {{ note.kind | lower }}">{{ note.kind }}</span>
+    </div>
+    <div class="flex-shrink-0">
+        {{ note.summary }}
+    </div>
+    <div class="flex-shrink-0">
+        {{ icon("calendar") }}
+        {{ note.date | dateformat(format="short") }}
+    </div>
+</div>
+<div class="text-body-tertiary">
+    {{ note.details or "" }}
 </div>
 {% endfor %}
 {% endblock %}
