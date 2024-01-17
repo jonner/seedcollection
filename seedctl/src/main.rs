@@ -1,4 +1,3 @@
-use libseed::loadable::Loadable;
 use std::io::stdin;
 use std::io::stdout;
 use std::io::Write;
@@ -9,6 +8,7 @@ use clap::Parser;
 use cli::*;
 use libseed::{
     collection::{Allocation, Collection},
+    loadable::Loadable,
     location::Location,
     sample::Sample,
     taxonomy::{self, filter_by, Taxon},

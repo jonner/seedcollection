@@ -16,12 +16,11 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::{self, Allocation, AllocationFilter, Collection},
+    collection::{self, Allocation, AllocationFilter, Collection, Note, NoteType},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
     location,
-    note::{Note, NoteType},
     sample::{self, Sample},
 };
 use minijinja::context;

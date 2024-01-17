@@ -6,7 +6,6 @@ pub mod error;
 pub mod filter;
 pub mod loadable;
 pub mod location;
-pub mod note;
 pub mod sample;
 pub mod taxonomy;
 pub mod user;

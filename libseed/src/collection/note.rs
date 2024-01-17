@@ -33,7 +33,7 @@ pub enum NoteType {
 }
 
 #[derive(Clone)]
-pub enum FilterField {
+pub enum NoteFilter {
     Id(i64),
     CollectionSample(i64),
 }
@@ -88,7 +88,7 @@ impl Loadable for Note {
     }
 }
 
-impl FilterPart for FilterField {
+impl FilterPart for NoteFilter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(i) => _ = builder.push(" csnoteid=").push_bind(*i),
@@ -129,7 +129,7 @@ impl Note {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
-        Self::build_query(Some(Arc::new(FilterField::Id(id))))
+        Self::build_query(Some(Arc::new(NoteFilter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
             .await
@@ -205,7 +205,7 @@ mod tests {
     #[test(sqlx::test(
         migrations = "../db/migrations/",
         fixtures(
-            path = "../../db/fixtures",
+            path = "../../../db/fixtures",
             scripts("users", "locations", "taxa", "csnotes")
         )
     ))]
@@ -231,7 +231,7 @@ mod tests {
         assert_eq!(note, loaded);
 
         // fetch all notes for a sample
-        let notes = Note::fetch_all(Some(Arc::new(FilterField::CollectionSample(1))), &pool)
+        let notes = Note::fetch_all(Some(Arc::new(NoteFilter::CollectionSample(1))), &pool)
             .await
             .expect("Unable to load notes for sample");
         assert_eq!(notes.len(), 2);
