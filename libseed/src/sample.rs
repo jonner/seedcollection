@@ -130,8 +130,8 @@ impl FilterPart for Filter {
 impl Sample {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-            r#"SELECT S.sampleid, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, T.complete_name,
-        T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
+            r#"SELECT S.sampleid, T.tsn, T.parent_tsn as parentid, L.locid, L.name as locname, L.description as locdescription,
+            T.complete_name, T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
                     quantity, month, year, notes, certainty,
                     GROUP_CONCAT(V.vernacular_name, "@") as cnames,
                     U.userid as userid, U.username

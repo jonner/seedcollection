@@ -18,7 +18,7 @@ pub struct Location {
     pub id: i64,
     #[sqlx(rename = "locname")]
     pub name: String,
-    #[sqlx(default)]
+    #[sqlx(rename = "locdescription")]
     pub description: Option<String>,
     #[sqlx(default)]
     pub latitude: Option<f64>,
@@ -91,7 +91,7 @@ impl FilterPart for Filter {
                     Cmp::Like => format!("%{frag}%"),
                     _ => frag.to_string(),
                 };
-                builder.push(" L.description ").push(cmp).push_bind(s);
+                builder.push(" locdescription ").push(cmp).push_bind(s);
             }
         }
     }
@@ -102,7 +102,7 @@ const MAP_TILER_KEY: &str = "OfKZsQq0kXBWp83M3Wjx";
 impl Location {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut qb = QueryBuilder::new(
-            r#"SELECT L.locid, L.name as locname, L.description, L.latitude, L.longitude,
+            r#"SELECT L.locid, L.name as locname, L.description as locdescription, L.latitude, L.longitude,
             L.userid, U.username FROM sc_locations L
             INNER JOIN sc_users U ON U.userid=L.userid"#,
         );

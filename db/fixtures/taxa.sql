@@ -1,4 +1,5 @@
 BEGIN TRANSACTION;
+-- canada wild rye
 INSERT INTO "taxonomic_units" VALUES (40683,NULL,'Elymus',NULL,'canadensis',NULL,NULL,NULL,NULL,NULL,'accepted',NULL,'TWG standards met',NULL,NULL,46867,'1996-06-13 14:51:08',40677,41302,0,3,220,'2010-11-30','No','accepted','Elymus canadensis');
 INSERT INTO "taxonomic_units" VALUES (40677,NULL,'Elymus',NULL,NULL,NULL,NULL,NULL,NULL,'N','accepted',NULL,'TWG standards met','partial','2016',46858,'1996-06-13 14:51:08',40351,41302,0,3,180,'2016-05-25','No','accepted','Elymus');
 INSERT INTO "taxonomic_units" VALUES (40351,NULL,'Poaceae',NULL,NULL,NULL,NULL,NULL,NULL,'N','accepted',NULL,'TWG standards met','partial','2014',45905,'1996-06-13 14:51:08',846620,0,0,3,140,'2014-12-22','No','accepted','Poaceae');
@@ -29,4 +30,13 @@ INSERT INTO "vernaculars" VALUES (846542,'monocots','English','N','2012-03-29',1
 INSERT INTO "vernaculars" VALUES (846542,'monocotyledons','English','N','2012-03-29',145221);
 INSERT INTO "vernaculars" VALUES (846542,'monocotylédones','French','N','2012-03-29',145222);
 INSERT INTO "vernaculars" VALUES (954898,'green plants','English','N','2018-09-25',167904);
+
+-- blue-eyed grass
+INSERT INTO "taxonomic_units" VALUES (43254,NULL,'Sisyrinchium',NULL,'campestre',NULL,NULL,NULL,NULL,NULL,'accepted',NULL,'TWG standards met',NULL,NULL,52980,'1996-06-13 14:51:08',43237,130822,0,3,220,'2011-02-04','No','accepted','Sisyrinchium campestre');
+INSERT INTO "taxonomic_units" VALUES (43237,NULL,'Sisyrinchium',NULL,NULL,NULL,NULL,NULL,NULL,'N','accepted',NULL,'TWG standards met','unknown','2010',52965,'1996-06-13 14:51:08',43190,41302,0,3,180,'2011-02-04','No','accepted','Sisyrinchium');
+INSERT INTO "taxonomic_units" VALUES (43190,NULL,'Iridaceae',NULL,NULL,NULL,NULL,NULL,NULL,'N','accepted',NULL,'TWG standards met','partial','2014',52895,'1996-06-13 14:51:08',897479,0,0,3,140,'2014-12-22','No','accepted','Iridaceae');
+INSERT INTO "taxonomic_units" VALUES (897479,NULL,'Asparagales',NULL,NULL,NULL,NULL,NULL,NULL,'N','accepted',NULL,'TWG standards met','partial','2014',52623,'2012-10-26 08:22:26',846542,0,0,3,100,'2022-02-25','No','accepted','Asparagales');
+INSERT INTO "vernaculars" VALUES (43237,'blue-eyed grass','English','N','2011-02-04',119532);
+INSERT INTO "vernaculars" VALUES (43254,'prairie blueeyed grass','unspecified','N','2011-02-04',74951);
+INSERT INTO "vernaculars" VALUES (43254,'prairie blue-eyed grass','English','N','2011-02-04',119583);
 COMMIT;

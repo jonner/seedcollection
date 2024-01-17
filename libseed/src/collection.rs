@@ -252,6 +252,7 @@ impl Collection {
 pub struct AssignedSample {
     pub id: i64,
     pub sample: Sample,
+    pub collection: Collection,
     pub notes: Vec<Note>,
     pub loaded: bool,
 }
@@ -261,6 +262,7 @@ impl Default for AssignedSample {
         Self {
             id: -1,
             sample: Default::default(),
+            collection: Default::default(),
             notes: Default::default(),
             loaded: false,
         }
@@ -307,15 +309,18 @@ impl AssignedSample {
             T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
             GROUP_CONCAT(V.vernacular_name, "@") as cnames,
 
-            L.locid, L.name as locname, T.complete_name,
+            L.locid, L.name as locname, L.description as locdescription, T.complete_name,
 
-            S.userid, U.username
+            S.userid, U.username,
+
+            C.collectionid, C.name, C.description
 
             FROM sc_collection_samples CS
             INNER JOIN taxonomic_units T ON T.tsn=S.tsn
             INNER JOIN sc_locations L on L.locid=S.collectedlocation
             INNER JOIN sc_samples S ON CS.sampleid=S.sampleid
             INNER JOIN sc_users U on U.userid=S.userid
+            INNER JOIN sc_collections C on C.collectionid=CS.collectionid
             LEFT JOIN (SELECT * FROM vernaculars WHERE
             (language="English" or language="unspecified")) V on V.tsn=T.tsn
             "#,
@@ -367,7 +372,14 @@ impl FromRow<'_, SqliteRow> for AssignedSample {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Ok(Self {
             id: row.try_get("csid")?,
-            sample: Sample::from_row(row)?,
+            sample: Sample::from_row(row).map(|mut s| {
+                s.loaded = true;
+                s
+            })?,
+            collection: Collection::from_row(row).map(|mut c| {
+                c.loaded = true;
+                c
+            })?,
             notes: Default::default(),
             loaded: true,
         })
@@ -402,5 +414,53 @@ mod tests {
         .await;
 
         check(&pool, "test name".to_string(), None, 1).await;
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../db/fixtures",
+            scripts("users", "locations", "taxa", "assigned-samples")
+        )
+    ))]
+    async fn assigned_samples(pool: Pool<Sqlite>) {
+        async fn check_sample(a: &AssignedSample, pool: &Pool<Sqlite>) {
+            tracing::debug!("loading sample");
+            let mut s = Sample::new_loadable(a.sample.id);
+            s.load(pool).await.expect("Failed to load sample");
+            assert_eq!(a.sample, s);
+
+            let mut c = Collection::new_loadable(a.collection.id);
+            c.load(pool).await.expect("Failed to load collection");
+            assert_eq!(a.collection, c);
+        }
+
+        let assigned =
+            AssignedSample::fetch_all(Some(Arc::new(AssignedSampleFilter::Collection(1))), &pool)
+                .await
+                .expect("Failed to load assigned samples for first collection");
+
+        assert_eq!(assigned.len(), 2);
+
+        tracing::debug!("{:?}", assigned[0]);
+        assert_eq!(assigned[0].sample.id, 1);
+        assert_eq!(assigned[0].collection.id, 1);
+        check_sample(&assigned[0], &pool).await;
+
+        tracing::debug!("{:?}", assigned[1]);
+        assert_eq!(assigned[1].sample.id, 2);
+        assert_eq!(assigned[1].collection.id, 1);
+        check_sample(&assigned[1], &pool).await;
+
+        let assigned =
+            AssignedSample::fetch_all(Some(Arc::new(AssignedSampleFilter::Collection(2))), &pool)
+                .await
+                .expect("Failed to load assigned samples for first collection");
+
+        assert_eq!(assigned.len(), 1);
+
+        assert_eq!(assigned[0].sample.id, 3);
+        assert_eq!(assigned[0].collection.id, 2);
+        check_sample(&assigned[0], &pool).await;
     }
 }
