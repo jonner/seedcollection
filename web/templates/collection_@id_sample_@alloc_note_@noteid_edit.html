@@ -1,7 +1,7 @@
 {% extends "root.html" %}
 {% from "_macros.html" import breadcrumbs %}
 {% from "_collection_macros.html" import allocation_note_form %}
-{% block title %}Add a new note{% endblock %}
+{% block title %}Edit note {{ note.id }}{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
@@ -13,6 +13,6 @@
 <h2>{{ self.title() }}</h2>
 <div>Sample {{ allocation.sample.id | idfmt("S") }}: {{ allocation.sample.taxon.complete_name }}</div>
 <div>Collection {{ allocation.collection.id | idfmt("C") }}: {{ allocation.collection.name }}</div>
-{{ allocation_note_form(allocation, message=message) }}
+{{ allocation_note_form(allocation, note=note, request=request, message=message) }}
 {% endblock %}
 

@@ -30,6 +30,10 @@ pub fn router() -> Router<AppState> {
         .route("/:alloc", get(show_allocation).delete(remove_allocation))
         .route("/:alloc/note/:noteid", delete(delete_note))
         .route(
+            "/:alloc/note/:noteid/edit",
+            get(show_edit_note).put(modify_note),
+        )
+        .route(
             "/:alloc/note/new",
             get(show_add_allocation_note).post(add_allocation_note),
         )
@@ -96,8 +100,8 @@ async fn add_allocation_note(
         allocid,
         params.date,
         params.notetype,
-        params.summary,
-        params.details,
+        params.summary.clone(),
+        params.details.as_ref().cloned(),
     );
     Ok(match note.insert(&state.dbpool).await {
         Ok(_) => {
@@ -112,6 +116,7 @@ async fn add_allocation_note(
                 context!(user => user,
                 note_types => note_types,
                 allocation => alloc,
+                request => params,
                 message => Message {
                     r#type: MessageType::Error,
                     msg: format!("Failed to save note: {}", e),
@@ -195,4 +200,82 @@ async fn delete_note(
 
     note.delete(&state.dbpool).await?;
     Ok(())
+}
+
+async fn show_edit_note(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Path((collectionid, allocid, noteid)): Path<(i64, i64, i64)>,
+) -> Result<impl IntoResponse, error::Error> {
+    // make sure this is a note the user can edit
+    let note = Note::fetch(noteid, &state.dbpool).await?;
+    let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
+    if note.csid != allocid || allocation.collection.id != collectionid {
+        return Err(Into::into(anyhow!("Bad request")));
+    }
+    if allocation.sample.user.id != user.id {
+        return Err(Error::Unauthorized(
+            "No permission to delete this note".to_string(),
+        ));
+    }
+
+    let note_types: Vec<NoteType> = NoteType::iter().collect();
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => user,
+                 note => note,
+                 note_types => note_types,
+                 allocation => allocation),
+    )
+    .into_response())
+}
+
+async fn modify_note(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Path((collectionid, allocid, noteid)): Path<(i64, i64, i64)>,
+    Form(params): Form<NoteParams>,
+) -> Result<impl IntoResponse, error::Error> {
+    // make sure this is a note the user can edit
+    let mut note = Note::fetch(noteid, &state.dbpool).await?;
+    let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
+    if note.csid != allocid || allocation.collection.id != collectionid {
+        return Err(Into::into(anyhow!("Bad request")));
+    }
+    if allocation.sample.user.id != user.id {
+        return Err(Error::Unauthorized(
+            "No permission to delete this note".to_string(),
+        ));
+    }
+
+    note.date = params.date;
+    note.summary = params.summary;
+    note.kind = params.notetype;
+    note.details = params.details;
+
+    match note.update(&state.dbpool).await {
+        Err(e) => {
+            let note_types: Vec<NoteType> = NoteType::iter().collect();
+            Ok(RenderHtml(
+                key,
+                state.tmpl.clone(),
+                context!(user => user,
+                note => note,
+                note_types => note_types,
+                allocation => allocation,
+                message => Message {
+                    r#type: MessageType::Error,
+                    msg: format!("Failed to update note: {e}"),
+                }),
+            )
+            .into_response())
+        }
+        Ok(_res) => {
+            let url = app_url(&format!("/collection/{collectionid}/sample/{allocid}"));
+            Ok([("HX-Redirect", url)].into_response())
+        }
+    }
 }
