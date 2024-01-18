@@ -302,14 +302,25 @@ impl Taxon {
         limit: Option<LimitSpec>,
     ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
         let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
-            r#"SELECT T.tsn, T.parent_tsn as parentid, T.unit_name1, T.unit_name2, T.unit_name3,
-        T.complete_name, T.rank_id, T.phylo_sort_seq as seq, M.native_status,
-            GROUP_CONCAT(V.vernacular_name, "@") as cnames
+            r#"SELECT
+                T.tsn,
+                T.parent_tsn as parentid,
+                T.unit_name1,
+                T.unit_name2,
+                T.unit_name3,
+                T.complete_name,
+                T.rank_id,
+                T.phylo_sort_seq as seq,
+                M.native_status,
+                GROUP_CONCAT(V.vernacular_name, "@") as cnames
             FROM taxonomic_units T
-            LEFT JOIN (SELECT * FROM vernaculars WHERE
-                       (language="English" or language="unspecified")) V on V.tsn=T.tsn
-     LEFT JOIN mntaxa M on T.tsn=M.tsn 
-      WHERE name_usage="accepted" AND kingdom_id="#,
+            LEFT JOIN (
+                SELECT *
+                FROM vernaculars
+                WHERE ( language="English" OR language="unspecified" )
+            ) V on V.tsn=T.tsn
+            LEFT JOIN mntaxa M on T.tsn=M.tsn 
+            WHERE name_usage="accepted" AND kingdom_id="#,
         );
         builder.push_bind(KINGDOM_PLANTAE);
 

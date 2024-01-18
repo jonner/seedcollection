@@ -96,27 +96,68 @@ async fn show_all_children(
 ) -> Result<impl IntoResponse, error::Error> {
     let samples: Vec<Sample> = sqlx::query_as(
         r#"WITH RECURSIVE CTE AS (
-        SELECT T.tsn, T.parent_tsn, T.complete_name, T.unit_name1, T.unit_name2, T.unit_name3,
-        T.rank_id, T.phylo_sort_seq, T.tsn as top_parent, T.complete_name as top_parent_name
-        FROM taxonomic_units T WHERE T.tsn=?
-        UNION ALL
-        SELECT TT.tsn, TT.parent_tsn, TT.complete_name, TT.unit_name1, TT.unit_name2, TT.unit_name3,
-        TT.rank_id, TT.phylo_sort_seq, CTE.top_parent, CTE.top_parent_name
-        FROM taxonomic_units TT, CTE
-        WHERE TT.parent_tsn = CTE.tsn)
-        SELECT CTE.tsn, CTE.parent_tsn as parentid, CTE.complete_name, CTE.unit_name1, CTE.unit_name2, CTE.unit_name3, CTE.phylo_sort_seq as seq, top_parent, top_parent_name,
-        M.native_status, S.sampleid, S.userid, U.username, L.srcid, L.srcname, quantity, month, year, notes, certainty
-        FROM CTE
-        INNER JOIN sc_samples S ON CTE.tsn=S.tsn
-        INNER JOIN sc_sources L on L.srcid=S.srcid
-        INNER JOIN sc_users U on U.userid=S.userid
-        LEFT JOIN mntaxa M on CTE.tsn=M.tsn 
-        WHERE S.userid=?
-        ORDER BY seq"#)
-        .bind(id)
-        .bind(user.id)
-        .fetch_all(&state.dbpool)
-        .await?;
+            SELECT
+                T.tsn,
+                T.parent_tsn,
+                T.complete_name,
+                T.unit_name1,
+                T.unit_name2,
+                T.unit_name3,
+                T.rank_id,
+                T.phylo_sort_seq,
+                T.tsn as top_parent,
+                T.complete_name as top_parent_name
+            FROM taxonomic_units T
+            WHERE T.tsn=?
+            UNION ALL
+            SELECT
+                TT.tsn,
+                TT.parent_tsn,
+                TT.complete_name,
+                TT.unit_name1,
+                TT.unit_name2,
+                TT.unit_name3,
+                TT.rank_id,
+                TT.phylo_sort_seq,
+                CTE.top_parent,
+                CTE.top_parent_name
+                FROM taxonomic_units TT, CTE
+                WHERE
+                    TT.parent_tsn = CTE.tsn
+            )
+            SELECT
+                CTE.tsn,
+                CTE.parent_tsn as parentid,
+                CTE.complete_name,
+                CTE.unit_name1,
+                CTE.unit_name2,
+                CTE.unit_name3,
+                CTE.phylo_sort_seq as seq,
+                top_parent,
+                top_parent_name,
+                M.native_status,
+                S.sampleid,
+                S.userid,
+                U.username,
+                L.srcid,
+                L.srcname,
+                quantity,
+                month,
+                year,
+                notes,
+                certainty
+            FROM CTE
+            INNER JOIN sc_samples S ON CTE.tsn=S.tsn
+            INNER JOIN sc_sources L on L.srcid=S.srcid
+            INNER JOIN sc_users U on U.userid=S.userid
+            LEFT JOIN mntaxa M on CTE.tsn=M.tsn 
+            WHERE S.userid=?
+            ORDER BY seq"#,
+    )
+    .bind(id)
+    .bind(user.id)
+    .fetch_all(&state.dbpool)
+    .await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
