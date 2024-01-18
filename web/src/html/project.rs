@@ -58,7 +58,7 @@ async fn list_projects(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collections => projects),
+                 projects => projects),
     )
     .into_response())
 }
@@ -94,7 +94,7 @@ async fn filter_projects(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collections => projects),
+                 projects => projects),
     )
     .into_response())
 }
@@ -143,7 +143,7 @@ async fn insert_project(
             state.tmpl.clone(),
             context!( message => Message {
                     r#type: MessageType::Error,
-                    msg: format!("Failed to save collection: {}", e),
+                    msg: format!("Failed to save project: {}", e),
                 },
                 request => params),
         )
@@ -161,7 +161,7 @@ async fn insert_project(
                     Message {
                         r#type: MessageType::Success,
                         msg: format!(
-                            r#"Added new collection {}: {} to the database"#,
+                            r#"Added new project {}: {} to the database"#,
                             id, params.name
                             )
                     },
@@ -184,9 +184,7 @@ async fn show_project(
         .push(Arc::new(project::Filter::User(user.id)));
     let mut projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
     let Some(mut project) = projects.pop() else {
-        return Err(Error::NotFound(
-            "That collection does not exist".to_string(),
-        ));
+        return Err(Error::NotFound("That project does not exist".to_string()));
     };
     project.fetch_samples(None, &state.dbpool).await?;
 
@@ -194,7 +192,7 @@ async fn show_project(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collection => project),
+                 project => project),
     )
     .into_response())
 }
@@ -240,7 +238,7 @@ async fn modify_project(
             None,
             Message {
                 r#type: MessageType::Success,
-                msg: "Successfully updated collection".to_string(),
+                msg: "Successfully updated project".to_string(),
             },
             Some([("HX-Redirect", app_url(&format!("/collection/{id}")))]),
         ),
@@ -251,7 +249,7 @@ async fn modify_project(
         RenderHtml(
             key,
             state.tmpl.clone(),
-            context!(collection => project,
+            context!(project => project,
              message => message,
              request => request,
             ),
@@ -268,16 +266,16 @@ async fn delete_project(
 ) -> Result<impl IntoResponse, error::Error> {
     let mut project = Project::fetch(id, &state.dbpool)
         .await
-        .map_err(|_| Error::NotFound("That collection does not exist".to_string()))?;
+        .map_err(|_| Error::NotFound("That project does not exist".to_string()))?;
     if project.userid != user.id {
         return Err(Error::Unauthorized(
-            "No permission to delete this collection".to_string(),
+            "No permission to delete this project".to_string(),
         ));
     }
 
     let errmsg = match project.delete(&state.dbpool).await {
         Err(e) => e.to_string(),
-        Ok(res) if (res.rows_affected() == 0) => "No collection found".to_string(),
+        Ok(res) if (res.rows_affected() == 0) => "No project found".to_string(),
         Ok(_) => {
             return Ok((
                 [("HX-Redirect", app_url("/collection/list"))],
@@ -290,10 +288,10 @@ async fn delete_project(
         key,
         state.tmpl.clone(),
         context!(
-        collection => project,
+        project => project,
         message => Message {
             r#type: MessageType::Error,
-            msg: format!("Failed to delete collection: {errmsg}")
+            msg: format!("Failed to delete project: {errmsg}")
         },
         ),
     )
@@ -336,12 +334,12 @@ async fn show_add_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let (c, samples) = add_sample_prep(&user, id, &state).await?;
+    let (project, samples) = add_sample_prep(&user, id, &state).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collection => c,
+                 project => project,
                  samples => samples),
     )
     .into_response())
@@ -413,7 +411,7 @@ async fn add_sample(
             0,
             Message {
                 r#type: MessageType::Success,
-                msg: format!("Assigned {n_inserted} samples to this collection"),
+                msg: format!("Assigned {n_inserted} samples to this project"),
             },
         );
     }
@@ -422,7 +420,7 @@ async fn add_sample(
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(collection => project,
+        context!(project => project,
                  messages => messages,
                  samples => samples),
     )
@@ -464,7 +462,7 @@ async fn filter_project_samples(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collection => project),
+                 project => project),
     )
     .into_response())
 }

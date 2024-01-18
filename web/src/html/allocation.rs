@@ -160,17 +160,13 @@ async fn remove_allocation(
     State(state): State<AppState>,
     Path((id, csid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut collections =
+    let mut projects =
         Project::fetch_all(Some(Arc::new(project::Filter::Id(id))), &state.dbpool).await?;
-    let Some(c) = collections.pop() else {
-        return Err(Error::NotFound(
-            "That collection does not exist".to_string(),
-        ));
+    let Some(c) = projects.pop() else {
+        return Err(Error::NotFound("That project does not exist".to_string()));
     };
     if c.userid != user.id {
-        return Err(Error::NotFound(
-            "That collection does not exist".to_string(),
-        ));
+        return Err(Error::NotFound("That project does not exist".to_string()));
     }
     sqlx::query!(
         "DELETE FROM sc_collection_samples AS CS WHERE CS.csid=? AND CS.collectionid IN (SELECT C.collectionid FROM sc_collections AS C WHERE C.userid=?)",

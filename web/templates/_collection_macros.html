@@ -1,40 +1,40 @@
 {% from "_macros.html" import show_message, icon %}
 
-{% macro collection_form(id, collection=none, message=none, request=none) -%}
+{% macro project_form(id, project=none, message=none, request=none) -%}
 <form 
-{% if collection %}
-hx-put="{{ ("/collection/" ~ collection.id) | app_url }}"
+{% if project %}
+hx-put="{{ ("/collection/" ~ project.id) | app_url }}"
 {% else %}
 hx-post="{{ "/collection/new" | app_url }}"
 {% endif %}
  hx-swap="outerHTML" id="{{ id }}">
     {{ show_message(message) }}
     <div class="row px-3 mb-3">
-        <label class="form-label" for="CollectionNameInput">Name</label>
-        <input id="CollectionNameInput"
+        <label class="form-label" for="ProjectNameInput">Name</label>
+        <input id="ProjectNameInput"
                form="{{ id }}"
                class="form-control"
                type="text"
-               value="{{ request.name or collection.name or "" }}"
+               value="{{ request.name or project.name or "" }}"
                name="name">
     </div>
     <div class="row px-3 mb-3">
-        <label class="form-label" for="CollectionDescInput">Description</label>
-        <textarea id="CollectionDescInput"
+        <label class="form-label" for="ProjectDescInput">Description</label>
+        <textarea id="ProjectDescInput"
                   form="{{ id }}"
                   class="form-control"
-                  name="description">{{ request.description or collection.description or ""}}</textarea>
+                  name="description">{{ request.description or project.description or ""}}</textarea>
     </div>
     <div class="row px-3 mb-3">
         <button class="btn btn-primary"
-                type="submit">{% if collection %}Update{% else %}Add{% endif %}</button>
+                type="submit">{% if project %}Update{% else %}Add{% endif %}</button>
     </div>
-    {% if collection %}
+    {% if project %}
     <div class="row px-3 mb-3">
         <button type="submit"
                 class="btn btn-danger"
-                hx-delete="{{ ("/collection/" ~ collection.id) | app_url }}"
-                hx-confirm="Are you sure you want to delete project {{ collection.id }}?"
+                hx-delete="{{ ("/collection/" ~ project.id) | app_url }}"
+                hx-confirm="Are you sure you want to delete project {{ project.id }}?"
                 hx-target="closest form"
                 >Delete</button>
     </div>
@@ -43,21 +43,21 @@ hx-post="{{ "/collection/new" | app_url }}"
 {%- endmacro %}
 
 
-{% macro collection_list(filter=false) -%}
-<div class="mb-3" id="collection-list">
-    {% for collection in collections %}
+{% macro project_list(filter=false) -%}
+<div class="mb-3" id="project-list">
+    {% for project in projects %}
     <div class="{{ loop.cycle("bg-body-tertiary", "") }}">
         <div class="d-flex rounded align-items-baseline flex-grow-1 flex-row mb-1 sample-item">
             <div class="p-1 m-1 text-end bg-light text-primary flex-shrink-0 rounded">
                 <a class="fw-bold font-monospace"
-                   href="{{ ("/collection/" ~ collection.id) | app_url}}">{{ collection.id | idfmt("C") }}</a>
+                   href="{{ ("/collection/" ~ project.id) | app_url}}">{{ project.id | idfmt("C") }}</a>
             </div>
             <div class="d-flex flex-column p-1">
-                <div>{{ collection.name }}
+                <div>{{ project.name }}
                 </div>
                 <div class="text-secondary">
                     <div class="d-flex flex-row flex-wrap column-gap-3">
-                        {% if collection.description %}<div class="fst-italic">{{ collection.description | truncate }}</div>{% endif %}
+                        {% if project.description %}<div class="fst-italic">{{ project.description | truncate }}</div>{% endif %}
                     </div>
                 </div>
             </div>
@@ -75,11 +75,11 @@ hx-post="{{ "/collection/new" | app_url }}"
 </div>
 {%- endmacro %}
 
-{% macro collection_sample_list(collection) %}
+{% macro project_sample_list(project) %}
 {% from "_macros.html" import icon %}
 {% from "_sample_macros.html" import sample_item %}
-{% for alloc in collection.allocations %}
-<div class="collection-sample-row {{ loop.cycle("bg-body-tertiary", "") }}">
+{% for alloc in project.allocations %}
+<div class="project-sample-row {{ loop.cycle("bg-body-tertiary", "") }}">
     {% call sample_item(alloc.sample) %}
     {% if alloc.notes %}
     {% for note in alloc.notes %}
@@ -91,16 +91,16 @@ hx-post="{{ "/collection/new" | app_url }}"
     <div class="dropdown">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ icon("three-dots-vertical") }}</button>
         <ul class="dropdown-menu dropdown-menu-end">
-            <li><a href="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ alloc.id) | app_url }}"
+            <li><a href="{{ ("/collection/" ~ project.id ~ "/sample/" ~ alloc.id) | app_url }}"
                    class="dropdown-item">{{ icon("info-circle") }} Details</a>
             </li>
-            <li><a href="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ alloc.id ~ "/note/new") | app_url }}"
+            <li><a href="{{ ("/collection/" ~ project.id ~ "/sample/" ~ alloc.id ~ "/note/new") | app_url }}"
                    class="dropdown-item">{{ icon("card-text") }} Add a note</a>
             </li>
             <li><button type="button"
                     class="dropdown-item btn-danger"
-                    hx-delete="{{ ("/collection/" ~ collection.id ~ "/sample/" ~ alloc.id) | app_url }}"
-                    hx-target="closest .collection-sample-row"
+                    hx-delete="{{ ("/collection/" ~ project.id ~ "/sample/" ~ alloc.id) | app_url }}"
+                    hx-target="closest .project-sample-row"
                     hx-swap="outerHTML"
                     hx-confirm="Are you sure you want to remove this sample from the project?">{{ icon("x") }} Remove from project</button>
             </li>

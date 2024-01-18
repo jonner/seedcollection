@@ -1,4 +1,4 @@
-{% from "_collection_macros.html" import collection_form %}
+{% from "_collection_macros.html" import project_form %}
 {% from "_macros.html" import breadcrumbs %}
 {% extends "root.html" %}
 {% block title %}New Project{% endblock %}
@@ -9,5 +9,5 @@
 {"name": "New Project", "active": true },
 ]) }}
 <h2>{{ self.title() }}</h2>
-{{ collection_form("new-collection-form") }}
+{{ project_form("new-project-form") }}
 {% endblock %}

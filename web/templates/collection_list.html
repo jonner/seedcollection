@@ -1,12 +1,12 @@
 {% extends "root.html" %}
-{% from "_collection_macros.html" import icon, collection_list %}
+{% from "_collection_macros.html" import icon, project_list %}
 {% block title %}Projects{% endblock %}
 {% block content %}
 <h2><span class="me-2">{{ icon("collection") }}</span>Projects <a class="ms-2" href="{{ "/collection/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
     <form 
          hx-swap="outerHTML"
-         hx-target="#collection-list"
+         hx-target="#project-list"
          hx-get="{{ "/collection/filter" | app_url }}"
          hx-trigger="submit, input changed delay:500ms from:input">
         <input type="text"
@@ -16,5 +16,5 @@
                name="fragment">
     </form>
     </div>
-    {{ collection_list() }}
+    {{ project_list() }}
 {% endblock %}
