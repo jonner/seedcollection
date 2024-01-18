@@ -66,7 +66,7 @@ async fn modify_source(
         return Err(anyhow!("No parameters given").into());
     }
     let mut src = Source::fetch(id, &state.dbpool).await?;
-    if src.userid != Some(user.id) {
+    if src.userid != user.id {
         return Err(Error::Unauthorized(
             "No permission to modify this source".to_string(),
         ));
@@ -111,7 +111,7 @@ async fn add_source(
         params.description,
         params.latitude,
         params.longitude,
-        Some(user.id),
+        user.id,
     );
     let id = source.insert(&state.dbpool).await?.last_insert_rowid();
     Ok((

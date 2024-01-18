@@ -24,7 +24,7 @@ pub struct Source {
     pub latitude: Option<f64>,
     #[sqlx(default)]
     pub longitude: Option<f64>,
-    pub userid: Option<i64>,
+    pub userid: i64,
 }
 
 impl Default for Source {
@@ -35,7 +35,7 @@ impl Default for Source {
             description: None,
             latitude: None,
             longitude: None,
-            userid: None,
+            userid: -1,
         }
     }
 }
@@ -200,7 +200,7 @@ impl Source {
         description: Option<String>,
         latitude: Option<f64>,
         longitude: Option<f64>,
-        userid: Option<i64>,
+        userid: i64,
     ) -> Self {
         Self {
             id: -1,
@@ -229,7 +229,7 @@ mod tests {
             desc: Option<String>,
             lat: Option<f64>,
             lon: Option<f64>,
-            userid: Option<i64>,
+            userid: i64,
         ) {
             let mut src = Source::new(name, desc, lat, lon, userid);
             // full data
@@ -251,7 +251,7 @@ mod tests {
             Some("Test description".to_string()),
             Some(39.7870909115992),
             Some(-75.64827694159666),
-            Some(1),
+            1,
         )
         .await;
         check(
@@ -260,7 +260,7 @@ mod tests {
             Some("Test description".to_string()),
             Some(39.7870909115992),
             None,
-            Some(1),
+            1,
         )
         .await;
         check(
@@ -269,10 +269,10 @@ mod tests {
             Some("Test description".to_string()),
             None,
             None,
-            Some(1),
+            1,
         )
         .await;
-        check(&pool, "test name".to_string(), None, None, None, Some(1)).await;
-        check(&pool, "".to_string(), None, None, None, Some(1)).await;
+        check(&pool, "test name".to_string(), None, None, None, 1).await;
+        check(&pool, "".to_string(), None, None, None, 1).await;
     }
 }

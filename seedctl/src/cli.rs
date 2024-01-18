@@ -114,7 +114,7 @@ pub enum SourceCommands {
         #[arg(long = "long")]
         longitude: Option<f64>,
         #[arg(long)]
-        userid: Option<i64>,
+        userid: i64,
     },
     #[command(about = "Remove an existing source from the database")]
     Remove { id: i64 },

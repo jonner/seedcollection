@@ -123,7 +123,7 @@ async fn update_source(
     Form(params): Form<SourceParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let src = Source::fetch(id, &state.dbpool).await?;
-    if src.userid != Some(user.id) {
+    if src.userid != user.id {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
     let (request, message, headers) = match do_update(id, &params, &state).await {
@@ -181,7 +181,7 @@ async fn do_insert(
         params.description.as_ref().cloned(),
         params.latitude,
         params.longitude,
-        Some(user.id),
+        user.id,
     );
     source.insert(&state.dbpool).await.map_err(|e| e.into())
 }
@@ -244,7 +244,7 @@ async fn delete_source(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let src = Source::fetch(id, &state.dbpool).await?;
-    if src.userid != Some(user.id) {
+    if src.userid != user.id {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
     sqlx::query("DELETE FROM sc_sources WHERE srcid=?")
