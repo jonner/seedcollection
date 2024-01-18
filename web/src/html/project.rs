@@ -274,7 +274,10 @@ async fn delete_project(
     }
 
     let errmsg = match project.delete(&state.dbpool).await {
-        Err(e) => e.to_string(),
+        Err(e) => {
+            warn!("{e:?}");
+            e.to_string()
+        }
         Ok(res) if (res.rows_affected() == 0) => "No project found".to_string(),
         Ok(_) => {
             return Ok((
