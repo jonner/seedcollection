@@ -9,13 +9,17 @@ use crate::{
     loadable::Loadable,
 };
 
+/// A website user that is stored in the database
 #[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User {
+    /// the database ID for this user
     #[sqlx(rename = "userid")]
     pub id: i64,
+    /// the username for this user
     pub username: String,
     #[serde(skip_serializing)]
     #[sqlx(default)]
+    /// a hashed password for use when authenticating a user
     pub pwhash: String,
     #[serde(skip_serializing)]
     #[sqlx(skip)]
@@ -49,6 +53,7 @@ impl Loadable for User {
 }
 
 impl User {
+    /// Fetch all users from the database
     pub async fn fetch_all(pool: &Pool<Sqlite>) -> Result<Vec<User>> {
         Ok(
             sqlx::query_as("SELECT userid, username, pwhash FROM sc_users ORDER BY username ASC")
@@ -64,6 +69,7 @@ impl User {
         )
     }
 
+    /// Fetch the user with the given id from the database
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<User> {
         Ok(
             sqlx::query_as("SELECT userid, username, pwhash FROM sc_users WHERE userid=?")
@@ -77,6 +83,7 @@ impl User {
         )
     }
 
+    /// Fetch the user with the given username from the database
     pub async fn fetch_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
         sqlx::query_as("SELECT userid, username, pwhash FROM sc_users WHERE username=?")
             .bind(username)
@@ -91,6 +98,7 @@ impl User {
             .map_err(|e| e.into())
     }
 
+    /// Update the database to match the values currently stored in the object
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidData("No id set, cannot update".to_string()));
@@ -105,6 +113,7 @@ impl User {
             .map_err(|e| e.into())
     }
 
+    /// Delete this user from the database
     pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidData("No id set, cannot delete".to_string()));
@@ -121,12 +130,15 @@ impl User {
             })
     }
 
+    /// A helper function to hash a password with a randomly generated salt using the Argon2 hasher
     pub fn hash_password(pw: &str) -> Result<String> {
         let salt = SaltString::generate(&mut OsRng);
         let hasher = Argon2::default();
         Ok(hasher.hash_password(pw.as_bytes(), &salt)?.to_string())
     }
 
+    /// Use the provided parameters from this user's password hash to hash the supplied password
+    /// and compare them to see whether this is the correct password.
     pub fn verify_password(&self, pw: &str) -> Result<()> {
         let hasher = Argon2::default();
         let expected_hash = PasswordHash::new(&self.pwhash)?;
@@ -135,11 +147,13 @@ impl User {
             .map_err(|e| e.into())
     }
 
+    /// hash the given password with a random salt and store it inside the User object.
     pub fn change_password(&mut self, pw: &str) -> Result<()> {
         self.pwhash = Self::hash_password(pw)?;
         Ok(())
     }
 
+    /// create a new object with the given values
     pub fn new(username: String, pwhash: String) -> Self {
         Self {
             id: -1,
@@ -149,6 +163,7 @@ impl User {
         }
     }
 
+    /// Insert a new row into the database with the values stored in this object
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         sqlx::query("INSERT INTO sc_users (username, pwhash) VALUES (?, ?)")
             .bind(&self.username)
