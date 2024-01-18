@@ -25,8 +25,6 @@ pub struct Source {
     #[sqlx(default)]
     pub longitude: Option<f64>,
     pub userid: Option<i64>,
-    #[sqlx(skip)]
-    pub loaded: bool,
 }
 
 impl Default for Source {
@@ -38,7 +36,6 @@ impl Default for Source {
             latitude: None,
             longitude: None,
             userid: None,
-            loaded: false,
         }
     }
 }
@@ -51,10 +48,6 @@ impl Loadable for Source {
         let mut src: Self = Default::default();
         src.id = id;
         src
-    }
-
-    fn is_loaded(&self) -> bool {
-        self.loaded
     }
 
     fn is_loadable(&self) -> bool {
@@ -126,10 +119,6 @@ impl Source {
             .build_query_as()
             .fetch_one(pool)
             .await
-            .map(|mut l: Source| {
-                l.loaded = true;
-                l
-            })
             .map_err(|e| e.into())
     }
 
@@ -141,13 +130,6 @@ impl Source {
             .build_query_as()
             .fetch_all(pool)
             .await
-            .map(|mut v| {
-                let _ = v.iter_mut().map(|l: &mut Source| {
-                    l.loaded = true;
-                    l
-                });
-                v
-            })
             .map_err(|e| e.into())
     }
 
@@ -176,7 +158,6 @@ impl Source {
         .await
         .map(|r| {
             self.id = r.last_insert_rowid();
-            self.loaded = true;
             r
         })
         .map_err(|e| e.into())
@@ -228,7 +209,6 @@ impl Source {
             latitude,
             longitude,
             userid,
-            loaded: false,
         }
     }
 }

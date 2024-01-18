@@ -72,7 +72,6 @@ pub struct Taxon {
     pub parentid: Option<i64>,
     pub seq: Option<i64>,
     pub germination: Option<Vec<Germination>>,
-    pub loaded: bool,
 }
 
 impl Default for Taxon {
@@ -89,7 +88,6 @@ impl Default for Taxon {
             parentid: Default::default(),
             seq: Default::default(),
             germination: Default::default(),
-            loaded: false,
         }
     }
 }
@@ -102,10 +100,6 @@ impl Loadable for Taxon {
         let mut taxon: Self = Default::default();
         taxon.id = id;
         taxon
-    }
-
-    fn is_loaded(&self) -> bool {
-        self.loaded
     }
 
     fn is_loadable(&self) -> bool {
@@ -170,7 +164,6 @@ impl FromRow<'_, SqliteRow> for Taxon {
             parentid: row.try_get("parentid")?,
             seq: row.try_get("seq").unwrap_or(None),
             germination: None,
-            loaded: true,
         })
     }
 }

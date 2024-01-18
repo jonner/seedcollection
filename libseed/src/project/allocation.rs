@@ -41,7 +41,6 @@ pub struct Allocation {
     pub sample: Sample,
     pub project: Project,
     pub notes: Vec<Note>,
-    pub loaded: bool,
 }
 
 impl Default for Allocation {
@@ -51,7 +50,6 @@ impl Default for Allocation {
             sample: Default::default(),
             project: Default::default(),
             notes: Default::default(),
-            loaded: false,
         }
     }
 }
@@ -66,19 +64,12 @@ impl Loadable for Allocation {
         a
     }
 
-    fn is_loaded(&self) -> bool {
-        self.loaded
-    }
-
     fn is_loadable(&self) -> bool {
         self.id > 0
     }
 
     async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        Allocation::fetch(self.id, pool).await.and_then(|mut a| {
-            a.loaded = true;
-            Ok(a)
-        })
+        Allocation::fetch(self.id, pool).await
     }
 }
 
@@ -167,16 +158,9 @@ impl FromRow<'_, SqliteRow> for Allocation {
         }
         Ok(Self {
             id: row.try_get("psid")?,
-            sample: Sample::from_row(row).map(|mut s| {
-                s.loaded = true;
-                s
-            })?,
-            project: Project::from_row(row).map(|mut c| {
-                c.loaded = true;
-                c
-            })?,
+            sample: Sample::from_row(row)?,
+            project: Project::from_row(row)?,
             notes,
-            loaded: true,
         })
     }
 }

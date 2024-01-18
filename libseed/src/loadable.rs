@@ -7,7 +7,6 @@ pub trait Loadable: Default {
     type Id;
 
     fn new_loadable(id: Self::Id) -> Self;
-    fn is_loaded(&self) -> bool;
     fn is_loadable(&self) -> bool;
     async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self>;
 

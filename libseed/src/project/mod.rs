@@ -29,9 +29,6 @@ pub struct Project {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub allocations: Vec<Allocation>,
     pub userid: i64,
-    #[serde(skip_serializing)]
-    #[sqlx(skip)]
-    loaded: bool,
 }
 
 impl Default for Project {
@@ -42,7 +39,6 @@ impl Default for Project {
             description: None,
             allocations: Default::default(),
             userid: -1,
-            loaded: false,
         }
     }
 }
@@ -55,10 +51,6 @@ impl Loadable for Project {
         let mut c: Project = Default::default();
         c.id = id;
         c
-    }
-
-    fn is_loaded(&self) -> bool {
-        self.loaded
     }
 
     fn is_loadable(&self) -> bool {
@@ -115,14 +107,11 @@ impl Project {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        Ok(Self::build_query(Some(Arc::new(Filter::Id(id))))
+        Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
             .await
-            .and_then(|mut c: Self| {
-                c.loaded = true;
-                Ok(c)
-            })?)
+            .map_err(|e| e.into())
     }
 
     pub async fn fetch_all(
@@ -133,13 +122,6 @@ impl Project {
             .build_query_as()
             .fetch_all(pool)
             .await
-            .and_then(|mut v| {
-                let _ = v.iter_mut().map(|c: &mut Project| {
-                    c.loaded = true;
-                    c
-                });
-                Ok(v)
-            })
             .map_err(|e| e.into())
     }
 
@@ -180,7 +162,6 @@ impl Project {
             .await
             .map(|r| {
                 self.id = r.last_insert_rowid();
-                self.loaded = true;
                 r
             })
             .map_err(|e| e.into())
@@ -230,7 +211,6 @@ impl Project {
             description,
             userid,
             allocations: Default::default(),
-            loaded: false,
         }
     }
 }

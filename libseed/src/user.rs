@@ -21,18 +21,11 @@ pub struct User {
     #[sqlx(default)]
     /// a hashed password for use when authenticating a user
     pub pwhash: String,
-    #[serde(skip_serializing)]
-    #[sqlx(skip)]
-    loaded: bool,
 }
 
 #[async_trait]
 impl Loadable for User {
     type Id = i64;
-
-    fn is_loaded(&self) -> bool {
-        self.loaded
-    }
 
     fn is_loadable(&self) -> bool {
         self.id > 0
@@ -47,7 +40,6 @@ impl Loadable for User {
             id,
             username: Default::default(),
             pwhash: Default::default(),
-            loaded: false,
         }
     }
 }
@@ -55,32 +47,19 @@ impl Loadable for User {
 impl User {
     /// Fetch all users from the database
     pub async fn fetch_all(pool: &Pool<Sqlite>) -> Result<Vec<User>> {
-        Ok(
-            sqlx::query_as("SELECT userid, username, pwhash FROM sc_users ORDER BY username ASC")
-                .fetch_all(pool)
-                .await
-                .and_then(|mut v| {
-                    let _ = v.iter_mut().map(|u: &mut User| {
-                        u.loaded = true;
-                        u
-                    });
-                    Ok(v)
-                })?,
-        )
+        sqlx::query_as("SELECT userid, username, pwhash FROM sc_users ORDER BY username ASC")
+            .fetch_all(pool)
+            .await
+            .map_err(|e| e.into())
     }
 
     /// Fetch the user with the given id from the database
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<User> {
-        Ok(
-            sqlx::query_as("SELECT userid, username, pwhash FROM sc_users WHERE userid=?")
-                .bind(id)
-                .fetch_one(pool)
-                .await
-                .and_then(|mut u: Self| {
-                    u.loaded = true;
-                    Ok(u)
-                })?,
-        )
+        sqlx::query_as("SELECT userid, username, pwhash FROM sc_users WHERE userid=?")
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .map_err(|e| e.into())
     }
 
     /// Fetch the user with the given username from the database
@@ -89,12 +68,6 @@ impl User {
             .bind(username)
             .fetch_optional(pool)
             .await
-            .and_then(|opt| {
-                Ok(opt.map(|mut u: User| {
-                    u.loaded = true;
-                    u
-                }))
-            })
             .map_err(|e| e.into())
     }
 
@@ -159,7 +132,6 @@ impl User {
             id: -1,
             username,
             pwhash,
-            loaded: false,
         }
     }
 
@@ -172,7 +144,6 @@ impl User {
             .await
             .map(|r| {
                 self.id = r.last_insert_rowid();
-                self.loaded = true;
                 r
             })
             .map_err(|e| e.into())
@@ -185,7 +156,6 @@ impl Default for User {
             id: -1,
             username: Default::default(),
             pwhash: Default::default(),
-            loaded: Default::default(),
         }
     }
 }

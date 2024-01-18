@@ -51,8 +51,6 @@ pub struct Note {
     pub summary: String,
     #[sqlx(rename = "notedetails")]
     pub details: Option<String>,
-    #[sqlx(skip)]
-    pub loaded: bool,
 }
 
 impl Default for Note {
@@ -64,7 +62,6 @@ impl Default for Note {
             kind: NoteType::Other,
             summary: Default::default(),
             details: None,
-            loaded: false,
         }
     }
 }
@@ -77,10 +74,6 @@ impl Loadable for Note {
         let mut note = Self::default();
         note.id = id;
         note
-    }
-
-    fn is_loaded(&self) -> bool {
-        self.loaded
     }
 
     fn is_loadable(&self) -> bool {
@@ -116,7 +109,6 @@ impl Note {
             kind,
             summary,
             details,
-            loaded: false,
         }
     }
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
@@ -137,10 +129,6 @@ impl Note {
             .build_query_as()
             .fetch_one(pool)
             .await
-            .map(|mut n: Note| {
-                n.loaded = true;
-                n
-            })
     }
 
     pub async fn fetch_all(
@@ -151,13 +139,6 @@ impl Note {
             .build_query_as()
             .fetch_all(pool)
             .await
-            .map(|mut v| {
-                let _ = v.iter_mut().map(|n: &mut Note| {
-                    n.loaded = true;
-                    n
-                });
-                v
-            })
     }
 
     pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<Note> {
@@ -176,10 +157,6 @@ impl Note {
         .bind(&self.details)
         .fetch_one(pool)
         .await
-        .map(|mut n: Note| {
-            n.loaded = true;
-            n
-        })
         .map_err(|e| e.into())
     }
 
@@ -238,7 +215,6 @@ mod tests {
         assert_eq!(note.kind, NoteType::Preparation);
         assert_eq!(note.summary, "summary 3");
         assert_eq!(note.details, Some("details 3".to_string()));
-        assert_eq!(note.loaded, true);
 
         note.summary = "I changed the summary".to_string();
         note.details = None;

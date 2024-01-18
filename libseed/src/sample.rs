@@ -32,8 +32,6 @@ pub struct Sample {
     pub year: Option<u32>,
     pub notes: Option<String>,
     pub certainty: Certainty,
-    #[serde(skip_serializing)]
-    pub loaded: bool,
 }
 
 #[derive(Clone)]
@@ -59,7 +57,6 @@ impl Default for Sample {
             year: None,
             notes: None,
             certainty: Certainty::Uncertain,
-            loaded: false,
         }
     }
 }
@@ -72,10 +69,6 @@ impl Loadable for Sample {
         let mut s: Sample = Default::default();
         s.id = id;
         s
-    }
-
-    fn is_loaded(&self) -> bool {
-        self.loaded
     }
 
     fn is_loadable(&self) -> bool {
@@ -196,7 +189,7 @@ impl Sample {
         .bind(&self.certainty)
         .execute(pool)
         .await
-        .map(|r| { self.id = r.last_insert_rowid(); self.loaded = true; r})
+        .map(|r| { self.id = r.last_insert_rowid(); r})
         .map_err(|e| e.into())
     }
 
@@ -263,7 +256,6 @@ impl Sample {
             year,
             notes,
             certainty,
-            loaded: false,
         }
     }
 }
@@ -280,7 +272,6 @@ impl FromRow<'_, SqliteRow> for Sample {
             year: row.try_get("year").unwrap_or(None),
             notes: row.try_get("notes").unwrap_or(None),
             certainty: row.try_get("certainty").unwrap_or(Certainty::Uncertain),
-            loaded: true,
         })
     }
 }
@@ -316,7 +307,6 @@ mod tests {
                 .await
                 .expect("Failed to load sample from database");
             assert_eq!(sample.id, loaded.id);
-            assert_eq!(sample.loaded, loaded.loaded);
             assert_eq!(sample.user.id, loaded.user.id);
             assert_eq!(sample.taxon.id, loaded.taxon.id);
             assert_eq!(sample.source.id, loaded.source.id);
