@@ -18,7 +18,7 @@ pub struct Source {
     pub id: i64,
     #[sqlx(rename = "srcname")]
     pub name: String,
-    #[sqlx(rename = "srcdesc")]
+    #[sqlx(rename = "srcdesc", default)]
     pub description: Option<String>,
     #[sqlx(default)]
     pub latitude: Option<f64>,
