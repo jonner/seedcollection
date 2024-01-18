@@ -1,11 +1,11 @@
-{% from "_collection_macros.html" import project_form %}
+{% from "_project_macros.html" import project_form %}
 {% from "_macros.html" import breadcrumbs %}
 {% extends "root.html" %}
 {% block title %}New Project{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
-{"name": "Projects", "link": ("/collection/list" | app_url) },
+{"name": "Projects", "link": ("/project/list" | app_url) },
 {"name": "New Project", "active": true },
 ]) }}
 <h2>{{ self.title() }}</h2>

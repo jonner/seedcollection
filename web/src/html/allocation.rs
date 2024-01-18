@@ -43,7 +43,7 @@ async fn show_allocation(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, allocid)): Path<(i64, i64)>,
+    Path((projectid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure that this is our sample
     let mut allocation = Allocation::fetch_one(
@@ -51,7 +51,7 @@ async fn show_allocation(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Project(collectionid)))
+                .push(Arc::new(AllocationFilter::Project(projectid)))
                 .build(),
         ),
         &state.dbpool,
@@ -81,7 +81,7 @@ async fn add_allocation_note(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, allocid)): Path<(i64, i64)>,
+    Path((projectid, allocid)): Path<(i64, i64)>,
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure that this is our sample
@@ -90,7 +90,7 @@ async fn add_allocation_note(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Project(collectionid)))
+                .push(Arc::new(AllocationFilter::Project(projectid)))
                 .build(),
         ),
         &state.dbpool,
@@ -105,7 +105,7 @@ async fn add_allocation_note(
     );
     Ok(match note.insert(&state.dbpool).await {
         Ok(_) => {
-            let url = app_url(&format!("/collection/{}/sample/{}", collectionid, allocid));
+            let url = app_url(&format!("/project/{}/sample/{}", projectid, allocid));
             [("HX-Redirect", url)].into_response()
         }
         Err(e) => {
@@ -131,14 +131,14 @@ async fn show_add_allocation_note(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, allocid)): Path<(i64, i64)>,
+    Path((projectid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     let allocation = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Project(collectionid)))
+                .push(Arc::new(AllocationFilter::Project(projectid)))
                 .build(),
         ),
         &state.dbpool,
@@ -180,12 +180,12 @@ async fn delete_note(
     user: SqliteUser,
     TemplateKey(_key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, allocid, noteid)): Path<(i64, i64, i64)>,
+    Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can delete
     let note = Note::fetch(noteid, &state.dbpool).await?;
     let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.project.id != collectionid {
+    if note.csid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {
@@ -202,12 +202,12 @@ async fn show_edit_note(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, allocid, noteid)): Path<(i64, i64, i64)>,
+    Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
     let note = Note::fetch(noteid, &state.dbpool).await?;
     let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.project.id != collectionid {
+    if note.csid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {
@@ -232,13 +232,13 @@ async fn modify_note(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path((collectionid, allocid, noteid)): Path<(i64, i64, i64)>,
+    Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
     let mut note = Note::fetch(noteid, &state.dbpool).await?;
     let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.project.id != collectionid {
+    if note.csid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {
@@ -270,7 +270,7 @@ async fn modify_note(
             .into_response())
         }
         Ok(_res) => {
-            let url = app_url(&format!("/collection/{collectionid}/sample/{allocid}"));
+            let url = app_url(&format!("/project/{projectid}/sample/{allocid}"));
             Ok([("HX-Redirect", url)].into_response())
         }
     }

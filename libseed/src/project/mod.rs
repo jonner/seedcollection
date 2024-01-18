@@ -206,7 +206,7 @@ impl Project {
     pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidData(
-                "id not set, cannot delete collection".to_string(),
+                "id not set, cannot delete project".to_string(),
             ));
         }
 
@@ -245,13 +245,13 @@ mod tests {
         migrations = "../db/migrations/",
         fixtures(path = "../../../db/fixtures", scripts("users"))
     ))]
-    async fn test_insert_collections(pool: Pool<Sqlite>) {
+    async fn test_insert_projects(pool: Pool<Sqlite>) {
         async fn check(pool: &Pool<Sqlite>, name: String, desc: Option<String>, userid: i64) {
             let mut c = Project::new(name, desc, userid);
             let res = c.insert(&pool).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
             let mut cload = Project::new_loadable(res.last_insert_rowid());
-            cload.load(&pool).await.expect("Failed to load collection");
+            cload.load(&pool).await.expect("Failed to load project");
             assert_eq!(c, cload);
         }
 

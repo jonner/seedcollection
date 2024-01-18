@@ -66,7 +66,7 @@ async fn modify_project(
     let mut project = Project::fetch(id, &state.dbpool).await?;
     if project.userid != user.id {
         return Err(Error::Unauthorized(
-            "No permission to modify this collection".to_string(),
+            "No permission to modify this project".to_string(),
         ));
     }
     if let Some(name) = params.name {
@@ -86,10 +86,10 @@ async fn delete_project(
 ) -> Result<(), error::Error> {
     let mut c = Project::fetch(id, &state.dbpool)
         .await
-        .map_err(|_| Error::NotFound("That collection does not exist".to_string()))?;
+        .map_err(|_| Error::NotFound("That project does not exist".to_string()))?;
     if c.userid != user.id {
         return Err(Error::Unauthorized(
-            "No permission to delete this collection".to_string(),
+            "No permission to delete this project".to_string(),
         ));
     }
 

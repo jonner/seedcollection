@@ -150,7 +150,7 @@ async fn insert_project(
         .into_response()),
         Ok(result) => {
             let id = result.last_insert_rowid();
-            let projecturl = app_url(&format!("/collection/{}", id));
+            let projecturl = app_url(&format!("/project/{}", id));
 
             Ok((
                 [("HX-Redirect", projecturl)],
@@ -240,7 +240,7 @@ async fn modify_project(
                 r#type: MessageType::Success,
                 msg: "Successfully updated project".to_string(),
             },
-            Some([("HX-Redirect", app_url(&format!("/collection/{id}")))]),
+            Some([("HX-Redirect", app_url(&format!("/project/{id}")))]),
         ),
     };
     let project = Project::fetch(id, &state.dbpool).await?;
@@ -278,7 +278,7 @@ async fn delete_project(
         Ok(res) if (res.rows_affected() == 0) => "No project found".to_string(),
         Ok(_) => {
             return Ok((
-                [("HX-Redirect", app_url("/collection/list"))],
+                [("HX-Redirect", app_url("/project/list"))],
                 RenderHtml(key, state.tmpl.clone(), context!(deleted => true, id => id)),
             )
                 .into_response())

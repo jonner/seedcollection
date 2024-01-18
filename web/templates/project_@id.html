@@ -1,20 +1,20 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon, breadcrumbs %}
-{% from "_collection_macros.html" import project_sample_list %}
+{% from "_project_macros.html" import project_sample_list %}
 {% block title %}{{ project.name or "Project Details" }}{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
-{"name": "Projects", "link": ("/collection/list" | app_url) },
+{"name": "Projects", "link": ("/project/list" | app_url) },
 {"name": project.id | idfmt("C"), "active": true },
 ]) }}
-<h2>{{ self.title() }} <a href="{{ ("/collection/" ~ project.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
+<h2>{{ self.title() }} <a href="{{ ("/project/" ~ project.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ project.description }}</p>
-<h3>Samples in this project <a class="ms-2" href="{{ ("/collection/" ~ project.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
+<h3>Samples in this project <a class="ms-2" href="{{ ("/project/" ~ project.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
     <div class="mb-3">
     <form
            hx-target="#project-sample-list"
-           hx-get="{{ ("/collection/" ~ project.id ~ "/filter") | app_url }}"
+           hx-get="{{ ("/project/" ~ project.id ~ "/filter") | app_url }}"
            hx-trigger="submit, input changed delay:500ms from:input">
     <input type="text"
            class="form-control"

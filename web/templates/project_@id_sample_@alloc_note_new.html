@@ -1,13 +1,13 @@
 {% extends "root.html" %}
 {% from "_macros.html" import breadcrumbs %}
-{% from "_collection_macros.html" import allocation_note_form %}
+{% from "_project_macros.html" import allocation_note_form %}
 {% block title %}Add a new note{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
-{"name": "Projects", "link": ("/collection/list" | app_url) },
-{"name": allocation.project.id | idfmt("C"), "link": ("/collection/" ~ allocation.project.id) | app_url },
-{"name": allocation.sample.id | idfmt("S"), "link": ("/collection/" ~ allocation.project.id ~ "/sample/" ~ allocation.id) | app_url },
+{"name": "Projects", "link": ("/project/list" | app_url) },
+{"name": allocation.project.id | idfmt("C"), "link": ("/project/" ~ allocation.project.id) | app_url },
+{"name": allocation.sample.id | idfmt("S"), "link": ("/project/" ~ allocation.project.id ~ "/sample/" ~ allocation.id) | app_url },
 {"name": "Add Note", "active": true },
 ]) }}
 <h2>{{ self.title() }}</h2>

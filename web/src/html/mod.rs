@@ -20,7 +20,7 @@ mod taxonomy;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .nest("/collection/", project::router())
+        .nest("/project/", project::router())
         .nest("/source/", source::router())
         .nest("/sample/", sample::router())
         .nest("/taxonomy/", taxonomy::router())

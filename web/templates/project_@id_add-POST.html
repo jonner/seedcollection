@@ -1,6 +1,6 @@
 {% from "_macros.html" import show_message %}
 {% if samples %}
-<form hx-post="{{ ("/collection/" ~ project.id ~ "/add") | app_url }}">
+<form hx-post="{{ ("/project/" ~ project.id ~ "/add") | app_url }}">
     {% for msg in messages %}
     {{ show_message(msg) }}
     {% endfor %}
