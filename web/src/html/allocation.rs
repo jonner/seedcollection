@@ -10,9 +10,9 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::{self, Allocation, AllocationFilter, Note, NoteType, Project},
     empty_string_as_none,
     filter::{FilterBuilder, FilterOp},
+    project::{self, Allocation, AllocationFilter, Note, NoteType, Project},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -161,7 +161,7 @@ async fn remove_allocation(
     Path((id, csid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut collections =
-        Project::fetch_all(Some(Arc::new(collection::Filter::Id(id))), &state.dbpool).await?;
+        Project::fetch_all(Some(Arc::new(project::Filter::Id(id))), &state.dbpool).await?;
     let Some(c) = collections.pop() else {
         return Err(Error::NotFound(
             "That collection does not exist".to_string(),

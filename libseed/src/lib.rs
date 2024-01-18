@@ -1,10 +1,10 @@
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 
-pub mod collection;
 pub mod error;
 pub mod filter;
 pub mod loadable;
+pub mod project;
 pub mod sample;
 pub mod source;
 pub mod taxonomy;

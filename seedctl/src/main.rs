@@ -7,8 +7,8 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::*;
 use libseed::{
-    collection::{Allocation, Project},
     loadable::Loadable,
+    project::{Allocation, Project},
     sample::Sample,
     source::Source,
     taxonomy::{self, filter_by, Taxon},

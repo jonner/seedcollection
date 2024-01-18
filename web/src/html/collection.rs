@@ -16,10 +16,10 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::{self, Project},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
+    project::{self, Project},
     sample::{self, Sample},
     source,
 };
@@ -50,7 +50,7 @@ async fn list_projects(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let projects = Project::fetch_all(
-        Some(Arc::new(collection::Filter::User(user.id))),
+        Some(Arc::new(project::Filter::User(user.id))),
         &state.dbpool,
     )
     .await?;
@@ -75,18 +75,18 @@ async fn filter_projects(
     Query(params): Query<FilterParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let namefilter = FilterBuilder::new(FilterOp::Or)
-        .push(Arc::new(collection::Filter::Name(
+        .push(Arc::new(project::Filter::Name(
             Cmp::Like,
             params.fragment.clone(),
         )))
-        .push(Arc::new(collection::Filter::Description(
+        .push(Arc::new(project::Filter::Description(
             Cmp::Like,
             params.fragment.clone(),
         )))
         .build();
     let filter = FilterBuilder::new(FilterOp::And)
         .push(namefilter)
-        .push(Arc::new(collection::Filter::User(user.id)))
+        .push(Arc::new(project::Filter::User(user.id)))
         .build();
 
     let projects = Project::fetch_all(Some(filter), &state.dbpool).await?;
@@ -180,8 +180,8 @@ async fn show_project(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let fb = FilterBuilder::new(FilterOp::And)
-        .push(Arc::new(collection::Filter::Id(id)))
-        .push(Arc::new(collection::Filter::User(user.id)));
+        .push(Arc::new(project::Filter::Id(id)))
+        .push(Arc::new(project::Filter::User(user.id)));
     let mut projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
     let Some(mut project) = projects.pop() else {
         return Err(Error::NotFound(
@@ -221,8 +221,8 @@ async fn modify_project(
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let fb = FilterBuilder::new(FilterOp::And)
-        .push(Arc::new(collection::Filter::Id(id)))
-        .push(Arc::new(collection::Filter::User(user.id)));
+        .push(Arc::new(project::Filter::Id(id)))
+        .push(Arc::new(project::Filter::User(user.id)));
     let projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
     if projects.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());

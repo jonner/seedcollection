@@ -6,13 +6,13 @@ use crate::{
 use anyhow::{anyhow, Result};
 use axum::{
     extract::{Path, Query, State},
-    response::{Html, IntoResponse, Json},
+    response::{IntoResponse, Json},
     routing::{delete, get, post},
     Form, Router,
 };
 use libseed::{
-    collection::{Filter, Project},
     loadable::Loadable,
+    project::{Filter, Project},
     sample::Sample,
 };
 use serde::Deserialize;

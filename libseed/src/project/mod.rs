@@ -235,8 +235,8 @@ impl Project {
 
 #[cfg(test)]
 mod tests {
-    use crate::collection::Project;
     use crate::loadable::Loadable;
+    use crate::project::Project;
     use sqlx::Pool;
     use sqlx::Sqlite;
     use test_log::test;

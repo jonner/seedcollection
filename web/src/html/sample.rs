@@ -9,10 +9,10 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::{Allocation, AllocationFilter},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
+    project::{Allocation, AllocationFilter},
     sample::{self, Certainty, Sample},
     source::{self, Source},
     taxonomy::Taxon,
