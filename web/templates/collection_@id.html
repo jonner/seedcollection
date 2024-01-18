@@ -1,16 +1,16 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon, breadcrumbs %}
 {% from "_collection_macros.html" import collection_sample_list %}
-{% block title %}{{ collection.name or "Collection Details" }}{% endblock %}
+{% block title %}{{ collection.name or "Project Details" }}{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
-{"name": "Collections", "link": ("/collection/list" | app_url) },
+{"name": "Projects", "link": ("/collection/list" | app_url) },
 {"name": collection.id | idfmt("C"), "active": true },
 ]) }}
 <h2>{{ self.title() }} <a href="{{ ("/collection/" ~ collection.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ collection.description }}</p>
-<h3>Samples in this collection <a class="ms-2" href="{{ ("/collection/" ~ collection.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
+<h3>Samples in this project <a class="ms-2" href="{{ ("/collection/" ~ collection.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
     <div class="mb-3">
     <form
            hx-target="#collection-sample-list"

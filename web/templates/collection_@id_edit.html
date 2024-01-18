@@ -1,13 +1,13 @@
 {% from "_collection_macros.html" import collection_form %}
 {% from "_macros.html" import breadcrumbs %}
 {% extends "root.html" %}
-{% block title %}Collection {{ collection.id }}{% endblock %}
+{% block title %}Project {{ collection.id }}{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
-{"name": "Collections", "link": ("/collection/list" | app_url) },
+{"name": "Projects", "link": ("/collection/list" | app_url) },
 {"name": collection.id | idfmt("C"), "link": ("/collection/" ~ collection.id) | app_url },
 {"name": "Edit", "active": true }]) }}
-<h2>Collection Details</h2>
+<h2>Project Details</h2>
 {{ collection_form("collection-form", collection, messages, request) }}
 {% endblock %}

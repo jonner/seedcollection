@@ -35,7 +35,7 @@ pub enum NoteType {
 #[derive(Clone)]
 pub enum NoteFilter {
     Id(i64),
-    CollectionSample(i64),
+    AllocationId(i64),
 }
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Debug, PartialEq)]
@@ -92,7 +92,7 @@ impl FilterPart for NoteFilter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(i) => _ = builder.push(" csnoteid=").push_bind(*i),
-            Self::CollectionSample(i) => _ = builder.push(" csid=").push_bind(*i),
+            Self::AllocationId(i) => _ = builder.push(" csid=").push_bind(*i),
         }
     }
 }
@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(note, loaded);
 
         // fetch all notes for a sample
-        let notes = Note::fetch_all(Some(Arc::new(NoteFilter::CollectionSample(1))), &pool)
+        let notes = Note::fetch_all(Some(Arc::new(NoteFilter::AllocationId(1))), &pool)
             .await
             .expect("Unable to load notes for sample");
         assert_eq!(notes.len(), 2);

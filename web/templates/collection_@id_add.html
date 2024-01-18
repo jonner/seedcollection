@@ -1,13 +1,13 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon, breadcrumbs %}
-{% block title %}Add Samples to Collection{% endblock %}
+{% block title %}Add Samples to Project{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
-{"name": "Collections", "link": ("/collection/list" | app_url) },
+{"name": "Projects", "link": ("/collection/list" | app_url) },
 {"name": collection.id | idfmt("C"), "link": ("/collection/" ~ collection.id) | app_url },
 {"name": "Add Samples", "active": true }]) }}
 <h2>{{ self.title() }}</h2>
-<p>Choose samples to add to the collection <i>{{ collection.name }}</p>
+<p>Choose samples to add to the project <i>{{ collection.name }}</p>
 {% include "collection_$id_add-POST.html" %}
 {% endblock %}

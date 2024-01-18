@@ -1,12 +1,12 @@
 {% extends "root.html" %}
-{% block title %}Collections{% endblock %}
+{% block title %}Projects{% endblock %}
 {% block content %}
-    <h2>Collections</h2>
-    <p>A collection represents a group of seed samples intended for a specific purpose.</p>
+<h2>{{ self.title() }}</h2>
+    <p>A project represents a group of seed samples intended for a specific purpose.</p>
     <ul>
         {% if user %}
-        <li><a href="{{ "/collection/new" | app_url }}">New collection</a></li>
+        <li><a href="{{ "/collection/new" | app_url }}">New project</a></li>
         {% endif %}
-        <li><a href="{{ "/collection/list" | app_url }}">List all collections</a></li>
+        <li><a href="{{ "/collection/list" | app_url }}">List all projects</a></li>
     <ul>
 {% endblock %}

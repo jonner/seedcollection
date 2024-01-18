@@ -13,14 +13,14 @@ use crate::{
 
 use super::{
     note::{self, Note},
-    Collection,
+    Project,
 };
 
 #[derive(Clone)]
 pub enum AllocationFilter {
     Id(i64),
     User(i64),
-    Collection(i64),
+    Project(i64),
     Sample(i64),
 }
 
@@ -29,7 +29,7 @@ impl FilterPart for AllocationFilter {
         match self {
             Self::Id(id) => _ = builder.push(" CS.csid = ").push_bind(*id),
             Self::User(id) => _ = builder.push(" S.userid = ").push_bind(*id),
-            Self::Collection(id) => _ = builder.push(" CS.collectionid = ").push_bind(*id),
+            Self::Project(id) => _ = builder.push(" CS.collectionid = ").push_bind(*id),
             Self::Sample(id) => _ = builder.push(" CS.sampleid = ").push_bind(*id),
         }
     }
@@ -39,7 +39,7 @@ impl FilterPart for AllocationFilter {
 pub struct Allocation {
     pub id: i64,
     pub sample: Sample,
-    pub collection: Collection,
+    pub project: Project,
     pub notes: Vec<Note>,
     pub loaded: bool,
 }
@@ -49,7 +49,7 @@ impl Default for Allocation {
         Self {
             id: -1,
             sample: Default::default(),
-            collection: Default::default(),
+            project: Default::default(),
             notes: Default::default(),
             loaded: false,
         }
@@ -150,7 +150,7 @@ impl Allocation {
 
     pub async fn fetch_notes(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
         self.notes = Note::fetch_all(
-            Some(Arc::new(note::NoteFilter::CollectionSample(self.id))),
+            Some(Arc::new(note::NoteFilter::AllocationId(self.id))),
             pool,
         )
         .await?;
@@ -171,7 +171,7 @@ impl FromRow<'_, SqliteRow> for Allocation {
                 s.loaded = true;
                 s
             })?,
-            collection: Collection::from_row(row).map(|mut c| {
+            project: Project::from_row(row).map(|mut c| {
                 c.loaded = true;
                 c
             })?,
@@ -202,22 +202,21 @@ mod tests {
             s.load(pool).await.expect("Failed to load sample");
             assert_eq!(a.sample, s);
 
-            let mut c = Collection::new_loadable(a.collection.id);
-            c.load(pool).await.expect("Failed to load collection");
-            assert_eq!(a.collection, c);
+            let mut c = Project::new_loadable(a.project.id);
+            c.load(pool).await.expect("Failed to load project");
+            assert_eq!(a.project, c);
         }
 
-        // check allocations for collection 1
-        let assigned =
-            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Collection(1))), &pool)
-                .await
-                .expect("Failed to load assigned samples for first collection");
+        // check allocations for project 1
+        let assigned = Allocation::fetch_all(Some(Arc::new(AllocationFilter::Project(1))), &pool)
+            .await
+            .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
         tracing::debug!("{:?}", assigned[0]);
         assert_eq!(assigned[0].sample.id, 1);
-        assert_eq!(assigned[0].collection.id, 1);
+        assert_eq!(assigned[0].project.id, 1);
         // querying allocations should also load the latest note
         assert_eq!(assigned[0].notes.len(), 1);
         assert_eq!(assigned[0].notes[0].id, 2);
@@ -233,38 +232,37 @@ mod tests {
 
         tracing::debug!("{:?}", assigned[1]);
         assert_eq!(assigned[1].sample.id, 2);
-        assert_eq!(assigned[1].collection.id, 1);
+        assert_eq!(assigned[1].project.id, 1);
         check_sample(&assigned[1], &pool).await;
 
-        // check allocations for collection 2
-        let assigned =
-            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Collection(2))), &pool)
-                .await
-                .expect("Failed to load assigned samples for first collection");
+        // check allocations for project 2
+        let assigned = Allocation::fetch_all(Some(Arc::new(AllocationFilter::Project(2))), &pool)
+            .await
+            .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
         assert_eq!(assigned[0].sample.id, 1);
-        assert_eq!(assigned[0].collection.id, 2);
+        assert_eq!(assigned[0].project.id, 2);
         check_sample(&assigned[0], &pool).await;
 
         assert_eq!(assigned[1].sample.id, 3);
-        assert_eq!(assigned[1].collection.id, 2);
+        assert_eq!(assigned[1].project.id, 2);
         check_sample(&assigned[1], &pool).await;
 
         // check allocations for sample 1
         let assigned = Allocation::fetch_all(Some(Arc::new(AllocationFilter::Sample(1))), &pool)
             .await
-            .expect("Failed to load assigned samples for first collection");
+            .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
         assert_eq!(assigned[0].sample.id, 1);
-        assert_eq!(assigned[0].collection.id, 1);
+        assert_eq!(assigned[0].project.id, 1);
         check_sample(&assigned[0], &pool).await;
 
         assert_eq!(assigned[1].sample.id, 1);
-        assert_eq!(assigned[1].collection.id, 2);
+        assert_eq!(assigned[1].project.id, 2);
         check_sample(&assigned[1], &pool).await;
     }
 }

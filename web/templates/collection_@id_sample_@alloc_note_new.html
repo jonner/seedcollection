@@ -5,14 +5,14 @@
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
-{"name": "Collections", "link": ("/collection/list" | app_url) },
-{"name": allocation.collection.id | idfmt("C"), "link": ("/collection/" ~ allocation.collection.id) | app_url },
-{"name": allocation.sample.id | idfmt("S"), "link": ("/collection/" ~ allocation.collection.id ~ "/sample/" ~ allocation.id) | app_url },
+{"name": "Projects", "link": ("/collection/list" | app_url) },
+{"name": allocation.project.id | idfmt("C"), "link": ("/collection/" ~ allocation.project.id) | app_url },
+{"name": allocation.sample.id | idfmt("S"), "link": ("/collection/" ~ allocation.project.id ~ "/sample/" ~ allocation.id) | app_url },
 {"name": "Add Note", "active": true },
 ]) }}
 <h2>{{ self.title() }}</h2>
 <div>Sample {{ allocation.sample.id | idfmt("S") }}: {{ allocation.sample.taxon.complete_name }}</div>
-<div>Collection {{ allocation.collection.id | idfmt("C") }}: {{ allocation.collection.name }}</div>
+<div>Project {{ allocation.project.id | idfmt("C") }}: {{ allocation.project.name }}</div>
 {{ allocation_note_form(allocation, message=message) }}
 {% endblock %}
 

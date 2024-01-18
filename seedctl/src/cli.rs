@@ -18,10 +18,10 @@ pub enum Commands {
         #[command(subcommand)]
         command: TaxonomyCommands,
     },
-    #[command(about = "Manage seed collections")]
-    Collection {
+    #[command(about = "Manage seed projects")]
+    Project {
         #[command(subcommand)]
-        command: CollectionCommands,
+        command: ProjectCommands,
     },
     #[command(about = "Manage sources")]
     Source {
@@ -41,13 +41,13 @@ pub enum Commands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum CollectionCommands {
-    #[command(about = "List all collections")]
+pub enum ProjectCommands {
+    #[command(about = "List all projects")]
     List {
         #[arg(short, long)]
         full: bool,
     },
-    #[command(about = "Add a new collection to the database")]
+    #[command(about = "Add a new project to the database")]
     Add {
         #[arg(short, long)]
         name: String,
@@ -57,7 +57,7 @@ pub enum CollectionCommands {
         userid: i64,
     },
     #[command(
-        about="Modify properties of a collection",
+        about="Modify properties of a project",
         group(
             clap::ArgGroup::new("modify")
                 .required(true)
@@ -72,23 +72,23 @@ pub enum CollectionCommands {
         #[arg(short, long)]
         description: Option<String>,
     },
-    #[command(about = "Remove a collection from the database")]
+    #[command(about = "Remove a project from the database")]
     Remove { id: i64 },
-    #[command(about = "Add a new sample to the collection")]
+    #[command(about = "Add a new sample to the project")]
     AddSample {
         #[arg(short, long)]
-        collection: i64,
+        project: i64,
         #[arg(short, long)]
         sample: i64,
     },
-    #[command(about = "Remove an existing sample from the collection")]
+    #[command(about = "Remove an existing sample from the project")]
     RemoveSample {
         #[arg(short, long)]
-        collection: i64,
+        project: i64,
         #[arg(short, long)]
         sample: i64,
     },
-    #[command(about = "Show all details about a collection")]
+    #[command(about = "Show all details about a project")]
     Show {
         id: i64,
         #[arg(short, long)]

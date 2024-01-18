@@ -53,7 +53,7 @@
 <h5>Allocations</h5>
 <ul>
     {% for a in allocations %}
-    <li><a href="{{ ("/collection/" ~ a.collection.id ~ "/sample/" ~ a.id) | app_url }}">{{ a.collection.name }}</a>
+    <li><a href="{{ ("/collection/" ~ a.project.id ~ "/sample/" ~ a.id) | app_url }}">{{ a.project.name }}</a>
     </li>
     {% else %}
     <li>None</li>

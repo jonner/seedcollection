@@ -18,7 +18,7 @@ pub mod allocation;
 pub mod note;
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize, PartialEq)]
-pub struct Collection {
+pub struct Project {
     #[sqlx(rename = "collectionid")]
     pub id: i64,
     pub name: String,
@@ -32,7 +32,7 @@ pub struct Collection {
     loaded: bool,
 }
 
-impl Default for Collection {
+impl Default for Project {
     fn default() -> Self {
         Self {
             id: -1,
@@ -46,11 +46,11 @@ impl Default for Collection {
 }
 
 #[async_trait]
-impl Loadable for Collection {
+impl Loadable for Project {
     type Id = i64;
 
     fn new_loadable(id: Self::Id) -> Self {
-        let mut c: Collection = Default::default();
+        let mut c: Project = Default::default();
         c.id = id;
         c
     }
@@ -64,7 +64,7 @@ impl Loadable for Collection {
     }
 
     async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        Collection::fetch(self.id, pool).await
+        Project::fetch(self.id, pool).await
     }
 }
 
@@ -99,7 +99,7 @@ impl FilterPart for Filter {
     }
 }
 
-impl Collection {
+impl Project {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT C.collectionid, C.name, C.description, C.userid, U.username
@@ -132,7 +132,7 @@ impl Collection {
             .fetch_all(pool)
             .await
             .and_then(|mut v| {
-                let _ = v.iter_mut().map(|c: &mut Collection| {
+                let _ = v.iter_mut().map(|c: &mut Project| {
                     c.loaded = true;
                     c
                 });
@@ -147,7 +147,7 @@ impl Collection {
         pool: &Pool<Sqlite>,
     ) -> Result<()> {
         let mut fbuilder =
-            FilterBuilder::new(FilterOp::And).push(Arc::new(AllocationFilter::Collection(self.id)));
+            FilterBuilder::new(FilterOp::And).push(Arc::new(AllocationFilter::Project(self.id)));
         if let Some(filter) = filter {
             fbuilder = fbuilder.push(filter);
         }
@@ -235,7 +235,7 @@ impl Collection {
 
 #[cfg(test)]
 mod tests {
-    use crate::collection::Collection;
+    use crate::collection::Project;
     use crate::loadable::Loadable;
     use sqlx::Pool;
     use sqlx::Sqlite;
@@ -247,10 +247,10 @@ mod tests {
     ))]
     async fn test_insert_collections(pool: Pool<Sqlite>) {
         async fn check(pool: &Pool<Sqlite>, name: String, desc: Option<String>, userid: i64) {
-            let mut c = Collection::new(name, desc, userid);
+            let mut c = Project::new(name, desc, userid);
             let res = c.insert(&pool).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
-            let mut cload = Collection::new_loadable(res.last_insert_rowid());
+            let mut cload = Project::new_loadable(res.last_insert_rowid());
             cload.load(&pool).await.expect("Failed to load collection");
             assert_eq!(c, cload);
         }

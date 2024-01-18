@@ -16,7 +16,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::{self, Collection},
+    collection::{self, Project},
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::Loadable,
@@ -31,27 +31,25 @@ use tracing::warn;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/new", get(new_collection).post(insert_collection))
-        .route("/list", get(list_collections))
-        .route("/filter", get(filter_collections))
+        .route("/new", get(show_new_project).post(insert_project))
+        .route("/list", get(list_projects))
+        .route("/filter", get(filter_projects))
         .route(
             "/:id",
-            get(show_collection)
-                .put(modify_collection)
-                .delete(delete_collection),
+            get(show_project).put(modify_project).delete(delete_project),
         )
-        .route("/:id/edit", get(show_collection))
-        .route("/:id/filter", get(filter_collection_samples))
+        .route("/:id/edit", get(show_project))
+        .route("/:id/filter", get(filter_project_samples))
         .route("/:id/add", get(show_add_sample).post(add_sample))
         .nest("/:id/sample/", super::allocation::router())
 }
 
-async fn list_collections(
+async fn list_projects(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let collections = Collection::fetch_all(
+    let projects = Project::fetch_all(
         Some(Arc::new(collection::Filter::User(user.id))),
         &state.dbpool,
     )
@@ -60,7 +58,7 @@ async fn list_collections(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collections => collections),
+                 collections => projects),
     )
     .into_response())
 }
@@ -70,7 +68,7 @@ struct FilterParams {
     fragment: String,
 }
 
-async fn filter_collections(
+async fn filter_projects(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
@@ -91,17 +89,17 @@ async fn filter_collections(
         .push(Arc::new(collection::Filter::User(user.id)))
         .build();
 
-    let collections = Collection::fetch_all(Some(filter), &state.dbpool).await?;
+    let projects = Project::fetch_all(Some(filter), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collections => collections),
+                 collections => projects),
     )
     .into_response())
 }
 
-async fn new_collection(
+async fn show_new_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
@@ -110,7 +108,7 @@ async fn new_collection(
 }
 
 #[derive(Deserialize, Serialize)]
-struct CollectionParams {
+struct ProjectParams {
     name: String,
     #[serde(deserialize_with = "empty_string_as_none")]
     description: Option<String>,
@@ -118,26 +116,26 @@ struct CollectionParams {
 
 async fn do_insert(
     user: SqliteUser,
-    params: &CollectionParams,
+    params: &ProjectParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
 
-    let mut collection = Collection::new(
+    let mut project = Project::new(
         params.name.clone(),
         params.description.as_ref().cloned(),
         user.id,
     );
-    collection.insert(&state.dbpool).await.map_err(|e| e.into())
+    project.insert(&state.dbpool).await.map_err(|e| e.into())
 }
 
-async fn insert_collection(
+async fn insert_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Form(params): Form<CollectionParams>,
+    Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     match do_insert(user, &params, &state).await {
         Err(e) => Ok(RenderHtml(
@@ -152,10 +150,10 @@ async fn insert_collection(
         .into_response()),
         Ok(result) => {
             let id = result.last_insert_rowid();
-            let collectionurl = app_url(&format!("/collection/{}", id));
+            let projecturl = app_url(&format!("/collection/{}", id));
 
             Ok((
-                [("HX-Redirect", collectionurl)],
+                [("HX-Redirect", projecturl)],
                 RenderHtml(
                     key,
                     state.tmpl.clone(),
@@ -175,7 +173,7 @@ async fn insert_collection(
     }
 }
 
-async fn show_collection(
+async fn show_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
@@ -184,49 +182,49 @@ async fn show_collection(
     let fb = FilterBuilder::new(FilterOp::And)
         .push(Arc::new(collection::Filter::Id(id)))
         .push(Arc::new(collection::Filter::User(user.id)));
-    let mut collections = Collection::fetch_all(Some(fb.build()), &state.dbpool).await?;
-    let Some(mut c) = collections.pop() else {
+    let mut projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
+    let Some(mut project) = projects.pop() else {
         return Err(Error::NotFound(
             "That collection does not exist".to_string(),
         ));
     };
-    c.fetch_samples(None, &state.dbpool).await?;
+    project.fetch_samples(None, &state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collection => c),
+                 collection => project),
     )
     .into_response())
 }
 
 async fn do_update(
     id: i64,
-    params: &CollectionParams,
+    params: &ProjectParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
-    let mut collection = Collection::fetch(id, &state.dbpool).await?;
-    collection.name = params.name.clone();
-    collection.description = params.description.clone();
-    collection.update(&state.dbpool).await.map_err(|e| e.into())
+    let mut project = Project::fetch(id, &state.dbpool).await?;
+    project.name = params.name.clone();
+    project.description = params.description.clone();
+    project.update(&state.dbpool).await.map_err(|e| e.into())
 }
 
-async fn modify_collection(
+async fn modify_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
-    Form(params): Form<CollectionParams>,
+    Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let fb = FilterBuilder::new(FilterOp::And)
         .push(Arc::new(collection::Filter::Id(id)))
         .push(Arc::new(collection::Filter::User(user.id)));
-    let collections = Collection::fetch_all(Some(fb.build()), &state.dbpool).await?;
-    if collections.is_empty() {
+    let projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
+    if projects.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());
     };
     let (request, message, headers) = match do_update(id, &params, &state).await {
@@ -247,13 +245,13 @@ async fn modify_collection(
             Some([("HX-Redirect", app_url(&format!("/collection/{id}")))]),
         ),
     };
-    let c = Collection::fetch(id, &state.dbpool).await?;
+    let project = Project::fetch(id, &state.dbpool).await?;
     Ok((
         headers,
         RenderHtml(
             key,
             state.tmpl.clone(),
-            context!(collection => c,
+            context!(collection => project,
              message => message,
              request => request,
             ),
@@ -262,22 +260,22 @@ async fn modify_collection(
         .into_response())
 }
 
-async fn delete_collection(
+async fn delete_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut c = Collection::fetch(id, &state.dbpool)
+    let mut project = Project::fetch(id, &state.dbpool)
         .await
         .map_err(|_| Error::NotFound("That collection does not exist".to_string()))?;
-    if c.userid != user.id {
+    if project.userid != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete this collection".to_string(),
         ));
     }
 
-    let errmsg = match c.delete(&state.dbpool).await {
+    let errmsg = match project.delete(&state.dbpool).await {
         Err(e) => e.to_string(),
         Ok(res) if (res.rows_affected() == 0) => "No collection found".to_string(),
         Ok(_) => {
@@ -292,7 +290,7 @@ async fn delete_collection(
         key,
         state.tmpl.clone(),
         context!(
-        collection => c,
+        collection => project,
         message => Message {
             r#type: MessageType::Error,
             msg: format!("Failed to delete collection: {errmsg}")
@@ -306,16 +304,16 @@ async fn add_sample_prep(
     user: &SqliteUser,
     id: i64,
     state: &AppState,
-) -> Result<(Collection, Vec<Sample>), error::Error> {
-    let c = Collection::fetch(id, &state.dbpool).await?;
+) -> Result<(Project, Vec<Sample>), error::Error> {
+    let project = Project::fetch(id, &state.dbpool).await?;
 
-    let ids_in_collection = sqlx::query!(
+    let ids_in_project = sqlx::query!(
         "SELECT CS.sampleid from sc_collection_samples CS WHERE CS.collectionid=?",
         id
     )
     .fetch_all(&state.dbpool)
     .await?;
-    let ids = ids_in_collection.iter().map(|row| row.sampleid).collect();
+    let ids = ids_in_project.iter().map(|row| row.sampleid).collect();
 
     /* FIXME: make this more efficient by changeing it to filter by
      *  'WHERE NOT IN (SELECT ids from...)'
@@ -329,7 +327,7 @@ async fn add_sample_prep(
         &state.dbpool,
     )
     .await?;
-    Ok((c, samples))
+    Ok((project, samples))
 }
 
 async fn show_add_sample(
@@ -392,12 +390,12 @@ async fn add_sample(
         }
     });
 
-    let mut collection = Collection::fetch(id, &state.dbpool).await?;
+    let mut project = Project::fetch(id, &state.dbpool).await?;
     let mut n_inserted = 0;
     let mut messages = Vec::new();
     for sample in valid_samples {
         let s = Sample::new_loadable(sample);
-        match collection.allocate_sample(s, &state.dbpool).await {
+        match project.allocate_sample(s, &state.dbpool).await {
             Err(e) => messages.push(Message {
                 r#type: MessageType::Error,
                 msg: format!(
@@ -420,18 +418,18 @@ async fn add_sample(
         );
     }
 
-    let (c, samples) = add_sample_prep(&user, id, &state).await?;
+    let (project, samples) = add_sample_prep(&user, id, &state).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(collection => c,
+        context!(collection => project,
                  messages => messages,
                  samples => samples),
     )
     .into_response())
 }
 
-async fn filter_collection_samples(
+async fn filter_project_samples(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
@@ -458,15 +456,15 @@ async fn filter_collection_samples(
         fbuilder = fbuilder.push(subfilter);
     }
 
-    let mut collection = Collection::fetch(id, &state.dbpool).await?;
-    collection
+    let mut project = Project::fetch(id, &state.dbpool).await?;
+    project
         .fetch_samples(Some(fbuilder.build()), &state.dbpool)
         .await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 collection => collection),
+                 collection => project),
     )
     .into_response())
 }

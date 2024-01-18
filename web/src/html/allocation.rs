@@ -10,7 +10,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    collection::{self, Allocation, AllocationFilter, Collection, Note, NoteType},
+    collection::{self, Allocation, AllocationFilter, Note, NoteType, Project},
     empty_string_as_none,
     filter::{FilterBuilder, FilterOp},
 };
@@ -51,7 +51,7 @@ async fn show_allocation(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Collection(collectionid)))
+                .push(Arc::new(AllocationFilter::Project(collectionid)))
                 .build(),
         ),
         &state.dbpool,
@@ -90,7 +90,7 @@ async fn add_allocation_note(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Collection(collectionid)))
+                .push(Arc::new(AllocationFilter::Project(collectionid)))
                 .build(),
         ),
         &state.dbpool,
@@ -138,7 +138,7 @@ async fn show_add_allocation_note(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(AllocationFilter::Id(allocid)))
                 .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Collection(collectionid)))
+                .push(Arc::new(AllocationFilter::Project(collectionid)))
                 .build(),
         ),
         &state.dbpool,
@@ -161,7 +161,7 @@ async fn remove_allocation(
     Path((id, csid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut collections =
-        Collection::fetch_all(Some(Arc::new(collection::Filter::Id(id))), &state.dbpool).await?;
+        Project::fetch_all(Some(Arc::new(collection::Filter::Id(id))), &state.dbpool).await?;
     let Some(c) = collections.pop() else {
         return Err(Error::NotFound(
             "That collection does not exist".to_string(),
@@ -189,7 +189,7 @@ async fn delete_note(
     // make sure this is a note the user can delete
     let note = Note::fetch(noteid, &state.dbpool).await?;
     let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.collection.id != collectionid {
+    if note.csid != allocid || allocation.project.id != collectionid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {
@@ -211,7 +211,7 @@ async fn show_edit_note(
     // make sure this is a note the user can edit
     let note = Note::fetch(noteid, &state.dbpool).await?;
     let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.collection.id != collectionid {
+    if note.csid != allocid || allocation.project.id != collectionid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {
@@ -242,7 +242,7 @@ async fn modify_note(
     // make sure this is a note the user can edit
     let mut note = Note::fetch(noteid, &state.dbpool).await?;
     let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.collection.id != collectionid {
+    if note.csid != allocid || allocation.project.id != collectionid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {

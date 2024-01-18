@@ -1,8 +1,8 @@
 {% extends "root.html" %}
 {% from "_collection_macros.html" import icon, collection_list %}
-{% block title %}Collections{% endblock %}
+{% block title %}Projects{% endblock %}
 {% block content %}
-<h2><span class="me-2">{{ icon("collection") }}</span>Collections <a class="ms-2" href="{{ "/collection/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
+<h2><span class="me-2">{{ icon("collection") }}</span>Projects <a class="ms-2" href="{{ "/collection/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
     <form 
          hx-swap="outerHTML"

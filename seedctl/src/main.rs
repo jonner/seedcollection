@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::*;
 use libseed::{
-    collection::{Allocation, Collection},
+    collection::{Allocation, Project},
     loadable::Loadable,
     sample::Sample,
     source::Source,
@@ -87,7 +87,7 @@ impl ConstructTable for Vec<Sample> {
     }
 }
 
-impl ConstructTable for Collection {
+impl ConstructTable for Project {
     type Item = Allocation;
 
     fn table_headers(&self, full: bool) -> Vec<&'static str> {
@@ -139,87 +139,87 @@ async fn main() -> Result<()> {
         SqlitePool::connect(&format!("sqlite://{}", args.database.to_string_lossy())).await?;
     sqlx::migrate!("../db/migrations").run(&dbpool).await?;
     match args.command {
-        Commands::Collection { command } => match command {
-            CollectionCommands::List { full } => {
-                let collections = Collection::fetch_all(None, &dbpool).await?;
+        Commands::Project { command } => match command {
+            ProjectCommands::List { full } => {
+                let projects = Project::fetch_all(None, &dbpool).await?;
                 let mut tbuilder = tabled::builder::Builder::new();
                 let mut header = vec!["ID", "Name"];
                 if full {
                     header.push("Description");
                 }
                 tbuilder.set_header(header);
-                for collection in &collections {
-                    let mut vals = vec![collection.id.to_string(), collection.name.clone()];
+                for project in &projects {
+                    let mut vals = vec![project.id.to_string(), project.name.clone()];
                     if full {
-                        vals.push(collection.description.clone().unwrap_or("".to_string()));
+                        vals.push(project.description.clone().unwrap_or("".to_string()));
                     }
                     tbuilder.push_record(vals);
                 }
-                print_table(tbuilder, collections.len());
+                print_table(tbuilder, projects.len());
                 Ok(())
             }
-            CollectionCommands::Add {
+            ProjectCommands::Add {
                 name,
                 description,
                 userid,
             } => {
-                let mut collection = Collection::new(name, description, userid);
-                let id = collection.insert(&dbpool).await?.last_insert_rowid();
-                let collection = Collection::fetch(id, &dbpool).await?;
-                println!("Added collection to database:");
-                println!("{}: {}", collection.id, collection.name);
+                let mut project = Project::new(name, description, userid);
+                let id = project.insert(&dbpool).await?.last_insert_rowid();
+                let project = Project::fetch(id, &dbpool).await?;
+                println!("Added project to database:");
+                println!("{}: {}", project.id, project.name);
                 Ok(())
             }
-            CollectionCommands::Modify {
+            ProjectCommands::Modify {
                 id,
                 name,
                 description,
             } => {
-                let mut collection = Collection::fetch(id, &dbpool).await?;
+                let mut project = Project::fetch(id, &dbpool).await?;
                 if let Some(name) = name {
-                    collection.name = name
+                    project.name = name
                 }
                 if let Some(description) = description {
-                    collection.description = Some(description);
+                    project.description = Some(description);
                 }
-                collection.update(&dbpool).await?;
-                println!("Modified collection...");
+                project.update(&dbpool).await?;
+                println!("Modified project...");
                 Ok(())
             }
-            CollectionCommands::Remove { id } => {
-                let mut collection = Collection::new_loadable(id);
-                collection.delete(&dbpool).await?;
-                println!("Removed collection {id}");
+            ProjectCommands::Remove { id } => {
+                let mut project = Project::new_loadable(id);
+                project.delete(&dbpool).await?;
+                println!("Removed project {id}");
                 Ok(())
             }
-            CollectionCommands::AddSample { collection, sample } => {
-                let mut collection = Collection::fetch(collection, &dbpool).await?;
+            ProjectCommands::AddSample { project, sample } => {
+                let mut project = Project::fetch(project, &dbpool).await?;
                 let sample = Sample::new_loadable(sample);
-                collection.allocate_sample(sample, &dbpool).await?;
-                println!("Added sample to collection");
+                project.allocate_sample(sample, &dbpool).await?;
+                println!("Added sample to project");
                 Ok(())
             }
-            CollectionCommands::RemoveSample { collection, sample } => {
+            ProjectCommands::RemoveSample { project, sample } => {
                 sqlx::query!(
                     r#"DELETE FROM sc_collection_samples WHERE collectionid=? AND sampleid=?"#,
-                    collection,
+                    project,
                     sample,
                 )
                 .execute(&dbpool)
                 .await?;
-                println!("Removed sample from collection");
+                println!("Removed sample from project");
                 Ok(())
             }
-            CollectionCommands::Show { id, full } => {
-                let mut collectioninfo = Collection::fetch(id, &dbpool).await?;
-                collectioninfo.fetch_samples(None, &dbpool).await?;
-                println!("Collection ID: {}", id);
-                println!("Collection name: {}", collectioninfo.name);
-                if let Some(desc) = &collectioninfo.description {
+            ProjectCommands::Show { id, full } => {
+                let mut projectinfo = Project::fetch(id, &dbpool).await?;
+                projectinfo.fetch_samples(None, &dbpool).await?;
+                println!("Project ID: {}", id);
+                println!("Project name: {}", projectinfo.name);
+                if let Some(desc) = &projectinfo.description {
                     println!("  {}", desc);
                 }
                 println!();
-                let (builder, nitems) = collectioninfo.construct_table(full)?;
+                let (builder, nitems) = projectinfo.construct_table(full)?;
                 print_table(builder, nitems);
                 Ok(())
             }
@@ -302,7 +302,7 @@ async fn main() -> Result<()> {
                     src.longitude = Some(longitude);
                 }
                 src.update(&dbpool).await?;
-                println!("Modified collection...");
+                println!("Modified source...");
                 Ok(())
             }
         },
@@ -380,7 +380,7 @@ async fn main() -> Result<()> {
                     sample.quantity = Some(quantity.into());
                 }
                 sample.update(&dbpool).await?;
-                println!("Modified collection...");
+                println!("Modified sample...");
                 Ok(())
             }
         },

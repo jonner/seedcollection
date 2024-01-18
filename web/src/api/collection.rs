@@ -11,7 +11,7 @@ use axum::{
     Form, Router,
 };
 use libseed::{
-    collection::{Collection, Filter},
+    collection::{Filter, Project},
     loadable::Loadable,
     sample::Sample,
 };
@@ -20,40 +20,32 @@ use std::sync::Arc;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/", get(root))
-        .route("/list", get(list_collections))
-        .route("/new", post(add_collection))
+        .route("/list", get(list_projects))
+        .route("/new", post(add_project))
         .route("/:id/sample/:sampleid", delete(remove_sample))
         .route("/:id/add", post(add_sample))
         .route(
             "/:id",
-            get(show_collection)
-                .put(modify_collection)
-                .delete(delete_collection),
+            get(show_project).put(modify_project).delete(delete_project),
         )
 }
 
-async fn root() -> Html<String> {
-    Html("Collections".to_string())
-}
-
-async fn list_collections(
+async fn list_projects(
     user: SqliteUser,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let collections =
-        Collection::fetch_all(Some(Arc::new(Filter::User(user.id))), &state.dbpool).await?;
-    Ok(Json(collections).into_response())
+    let projects = Project::fetch_all(Some(Arc::new(Filter::User(user.id))), &state.dbpool).await?;
+    Ok(Json(projects).into_response())
 }
 
-async fn show_collection(
+async fn show_project(
     _user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<Collection>, error::Error> {
-    let mut collection = Collection::fetch(id, &state.dbpool).await?;
-    collection.fetch_samples(None, &state.dbpool).await?;
-    Ok(Json(collection))
+) -> Result<Json<Project>, error::Error> {
+    let mut project = Project::fetch(id, &state.dbpool).await?;
+    project.fetch_samples(None, &state.dbpool).await?;
+    Ok(Json(project))
 }
 
 #[derive(Deserialize)]
@@ -62,7 +54,7 @@ struct ModifyProps {
     description: Option<String>,
 }
 
-async fn modify_collection(
+async fn modify_project(
     user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -71,28 +63,28 @@ async fn modify_collection(
     if params.name.is_none() && params.description.is_none() {
         return Err(anyhow!("No params to modify").into());
     }
-    let mut collection = Collection::fetch(id, &state.dbpool).await?;
-    if collection.userid != user.id {
+    let mut project = Project::fetch(id, &state.dbpool).await?;
+    if project.userid != user.id {
         return Err(Error::Unauthorized(
             "No permission to modify this collection".to_string(),
         ));
     }
     if let Some(name) = params.name {
-        collection.name = name;
+        project.name = name;
     }
     if let Some(desc) = params.description {
-        collection.description = Some(desc);
+        project.description = Some(desc);
     }
-    collection.update(&state.dbpool).await?;
+    project.update(&state.dbpool).await?;
     Ok(())
 }
 
-async fn delete_collection(
+async fn delete_project(
     user: SqliteUser,
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
-    let mut c = Collection::fetch(id, &state.dbpool)
+    let mut c = Project::fetch(id, &state.dbpool)
         .await
         .map_err(|_| Error::NotFound("That collection does not exist".to_string()))?;
     if c.userid != user.id {
@@ -111,13 +103,13 @@ struct AddProps {
     description: Option<String>,
 }
 
-async fn add_collection(
+async fn add_project(
     user: SqliteUser,
     Query(params): Query<AddProps>,
     State(state): State<AppState>,
 ) -> Result<Json<i64>, error::Error> {
-    let mut collection = Collection::new(params.name, params.description, user.id);
-    let id = collection.insert(&state.dbpool).await?.last_insert_rowid();
+    let mut project = Project::new(params.name, params.description, user.id);
+    let id = project.insert(&state.dbpool).await?.last_insert_rowid();
     Ok(Json(id))
 }
 
@@ -151,9 +143,9 @@ async fn add_sample(
     Path(id): Path<i64>,
     Form(params): Form<AddSampleProps>,
 ) -> Result<Json<i64>, error::Error> {
-    let mut collection = Collection::fetch(id, &state.dbpool).await?;
+    let mut project = Project::fetch(id, &state.dbpool).await?;
     let sample = Sample::new_loadable(params.sample);
-    let id = collection
+    let id = project
         .allocate_sample(sample, &state.dbpool)
         .await?
         .last_insert_rowid();
