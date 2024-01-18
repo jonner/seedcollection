@@ -59,6 +59,11 @@ async fn show_allocation(
     .await?;
 
     allocation.fetch_notes(&state.dbpool).await?;
+    allocation
+        .sample
+        .taxon
+        .fetch_germination_info(&state.dbpool)
+        .await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
