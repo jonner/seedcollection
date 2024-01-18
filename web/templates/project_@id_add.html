@@ -1,5 +1,6 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon, breadcrumbs %}
+{% from "_project_macros.html" import project_add_sample %}
 {% block title %}Add Samples to Project{% endblock %}
 {% block content %}
 {{ breadcrumbs([
@@ -9,5 +10,5 @@
 {"name": "Add Samples", "active": true }]) }}
 <h2>{{ self.title() }}</h2>
 <p>Choose samples to add to the project <i>{{ project.name }}</p>
-{% include "project_@id_add-POST.html" %}
+{{ project_add_sample(project, samples) }}
 {% endblock %}
