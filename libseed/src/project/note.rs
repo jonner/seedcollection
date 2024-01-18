@@ -220,7 +220,7 @@ mod tests {
         migrations = "../db/migrations/",
         fixtures(
             path = "../../../db/fixtures",
-            scripts("users", "locations", "taxa", "csnotes")
+            scripts("users", "sources", "taxa", "csnotes")
         )
     ))]
     async fn test_query_notes(pool: Pool<Sqlite>) {

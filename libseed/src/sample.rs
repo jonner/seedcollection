@@ -292,7 +292,7 @@ mod tests {
 
     #[test(sqlx::test(
         migrations = "../db/migrations/",
-        fixtures(path = "../../db/fixtures", scripts("users", "locations", "taxa"))
+        fixtures(path = "../../db/fixtures", scripts("users", "sources", "taxa"))
     ))]
     async fn insert_samples(pool: Pool<Sqlite>) {
         async fn check(
