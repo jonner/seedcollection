@@ -306,7 +306,7 @@ async fn add_sample_prep(
     let project = Project::fetch(id, &state.dbpool).await?;
 
     let ids_in_project = sqlx::query!(
-        "SELECT CS.sampleid from sc_collection_samples CS WHERE CS.collectionid=?",
+        "SELECT PS.sampleid from sc_project_samples PS WHERE PS.projectid=?",
         id
     )
     .fetch_all(&state.dbpool)
@@ -359,7 +359,7 @@ async fn add_sample(
             _ => None,
         })
         .collect();
-    let res = sqlx::query!("SELECT userid FROM sc_collections WHERE collectionid=?", id)
+    let res = sqlx::query!("SELECT userid FROM sc_projects WHERE projectid=?", id)
         .fetch_one(&state.dbpool)
         .await?;
     if res.userid != Some(user.id) {

@@ -27,10 +27,10 @@ pub enum AllocationFilter {
 impl FilterPart for AllocationFilter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(id) => _ = builder.push(" CS.csid = ").push_bind(*id),
+            Self::Id(id) => _ = builder.push(" PS.psid = ").push_bind(*id),
             Self::User(id) => _ = builder.push(" S.userid = ").push_bind(*id),
-            Self::Project(id) => _ = builder.push(" CS.collectionid = ").push_bind(*id),
-            Self::Sample(id) => _ = builder.push(" CS.sampleid = ").push_bind(*id),
+            Self::Project(id) => _ = builder.push(" PS.projectid = ").push_bind(*id),
+            Self::Sample(id) => _ = builder.push(" PS.sampleid = ").push_bind(*id),
         }
     }
 }
@@ -86,7 +86,7 @@ impl Allocation {
     pub fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
-            SELECT CS.csid,
+            SELECT PS.psid,
 
             S.sampleid, quantity, month, year, notes, certainty,
 
@@ -98,19 +98,19 @@ impl Allocation {
 
             S.userid, U.username,
 
-            C.collectionid, C.name, C.description,
-            N.csnoteid, N.date, N.kind, N.summary, N.details
+            P.projectid, P.projname, P.projdescription,
+            N.pnoteid, N.notedate, N.notetype, N.notesummary, N.notedetails
 
-            FROM sc_collection_samples CS
+            FROM sc_project_samples PS
             INNER JOIN taxonomic_units T ON T.tsn=S.tsn
             INNER JOIN sc_sources L on L.srcid=S.srcid
-            INNER JOIN sc_samples S ON CS.sampleid=S.sampleid
+            INNER JOIN sc_samples S ON PS.sampleid=S.sampleid
             INNER JOIN sc_users U on U.userid=S.userid
-            INNER JOIN sc_collections C on C.collectionid=CS.collectionid
+            INNER JOIN sc_projects P on P.projectid=PS.projectid
             LEFT JOIN ( SELECT * FROM
-            (SELECT *, ROW_NUMBER() OVER (PARTITION BY csid ORDER BY DATE(date) DESC, csnoteid DESC) AS rownr
-            FROM sc_collection_sample_notes ORDER BY csnoteid DESC)
-            WHERE rownr = 1) N ON N.csid = CS.csid
+            (SELECT *, ROW_NUMBER() OVER (PARTITION BY psid ORDER BY DATE(notedate) DESC, pnoteid DESC) AS rownr
+            FROM sc_project_notes ORDER BY pnoteid DESC)
+            WHERE rownr = 1) N ON N.psid = PS.psid
             LEFT JOIN (SELECT * FROM vernaculars WHERE
             (language="English" or language="unspecified")) V on V.tsn=T.tsn
             "#,
@@ -119,7 +119,7 @@ impl Allocation {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" GROUP BY CS.csid, T.tsn ORDER BY phylo_sort_seq");
+        builder.push(" GROUP BY PS.psid, T.tsn ORDER BY phylo_sort_seq");
         builder
     }
 
@@ -166,7 +166,7 @@ impl FromRow<'_, SqliteRow> for Allocation {
             notes.push(n);
         }
         Ok(Self {
-            id: row.try_get("csid")?,
+            id: row.try_get("psid")?,
             sample: Sample::from_row(row).map(|mut s| {
                 s.loaded = true;
                 s

@@ -201,7 +201,7 @@ async fn main() -> Result<()> {
             }
             ProjectCommands::RemoveSample { project, sample } => {
                 sqlx::query!(
-                    r#"DELETE FROM sc_collection_samples WHERE collectionid=? AND sampleid=?"#,
+                    r#"DELETE FROM sc_project_samples WHERE projectid=? AND sampleid=?"#,
                     project,
                     sample,
                 )

@@ -124,7 +124,7 @@ async fn remove_sample(
     State(state): State<AppState>,
     Path(RemoveSampleParams { id, sampleid }): Path<RemoveSampleParams>,
 ) -> Result<(), error::Error> {
-    sqlx::query("DELETE FROM sc_collection_samples WHERE collectionid=? AND sampleid=?")
+    sqlx::query("DELETE FROM sc_project_samples WHERE projectid=? AND sampleid=?")
         .bind(id)
         .bind(sampleid)
         .execute(&state.dbpool)

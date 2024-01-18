@@ -40,12 +40,16 @@ pub enum NoteFilter {
 
 #[derive(sqlx::FromRow, Deserialize, Serialize, Debug, PartialEq)]
 pub struct Note {
-    #[sqlx(rename = "csnoteid")]
+    #[sqlx(rename = "pnoteid")]
     pub id: i64,
-    pub csid: i64,
+    pub psid: i64,
+    #[sqlx(rename = "notedate")]
     pub date: Date,
+    #[sqlx(rename = "notetype")]
     pub kind: NoteType,
+    #[sqlx(rename = "notesummary")]
     pub summary: String,
+    #[sqlx(rename = "notedetails")]
     pub details: Option<String>,
     #[sqlx(skip)]
     pub loaded: bool,
@@ -55,7 +59,7 @@ impl Default for Note {
     fn default() -> Self {
         Self {
             id: -1,
-            csid: -1,
+            psid: -1,
             date: Date::MIN,
             kind: NoteType::Other,
             summary: Default::default(),
@@ -91,15 +95,15 @@ impl Loadable for Note {
 impl FilterPart for NoteFilter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(i) => _ = builder.push(" csnoteid=").push_bind(*i),
-            Self::AllocationId(i) => _ = builder.push(" csid=").push_bind(*i),
+            Self::Id(i) => _ = builder.push(" pnoteid=").push_bind(*i),
+            Self::AllocationId(i) => _ = builder.push(" psid=").push_bind(*i),
         }
     }
 }
 
 impl Note {
     pub fn new(
-        csid: i64,
+        psid: i64,
         date: Date,
         kind: NoteType,
         summary: String,
@@ -107,7 +111,7 @@ impl Note {
     ) -> Self {
         Self {
             id: -1,
-            csid,
+            psid,
             date,
             kind,
             summary,
@@ -117,13 +121,13 @@ impl Note {
     }
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
-            r#"SELECT csnoteid, csid, date, kind, summary, details FROM sc_collection_sample_notes"#,
+            r#"SELECT pnoteid, psid, notedate, notetype, notesummary, notedetails FROM sc_project_notes"#,
         );
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" ORDER BY csid, date");
+        builder.push(" ORDER BY psid, notedate");
         tracing::debug!("GENERATED SQL: {}", builder.sql());
         builder
     }
@@ -161,11 +165,11 @@ impl Note {
             return Err(Error::InvalidData("No summary specified".to_string()));
         }
         sqlx::query_as(
-            r#"INSERT INTO sc_collection_sample_notes
-            (csid, date, kind, summary, details)
+            r#"INSERT INTO sc_project_notes
+            (psid, notedate, notetype, notesummary, notedetails)
             VALUES (?, ?, ?, ?, ?) RETURNING *"#,
         )
-        .bind(self.csid)
+        .bind(self.psid)
         .bind(self.date)
         .bind(self.kind as i64)
         .bind(&self.summary)
@@ -181,11 +185,11 @@ impl Note {
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
         sqlx::query_as(
-            r#"UPDATE sc_collection_sample_notes
-            SET csid=?, date=?, kind=?, summary=?, details=? WHERE csnoteid=?
+            r#"UPDATE sc_project_notes
+            SET psid=?, notedate=?, notetype=?, notesummary=?, notedetails=? WHERE pnoteid=?
             RETURNING *"#,
         )
-        .bind(self.csid)
+        .bind(self.psid)
         .bind(self.date)
         .bind(self.kind as i64)
         .bind(&self.summary)
@@ -202,7 +206,7 @@ impl Note {
             ));
         }
 
-        sqlx::query("DELETE FROM sc_collection_sample_notes WHERE csnoteid=?")
+        sqlx::query("DELETE FROM sc_project_notes WHERE pnoteid=?")
             .bind(self.id)
             .execute(pool)
             .await
@@ -227,7 +231,7 @@ mod tests {
         let mut note = Note::fetch(3, &pool).await.expect("Failed to load notes");
         tracing::debug!("{note:?}");
         assert_eq!(note.id, 3);
-        assert_eq!(note.csid, 2);
+        assert_eq!(note.psid, 2);
         assert_eq!(note.date.year(), 2024);
         assert_eq!(note.date.month(), Month::January);
         assert_eq!(note.date.day(), 16);

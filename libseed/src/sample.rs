@@ -185,7 +185,7 @@ impl Sample {
                 self.id
             )));
         }
-        sqlx::query("INSERT INTO sc_samples (tsn, userid, collectedlocation, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO sc_samples (tsn, userid, srcid, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(self.taxon.id)
         .bind(self.user.id)
         .bind(self.source.id)
@@ -215,7 +215,7 @@ impl Sample {
             ));
         }
 
-        sqlx::query("Update sc_samples SET tsn=?, collectedlocation=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")
+        sqlx::query("Update sc_samples SET tsn=?, srcid=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")
             .bind(self.taxon.id)
             .bind(self.source.id)
             .bind(self.month)

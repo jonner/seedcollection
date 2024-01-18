@@ -158,7 +158,7 @@ async fn show_add_allocation_note(
 async fn remove_allocation(
     user: SqliteUser,
     State(state): State<AppState>,
-    Path((id, csid)): Path<(i64, i64)>,
+    Path((id, psid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut projects =
         Project::fetch_all(Some(Arc::new(project::Filter::Id(id))), &state.dbpool).await?;
@@ -169,8 +169,8 @@ async fn remove_allocation(
         return Err(Error::NotFound("That project does not exist".to_string()));
     }
     sqlx::query!(
-        "DELETE FROM sc_collection_samples AS CS WHERE CS.csid=? AND CS.collectionid IN (SELECT C.collectionid FROM sc_collections AS C WHERE C.userid=?)",
-        csid, user.id)
+        "DELETE FROM sc_project_samples AS PS WHERE PS.psid=? AND PS.projectid IN (SELECT P.projectid FROM sc_projects AS P WHERE P.userid=?)",
+        psid, user.id)
         .execute(&state.dbpool)
         .await?;
     Ok(())
@@ -184,8 +184,8 @@ async fn delete_note(
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can delete
     let note = Note::fetch(noteid, &state.dbpool).await?;
-    let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.project.id != projectid {
+    let allocation = Allocation::fetch(note.psid, &state.dbpool).await?;
+    if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {
@@ -206,8 +206,8 @@ async fn show_edit_note(
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
     let note = Note::fetch(noteid, &state.dbpool).await?;
-    let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.project.id != projectid {
+    let allocation = Allocation::fetch(note.psid, &state.dbpool).await?;
+    if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {
@@ -237,8 +237,8 @@ async fn modify_note(
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
     let mut note = Note::fetch(noteid, &state.dbpool).await?;
-    let allocation = Allocation::fetch(note.csid, &state.dbpool).await?;
-    if note.csid != allocid || allocation.project.id != projectid {
+    let allocation = Allocation::fetch(note.psid, &state.dbpool).await?;
+    if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id != user.id {

@@ -19,9 +19,11 @@ pub mod note;
 
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Project {
-    #[sqlx(rename = "collectionid")]
+    #[sqlx(rename = "projectid")]
     pub id: i64,
+    #[sqlx(rename = "projname")]
     pub name: String,
+    #[sqlx(rename = "projdescription")]
     pub description: Option<String>,
     #[sqlx(skip)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -79,21 +81,21 @@ pub enum Filter {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(id) => _ = builder.push(" C.collectionid = ").push_bind(*id),
-            Self::User(id) => _ = builder.push(" C.userid = ").push_bind(*id),
+            Self::Id(id) => _ = builder.push(" P.projectid = ").push_bind(*id),
+            Self::User(id) => _ = builder.push(" P.userid = ").push_bind(*id),
             Self::Name(cmp, frag) => {
                 let s = match cmp {
                     Cmp::Like => format!("%{frag}%"),
                     _ => frag.to_string(),
                 };
-                builder.push(" C.name ").push(cmp).push_bind(s);
+                builder.push(" P.projname ").push(cmp).push_bind(s);
             }
             Self::Description(cmp, frag) => {
                 let s = match cmp {
                     Cmp::Like => format!("%{frag}%"),
                     _ => frag.to_string(),
                 };
-                builder.push(" C.description ").push(cmp).push_bind(s);
+                builder.push(" P.projdescription ").push(cmp).push_bind(s);
             }
         }
     }
@@ -102,8 +104,8 @@ impl FilterPart for Filter {
 impl Project {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
-            r#"SELECT C.collectionid, C.name, C.description, C.userid, U.username
-            FROM sc_collections C INNER JOIN sc_users U ON U.userid=C.userid"#,
+            r#"SELECT P.projectid, P.projname, P.projdescription, P.userid, U.username
+            FROM sc_projects P INNER JOIN sc_users U ON U.userid=P.userid"#,
         );
         if let Some(f) = filter {
             builder.push(" WHERE ");
@@ -161,7 +163,7 @@ impl Project {
         sample: Sample,
         pool: &Pool<Sqlite>,
     ) -> Result<SqliteQueryResult> {
-        sqlx::query("INSERT INTO sc_collection_samples (collectionid, sampleid) VALUES (?, ?)")
+        sqlx::query("INSERT INTO sc_project_samples (projectid, sampleid) VALUES (?, ?)")
             .bind(self.id)
             .bind(sample.id)
             .execute(pool)
@@ -170,7 +172,7 @@ impl Project {
     }
 
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        sqlx::query("INSERT INTO sc_collections (name, description, userid) VALUES (?, ?, ?)")
+        sqlx::query("INSERT INTO sc_projects (projname, projdescription, userid) VALUES (?, ?, ?)")
             .bind(self.name.clone())
             .bind(self.description.clone())
             .bind(self.userid)
@@ -192,7 +194,7 @@ impl Project {
             return Err(Error::InvalidData("No id set".to_string()));
         }
         sqlx::query(
-            "UPDATE sc_collections SET name=?, description=?, userid=? WHERE collectionid=?",
+            "UPDATE sc_projects SET projname=?, projdescription=?, userid=? WHERE projectid=?",
         )
         .bind(self.name.clone())
         .bind(self.description.as_ref().cloned())
@@ -210,7 +212,7 @@ impl Project {
             ));
         }
 
-        sqlx::query("DELETE FROM sc_collections WHERE collectionid=?")
+        sqlx::query("DELETE FROM sc_projects WHERE projectid=?")
             .bind(self.id)
             .execute(pool)
             .await
