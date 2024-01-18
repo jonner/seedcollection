@@ -6,7 +6,7 @@
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
 {"name": "Projects", "link": ("/project/list" | app_url) },
-{"name": project.id | idfmt("C"), "active": true },
+{"name": project.id | idfmt("P"), "active": true },
 ]) }}
 <h2>{{ self.title() }} <a href="{{ ("/project/" ~ project.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ project.description }}</p>

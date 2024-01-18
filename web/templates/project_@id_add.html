@@ -6,7 +6,7 @@
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
 {"name": "Projects", "link": ("/project/list" | app_url) },
-{"name": project.id | idfmt("C"), "link": ("/project/" ~ project.id) | app_url },
+{"name": project.id | idfmt("P"), "link": ("/project/" ~ project.id) | app_url },
 {"name": "Add Samples", "active": true }]) }}
 <h2>{{ self.title() }}</h2>
 <p>Choose samples to add to the project <i>{{ project.name }}</p>

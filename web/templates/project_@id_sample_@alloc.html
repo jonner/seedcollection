@@ -6,7 +6,7 @@
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
 {"name": "Projects", "link": ("/project/list" | app_url) },
-{"name": allocation.project.id | idfmt("C"), "link": ("/project/" ~ allocation.project.id) | app_url },
+{"name": allocation.project.id | idfmt("P"), "link": ("/project/" ~ allocation.project.id) | app_url },
 {"name": allocation.sample.id | idfmt("S"), "active": true },
 ]) }}
 
