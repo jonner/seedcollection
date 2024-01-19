@@ -109,6 +109,14 @@ pub fn app_url(value: &str) -> String {
     [APP_PREFIX, &value.trim_start_matches('/')].join("")
 }
 
+pub fn markdown(value: Option<&str>) -> minijinja::Value {
+    let value = value.unwrap_or("");
+    let parser = pulldown_cmark::Parser::new(value);
+    let mut output = String::new();
+    pulldown_cmark::html::push_html(&mut output, parser);
+    minijinja::Value::from_safe_string(output)
+}
+
 pub fn append_query_param(
     uristr: String,
     key: String,
@@ -206,6 +214,7 @@ async fn main() -> Result<()> {
     jinja.add_filter("append_query_param", append_query_param);
     jinja.add_filter("truncate", truncate_text);
     jinja.add_filter("idfmt", format_id_number);
+    jinja.add_filter("markdown", markdown);
     jinja.add_global("environment", args.env);
     minijinja_contrib::add_to_environment(&mut jinja);
 

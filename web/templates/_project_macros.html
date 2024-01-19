@@ -168,7 +168,7 @@ hx-post="{{ "/project/new" | app_url }}"
                 ({{ sample.year }})
                 {% endif %}
                 {% if sample.notes %}
-                - {{ sample.notes }}
+                - {{ sample.notes | markdown }}
                 {% endif %}
                 </span>
             </label>
