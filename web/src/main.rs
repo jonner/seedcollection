@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use axum::{
     async_trait,
     error_handling::HandleErrorLayer,
@@ -205,7 +205,8 @@ async fn main() -> Result<()> {
         PathBuf::from("certs").join("server.crt"),
         PathBuf::from("certs").join("server.key"),
     )
-    .await?;
+    .await
+    .with_context(|| "Unable to load TLS key and certificate. See certs/README for more info")?;
 
     let mut jinja = Environment::new();
     jinja.set_loader(minijinja::path_loader("web/templates"));
