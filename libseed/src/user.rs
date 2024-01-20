@@ -1,13 +1,15 @@
+use crate::{
+    error::{Error, Result},
+    filter::{DynFilterPart, FilterPart},
+    loadable::Loadable,
+};
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
 use password_hash::{rand_core::OsRng, PasswordHash, SaltString};
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite};
+use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Sqlite};
+use std::sync::Arc;
 
-use crate::{
-    error::{Error, Result},
-    loadable::Loadable,
-};
 
 /// A website user that is stored in the database
 #[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -44,10 +46,36 @@ impl Loadable for User {
     }
 }
 
+enum UserFilter {
+    Id(i64),
+    Username(String),
+}
+
+impl FilterPart for UserFilter {
+    fn add_to_query(&self, builder: &mut QueryBuilder<Sqlite>) {
+        match self {
+            UserFilter::Id(id) => builder.push(" userid=").push_bind(*id),
+            UserFilter::Username(name) => builder.push(" username=").push_bind(name.clone()),
+        };
+    }
+}
+
 impl User {
+    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        let mut builder =
+            QueryBuilder::new("SELECT userid, username, pwhash FROM sc_users");
+        if let Some(f) = filter {
+            builder.push(" WHERE ");
+            f.add_to_query(&mut builder);
+        }
+        builder.push(" ORDER BY username ASC");
+        builder
+    }
+
     /// Fetch all users from the database
     pub async fn fetch_all(pool: &Pool<Sqlite>) -> Result<Vec<User>> {
-        sqlx::query_as("SELECT userid, username, pwhash FROM sc_users ORDER BY username ASC")
+        Self::build_query(None)
+            .build_query_as()
             .fetch_all(pool)
             .await
             .map_err(|e| e.into())
@@ -55,8 +83,8 @@ impl User {
 
     /// Fetch the user with the given id from the database
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<User> {
-        sqlx::query_as("SELECT userid, username, pwhash FROM sc_users WHERE userid=?")
-            .bind(id)
+        Self::build_query(Some(Arc::new(UserFilter::Id(id))))
+            .build_query_as()
             .fetch_one(pool)
             .await
             .map_err(|e| e.into())
@@ -64,8 +92,8 @@ impl User {
 
     /// Fetch the user with the given username from the database
     pub async fn fetch_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
-        sqlx::query_as("SELECT userid, username, pwhash FROM sc_users WHERE username=?")
-            .bind(username)
+        Self::build_query(Some(Arc::new(UserFilter::Username(username.to_string()))))
+            .build_query_as()
             .fetch_optional(pool)
             .await
             .map_err(|e| e.into())
