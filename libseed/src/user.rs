@@ -148,6 +148,44 @@ impl User {
             })
             .map_err(|e| e.into())
     }
+
+    pub fn validate_username(username: &str) -> Result<()> {
+        if username.len() < 5 {
+            return Err(Error::InvalidData(
+                "Usernames must be at least 5 characters long".to_string(),
+            ));
+        }
+
+        let mut chars = username.chars();
+        match chars.next() {
+            Some(first_char) => {
+                if !first_char.is_alphanumeric() {
+                    return Err(Error::InvalidData(
+                        "First character of username must be alphanumeric".to_string(),
+                    ));
+                }
+            }
+            // this should never happen since we checked length above
+            None => {
+                return Err(Error::InvalidData(
+                    "Username must be at least 5 characters long".to_string(),
+                ))
+            }
+        }
+
+        let allowed_chars = "@.-_";
+        if !chars.all(|c| c.is_alphanumeric() || allowed_chars.contains(c)) {
+            return Err(Error::InvalidData(format!(
+                "Usernames can only contain alphanumeric characters or one of {}",
+                allowed_chars
+                    .chars()
+                    .map(|c| format!("'{c}'"))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )));
+        }
+        Ok(())
+    }
 }
 
 impl Default for User {
@@ -211,5 +249,29 @@ mod tests {
         let mut user = User::new_loadable(1);
         user.delete(&pool).await.expect("Failed to delete user");
         assert!(User::fetch(1, &pool).await.is_err());
+    }
+
+    #[test]
+    fn validate_user() {
+        // too short
+        assert!(User::validate_username("foo").is_err());
+        // starts with a non-alphanumeric character
+        assert!(User::validate_username("-foobar").is_err());
+        assert!(User::validate_username("_foobar").is_err());
+        assert!(User::validate_username(".foobar").is_err());
+        assert!(User::validate_username(" foobar").is_err());
+        // contains a space
+        assert!(User::validate_username("foo bar").is_err());
+        // other character
+        assert!(User::validate_username("foo%bar.com").is_err());
+
+        assert!(User::validate_username("foobar").is_ok());
+        assert!(User::validate_username("foo-bar").is_ok());
+        assert!(User::validate_username("foo_bar").is_ok());
+        assert!(User::validate_username("foo.bar").is_ok());
+        assert!(User::validate_username("7foobar").is_ok());
+        assert!(User::validate_username("foo3bar").is_ok());
+        // emails should be ok
+        assert!(User::validate_username("foo@bar.com").is_ok());
     }
 }
