@@ -70,18 +70,12 @@ impl Default for Note {
 impl Loadable for Note {
     type Id = i64;
 
-    fn new_loadable(id: Self::Id) -> Self {
-        let mut note = Self::default();
-        note.id = id;
-        note
+    fn id(&self) -> Self::Id {
+        self.id
     }
 
-    fn is_loadable(&self) -> bool {
-        self.id > 0
-    }
-
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        Note::fetch(self.id, pool).await.map_err(|e| e.into())
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        Note::fetch(id, pool).await.map_err(|e| e.into())
     }
 }
 
@@ -220,8 +214,9 @@ mod tests {
         note.details = None;
         note.date = note.date.replace_year(2019).expect("Unable to update date");
         note.update(&pool).await.expect("Couldn't update the note");
-        let mut loaded = Note::new_loadable(note.id);
-        loaded.load(&pool).await.expect("Failed to load new note");
+        let loaded = Note::load(note.id, &pool)
+            .await
+            .expect("Failed to load new note");
         assert_eq!(note, loaded);
 
         // fetch all notes for a sample

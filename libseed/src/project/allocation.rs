@@ -43,33 +43,16 @@ pub struct Allocation {
     pub notes: Vec<Note>,
 }
 
-impl Default for Allocation {
-    fn default() -> Self {
-        Self {
-            id: -1,
-            sample: Default::default(),
-            project: Default::default(),
-            notes: Default::default(),
-        }
-    }
-}
-
 #[async_trait]
 impl Loadable for Allocation {
     type Id = i64;
 
-    fn new_loadable(id: Self::Id) -> Self {
-        let mut a: Allocation = Default::default();
-        a.id = id;
-        a
+    fn id(&self) -> Self::Id {
+        self.id
     }
 
-    fn is_loadable(&self) -> bool {
-        self.id > 0
-    }
-
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        Allocation::fetch(self.id, pool).await
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        Allocation::fetch(id, pool).await
     }
 }
 
@@ -182,12 +165,14 @@ mod tests {
     async fn fetch_allocations(pool: Pool<Sqlite>) {
         async fn check_sample(a: &Allocation, pool: &Pool<Sqlite>) {
             tracing::debug!("loading sample");
-            let mut s = Sample::new_loadable(a.sample.id);
-            s.load(pool).await.expect("Failed to load sample");
+            let s = Sample::load(a.sample.id, pool)
+                .await
+                .expect("Failed to load sample");
             assert_eq!(a.sample, s);
 
-            let mut c = Project::new_loadable(a.project.id);
-            c.load(pool).await.expect("Failed to load project");
+            let c = Project::load(a.project.id, pool)
+                .await
+                .expect("Failed to load project");
             assert_eq!(a.project, c);
         }
 

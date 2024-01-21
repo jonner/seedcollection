@@ -12,10 +12,8 @@ use axum::{
 };
 use libseed::{
     empty_string_as_none,
-    loadable::Loadable,
+    loadable::ExternalRef,
     sample::{Certainty, Sample},
-    source::Source,
-    taxonomy::Taxon,
 };
 use serde::Deserialize;
 
@@ -84,10 +82,10 @@ async fn modify_sample(
     }
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
     if let Some(taxon) = params.taxon {
-        sample.taxon = Taxon::new_loadable(taxon);
+        sample.taxon = ExternalRef::Stub(taxon);
     }
     if let Some(source) = params.source {
-        sample.source = Source::new_loadable(source);
+        sample.source = ExternalRef::Stub(source);
     }
     if let Some(month) = params.month {
         sample.month = Some(month);
@@ -138,7 +136,7 @@ async fn delete_sample(
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
     let sample = Sample::fetch(id, &state.dbpool).await?;
-    if sample.user.id != user.id {
+    if sample.user.id() != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete sample".to_string(),
         ));

@@ -1,32 +1,32 @@
+use anyhow::{anyhow, Result};
+use clap::Parser;
+use cli::*;
+use libseed::loadable::ExternalRef;
+use libseed::loadable::Loadable;
+use libseed::{
+    project::{Allocation, Project},
+    sample::Sample,
+    source::Source,
+    taxonomy::{filter_by, Taxon},
+    user::User,
+};
+use sqlx::SqlitePool;
 use std::io::stdin;
 use std::io::stdout;
 use std::io::Write;
 use std::path::PathBuf;
-
-use anyhow::{anyhow, Result};
-use clap::Parser;
-use cli::*;
-use libseed::{
-    loadable::Loadable,
-    project::{Allocation, Project},
-    sample::Sample,
-    source::Source,
-    taxonomy::{self, filter_by, Taxon},
-    user::User,
-};
-use sqlx::SqlitePool;
 use tokio::fs;
 
 trait ConstructTableRow {
-    fn row_values(&self, full: bool) -> Vec<String>;
+    fn row_values(&self, full: bool) -> Result<Vec<String>>;
 }
 
 impl ConstructTableRow for Sample {
-    fn row_values(&self, full: bool) -> Vec<String> {
+    fn row_values(&self, full: bool) -> Result<Vec<String>> {
         let mut vals = vec![
             self.id.to_string(),
-            self.taxon.complete_name.clone(),
-            self.source.name.clone(),
+            self.taxon.object()?.complete_name.clone(),
+            self.source.object()?.name.clone(),
         ];
         if full {
             vals.push(self.month.map(|x| x.to_string()).unwrap_or("".to_string()));
@@ -38,15 +38,15 @@ impl ConstructTableRow for Sample {
             );
             vals.push(self.notes.clone().unwrap_or("".to_string()));
         }
-        vals
+        Ok(vals)
     }
 }
 
 impl ConstructTableRow for Allocation {
-    fn row_values(&self, full: bool) -> Vec<String> {
+    fn row_values(&self, full: bool) -> Result<Vec<String>> {
         let mut vals = vec![self.id.to_string()];
-        vals.append(&mut self.sample.row_values(full));
-        vals
+        vals.append(&mut self.sample.row_values(full)?);
+        Ok(vals)
     }
 }
 
@@ -60,7 +60,7 @@ trait ConstructTable {
         let headers = self.table_headers(full);
         tbuilder.set_header(headers);
         for item in self.items() {
-            let vals = item.row_values(full);
+            let vals = item.row_values(full)?;
             tbuilder.push_record(vals);
         }
         Ok((tbuilder, self.items().count()))
@@ -187,15 +187,16 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             ProjectCommands::Remove { id } => {
-                let mut project = Project::new_loadable(id);
+                let mut project = Project::load(id, &dbpool).await?;
                 project.delete(&dbpool).await?;
                 println!("Removed project {id}");
                 Ok(())
             }
             ProjectCommands::AddSample { project, sample } => {
                 let mut project = Project::fetch(project, &dbpool).await?;
-                let sample = Sample::new_loadable(sample);
-                project.allocate_sample(sample, &dbpool).await?;
+                project
+                    .allocate_sample(ExternalRef::Stub(sample), &dbpool)
+                    .await?;
                 println!("Added sample to project");
                 Ok(())
             }
@@ -338,7 +339,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Remove { id } => {
-                let sample = Sample::new_loadable(id);
+                let sample = Sample::load(id, &dbpool).await?;
                 sample.delete(&dbpool).await?.rows_affected();
                 Ok(())
             }
@@ -362,10 +363,10 @@ async fn main() -> Result<()> {
                 }
                 let mut sample = Sample::fetch(id, &dbpool).await?;
                 if let Some(taxon) = taxon {
-                    sample.taxon = Taxon::new_loadable(taxon);
+                    sample.taxon = ExternalRef::Stub(taxon);
                 }
                 if let Some(source) = source {
-                    sample.source = Source::new_loadable(source);
+                    sample.source = ExternalRef::Stub(source);
                 }
                 if let Some(month) = month {
                     sample.month = Some(month.into());
@@ -454,7 +455,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             UserCommands::Remove { id } => {
-                let mut user = User::new_loadable(id);
+                let mut user = User::load(id, &dbpool).await?;
                 user.delete(&dbpool).await.map(|_| ())
             }
             UserCommands::Modify {

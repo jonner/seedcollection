@@ -18,7 +18,7 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
-    loadable::Loadable,
+    loadable::ExternalRef,
     project::{self, Project},
     sample::{self, Sample},
     source,
@@ -395,8 +395,10 @@ async fn add_sample(
     let mut n_inserted = 0;
     let mut messages = Vec::new();
     for sample in valid_samples {
-        let s = Sample::new_loadable(sample);
-        match project.allocate_sample(s, &state.dbpool).await {
+        match project
+            .allocate_sample(ExternalRef::Stub(sample), &state.dbpool)
+            .await
+        {
             Err(e) => messages.push(Message {
                 r#type: MessageType::Error,
                 msg: format!(

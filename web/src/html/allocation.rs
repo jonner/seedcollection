@@ -62,6 +62,7 @@ async fn show_allocation(
     allocation
         .sample
         .taxon
+        .object_mut()?
         .fetch_germination_info(&state.dbpool)
         .await?;
     Ok(RenderHtml(
@@ -193,7 +194,7 @@ async fn delete_note(
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
-    if allocation.sample.user.id != user.id {
+    if allocation.sample.user.id() != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete this note".to_string(),
         ));
@@ -215,7 +216,7 @@ async fn show_edit_note(
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
-    if allocation.sample.user.id != user.id {
+    if allocation.sample.user.id() != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete this note".to_string(),
         ));
@@ -246,7 +247,7 @@ async fn modify_note(
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
-    if allocation.sample.user.id != user.id {
+    if allocation.sample.user.id() != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete this note".to_string(),
         ));

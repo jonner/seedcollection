@@ -1,5 +1,5 @@
-use crate::taxonomy;
 use clap::{Parser, Subcommand};
+use libseed::taxonomy;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]

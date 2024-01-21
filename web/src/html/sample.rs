@@ -11,11 +11,10 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
-    loadable::Loadable,
+    loadable::ExternalRef,
     project::{Allocation, AllocationFilter},
     sample::{self, Certainty, Sample},
     source::{self, Source},
-    taxonomy::Taxon,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -96,7 +95,11 @@ async fn show_sample(
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
-    sample.taxon.fetch_germination_info(&state.dbpool).await?;
+    sample
+        .taxon
+        .object_mut()?
+        .fetch_germination_info(&state.dbpool)
+        .await?;
 
     // needed for edit form
     let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
@@ -207,7 +210,7 @@ async fn insert_sample(
                         r#type: MessageType::Success,
                         msg: format!(
                             "Added new sample {}: {} to the database",
-                            sample.id, sample.taxon.complete_name
+                            sample.id, sample.taxon.object()?.complete_name
                             ),
                     },
                     ),
@@ -228,8 +231,8 @@ async fn do_update(
         _ => Certainty::Certain,
     };
     let mut sample = Sample::fetch(id, &state.dbpool).await?;
-    sample.taxon = Taxon::new_loadable(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
-    sample.source = Source::new_loadable(
+    sample.taxon = ExternalRef::Stub(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
+    sample.source = ExternalRef::Stub(
         params
             .source
             .ok_or_else(|| anyhow!("No source specified"))?,
@@ -292,7 +295,7 @@ async fn delete_sample(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let sample = Sample::fetch(id, &state.dbpool).await?;
-    if sample.user.id != user.id {
+    if sample.user.id() != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete sample".to_string(),
         ));

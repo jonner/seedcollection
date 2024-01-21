@@ -11,9 +11,8 @@ use axum::{
     Form, Router,
 };
 use libseed::{
-    loadable::Loadable,
+    loadable::ExternalRef,
     project::{Filter, Project},
-    sample::Sample,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -144,9 +143,8 @@ async fn add_sample(
     Form(params): Form<AddSampleProps>,
 ) -> Result<Json<i64>, error::Error> {
     let mut project = Project::fetch(id, &state.dbpool).await?;
-    let sample = Sample::new_loadable(params.sample);
     let id = project
-        .allocate_sample(sample, &state.dbpool)
+        .allocate_sample(ExternalRef::Stub(params.sample), &state.dbpool)
         .await?
         .last_insert_rowid();
     Ok(Json(id))

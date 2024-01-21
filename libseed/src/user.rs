@@ -1,26 +1,27 @@
 use crate::{
     error::{Error, Result},
     filter::{DynFilterPart, FilterPart},
-    loadable::Loadable,
+    loadable::{ExternalRef, Loadable},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
 use password_hash::{rand_core::OsRng, PasswordHash, SaltString};
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Sqlite};
+use sqlx::{
+    prelude::*,
+    sqlite::{SqliteQueryResult, SqliteRow},
+    Pool, QueryBuilder, Sqlite,
+};
 use std::sync::Arc;
 
-
 /// A website user that is stored in the database
-#[derive(sqlx::FromRow, Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User {
     /// the database ID for this user
-    #[sqlx(rename = "userid")]
     pub id: i64,
     /// the username for this user
     pub username: String,
     #[serde(skip_serializing)]
-    #[sqlx(default)]
     /// a hashed password for use when authenticating a user
     pub pwhash: String,
 }
@@ -29,20 +30,12 @@ pub struct User {
 impl Loadable for User {
     type Id = i64;
 
-    fn is_loadable(&self) -> bool {
-        self.id > 0
+    fn id(&self) -> Self::Id {
+        self.id
     }
 
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        User::fetch(self.id, pool).await
-    }
-
-    fn new_loadable(id: Self::Id) -> Self {
-        User {
-            id,
-            username: Default::default(),
-            pwhash: Default::default(),
-        }
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        User::fetch(id, pool).await
     }
 }
 
@@ -62,8 +55,7 @@ impl FilterPart for UserFilter {
 
 impl User {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
-        let mut builder =
-            QueryBuilder::new("SELECT userid, username, pwhash FROM sc_users");
+        let mut builder = QueryBuilder::new("SELECT userid, username, pwhash FROM sc_users");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
@@ -226,6 +218,31 @@ impl Default for User {
     }
 }
 
+impl FromRow<'_, SqliteRow> for User {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        let id = row.try_get("userid")?;
+        let username = row.try_get("username")?;
+        let pwhash = row.try_get("pwhash")?;
+        Ok(User {
+            id,
+            username,
+            pwhash,
+        })
+    }
+}
+
+impl FromRow<'_, SqliteRow> for ExternalRef<User> {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        Ok(match User::from_row(row) {
+            Ok(user) => ExternalRef::Object(user),
+            Err(_) => {
+                let id = row.try_get("userid")?;
+                ExternalRef::Stub(id)
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,8 +256,9 @@ mod tests {
         let res = user.insert(&pool).await.expect("Failed to insert user");
         let userid = res.last_insert_rowid();
 
-        let mut loaded = User::new_loadable(userid);
-        loaded.load(&pool).await.expect("Unable to load new user");
+        let loaded = User::load(userid, &pool)
+            .await
+            .expect("Unable to load new user");
         assert_eq!(user, loaded);
         assert!(loaded.verify_password(PASSWORD).is_ok());
     }
@@ -258,9 +276,7 @@ mod tests {
         user.update(&pool).await.expect("Unable to update user");
         assert!(user.insert(&pool).await.is_err());
 
-        let mut loaded = User::new_loadable(1);
-        loaded
-            .load(&pool)
+        let loaded = User::load(1, &pool)
             .await
             .expect("Unable to load updated user");
         assert_eq!(user, loaded);
@@ -272,11 +288,10 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn delete_user(pool: Pool<Sqlite>) {
-        assert!(User::fetch(1, &pool).await.is_ok());
+        let mut user = User::load(1, &pool).await.expect("can't load user");
 
-        let mut user = User::new_loadable(1);
         user.delete(&pool).await.expect("Failed to delete user");
-        assert!(User::fetch(1, &pool).await.is_err());
+        assert!(User::load(1, &pool).await.is_err());
     }
 
     #[test]

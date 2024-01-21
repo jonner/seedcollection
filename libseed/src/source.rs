@@ -1,15 +1,18 @@
 use crate::{
     error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterPart},
-    loadable::Loadable,
+    loadable::{ExternalRef, Loadable},
 };
 use async_trait::async_trait;
 use serde::Deserialize;
 use serde::Serialize;
-use sqlx::sqlite::SqliteQueryResult;
 use sqlx::Pool;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
+use sqlx::{
+    prelude::*,
+    sqlite::{SqliteQueryResult, SqliteRow},
+};
 use std::sync::Arc;
 
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq)]
@@ -25,6 +28,14 @@ pub struct Source {
     #[sqlx(default)]
     pub longitude: Option<f64>,
     pub userid: i64,
+}
+
+impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        Source::from_row(row)
+            .map(|t| ExternalRef::Object(t))
+            .or_else(|_| row.try_get("tsn").map(|id| ExternalRef::Stub(id)))
+    }
 }
 
 impl Default for Source {
@@ -44,18 +55,12 @@ impl Default for Source {
 impl Loadable for Source {
     type Id = i64;
 
-    fn new_loadable(id: Self::Id) -> Self {
-        let mut src: Self = Default::default();
-        src.id = id;
-        src
+    fn id(&self) -> Self::Id {
+        self.id
     }
 
-    fn is_loadable(&self) -> bool {
-        self.id > 0
-    }
-
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        Source::fetch(self.id, pool).await
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        Source::fetch(id, pool).await
     }
 }
 
@@ -235,13 +240,9 @@ mod tests {
             // full data
             let res = src.insert(&pool).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
-            let mut srcloaded = Source::new_loadable(res.last_insert_rowid());
-            let res = srcloaded.load(&pool).await;
-
-            if let Err(e) = res {
-                println!("{e:?}");
-                panic!();
-            }
+            let srcloaded = Source::load(res.last_insert_rowid(), &pool)
+                .await
+                .expect("Failed to load inserted object");
             assert_eq!(src, srcloaded);
         }
 

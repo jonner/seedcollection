@@ -1,7 +1,7 @@
 use crate::{
     error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
-    loadable::Loadable,
+    loadable::{ExternalRef, Loadable},
     sample::Sample,
 };
 pub use allocation::Allocation;
@@ -47,18 +47,12 @@ impl Default for Project {
 impl Loadable for Project {
     type Id = i64;
 
-    fn new_loadable(id: Self::Id) -> Self {
-        let mut c: Project = Default::default();
-        c.id = id;
-        c
+    fn id(&self) -> Self::Id {
+        self.id
     }
 
-    fn is_loadable(&self) -> bool {
-        self.id > 0
-    }
-
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        Project::fetch(self.id, pool).await
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        Project::fetch(id, pool).await
     }
 }
 
@@ -142,12 +136,12 @@ impl Project {
 
     pub async fn allocate_sample(
         &mut self,
-        sample: Sample,
+        sample: ExternalRef<Sample>,
         pool: &Pool<Sqlite>,
     ) -> Result<SqliteQueryResult> {
         sqlx::query("INSERT INTO sc_project_samples (projectid, sampleid) VALUES (?, ?)")
             .bind(self.id)
-            .bind(sample.id)
+            .bind(sample.id())
             .execute(pool)
             .await
             .map_err(|e| e.into())
@@ -232,8 +226,9 @@ mod tests {
             let mut c = Project::new(name, desc, userid);
             let res = c.insert(&pool).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
-            let mut cload = Project::new_loadable(res.last_insert_rowid());
-            cload.load(&pool).await.expect("Failed to load project");
+            let cload = Project::load(res.last_insert_rowid(), &pool)
+                .await
+                .expect("Failed to load project");
             assert_eq!(c, cload);
         }
 

@@ -1,7 +1,7 @@
 use crate::{
     error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
-    loadable::Loadable,
+    loadable::{ExternalRef, Loadable},
     source::Source,
     taxonomy::Taxon,
     user::User,
@@ -24,9 +24,9 @@ pub enum Certainty {
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Sample {
     pub id: i64,
-    pub user: User,
-    pub taxon: Taxon,
-    pub source: Source,
+    pub user: ExternalRef<User>,
+    pub taxon: ExternalRef<Taxon>,
+    pub source: ExternalRef<Source>,
     pub quantity: Option<i64>,
     pub month: Option<u32>,
     pub year: Option<u32>,
@@ -45,38 +45,16 @@ pub enum Filter {
     Notes(Cmp, String),
 }
 
-impl Default for Sample {
-    fn default() -> Self {
-        Self {
-            id: -1,
-            user: User::default(),
-            taxon: Taxon::default(),
-            source: Source::default(),
-            quantity: None,
-            month: None,
-            year: None,
-            notes: None,
-            certainty: Certainty::Uncertain,
-        }
-    }
-}
-
 #[async_trait]
 impl Loadable for Sample {
     type Id = i64;
 
-    fn new_loadable(id: Self::Id) -> Self {
-        let mut s: Sample = Default::default();
-        s.id = id;
-        s
+    fn id(&self) -> Self::Id {
+        self.id
     }
 
-    fn is_loadable(&self) -> bool {
-        self.id > 0
-    }
-
-    async fn do_load(&mut self, pool: &Pool<Sqlite>) -> Result<Self> {
-        Sample::fetch(self.id, pool).await
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        Sample::fetch(id, pool).await
     }
 }
 
@@ -127,7 +105,7 @@ impl Sample {
             T.complete_name, T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
                     quantity, month, year, notes, certainty,
                     GROUP_CONCAT(V.vernacular_name, "@") as cnames,
-                    U.userid as userid, U.username
+                    U.userid as userid
                     FROM sc_samples S
                     INNER JOIN taxonomic_units T ON T.tsn=S.tsn
                     INNER JOIN sc_sources L on L.srcid=S.srcid
@@ -179,9 +157,9 @@ impl Sample {
             )));
         }
         sqlx::query("INSERT INTO sc_samples (tsn, userid, srcid, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-        .bind(self.taxon.id)
-        .bind(self.user.id)
-        .bind(self.source.id)
+        .bind(self.taxon.id())
+        .bind(self.user.id())
+        .bind(self.source.id())
         .bind(self.month)
         .bind(self.year)
         .bind(self.quantity)
@@ -197,20 +175,20 @@ impl Sample {
         if self.id < 0 {
             return Err(Error::InvalidData("No id set, cannot update".to_string()));
         }
-        if self.taxon.id < 0 {
+        if self.taxon.id() < 0 {
             return Err(Error::InvalidData(
                 "No taxon set, cannot update".to_string(),
             ));
         }
-        if self.source.id < 0 {
+        if self.source.id() < 0 {
             return Err(Error::InvalidData(
                 "No source set, cannot update".to_string(),
             ));
         }
 
         sqlx::query("Update sc_samples SET tsn=?, srcid=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")
-            .bind(self.taxon.id)
-            .bind(self.source.id)
+            .bind(self.taxon.id())
+            .bind(self.source.id())
             .bind(self.month)
             .bind(self.year)
             .bind(self.quantity)
@@ -248,9 +226,9 @@ impl Sample {
     ) -> Self {
         Self {
             id: -1,
-            user: User::new_loadable(userid),
-            taxon: Taxon::new_loadable(taxonid),
-            source: Source::new_loadable(sourceid),
+            user: ExternalRef::Stub(userid),
+            taxon: ExternalRef::Stub(taxonid),
+            source: ExternalRef::Stub(sourceid),
             quantity,
             month,
             year,
@@ -264,9 +242,9 @@ impl FromRow<'_, SqliteRow> for Sample {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Ok(Self {
             id: row.try_get("sampleid")?,
-            user: User::from_row(row)?,
-            taxon: Taxon::from_row(row)?,
-            source: Source::from_row(row)?,
+            user: FromRow::from_row(row)?,
+            taxon: FromRow::from_row(row)?,
+            source: FromRow::from_row(row)?,
             quantity: row.try_get("quantity").unwrap_or(None),
             month: row.try_get("month").unwrap_or(None),
             year: row.try_get("year").unwrap_or(None),
@@ -301,15 +279,13 @@ mod tests {
                 Sample::new(taxon, user, source, month, year, quantity, notes, certainty);
             let res = sample.insert(pool).await;
             let res = res.expect("Failed to insert sample");
-            let mut loaded = Sample::new_loadable(res.last_insert_rowid());
-            loaded
-                .load(pool)
+            let loaded = Sample::load(res.last_insert_rowid(), pool)
                 .await
                 .expect("Failed to load sample from database");
             assert_eq!(sample.id, loaded.id);
-            assert_eq!(sample.user.id, loaded.user.id);
-            assert_eq!(sample.taxon.id, loaded.taxon.id);
-            assert_eq!(sample.source.id, loaded.source.id);
+            assert_eq!(sample.user, loaded.user);
+            assert_eq!(sample.taxon.id(), loaded.taxon.id());
+            assert_eq!(sample.source.id(), loaded.source.id());
             assert_eq!(sample.month, loaded.month);
             assert_eq!(sample.year, loaded.year);
             assert_eq!(sample.quantity, loaded.quantity);
