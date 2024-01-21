@@ -8,7 +8,7 @@ use libseed::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SqliteUser(User);
@@ -18,6 +18,12 @@ impl Deref for SqliteUser {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for SqliteUser {
+    fn deref_mut(&mut self) -> &mut User {
+        &mut self.0
     }
 }
 
