@@ -1,16 +1,59 @@
 {% extends "root.html" %}
 {% from "_macros.html" import icon %}
-{% block title %}User Profile{% endblock %}
+{% block title %}My Profile{% endblock %}
 {% block content %}
-<h2>{{ self.title() }}
+<h2 class="mb-3 border-bottom">{{ self.title() }}
     <a href="{{ ("/user/me/edit") | app_url }}">{{ icon("pencil") }}</a>
 </h2>
-<h5>Username</h5>
-{{ user.username }}
-<h5>E-mail Address</h5>
-{{ user.email }}
-<h5>Display Name</h5>
-{{ user.display_name or "" }}
-<h5>About me</h5>
-{{ (user.profile | markdown) or "" }}
+<div class="container row column-gap-4">
+    <div class="col-md-3">
+        <div class="row mb-2">
+            <h4>Username</h4>
+            <div class="ms-2">
+                {{ user.username }}
+            </div>
+        </div>
+        <div class="row mb-2">
+            <h4>Display Name</h4>
+            <div class="ms-2">
+                {{ user.display_name or user.username }}
+            </div>
+        </div>
+        <div class="row mb-2">
+            <h4>Member since</h4>
+            <div class="ms-2">
+            {{ user.register_date | dateformat(format="short") }}
+            </div>
+        </div>
+        <div class="row mb-2">
+            <h4>E-mail Address</h4>
+            <div class="vstack row-gap-2 ms-2">
+            <div>{{ user.email }}</div>
+            {% if user.status == "Unverified" %}
+            <div class="alert alert-warning p-2">
+                This address is unverified. <a href="#" hx-post="#">Resend verification email</a>
+            </div>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="mb-2">
+            <h4>About me</h4>
+            <div class="ms-2">
+                {{ (user.profile | markdown) or "No profile information provided" }}
+            </div>
+        </div>
+        <div class="mb-2">
+            <h4>Statistics</h4>
+            <div class="ms-2">
+                <ul>
+                    <li>Samples: {{ userstats.nsamples or 0 }}</li>
+                    <li>Sources: {{ userstats.nsources or 0 }}</li>
+                    <li>Projects: {{ userstats.nprojects or 0 }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

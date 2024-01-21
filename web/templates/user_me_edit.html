@@ -1,0 +1,44 @@
+{% extends "root.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}{{ user.username }}: Edit User Profile{% endblock %}
+{% block content %}
+<h2>{{ self.title() }}</h2>
+<form hx-put="{{ "/user/me" | app_url }}">
+    <div class="mb-2">
+        <label for="UserNameInput" class="form-label">Username</label>
+        <input id="UserNameInput"
+               type="text"
+               class="form-control"
+               disabled
+               value="{{ user.username }}">
+    </div>
+    <div class="mb-2">
+        <label class="form-label"
+            for="UserEmailInput">E-mail Address</label>
+        <input id="UserEmailInput"
+               type="text"
+               class="form-control"
+               name="email"
+               value="{{ user.email }}">
+    </div>
+    <div class="mb-2">
+        <label class="form-label" for="">Display Name</label>
+        <input id="UserDisplayNameInput"
+               type="text"
+               class="form-control"
+               name="displayname"
+               value="{{ user.display_name or "" }}">
+    </div>
+    <div class="mb-2">
+        <label class="form-label" for="">About me</label>
+        <textarea id="UserProfileInput"
+               class="form-control"
+               name="profile"
+               rows="5"
+            >{{ user.profile or "" }}</textarea>
+    </div>
+    <div class="mb-2">
+        <button type="submit" class="btn btn-primary">Update</button>
+    </div>
+</form>
+{% endblock %}
