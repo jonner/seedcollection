@@ -38,19 +38,6 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
     }
 }
 
-impl Default for Source {
-    fn default() -> Self {
-        Self {
-            id: -1,
-            name: Default::default(),
-            description: None,
-            latitude: None,
-            longitude: None,
-            userid: -1,
-        }
-    }
-}
-
 #[async_trait]
 impl Loadable for Source {
     type Id = i64;

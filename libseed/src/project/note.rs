@@ -53,19 +53,6 @@ pub struct Note {
     pub details: Option<String>,
 }
 
-impl Default for Note {
-    fn default() -> Self {
-        Self {
-            id: -1,
-            psid: -1,
-            date: Date::MIN,
-            kind: NoteType::Other,
-            summary: Default::default(),
-            details: None,
-        }
-    }
-}
-
 #[async_trait]
 impl Loadable for Note {
     type Id = i64;

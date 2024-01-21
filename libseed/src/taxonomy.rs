@@ -79,24 +79,6 @@ pub struct Taxon {
     pub germination: Option<Vec<Germination>>,
 }
 
-impl Default for Taxon {
-    fn default() -> Self {
-        Self {
-            id: -1,
-            rank: Rank::Unknown,
-            name1: Default::default(),
-            name2: Default::default(),
-            name3: Default::default(),
-            complete_name: Default::default(),
-            vernaculars: Default::default(),
-            native_status: Default::default(),
-            parentid: Default::default(),
-            seq: Default::default(),
-            germination: Default::default(),
-        }
-    }
-}
-
 #[async_trait]
 impl Loadable for Taxon {
     type Id = i64;

@@ -31,18 +31,6 @@ pub struct Project {
     pub userid: i64,
 }
 
-impl Default for Project {
-    fn default() -> Self {
-        Self {
-            id: -1,
-            name: Default::default(),
-            description: None,
-            allocations: Default::default(),
-            userid: -1,
-        }
-    }
-}
-
 #[async_trait]
 impl Loadable for Project {
     type Id = i64;

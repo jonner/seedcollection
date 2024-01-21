@@ -225,20 +225,21 @@ impl User {
                     userdisplayname,
                     userprofile
                 )
-                VALUES (?, ?, ?, ?, ?, ?)"#)
-            .bind(&self.username)
-            .bind(&self.email)
-            .bind(&self.pwhash)
-            .bind(&self.status)
-            .bind(&self.display_name)
-            .bind(&self.profile)
-            .execute(pool)
-            .await
-            .map(|r| {
-                self.id = r.last_insert_rowid();
-                r
-            })
-            .map_err(|e| e.into())
+                VALUES (?, ?, ?, ?, ?, ?)"#,
+        )
+        .bind(&self.username)
+        .bind(&self.email)
+        .bind(&self.pwhash)
+        .bind(&self.status)
+        .bind(&self.display_name)
+        .bind(&self.profile)
+        .execute(pool)
+        .await
+        .map(|r| {
+            self.id = r.last_insert_rowid();
+            r
+        })
+        .map_err(|e| e.into())
     }
 
     pub fn validate_username(username: &str) -> Result<()> {
@@ -277,21 +278,6 @@ impl User {
             )));
         }
         Ok(())
-    }
-}
-
-impl Default for User {
-    fn default() -> Self {
-        Self {
-            id: -1,
-            username: Default::default(),
-            email: Default::default(),
-            pwhash: Default::default(),
-            status: UserStatus::Unverified,
-            register_date: None,
-            display_name: Default::default(),
-            profile: Default::default(),
-        }
     }
 }
 
