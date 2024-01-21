@@ -1,3 +1,5 @@
+//! Objects related to querying the taxonomic database
+
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -11,7 +13,7 @@ use tracing::debug;
 
 use crate::{
     error::Result,
-    filter::{DynFilterPart, FilterBuilder, FilterOp, FilterPart},
+    filter::{DynFilterPart, FilterBuilder, FilterOp, FilterPart, LimitSpec},
     loadable::{ExternalRef, Loadable},
     Error,
 };
@@ -65,6 +67,7 @@ pub enum NativeStatus {
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
+/// An object representing a particular taxon from the database
 pub struct Taxon {
     pub id: i64,
     pub rank: Rank,
@@ -250,8 +253,6 @@ pub fn any_filter(s: &str) -> DynFilterPart {
         .push(Arc::new(FilterField::Vernacular(s.to_string())))
         .build()
 }
-
-pub struct LimitSpec(pub i32, pub Option<i32>);
 
 pub fn count_query(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
     let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(

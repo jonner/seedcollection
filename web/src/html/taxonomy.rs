@@ -9,9 +9,9 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, CompoundFilter, FilterOp},
+    filter::{Cmp, CompoundFilter, FilterOp, LimitSpec},
     sample::{Filter, Sample},
-    taxonomy::{self, any_filter, FilterField, Germination, LimitSpec, Rank, Taxon},
+    taxonomy::{self, any_filter, FilterField, Germination, Rank, Taxon},
 };
 use minijinja::context;
 use serde::Deserialize;

@@ -1,3 +1,4 @@
+//! Objects to keep track of the origin of seed samples
 use crate::{
     error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterPart},

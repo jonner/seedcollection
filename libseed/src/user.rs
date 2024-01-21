@@ -1,3 +1,4 @@
+//! Objects representing a user of the application
 use crate::{
     error::{Error, Result},
     filter::{DynFilterPart, FilterPart},
@@ -22,7 +23,8 @@ pub enum UserStatus {
     Verified = 1,
 }
 
-/// A website user that is stored in the database
+/// A website user that is stored in the database. Each object in the database is associated with a
+/// particular user.
 #[derive(FromRow, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User {
     /// the database ID for this user

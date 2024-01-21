@@ -1,3 +1,5 @@
+//! utilities for filtering database queries for the various objects
+//!
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -7,6 +9,7 @@ pub enum FilterOp {
 }
 
 #[derive(Clone)]
+/// An object that allows you easily build complound filters that can be applied to SQL queries
 pub struct FilterBuilder {
     top: CompoundFilter,
 }
@@ -28,11 +31,16 @@ impl FilterBuilder {
     }
 }
 
+/// A Trait implemented by anything that can be a filter. It could be a single field or a
+/// multi-level compound filter condition.
 pub trait FilterPart: Send {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>);
 }
 
 #[derive(Clone)]
+/// An object that represents one or more filter conditions that are combined by a single logical
+/// operator ([FilterOp]). Multiple compound filters can be combined together into larger filter
+/// conditions
 pub struct CompoundFilter {
     conditions: Vec<DynFilterPart>,
     op: FilterOp,
@@ -78,6 +86,7 @@ impl FilterPart for CompoundFilter {
 }
 
 #[derive(Clone)]
+/// An object representing the operation that is used to compare against a filter condition
 pub enum Cmp {
     Equal,
     NotEqual,
@@ -101,5 +110,8 @@ impl std::fmt::Display for Cmp {
         }
     }
 }
+
+/// An object that allows you to specify the limit and offset for an SQL query
+pub struct LimitSpec(pub i32, pub Option<i32>);
 
 pub type DynFilterPart = Arc<dyn FilterPart + Sync>;

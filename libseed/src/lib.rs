@@ -1,3 +1,6 @@
+//! This is a library that provides objects and functionality to help you manage a native seed
+//! collection and keep track of everything inside of a database.
+
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 

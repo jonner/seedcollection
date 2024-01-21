@@ -1,3 +1,4 @@
+//! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
     error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},

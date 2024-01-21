@@ -1,3 +1,6 @@
+//! Objects relating to projects. A Project is a group of seed samples that are intended for a
+//! specific purpose. It could be something like a group of seeds that you intend to plant for a
+//! particular restoration project, etc.
 use crate::{
     error::{Error, Result},
     filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},

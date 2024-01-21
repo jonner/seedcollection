@@ -1,3 +1,5 @@
+//! Objects related to reporting errors from this library
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Database error")]
