@@ -75,7 +75,12 @@ CREATE TABLE IF NOT EXISTS "sc_taxon_germination" (
 CREATE TABLE IF NOT EXISTS "sc_users" (
 	"userid"	INTEGER NOT NULL UNIQUE,
 	"username"	TEXT NOT NULL UNIQUE,
+	"useremail"	TEXT NOT NULL,
 	"pwhash"	TEXT NOT NULL,
+	"userstatus"	INTEGER NOT NULL DEFAULT 0,
+	"usersince"	TEXT DEFAULT CURRENT_TIMESTAMP,
+	"userdisplayname"	TEXT DEFAULT NULL,
+	"userprofile"	TEXT DEFAULT NULL,
 	PRIMARY KEY("userid" AUTOINCREMENT)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "collectionsamples_collection_sample" ON "sc_project_samples" (

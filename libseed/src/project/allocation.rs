@@ -89,7 +89,7 @@ impl Allocation {
 
             L.srcid, L.srcname, L.srcdesc, T.complete_name,
 
-            S.userid, U.username,
+            S.userid,
 
             P.projectid, P.projname, P.projdescription,
             N.pnoteid, N.notedate, N.notetype, N.notesummary, N.notedetails
@@ -98,7 +98,6 @@ impl Allocation {
             INNER JOIN taxonomic_units T ON T.tsn=S.tsn
             INNER JOIN sc_sources L on L.srcid=S.srcid
             INNER JOIN sc_samples S ON PS.sampleid=S.sampleid
-            INNER JOIN sc_users U on U.userid=S.userid
             INNER JOIN sc_projects P on P.projectid=PS.projectid
             LEFT JOIN ( SELECT * FROM
             (SELECT *, ROW_NUMBER() OVER (PARTITION BY psid ORDER BY DATE(notedate) DESC, pnoteid DESC) AS rownr

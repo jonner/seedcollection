@@ -6,6 +6,7 @@ use axum::{
     Form, Router,
 };
 use axum_template::RenderHtml;
+use libseed::empty_string_as_none;
 use minijinja::context;
 use serde::Deserialize;
 use tracing::debug;
@@ -24,12 +25,23 @@ pub fn router() -> Router<AppState> {
         .route("/logout", get(logout))
 }
 
+#[derive(Clone, Deserialize)]
+pub struct RegisterParams {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+    #[serde(deserialize_with = "empty_string_as_none")]
+    pub next: Option<String>,
+}
+
 #[allow(dead_code)]
 async fn register_user(
     auth: AuthSession,
-    Form(creds): Form<Credentials>,
+    Form(params): Form<RegisterParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    auth.backend.register(creds.username, creds.password).await
+    auth.backend
+        .register(params.username, params.email, params.password)
+        .await
 }
 
 #[allow(dead_code)]

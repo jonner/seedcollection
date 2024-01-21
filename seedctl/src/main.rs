@@ -1,19 +1,16 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::*;
-use libseed::loadable::ExternalRef;
-use libseed::loadable::Loadable;
 use libseed::{
+    loadable::{ExternalRef, Loadable},
     project::{Allocation, Project},
     sample::Sample,
     source::Source,
     taxonomy::{filter_by, Taxon},
-    user::User,
+    user::{User, UserStatus},
 };
 use sqlx::SqlitePool;
-use std::io::stdin;
-use std::io::stdout;
-use std::io::Write;
+use std::io::{stdin, stdout, Write};
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -427,15 +424,20 @@ async fn main() -> Result<()> {
             UserCommands::List {} => {
                 let users = User::fetch_all(&dbpool).await?;
                 let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.set_header(["ID", "Username"]);
+                tbuilder.set_header(["ID", "Username", "Email"]);
                 for user in &users {
-                    tbuilder.push_record([user.id.to_string(), user.username.clone()]);
+                    tbuilder.push_record([
+                        user.id.to_string(),
+                        user.username.clone(),
+                        user.email.clone(),
+                    ]);
                 }
                 print_table(tbuilder, users.len());
                 Ok(())
             }
             UserCommands::Add {
                 username,
+                email,
                 passwordfile,
             } => {
                 let password = get_password(
@@ -445,7 +447,15 @@ async fn main() -> Result<()> {
                 .await?;
                 // hash the password
                 let pwhash = User::hash_password(&password)?;
-                let mut user = User::new(username.clone(), pwhash);
+                let mut user = User::new(
+                    username.clone(),
+                    email.clone(),
+                    pwhash,
+                    UserStatus::Unverified,
+                    None,
+                    None,
+                    None,
+                );
                 let id = user.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added user to database:");
                 println!("{}: {}", id, username);

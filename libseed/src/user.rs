@@ -13,14 +13,41 @@ use sqlx::{
     Pool, QueryBuilder, Sqlite,
 };
 use std::sync::Arc;
+use time::PrimitiveDateTime;
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[repr(i64)]
+pub enum UserStatus {
+    Unverified = 0,
+    Verified = 1,
+}
 
 /// A website user that is stored in the database
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(FromRow, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User {
     /// the database ID for this user
+    #[sqlx(rename = "userid")]
     pub id: i64,
+
     /// the username for this user
     pub username: String,
+
+    /// the email address for this user
+    #[sqlx(rename = "useremail")]
+    pub email: String,
+
+    #[sqlx(rename = "userstatus")]
+    status: UserStatus,
+
+    #[sqlx(rename = "usersince")]
+    register_date: Option<PrimitiveDateTime>,
+
+    #[sqlx(rename = "userdisplayname")]
+    display_name: Option<String>,
+
+    #[sqlx(rename = "userprofile", default)]
+    profile: Option<String>,
+
     #[serde(skip_serializing)]
     /// a hashed password for use when authenticating a user
     pub pwhash: String,
@@ -71,7 +98,19 @@ impl FilterPart for UserFilter {
 
 impl User {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
-        let mut builder = QueryBuilder::new("SELECT userid, username, pwhash FROM sc_users");
+        let mut builder = QueryBuilder::new(
+            r#"SELECT
+                userid,
+                username,
+                useremail,
+                pwhash,
+                userstatus,
+                usersince,
+                userdisplayname,
+                userprofile
+            FROM
+                sc_users"#,
+        );
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
@@ -146,19 +185,53 @@ impl User {
     }
 
     /// create a new object with the given values
-    pub fn new(username: String, pwhash: String) -> Self {
+    pub fn new(
+        username: String,
+        email: String,
+        pwhash: String,
+        status: UserStatus,
+        register_date: Option<PrimitiveDateTime>,
+        display_name: Option<String>,
+        profile: Option<String>,
+    ) -> Self {
         Self {
             id: -1,
             username,
+            email,
             pwhash,
+            status,
+            register_date,
+            display_name,
+            profile,
         }
     }
 
     /// Insert a new row into the database with the values stored in this object
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        sqlx::query("INSERT INTO sc_users (username, pwhash) VALUES (?, ?)")
+        if self.username.trim().is_empty() || self.email.trim().is_empty() {
+            return Err(Error::InvalidData(
+                "Username and email must not be empty".to_string(),
+            ));
+        }
+        // Don't insert the register_date, the database will set it to the current timestamp
+        sqlx::query(
+            r#"INSERT INTO
+                sc_users
+                (
+                    username,
+                    useremail,
+                    pwhash,
+                    userstatus,
+                    userdisplayname,
+                    userprofile
+                )
+                VALUES (?, ?, ?, ?, ?, ?)"#)
             .bind(&self.username)
+            .bind(&self.email)
             .bind(&self.pwhash)
+            .bind(&self.status)
+            .bind(&self.display_name)
+            .bind(&self.profile)
             .execute(pool)
             .await
             .map(|r| {
@@ -212,21 +285,13 @@ impl Default for User {
         Self {
             id: -1,
             username: Default::default(),
+            email: Default::default(),
             pwhash: Default::default(),
+            status: UserStatus::Unverified,
+            register_date: None,
+            display_name: Default::default(),
+            profile: Default::default(),
         }
-    }
-}
-
-impl FromRow<'_, SqliteRow> for User {
-    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
-        let id = row.try_get("userid")?;
-        let username = row.try_get("username")?;
-        let pwhash = row.try_get("pwhash")?;
-        Ok(User {
-            id,
-            username,
-            pwhash,
-        })
     }
 }
 
@@ -251,14 +316,29 @@ mod tests {
     async fn register_user(pool: Pool<Sqlite>) {
         const PASSWORD: &str = "my-super-secret-password";
         let hash = User::hash_password(PASSWORD).expect("Failed to hash password");
-        let mut user = User::new("my-user-name".to_string(), hash);
+        let mut user = User::new(
+            "my-user-name".to_string(),
+            "my-address@domain.co.uk".to_string(),
+            hash,
+            UserStatus::Unverified,
+            None,
+            None,
+            None,
+        );
         let res = user.insert(&pool).await.expect("Failed to insert user");
         let userid = res.last_insert_rowid();
 
         let loaded = User::load(userid, &pool)
             .await
             .expect("Unable to load new user");
-        assert_eq!(user, loaded);
+        assert_eq!(user.id, loaded.id);
+        assert_eq!(user.username, loaded.username);
+        assert_eq!(user.email, loaded.email);
+        assert_eq!(user.pwhash, loaded.pwhash);
+        assert_eq!(user.status, loaded.status);
+        assert_ne!(user.register_date, loaded.register_date);
+        assert_eq!(user.display_name, loaded.display_name);
+        assert_eq!(user.profile, loaded.profile);
         assert!(loaded.verify_password(PASSWORD).is_ok());
     }
 

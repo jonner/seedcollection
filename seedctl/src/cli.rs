@@ -218,6 +218,8 @@ pub enum UserCommands {
         #[arg(long)]
         username: String,
         #[arg(long)]
+        email: String,
+        #[arg(long)]
         passwordfile: Option<PathBuf>,
     },
     #[command(about = "Remove an existing user from the database")]

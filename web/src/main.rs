@@ -23,7 +23,7 @@ use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::filter::EnvFilter;
 
 mod api;
@@ -214,12 +214,14 @@ async fn main() -> Result<()> {
         .run(&shared_state.dbpool)
         .await?;
 
+    debug!("Creating session layer");
     let session_store = SqliteStore::new(shared_state.dbpool.clone());
     session_store.migrate().await?;
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(true)
         .with_expiry(Expiry::OnInactivity(Duration::days(7)));
 
+    debug!("Creating auth backend");
     let auth_backend = auth::SqliteAuthBackend::new(shared_state.dbpool.clone());
     let auth_service = ServiceBuilder::new()
         .layer(HandleErrorLayer::new(|_: BoxError| async {
@@ -227,6 +229,7 @@ async fn main() -> Result<()> {
         }))
         .layer(AuthManagerLayerBuilder::new(auth_backend, session_layer).build());
 
+    debug!("Creating routers");
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))

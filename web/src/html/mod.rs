@@ -39,6 +39,7 @@ async fn root(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
+    tracing::info!("root");
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),

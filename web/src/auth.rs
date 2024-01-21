@@ -2,7 +2,10 @@ use crate::error::{self, Error};
 use anyhow::anyhow;
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 use axum_login::{AuthUser, AuthnBackend, UserId};
-use libseed::{empty_string_as_none, user::User};
+use libseed::{
+    empty_string_as_none,
+    user::{User, UserStatus},
+};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::ops::Deref;
@@ -53,7 +56,9 @@ impl AuthnBackend for SqliteAuthBackend {
         &self,
         credentials: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
+        tracing::info!("authenticating...");
         let user = self.get_user(&credentials.username).await?;
+        tracing::info!("Got user {user:?}");
         match user {
             Some(user) => user
                 .verify_password(&credentials.password)
@@ -72,9 +77,22 @@ impl AuthnBackend for SqliteAuthBackend {
 }
 
 impl SqliteAuthBackend {
-    pub async fn register(&self, username: String, password: String) -> Result<(), error::Error> {
+    pub async fn register(
+        &self,
+        username: String,
+        email: String,
+        password: String,
+    ) -> Result<(), error::Error> {
         let password_hash = User::hash_password(&password)?;
-        let mut user = User::new(username, password_hash);
+        let mut user = User::new(
+            username,
+            email,
+            password_hash,
+            UserStatus::Unverified,
+            None,
+            None,
+            None,
+        );
         user.insert(&self.db).await?;
         Ok(())
     }

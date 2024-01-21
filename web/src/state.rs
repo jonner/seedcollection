@@ -3,6 +3,7 @@ use anyhow::Result;
 use axum_template::engine::Engine;
 use sqlx::SqlitePool;
 use std::sync::Arc;
+use tracing::debug;
 
 type TemplateEngine = Engine<minijinja::Environment<'static>>;
 
@@ -14,6 +15,7 @@ pub struct SharedState {
 
 impl SharedState {
     pub async fn new(dbpath: String, template: TemplateEngine) -> Result<Self> {
+        debug!("Creating shared app state");
         Ok(Self {
             dbpool: db::pool(dbpath).await?,
             tmpl: template,
