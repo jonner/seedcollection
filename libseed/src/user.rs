@@ -154,13 +154,29 @@ impl User {
             return Err(Error::InvalidData("No id set, cannot update".to_string()));
         }
 
-        sqlx::query("UPDATE sc_users SET username=?, pwhash=? WHERE userid=?")
-            .bind(&self.username)
-            .bind(&self.pwhash)
-            .bind(self.id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
+        sqlx::query(
+            "UPDATE
+                        sc_users
+                    SET
+                        username=?,
+                        useremail=?,
+                        userstatus=?,
+                        userdisplayname=?,
+                        userprofile=?,
+                        pwhash=?
+                    WHERE
+                        userid=?",
+        )
+        .bind(&self.username)
+        .bind(&self.email)
+        .bind(&self.status)
+        .bind(&self.display_name)
+        .bind(&self.profile)
+        .bind(&self.pwhash)
+        .bind(self.id)
+        .execute(pool)
+        .await
+        .map_err(|e| e.into())
     }
 
     /// A helper function to hash a password with a randomly generated salt using the Argon2 hasher
