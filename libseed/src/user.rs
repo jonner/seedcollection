@@ -14,7 +14,7 @@ use sqlx::{
     Pool, QueryBuilder, Sqlite,
 };
 use std::sync::Arc;
-use time::PrimitiveDateTime;
+use time::OffsetDateTime;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[repr(i64)]
@@ -42,7 +42,7 @@ pub struct User {
     status: UserStatus,
 
     #[sqlx(rename = "usersince")]
-    register_date: Option<PrimitiveDateTime>,
+    register_date: Option<OffsetDateTime>,
 
     #[sqlx(rename = "userdisplayname")]
     display_name: Option<String>,
@@ -192,7 +192,7 @@ impl User {
         email: String,
         pwhash: String,
         status: UserStatus,
-        register_date: Option<PrimitiveDateTime>,
+        register_date: Option<OffsetDateTime>,
         display_name: Option<String>,
         profile: Option<String>,
     ) -> Self {
