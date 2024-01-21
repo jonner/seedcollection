@@ -39,16 +39,16 @@ pub struct User {
     pub email: String,
 
     #[sqlx(rename = "userstatus")]
-    status: UserStatus,
+    pub status: UserStatus,
 
     #[sqlx(rename = "usersince")]
-    register_date: Option<OffsetDateTime>,
+    pub register_date: Option<OffsetDateTime>,
 
     #[sqlx(rename = "userdisplayname")]
-    display_name: Option<String>,
+    pub display_name: Option<String>,
 
     #[sqlx(rename = "userprofile", default)]
-    profile: Option<String>,
+    pub profile: Option<String>,
 
     #[serde(skip_serializing)]
     /// a hashed password for use when authenticating a user
