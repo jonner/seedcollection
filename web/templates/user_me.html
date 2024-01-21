@@ -1,0 +1,16 @@
+{% extends "root.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}User Profile{% endblock %}
+{% block content %}
+<h2>{{ self.title() }}
+    <a href="{{ ("/user/me/edit") | app_url }}">{{ icon("pencil") }}</a>
+</h2>
+<h5>Username</h5>
+{{ user.username }}
+<h5>E-mail Address</h5>
+{{ user.email }}
+<h5>Display Name</h5>
+{{ user.display_name or "" }}
+<h5>About me</h5>
+{{ (user.profile | markdown) or "" }}
+{% endblock %}

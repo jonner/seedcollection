@@ -38,7 +38,7 @@
                 </ul>
                 {% if user %}
                 <span class="navbar-text">
-                    Logged in as {{ user.username }}
+                    Logged in as <a href="{{ "/user/me" | app_url }}">{{ user.username }}</a>
                 </span>
                 {% endif %}
                 <ul class="navbar-nav">

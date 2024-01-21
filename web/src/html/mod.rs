@@ -17,14 +17,16 @@ mod project;
 mod sample;
 mod source;
 mod taxonomy;
+mod user;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .nest("/project/", project::router())
-        .nest("/source/", source::router())
-        .nest("/sample/", sample::router())
-        .nest("/taxonomy/", taxonomy::router())
         .nest("/info/", info::router())
+        .nest("/project/", project::router())
+        .nest("/sample/", sample::router())
+        .nest("/source/", source::router())
+        .nest("/taxonomy/", taxonomy::router())
+        .nest("/user/", user::router())
         /* Anything above here is only available to logged-in users */
         .route_layer(login_required!(
             SqliteAuthBackend,
