@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use axum::{
     async_trait,
     error_handling::HandleErrorLayer,
@@ -109,6 +109,14 @@ pub fn app_url(value: &str) -> String {
     [APP_PREFIX, &value.trim_start_matches('/')].join("")
 }
 
+pub fn markdown(value: Option<&str>) -> minijinja::Value {
+    let value = value.unwrap_or("");
+    let parser = pulldown_cmark::Parser::new(value);
+    let mut output = String::new();
+    pulldown_cmark::html::push_html(&mut output, parser);
+    minijinja::Value::from_safe_string(output)
+}
+
 pub fn append_query_param(
     uristr: String,
     key: String,
@@ -197,7 +205,8 @@ async fn main() -> Result<()> {
         PathBuf::from("certs").join("server.crt"),
         PathBuf::from("certs").join("server.key"),
     )
-    .await?;
+    .await
+    .with_context(|| "Unable to load TLS key and certificate. See certs/README for more info")?;
 
     let mut jinja = Environment::new();
     jinja.set_loader(minijinja::path_loader("web/templates"));
@@ -206,6 +215,7 @@ async fn main() -> Result<()> {
     jinja.add_filter("append_query_param", append_query_param);
     jinja.add_filter("truncate", truncate_text);
     jinja.add_filter("idfmt", format_id_number);
+    jinja.add_filter("markdown", markdown);
     jinja.add_global("environment", args.env);
     minijinja_contrib::add_to_environment(&mut jinja);
 
