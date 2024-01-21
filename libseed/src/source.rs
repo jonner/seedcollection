@@ -55,12 +55,28 @@ impl Default for Source {
 impl Loadable for Source {
     type Id = i64;
 
+    fn invalid_id() -> Self::Id {
+        -1
+    }
+
     fn id(&self) -> Self::Id {
         self.id
     }
 
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
         Source::fetch(id, pool).await
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 

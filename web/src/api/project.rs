@@ -11,7 +11,7 @@ use axum::{
     Form, Router,
 };
 use libseed::{
-    loadable::ExternalRef,
+    loadable::{ExternalRef, Loadable},
     project::{Filter, Project},
 };
 use serde::Deserialize;
@@ -83,16 +83,16 @@ async fn delete_project(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
-    let mut c = Project::fetch(id, &state.dbpool)
+    let mut project = Project::fetch(id, &state.dbpool)
         .await
         .map_err(|_| Error::NotFound("That project does not exist".to_string()))?;
-    if c.userid != user.id {
+    if project.userid != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete this project".to_string(),
         ));
     }
 
-    c.delete(&state.dbpool).await?;
+    project.delete(&state.dbpool).await?;
     Ok(())
 }
 

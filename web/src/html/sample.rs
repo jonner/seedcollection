@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
@@ -11,7 +9,7 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
-    loadable::ExternalRef,
+    loadable::{ExternalRef, Loadable},
     project::{Allocation, AllocationFilter},
     sample::{self, Certainty, Sample},
     source::{self, Source},
@@ -19,6 +17,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
+use std::sync::Arc;
 
 use crate::{
     app_url,
@@ -294,7 +293,7 @@ async fn delete_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let sample = Sample::fetch(id, &state.dbpool).await?;
+    let mut sample = Sample::fetch(id, &state.dbpool).await?;
     if sample.user.id() != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete sample".to_string(),

@@ -30,12 +30,28 @@ pub struct User {
 impl Loadable for User {
     type Id = i64;
 
+    fn invalid_id() -> Self::Id {
+        -1
+    }
+
     fn id(&self) -> Self::Id {
         self.id
     }
 
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
         User::fetch(id, pool).await
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        sqlx::query("DELETE FROM sc_users WHERE userid=?")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
@@ -104,23 +120,6 @@ impl User {
             .execute(pool)
             .await
             .map_err(|e| e.into())
-    }
-
-    /// Delete this user from the database
-    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        if self.id < 0 {
-            return Err(Error::InvalidData("No id set, cannot delete".to_string()));
-        }
-
-        sqlx::query("DELETE FROM sc_users WHERE userid=?")
-            .bind(self.id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
-            .and_then(|x| {
-                self.id = -1;
-                Ok(x)
-            })
     }
 
     /// A helper function to hash a password with a randomly generated salt using the Argon2 hasher
@@ -288,9 +287,9 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn delete_user(pool: Pool<Sqlite>) {
-        let mut user = User::load(1, &pool).await.expect("can't load user");
-
-        user.delete(&pool).await.expect("Failed to delete user");
+        User::delete_id(&1, &pool)
+            .await
+            .expect("failed to delete user");
         assert!(User::load(1, &pool).await.is_err());
     }
 

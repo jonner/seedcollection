@@ -1,7 +1,4 @@
 use anyhow::anyhow;
-use std::sync::Arc;
-use strum::IntoEnumIterator;
-
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
@@ -12,10 +9,13 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{FilterBuilder, FilterOp},
+    loadable::Loadable,
     project::{self, Allocation, AllocationFilter, Note, NoteType, Project},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use strum::IntoEnumIterator;
 
 use crate::{
     app_url,
@@ -189,7 +189,7 @@ async fn delete_note(
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can delete
-    let note = Note::fetch(noteid, &state.dbpool).await?;
+    let mut note = Note::fetch(noteid, &state.dbpool).await?;
     let allocation = Allocation::fetch(note.psid, &state.dbpool).await?;
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));

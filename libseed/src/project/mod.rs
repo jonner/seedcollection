@@ -47,12 +47,28 @@ impl Default for Project {
 impl Loadable for Project {
     type Id = i64;
 
+    fn invalid_id() -> Self::Id {
+        -1
+    }
+
     fn id(&self) -> Self::Id {
         self.id
     }
 
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
         Project::fetch(id, pool).await
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        sqlx::query("DELETE FROM sc_projects WHERE projectid=?")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
@@ -178,24 +194,6 @@ impl Project {
         .execute(pool)
         .await
         .map_err(|e| e.into())
-    }
-
-    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        if self.id < 0 {
-            return Err(Error::InvalidData(
-                "id not set, cannot delete project".to_string(),
-            ));
-        }
-
-        sqlx::query("DELETE FROM sc_projects WHERE projectid=?")
-            .bind(self.id)
-            .execute(pool)
-            .await
-            .and_then(|r| {
-                self.id = -1;
-                Ok(r)
-            })
-            .map_err(|e| e.into())
     }
 
     pub fn new(name: String, description: Option<String>, userid: i64) -> Self {

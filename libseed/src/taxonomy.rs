@@ -1,6 +1,10 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{error::Error::ColumnDecode, sqlite::SqliteRow, FromRow, Pool, Row, Sqlite};
+use sqlx::{
+    error::Error::ColumnDecode,
+    sqlite::{SqliteQueryResult, SqliteRow},
+    FromRow, Pool, Row, Sqlite,
+};
 use std::{str::FromStr, sync::Arc};
 use strum_macros::{Display, EnumIter, EnumString, FromRepr};
 use tracing::debug;
@@ -9,6 +13,7 @@ use crate::{
     error::Result,
     filter::{DynFilterPart, FilterBuilder, FilterOp, FilterPart},
     loadable::{ExternalRef, Loadable},
+    Error,
 };
 
 pub const KINGDOM_PLANTAE: i64 = 3;
@@ -96,12 +101,24 @@ impl Default for Taxon {
 impl Loadable for Taxon {
     type Id = i64;
 
+    fn invalid_id() -> Self::Id {
+        -1
+    }
+
     fn id(&self) -> Self::Id {
         self.id
     }
 
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
         Taxon::fetch(id, pool).await
+    }
+
+    async fn delete_id(_id: &Self::Id, _pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        Err(Error::NotAllowed("Cannot delete taxon".to_string()))
     }
 }
 

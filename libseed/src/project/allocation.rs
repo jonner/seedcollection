@@ -2,7 +2,11 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{prelude::*, sqlite::SqliteRow, Pool, QueryBuilder, Sqlite};
+use sqlx::{
+    prelude::*,
+    sqlite::{SqliteQueryResult, SqliteRow},
+    Pool, QueryBuilder, Sqlite,
+};
 
 use crate::{
     error::Result,
@@ -47,12 +51,27 @@ pub struct Allocation {
 impl Loadable for Allocation {
     type Id = i64;
 
+    fn invalid_id() -> Self::Id {
+        -1
+    }
+
     fn id(&self) -> Self::Id {
         self.id
     }
 
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
         Allocation::fetch(id, pool).await
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        sqlx::query!("DELETE FROM sc_project_samples WHERE psid=?", id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 

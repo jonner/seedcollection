@@ -1,16 +1,27 @@
 use crate::error::{Error, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite};
+use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite};
 
 #[async_trait]
 pub trait Loadable {
-    type Id: Clone;
+    type Id: Clone + Send;
 
+    fn invalid_id() -> Self::Id;
     fn id(&self) -> Self::Id;
+    fn set_id(&mut self, id: Self::Id);
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self>
     where
         Self: Sized;
+
+    async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        Self::delete_id(&self.id(), pool).await.and_then(|r| {
+            self.set_id(Self::invalid_id());
+            Ok(r)
+        })
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult>;
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -58,6 +69,13 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
                 self.object()
             }
             Self::Object(ref obj) => Ok(obj),
+        }
+    }
+
+    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        match self {
+            Self::Stub(id) => T::delete_id(id, pool).await,
+            Self::Object(obj) => obj.delete(pool).await,
         }
     }
 }

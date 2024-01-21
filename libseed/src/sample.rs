@@ -49,12 +49,28 @@ pub enum Filter {
 impl Loadable for Sample {
     type Id = i64;
 
+    fn invalid_id() -> Self::Id {
+        -1
+    }
+
     fn id(&self) -> Self::Id {
         self.id
     }
 
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
         Sample::fetch(id, pool).await
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        sqlx::query("DELETE FROM sc_samples WHERE sampleid=?")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
@@ -197,21 +213,6 @@ impl Sample {
             .bind(self.id)
             .execute(pool)
             .await.map_err(|e| e.into())
-    }
-
-    // consumes self
-    pub async fn delete(self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        if self.id < 0 {
-            return Err(Error::InvalidData(
-                "Id is not set, cannot delete".to_string(),
-            ));
-        }
-
-        sqlx::query("DELETE FROM sc_samples WHERE sampleid=?")
-            .bind(self.id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
     }
 
     pub fn new(

@@ -187,8 +187,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             ProjectCommands::Remove { id } => {
-                let mut project = Project::load(id, &dbpool).await?;
-                project.delete(&dbpool).await?;
+                Project::delete_id(&id, &dbpool).await?;
                 println!("Removed project {id}");
                 Ok(())
             }
@@ -270,8 +269,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SourceCommands::Remove { id } => {
-                let mut source = Source::fetch(id, &dbpool).await?;
-                source.delete(&dbpool).await?;
+                Source::delete_id(&id, &dbpool).await?;
                 println!("Removed source {id} from database");
                 Ok(())
             }
@@ -339,8 +337,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Remove { id } => {
-                let sample = Sample::load(id, &dbpool).await?;
-                sample.delete(&dbpool).await?.rows_affected();
+                Sample::delete_id(&id, &dbpool).await?;
                 Ok(())
             }
             SampleCommands::Modify {
@@ -454,10 +451,7 @@ async fn main() -> Result<()> {
                 println!("{}: {}", id, username);
                 Ok(())
             }
-            UserCommands::Remove { id } => {
-                let mut user = User::load(id, &dbpool).await?;
-                user.delete(&dbpool).await.map(|_| ())
-            }
+            UserCommands::Remove { id } => User::delete_id(&id, &dbpool).await.map(|_| ()),
             UserCommands::Modify {
                 id,
                 username,

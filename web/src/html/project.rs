@@ -18,7 +18,7 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
-    loadable::ExternalRef,
+    loadable::{ExternalRef, Loadable},
     project::{self, Project},
     sample::{self, Sample},
     source,

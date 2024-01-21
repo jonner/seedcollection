@@ -6,6 +6,8 @@ pub enum Error {
     InvalidData(String),
     #[error("Authentication error")]
     Authentication(#[from] password_hash::Error),
+    #[error("No permission for action")]
+    NotAllowed(String),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

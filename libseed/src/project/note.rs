@@ -70,12 +70,27 @@ impl Default for Note {
 impl Loadable for Note {
     type Id = i64;
 
+    fn invalid_id() -> Self::Id {
+        -1
+    }
+
     fn id(&self) -> Self::Id {
         self.id
     }
 
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
         Note::fetch(id, pool).await.map_err(|e| e.into())
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        sqlx::query!("DELETE FROM sc_project_notes WHERE pnoteid=?", id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
@@ -168,20 +183,6 @@ impl Note {
         .bind(self.id)
         .fetch_one(pool)
         .await
-    }
-
-    pub async fn delete(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        if self.id < 0 {
-            return Err(Error::InvalidData(
-                "Id is not set, cannot delete".to_string(),
-            ));
-        }
-
-        sqlx::query("DELETE FROM sc_project_notes WHERE pnoteid=?")
-            .bind(self.id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
     }
 }
 

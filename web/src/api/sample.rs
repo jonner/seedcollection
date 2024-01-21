@@ -12,7 +12,7 @@ use axum::{
 };
 use libseed::{
     empty_string_as_none,
-    loadable::ExternalRef,
+    loadable::{ExternalRef, Loadable},
     sample::{Certainty, Sample},
 };
 use serde::Deserialize;
@@ -135,7 +135,7 @@ async fn delete_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<(), error::Error> {
-    let sample = Sample::fetch(id, &state.dbpool).await?;
+    let mut sample = Sample::fetch(id, &state.dbpool).await?;
     if sample.user.id() != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete sample".to_string(),
