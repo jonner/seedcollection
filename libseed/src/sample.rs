@@ -139,6 +139,30 @@ impl Sample {
         builder
     }
 
+    fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+            r#"SELECT
+                COUNT(*) as nsamples
+                FROM (
+                    SELECT
+                        S.sampleid
+                    FROM
+                        sc_samples S
+                    INNER JOIN taxonomic_units T ON T.tsn=S.tsn
+                    INNER JOIN sc_sources L on L.srcid=S.srcid
+                    INNER JOIN sc_users U on U.userid=S.userid
+                    LEFT JOIN (SELECT * FROM vernaculars WHERE
+                    (language="English" or language="unspecified")) V on V.tsn=T.tsn
+                "#,
+        );
+        if let Some(f) = filter {
+            builder.push(" WHERE ");
+            f.add_to_query(&mut builder);
+        }
+        builder.push(" GROUP BY S.sampleid, T.tsn)");
+        builder
+    }
+
     pub async fn fetch_all_user(
         userid: i64,
         filter: Option<DynFilterPart>,
@@ -164,6 +188,16 @@ impl Sample {
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Sample> {
         let mut builder = Self::build_query(Some(Arc::new(Filter::Sample(Cmp::Equal, id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
+    }
+
+    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
+        let mut builder = Self::build_count(filter);
+        builder
+            .build()
+            .fetch_one(pool)
+            .await?
+            .try_get("nsamples")
+            .map_err(|e| e.into())
     }
 
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {

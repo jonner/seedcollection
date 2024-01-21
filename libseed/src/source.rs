@@ -116,6 +116,31 @@ impl Source {
         qb
     }
 
+    fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        let mut qb = QueryBuilder::new(
+            r#"SELECT
+                COUNT(*) as nsources
+            FROM (
+                SELECT
+                    L.srcid,
+                    L.srcname,
+                    L.srcdesc,
+                    L.latitude,
+                    L.longitude,
+                    L.userid,
+                    U.username
+                FROM
+                    sc_sources L
+                INNER JOIN sc_users U ON U.userid=L.userid"#,
+        );
+        if let Some(f) = filter {
+            qb.push(" WHERE ");
+            f.add_to_query(&mut qb);
+        }
+        qb.push(")");
+        qb
+    }
+
     pub fn map_viewer_uri(&self, zoom: f32) -> Option<String> {
         match (self.latitude, self.longitude) {
             (Some(latitude), Some(longitude)) => Some(format!("https://api.maptiler.com/maps/topo-v2/?key={MAP_TILER_KEY}#{zoom}/{latitude}/{longitude}")),
@@ -144,6 +169,15 @@ impl Source {
 
     pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Source>> {
         Self::fetch_all(Some(Arc::new(Filter::User(userid))), pool).await
+    }
+
+    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
+        Self::build_count(filter)
+            .build()
+            .fetch_one(pool)
+            .await?
+            .try_get("nsources")
+            .map_err(|e| e.into())
     }
 
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {

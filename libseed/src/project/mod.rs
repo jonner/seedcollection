@@ -14,7 +14,7 @@ pub use note::Note;
 pub use note::NoteFilter;
 pub use note::NoteType;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Sqlite};
+use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Row, Sqlite};
 use std::sync::Arc;
 
 pub mod allocation;
@@ -107,6 +107,29 @@ impl Project {
         builder
     }
 
+    fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        let mut builder = QueryBuilder::new(
+            r#"SELECT
+                COUNT(*) as nprojects
+            FROM (
+                SELECT
+                    P.projectid,
+                    P.projname,
+                    P.projdescription,
+                    P.userid,
+                    U.username
+                FROM
+                    sc_projects P
+                INNER JOIN sc_users U ON U.userid=P.userid"#,
+        );
+        if let Some(f) = filter {
+            builder.push(" WHERE ");
+            f.add_to_query(&mut builder);
+        }
+        builder.push(")");
+        builder
+    }
+
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
         Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
@@ -123,6 +146,15 @@ impl Project {
             .build_query_as()
             .fetch_all(pool)
             .await
+            .map_err(|e| e.into())
+    }
+
+    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
+        Self::build_count(filter)
+            .build()
+            .fetch_one(pool)
+            .await?
+            .try_get("nprojects")
             .map_err(|e| e.into())
     }
 
