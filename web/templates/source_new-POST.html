@@ -1,7 +1,2 @@
 {% from "_source_macros.html" import source_form %}
-{% call source_form("new-source-form", none, message, request) %}
-<div class="row px-3 mb-3">
-<button class="btn btn-primary"
-    type="submit">Add</button>
-</div>
-{% endcall %}
+{{ source_form("new-source-form", none, message, request) }}

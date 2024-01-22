@@ -47,6 +47,8 @@
                 </div>
             </div>
         </div>
+    <div class="row g-6">
+    </div>
         <div class="mb-3 col-12">
             <label for="SampleSourceInput" class="form-label">Source</label>
             <div class="input-group">
@@ -70,6 +72,8 @@
                     Add new source</button>
             </div>
         </div>
+    <div class="row g-6">
+    </div>
         <div class="mb-3 col-4">
             <label for="SampleMonthInput" class="form-label">Month</label>
             <select id="SampleMonthInput"
@@ -95,6 +99,8 @@
                    name="quantity"
                    value="{% if request %}{{request.quantity }}{% elif sample %}{{ sample.quantity }}{% endif %}"/>
         </div>
+    </div>
+    <div class="row g-6">
         <div class="mb-3 col-12">
             <label for="SampleNotesInput" class="form-label">Notes</label>
             <textarea id="SampleNotesInput"
@@ -102,20 +108,20 @@
                       class="form-control"
                       name="notes">{% if sample.notes %}{{ sample.notes if sample }}{% endif %}</textarea>
         </div>
-        <div class="mb-3">
-            <button type="submit" class="btn btn-primary">{% if sample %}Update{% else %}Add{% endif %}</button>
-        </div>
-        {% if sample %}
-        <div class="mb-3">
+    </div>
+    <div class="row g-6 justify-content-end">
+        <div class="d-flex flex-row-reverse column-gap-3">
+            <button type="submit" class="btn btn-primary px-3">{% if sample %}Update{% else %}Add{% endif %}</button>
+            {% if sample %}
             <button type="button"
-                    class="btn btn-danger"
+                    class="btn btn-danger px-3"
                     hx-delete="{{ ("/sample/" ~ sample.id) | app_url }}"
                     hx-confirm="Are you sure you want to delete sample {{ sample.id }}?"
                     hx-target="closest form"
                     hx-swap="outerHTML"
                     >Delete</button>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 </form>
 <div id="ModalContainer"

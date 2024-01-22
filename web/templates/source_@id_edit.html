@@ -1,5 +1,6 @@
 {% extends "root.html" %}
 {% from "_macros.html" import breadcrumbs %}
+{% from "_source_macros.html" import source_form %}
 {% block title %}{{ source.name }} Details{% endblock %}
 {% block content %}
 {{ breadcrumbs([
@@ -9,5 +10,5 @@
 {"name": "Edit", "active": true }
 ]) }}
 <h2>Source Details</h2>
-{% include "source_@id-PUT.html" %}
+{{ source_form("source-edit", source, message, request) }}
 {% endblock %}

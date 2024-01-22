@@ -6,9 +6,7 @@
       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
     </div>
     <div class="modal-body">
-        {% call source_form("new-source-modal-form") %}
-        <input name="modal" value="1" type="hidden">
-        {% endcall %}
+        {{ source_form("new-source-modal-form", modal=true) }}
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

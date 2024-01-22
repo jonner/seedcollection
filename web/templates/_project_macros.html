@@ -25,20 +25,18 @@ hx-post="{{ "/project/new" | app_url }}"
                   class="form-control"
                   name="description">{{ request.description or project.description or ""}}</textarea>
     </div>
-    <div class="row px-3 mb-3">
+    <div class="d-flex flex-row-reverse column-gap-3">
         <button class="btn btn-primary"
                 type="submit">{% if project %}Update{% else %}Add{% endif %}</button>
-    </div>
-    {% if project %}
-    <div class="row px-3 mb-3">
+        {% if project %}
         <button type="submit"
                 class="btn btn-danger"
                 hx-delete="{{ ("/project/" ~ project.id) | app_url }}"
                 hx-confirm="Are you sure you want to delete project {{ project.id }}?"
                 hx-target="closest form"
                 >Delete</button>
+        {% endif %}
     </div>
-    {% endif %}
 </form>
 {%- endmacro %}
 
@@ -119,14 +117,19 @@ hx-post="{{ "/project/new" | app_url }}"
 {% from "_macros.html" import show_message %}
 <form hx-{% if note %}put{% else %}post{% endif %}="" hx-swap="outerHTML">
     {{ show_message(message) }}
+    <div class="mb-3">
     <label for="SampleNoteSummary" class="form-label">Summary</label>
     <input type="text" id="SampleNoteSummary" name="summary" class="form-control mb-2" value="{{ request.summary or note.summary or "" }}">
+    </div>
+    <div class="mb-3">
     <label for="SampleNoteDate" class="form-label">Date</label>
     <input type="date"
            id="SampleNoteDate"
            name="date"
            class="form-control mb-2"
            value="{% if request %}{{ request.date | dateformat(format="short")}}{% elif note and note.date %}{{ note.date | dateformat(format="short") }}{% else %}{{ now() |dateformat(format="short") }}{% endif %}">
+    </div>
+    <div class="mb-3">
      <label for="SampleNoteType" class="form-label">Note Type</label>
      <select id="SampleNoteType" name="notetype" class="form-select mb-2">
          <option value="">Select a type...</option>
@@ -134,13 +137,18 @@ hx-post="{{ "/project/new" | app_url }}"
          <option value="{{ t }}" {% if (request and (request.notetype == t)) %}selected{% elif (note and (note.kind == t)) %}selected{% endif %}>{{ t }}</option>
          {% endfor %}
      </select>
+    </div>
+    <div class="mb-3">
      <label for="SampleNoteDetails" class="form-label">Details</label>
      <textarea id="SampleNoteDetails" rows="5" name="details" class="form-control mb-2">{{ (request.details or "") if request else note.details or "" }}</textarea>
-     {% if note %}
-     <button class="btn btn-primary" type="submit">Update</button>
-     {% else %}
-     <button class="btn btn-primary" type="submit">Add</button>
-     {% endif %}
+    </div>
+     <div class="d-flex flex-row-reverse">
+         {% if note %}
+         <button class="btn btn-primary" type="submit">Update</button>
+         {% else %}
+         <button class="btn btn-primary" type="submit">Add</button>
+         {% endif %}
+     </div>
 </form>
 {%- endmacro %}
 

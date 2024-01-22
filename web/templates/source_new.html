@@ -1,5 +1,6 @@
 {% extends "root.html" %}
 {% from "_macros.html" import breadcrumbs %}
+{% from "_source_macros.html" import source_form %}
 {% block title %}New Source{% endblock %}
 {% block content %}
 {{ breadcrumbs([
@@ -8,5 +9,5 @@
 {"name": "New Source", "active": true },
 ]) }}
 <h2>{{ self.title() }}</h2>
-{% include "source_new-POST.html" %}
+{{ source_form("new-source-form", none, message, request) }}
 {% endblock %}
