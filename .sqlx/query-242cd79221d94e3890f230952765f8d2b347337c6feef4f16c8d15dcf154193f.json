@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM sc_project_notes WHERE pnoteid=?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "242cd79221d94e3890f230952765f8d2b347337c6feef4f16c8d15dcf154193f"
+}

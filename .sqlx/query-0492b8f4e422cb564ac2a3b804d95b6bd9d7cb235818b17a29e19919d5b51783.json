@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "BEGIN TRANSACTION;\n            UPDATE sc_user_verification SET uvconfirmed=1 WHERE uvkey=?;\n            UPDATE sc_users AS U SET userstatus=?\n            FROM ( SELECT userid FROM sc_user_verification WHERE uvkey=?) AS UV\n            WHERE U.userid = UV.userid;\n            COMMIT;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "0492b8f4e422cb564ac2a3b804d95b6bd9d7cb235818b17a29e19919d5b51783"
+}

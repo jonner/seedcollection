@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT PS.sampleid from sc_project_samples PS WHERE PS.projectid=?",
+  "describe": {
+    "columns": [
+      {
+        "name": "sampleid",
+        "ordinal": 0,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6f1df5963a3e8f9b4cb944224bddb6869c8d414af4479f7119026e91f3134f45"
+}

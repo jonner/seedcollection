@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM sc_project_samples WHERE psid=?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "7a41a46e919247ef0d47d873fb561c23ce7bc22ea66d6fea9d31994b1d2add0a"
+}

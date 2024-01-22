@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM sc_project_samples WHERE projectid=? AND sampleid=?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "d2af36170b78f00bddf37a290e6f36aa92344457a49dc7e5ee5648a4a17d61ff"
+}

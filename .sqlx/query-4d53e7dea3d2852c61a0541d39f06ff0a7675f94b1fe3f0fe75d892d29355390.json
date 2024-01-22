@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO sc_taxon_germination (tsn, germid) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "4d53e7dea3d2852c61a0541d39f06ff0a7675f94b1fe3f0fe75d892d29355390"
+}

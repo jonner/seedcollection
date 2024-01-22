@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT userid FROM sc_projects WHERE projectid=?",
+  "describe": {
+    "columns": [
+      {
+        "name": "userid",
+        "ordinal": 0,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2caaf383fc7c58565a79f7cb970a3f411556a99527e311e4534e82c4c2b37d4c"
+}
