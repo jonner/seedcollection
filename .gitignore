@@ -1,4 +1,8 @@
-/target
+/.env
+/Cargo.lock
 /certs/server.crt
 /certs/server.csr
 /certs/server.key
+/target
+/TODO
+/seedcollection.sqlite*
