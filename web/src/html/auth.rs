@@ -1,3 +1,10 @@
+use crate::{
+    app_url,
+    auth::{AuthSession, Credentials},
+    error,
+    state::AppState,
+    Message, MessageType, TemplateKey,
+};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -6,23 +13,22 @@ use axum::{
     Form, Router,
 };
 use axum_template::RenderHtml;
-use libseed::empty_string_as_none;
-use minijinja::context;
-use serde::Deserialize;
-use tracing::debug;
-
-use crate::{
-    app_url,
-    auth::{AuthSession, Credentials},
-    error,
-    state::AppState,
-    Message, MessageType, TemplateKey,
+use libseed::{
+    empty_string_as_none,
+    loadable::Loadable,
+    user::{User, UserStatus},
 };
+use minijinja::context;
+use serde::{Deserialize, Serialize};
+use sqlx::{Pool, Sqlite};
+use time::{macros::format_description, Duration, OffsetDateTime, PrimitiveDateTime};
+use tracing::debug;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(show_login).post(do_login))
         .route("/logout", get(logout))
+        .route("/verify", get(show_verification).post(verify_user))
 }
 
 #[derive(Clone, Deserialize)]
@@ -116,5 +122,210 @@ async fn logout(mut auth: AuthSession) -> impl IntoResponse {
     match auth.logout().await {
         Ok(_) => Redirect::to("login").into_response(),
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct VerificationParam {
+    key: String,
+}
+
+#[derive(Serialize, PartialEq, Debug)]
+enum VerifyStatus {
+    VerificationCodeExpired,
+    VerificationCodeNotFound,
+    AlreadyVerified,
+    VerificationCodeValid,
+    VerificationSuccessful,
+}
+
+struct VerificationRow {
+    uvid: i64,
+    userid: i64,
+    uvkey: String,
+    uvrequested: String,
+    uvexpiration: i64,
+    uvconfirmed: i64,
+}
+
+fn parse_sqlite_datetime(timestamp: &str) -> anyhow::Result<OffsetDateTime> {
+    PrimitiveDateTime::parse(
+        timestamp,
+        format_description!("[year]-[month]-[day] [hour]:[minute]:[second]"),
+    )
+    .map(|p| p.assume_utc())
+    .map_err(|e| e.into())
+}
+
+async fn check_verification_code(
+    key: &str,
+    pool: &Pool<Sqlite>,
+) -> Result<VerifyStatus, error::Error> {
+    let row = sqlx::query_as!(
+        VerificationRow,
+        "SELECT * FROM sc_user_verification WHERE uvkey=?",
+        key
+    )
+    .fetch_optional(pool)
+    .await?;
+    let status = match row {
+        Some(row) => {
+            debug!("requested date from db: {}", row.uvrequested);
+            let requestdate = parse_sqlite_datetime(&row.uvrequested)?;
+            debug!("parsed requested date: {}", requestdate);
+            debug!("expiration from db: {}", row.uvexpiration);
+            let expiration = requestdate + Duration::new(row.uvexpiration * 60 * 60, 0);
+            debug!("calculated expiration date: {}", expiration);
+            debug!("now: {}", OffsetDateTime::now_utc());
+            if expiration < OffsetDateTime::now_utc() {
+                VerifyStatus::VerificationCodeExpired
+            } else {
+                let user = User::load(row.userid, pool).await?;
+                if user.status == UserStatus::Verified {
+                    VerifyStatus::AlreadyVerified
+                } else {
+                    VerifyStatus::VerificationCodeValid
+                }
+            }
+        }
+        None => VerifyStatus::VerificationCodeNotFound,
+    };
+    Ok(status)
+}
+
+async fn show_verification(
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Query(params): Query<VerificationParam>,
+) -> Result<impl IntoResponse, error::Error> {
+    let status = check_verification_code(&params.key, &state.dbpool).await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(verification_status => status),
+    ))
+}
+
+async fn do_verification(key: &str, pool: &Pool<Sqlite>) -> Result<VerifyStatus, error::Error> {
+    let mut status = check_verification_code(key, pool).await?;
+    if status == VerifyStatus::VerificationCodeValid {
+        sqlx::query!(
+            r#"BEGIN TRANSACTION;
+            UPDATE sc_user_verification SET uvconfirmed=1 WHERE uvkey=?;
+            UPDATE sc_users AS U SET userstatus=?
+            FROM ( SELECT userid FROM sc_user_verification WHERE uvkey=?) AS UV
+            WHERE U.userid = UV.userid;
+            COMMIT;
+            "#,
+            key,
+            UserStatus::Verified as i64,
+            key,
+        )
+        .execute(pool)
+        .await?;
+        status = VerifyStatus::VerificationSuccessful;
+    }
+    Ok(status)
+}
+async fn verify_user(
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Query(params): Query<VerificationParam>,
+) -> Result<impl IntoResponse, error::Error> {
+    let status = do_verification(&params.key, &state.dbpool).await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(verification_status => status),
+    ))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use test_log::test;
+
+    fn format_sqlite_datetime(date: &OffsetDateTime) -> anyhow::Result<String> {
+        date.format(format_description!(
+            "[year]-[month]-[day] [hour]:[minute]:[second]"
+        ))
+        .map_err(|e| e.into())
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../../db/fixtures", scripts("users", "sources", "taxa"))
+    ))]
+    async fn test_verification(pool: Pool<Sqlite>) {
+        // expires yesterday
+        const KEY1: &str = "aRbitrarykeyvalue21908fs0fqwaerilkiljanslaoi";
+        // expires in an hour
+        const KEY2: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
+        const USERID1: i64 = 1;
+
+        let yesterday = OffsetDateTime::now_utc() - Duration::new(24 * 60 * 60, 0);
+        let yesterday = format_sqlite_datetime(&yesterday).expect("unable to format timestamp");
+        let now = OffsetDateTime::now_utc();
+        let now = format_sqlite_datetime(&now).expect("unable to format timestamp");
+        sqlx::query!(
+            r#"INSERT INTO sc_user_verification
+                (uvid, userid, uvkey, uvrequested, uvexpiration, uvconfirmed)
+            VALUES
+                (1, ?, ?, ?, 0, 0);
+            INSERT INTO sc_user_verification
+                (uvid, userid, uvkey, uvrequested, uvexpiration, uvconfirmed)
+            VALUES
+                (2, ?, ?, ?, 1, 0)"#,
+            USERID1,
+            KEY1,
+            yesterday,
+            USERID1,
+            KEY2,
+            now,
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to insert user verification rows");
+
+        assert_eq!(
+            VerifyStatus::VerificationCodeNotFound,
+            do_verification("NON-EXISTENT KEY", &pool)
+                .await
+                .expect("Failed to do verification"),
+        );
+        assert_eq!(
+            VerifyStatus::VerificationCodeExpired,
+            do_verification(KEY1, &pool)
+                .await
+                .expect("Failed to do verification"),
+        );
+
+        // make sure that the user is unverified before this
+        let user = User::load(USERID1, &pool)
+            .await
+            .expect("Failed to load user");
+        assert_eq!(UserStatus::Unverified, user.status);
+        assert_eq!(
+            VerifyStatus::VerificationSuccessful,
+            do_verification(KEY2, &pool)
+                .await
+                .expect("Failed to do verification"),
+        );
+
+        let row = sqlx::query_as!(
+            VerificationRow,
+            "SELECT * FROM sc_user_verification WHERE uvid=?",
+            2
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to fetch verification row");
+        assert_eq!(2, row.uvid);
+        assert_eq!(KEY2, row.uvkey);
+        assert_eq!(1, row.uvconfirmed);
+        let user = User::load(USERID1, &pool)
+            .await
+            .expect("Failed to load user");
+        assert_eq!(UserStatus::Verified, user.status);
     }
 }

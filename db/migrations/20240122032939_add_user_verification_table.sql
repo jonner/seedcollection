@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS "sc_user_verification" (
+	"uvid"	INTEGER NOT NULL UNIQUE,
+	"userid"	INTEGER NOT NULL,
+	"uvkey"	TEXT NOT NULL UNIQUE,
+	"uvrequested"	TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	"uvexpiration"	INTEGER NOT NULL,
+	"uvconfirmed"	INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY("uvid" AUTOINCREMENT),
+	FOREIGN KEY("userid") REFERENCES "sc_users"("userid")
+);
