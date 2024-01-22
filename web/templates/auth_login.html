@@ -4,7 +4,11 @@
 <div class="row justify-content-center">
     <div style="max-width: 500px">
         <h2 class="text-center">{{ self.title() }}</h2>
-        {% include "auth_login-POST.html" %}
+{% if user %}
+<div class="alert alert-warning">Already logged in as {{ user.username }}</div>
+{% else %}
+        {{ login_form() }}
+{% endif %}
     </div>
 </div>
 {% endblock %}

@@ -1,27 +1,6 @@
-{% from "_macros.html" import show_message %}
+{% from "_auth_macros.html" import login_form %}
 {% if user %}
 <div class="alert alert-warning">Already logged in as {{ user.username }}</div>
 {% else %}
-<form hx-post="{{ "/auth/login" | app_url }}" id="login-user">
-    {{ show_message(message) }}
-    <div class="row px-3 mb-3">
-        <label class="form-label" for="UsernameInput">Username</label>
-        <input id="UsernameInput"
-               class="form-control"
-               type="text"
-               name="username"
-               value="{{ username or "" }}">
-    </div>
-    <div class="row px-3 mb-3">
-        <label class="form-label" for="PasswordInput">Password</label>
-        <input id="PasswordInput"
-               class="form-control"
-               type="password"
-               name="password">
-    </div>
-    <input type="hidden" name="next" value="{{ next or "" }}" />
-    <div class="row px-3 mb-3">
-        <button type="submit" class="btn btn-primary">Log in</button>
-    </div>
-</form>
+{{ login_form(username, message) }}
 {% endif %}
