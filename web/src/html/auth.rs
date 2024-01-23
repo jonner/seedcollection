@@ -6,7 +6,7 @@ use crate::{
     Message, MessageType, TemplateKey,
 };
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
     routing::get,
@@ -28,7 +28,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(show_login).post(do_login))
         .route("/logout", get(logout))
-        .route("/verify", get(show_verification).post(verify_user))
+        .route("/verify/:key", get(show_verification).post(verify_user))
 }
 
 #[derive(Clone, Deserialize)]
@@ -125,11 +125,6 @@ async fn logout(mut auth: AuthSession) -> impl IntoResponse {
     }
 }
 
-#[derive(Deserialize)]
-struct VerificationParam {
-    key: String,
-}
-
 #[derive(Serialize, PartialEq, Debug)]
 enum VerifyStatus {
     VerificationCodeExpired,
@@ -194,15 +189,16 @@ async fn check_verification_code(
 }
 
 async fn show_verification(
+    auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Query(params): Query<VerificationParam>,
+    Path(vkey): Path<String>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let status = check_verification_code(&params.key, &state.dbpool).await?;
+    let status = check_verification_code(&vkey, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(verification_status => status),
+        context!(verification_status => status, user => auth.user),
     ))
 }
 
@@ -230,9 +226,9 @@ async fn do_verification(key: &str, pool: &Pool<Sqlite>) -> Result<VerifyStatus,
 async fn verify_user(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Query(params): Query<VerificationParam>,
+    Path(vkey): Path<String>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let status = do_verification(&params.key, &state.dbpool).await?;
+    let status = do_verification(&vkey, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),

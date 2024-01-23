@@ -219,7 +219,15 @@ async fn main() -> Result<()> {
     jinja.add_global("environment", args.env);
     minijinja_contrib::add_to_environment(&mut jinja);
 
-    let shared_state = Arc::new(SharedState::new(database.to_string(), Engine::from(jinja)).await?);
+    let shared_state = Arc::new(
+        SharedState::new(
+            database.to_string(),
+            Engine::from(jinja),
+            args.listen.clone(),
+            ports.https,
+        )
+        .await?,
+    );
     sqlx::migrate!("../db/migrations")
         .run(&shared_state.dbpool)
         .await?;

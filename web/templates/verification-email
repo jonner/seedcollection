@@ -1,0 +1,7 @@
+In order to verify your email address for seedcollection, please visit the
+following URL:
+
+    {{ verification_url }}
+
+Thank you,
+The Management

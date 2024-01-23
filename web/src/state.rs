@@ -11,14 +11,23 @@ type TemplateEngine = Engine<minijinja::Environment<'static>>;
 pub struct SharedState {
     pub dbpool: SqlitePool,
     pub tmpl: TemplateEngine,
+    pub host: String,
+    pub port: u16,
 }
 
 impl SharedState {
-    pub async fn new(dbpath: String, template: TemplateEngine) -> Result<Self> {
+    pub async fn new(
+        dbpath: String,
+        template: TemplateEngine,
+        host: String,
+        port: u16,
+    ) -> Result<Self> {
         debug!("Creating shared app state");
         Ok(Self {
             dbpool: db::pool(dbpath).await?,
             tmpl: template,
+            host,
+            port,
         })
     }
 }

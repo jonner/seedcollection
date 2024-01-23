@@ -4,34 +4,34 @@
 <div class="row justify-content-center">
     <div style="max-width: 500px">
         <h2 class="text-center">{{ self.title() }}</h2>
-        {% if code_expired %}
-        <div class="alert text-bg-danger">
+        {% if verification_status == "VerificationCodeExpired" %}
+        <div class="alert alert-danger">
             This verification code has expired. Visit your
             <a href="{{ "/user/me" | app_url }}">user profile</a> to request a
             new verification code to be emailed to you.
         </div>
-        {% else if code_not_found %}
+        {% elif verification_status == "VerificationCodeNotFound" %}
         <div id="verify-info-box"
-            class="alert text-bg-warning">
+            class="alert alert-warning">
             The verification code you provided could not be found. Check your
             verification email and make sure that the link you clicked was not
             corrupted in some way. Visit your
             <a href="{{ "/user/me" | app_url }}">user profile</a> to request a
             new verification code to be emailed to you.
         </div>
-        {% else if already_verified %}
+        {% elif verification_status == "AlreadyVerified" %}
         <div id="verify-info-box"
-            class="alert text-bg-info">
+            class="alert alert-info">
             This email address has already been verified.
         </div>
-        {% else %}
+        {% elif verification_status == "VerificationCodeValid" %}
         <div id="verify-info-box"
-            class="alert text-bg-info">
+            class="alert alert-info">
             Verification of your email address is required in order to perform
             some actions on this website. Click below to verify your email
             address.
         </div>
-        <form hx-post="{{ "/auth/verify" | app_url }}"
+        <form hx-post=""
               hx-target="#verify-info-box"
               hx-swap="outerHTML">
             <button type="submit"

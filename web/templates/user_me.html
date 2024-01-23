@@ -5,6 +5,7 @@
 <h2 class="mb-3 border-bottom">{{ self.title() }}
     <a href="{{ ("/user/me/edit") | app_url }}">{{ icon("pencil") }}</a>
 </h2>
+<div id="message-box"></div>
 <div class="container row column-gap-4">
     <div class="col-md-3">
         <div class="row mb-2">
@@ -31,7 +32,9 @@
             <div>{{ user.email }}</div>
             {% if user.status == "Unverified" %}
             <div class="alert alert-warning p-2">
-                This address is unverified. <a href="#" hx-post="#">Resend verification email</a>
+                This address is unverified. <a href="#"
+                    hx-post="{{ "/user/me/reverify" | app_url }}"
+                    hx-target="#message-box">Resend verification email</a>
             </div>
             {% endif %}
             </div>
