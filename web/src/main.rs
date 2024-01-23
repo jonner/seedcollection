@@ -16,8 +16,9 @@ use axum_login::{
 use axum_server::tls_rustls::RustlsConfig;
 use axum_template::engine::Engine;
 use clap::Parser;
+use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
 use minijinja::{Environment, ErrorKind};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use state::SharedState;
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
@@ -93,12 +94,6 @@ pub struct Cli {
         help = "shows all valid values for the --env option"
     )]
     pub list_envs: bool,
-    #[arg(short, long, default_value = "localhost")]
-    pub listen: String,
-    #[arg(short, long, default_value = "8080")]
-    pub port: u16,
-    #[arg(short, long, default_value = "8443")]
-    pub tls_port: u16,
 }
 
 pub fn api_url(value: &str) -> String {
@@ -164,14 +159,84 @@ struct Ports {
     https: u16,
 }
 
+#[derive(Deserialize, PartialEq)]
+struct RemoteSmtpCredentials {
+    username: String,
+    password: String,
+}
+
+impl std::fmt::Debug for RemoteSmtpCredentials {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RemoteSmtpCredentials")
+            .field("username", &self.username)
+            .field("password", &"<obscured>")
+            .finish()
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+struct RemoteSmtpConfig {
+    url: String,
+    credentials: Option<RemoteSmtpCredentials>,
+    port: Option<u16>,
+    timeout: Option<u64>,
+}
+
+impl RemoteSmtpConfig {
+    fn build(&self) -> Result<AsyncSmtpTransport<Tokio1Executor>> {
+        let mut builder = AsyncSmtpTransport::<Tokio1Executor>::from_url(&self.url)?;
+        if let Some(ref creds) = self.credentials {
+            builder = builder.credentials(Credentials::new(
+                creds.username.clone(),
+                creds.password.clone(),
+            ));
+        }
+        if let Some(port) = self.port {
+            builder = builder.port(port);
+        }
+        if let Some(timeout) = self.timeout {
+            builder = builder.timeout(Some(std::time::Duration::new(timeout, 0)));
+        }
+
+        Ok(builder.build())
+    }
+}
+
+#[derive(Deserialize)]
+enum SmtpConfig {
+    Local,
+    Remote(RemoteSmtpConfig),
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+enum MailSender {
+    FileTransport(String),
+    LocalSmtpTransport,
+    SmtpTransport(RemoteSmtpConfig),
+}
+
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+struct ListenConfig {
+    host: String,
+    http_port: u16,
+    https_port: u16,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+struct EnvConfig {
+    listen: ListenConfig,
+    database: String,
+    mail: MailSender,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let configyaml = tokio::fs::read_to_string("config.yaml").await?;
-    let config: HashMap<String, HashMap<String, String>> = serde_yaml::from_str(&configyaml)?;
+    let mut configs: HashMap<String, EnvConfig> = serde_yaml::from_str(&configyaml)?;
     let args = Cli::parse();
 
     if args.list_envs {
-        for (key, _) in &config {
+        for (key, _) in &configs {
             println!("{key}");
         }
     }
@@ -180,26 +245,22 @@ async fn main() -> Result<()> {
         .with_env_filter(EnvFilter::from_env("SEEDWEB_LOG"))
         .init();
 
-    let env = config.get(&args.env).ok_or_else(|| {
+    let env = configs.remove(&args.env).ok_or_else(|| {
         anyhow!(
             "Unknown environment '{}'. Possible values: {}",
             &args.env,
-            config.keys().cloned().collect::<Vec<_>>().join(", ")
+            configs.keys().cloned().collect::<Vec<_>>().join(", ")
         )
     })?;
     info!("Using environment '{}'", args.env);
-
-    let database = env
-        .get("database")
-        .ok_or_else(|| anyhow!("No database specified in environment {}", args.env))?;
-    info!("using database {database}");
+    let listen = env.listen.clone();
 
     let ports = Ports {
-        http: args.port,
-        https: args.tls_port,
+        http: listen.http_port,
+        https: listen.https_port,
     };
 
-    tokio::spawn(redirect_http_to_https(args.listen.clone(), ports));
+    tokio::spawn(redirect_http_to_https(listen.host.clone(), ports));
 
     let tlsconfig = RustlsConfig::from_pem_file(
         PathBuf::from("certs").join("server.crt"),
@@ -219,15 +280,7 @@ async fn main() -> Result<()> {
     jinja.add_global("environment", args.env);
     minijinja_contrib::add_to_environment(&mut jinja);
 
-    let shared_state = Arc::new(
-        SharedState::new(
-            database.to_string(),
-            Engine::from(jinja),
-            args.listen.clone(),
-            ports.https,
-        )
-        .await?,
-    );
+    let shared_state = Arc::new(SharedState::new(env, Engine::from(jinja)).await?);
     sqlx::migrate!("../db/migrations")
         .run(&shared_state.dbpool)
         .await?;
@@ -257,7 +310,7 @@ async fn main() -> Result<()> {
         .with_state(shared_state)
         .layer(auth_service);
 
-    let addr: SocketAddr = format!("{}:{}", args.listen, ports.https).parse()?;
+    let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
     info!("Listening on https://{}", addr);
     axum_server::bind_rustls(addr, tlsconfig)
         .serve(app.into_make_service())
@@ -305,4 +358,52 @@ async fn root() -> impl IntoResponse {
 
 async fn favicon_redirect() -> impl IntoResponse {
     Redirect::permanent("/static/favicon.ico")
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_parse_config() {
+        let yaml = r#"dev:
+  database: dev-database.sqlite
+  mail: !FileTransport
+    "/tmp/"
+  listen: !ListenConfig &LISTEN
+    host: "0.0.0.0"
+    http_port: 8080
+    https_port: 8443
+prod:
+  database: prod-database.sqlite
+  mail: !LocalSmtpTransport
+  listen: *LISTEN"#;
+        let configs: HashMap<String, EnvConfig> =
+            serde_yaml::from_str(yaml).expect("Failed to parse yaml");
+        assert_eq!(configs.len(), 2);
+        assert_eq!(
+            configs["dev"],
+            EnvConfig {
+                database: "dev-database.sqlite".to_string(),
+                mail: MailSender::FileTransport("/tmp/".to_string()),
+                listen: ListenConfig {
+                    host: "0.0.0.0".to_string(),
+                    http_port: 8080,
+                    https_port: 8443,
+                }
+            }
+        );
+        assert_eq!(
+            configs["prod"],
+            EnvConfig {
+                database: "prod-database.sqlite".to_string(),
+                mail: MailSender::LocalSmtpTransport,
+                listen: ListenConfig {
+                    host: "0.0.0.0".to_string(),
+                    http_port: 8080,
+                    https_port: 8443,
+                }
+            }
+        );
+    }
 }

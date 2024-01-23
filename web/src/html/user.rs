@@ -15,7 +15,7 @@ use axum::{
 use axum_template::{RenderHtml, TemplateEngine};
 use lettre::{
     message::{header::ContentType, Mailbox},
-    AsyncFileTransport, AsyncTransport, Tokio1Executor,
+    AsyncFileTransport, AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
 };
 use libseed::{
     project::{self, Project},
@@ -117,9 +117,9 @@ async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), err
     // FIXME: figure out how to do the host/port stuff properly. Right now this will send a link to
     // host 0.0.0.0 if that's what we configured the server to listen on...
     let mut verification_url = "https://".to_string();
-    verification_url.push_str(&state.host);
-    if state.port != 443 {
-        verification_url.push_str(&format!(":{}", state.port));
+    verification_url.push_str(&state.config.listen.host);
+    if state.config.listen.https_port != 443 {
+        verification_url.push_str(&format!(":{}", state.config.listen.https_port));
     }
     verification_url.push_str(&app_url(&format!("/auth/verify/{uvkey}")));
     let emailbody = state
@@ -146,13 +146,30 @@ async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), err
         .header(ContentType::TEXT_PLAIN)
         .body(emailbody)
         .with_context(|| "Failed to create email message")?;
-    let sender = AsyncFileTransport::<Tokio1Executor>::new("/tmp");
-    sender
-        .send(email)
-        .await
-        .with_context(|| "Failed to send email")
-        .map_err(|e| e.into())
-        .map(|_| ())
+    match state.config.mail {
+        crate::MailSender::FileTransport(ref path) => {
+            AsyncFileTransport::<Tokio1Executor>::new(path)
+                .send(email)
+                .await
+                .map_err(anyhow::Error::from)
+                .map(|_| ())
+        }
+        crate::MailSender::LocalSmtpTransport => {
+            AsyncSmtpTransport::<Tokio1Executor>::unencrypted_localhost()
+                .send(email)
+                .await
+                .map_err(anyhow::Error::from)
+                .map(|_| ())
+        }
+        crate::MailSender::SmtpTransport(ref cfg) => cfg
+            .build()?
+            .send(email)
+            .await
+            .map_err(anyhow::Error::from)
+            .map(|_| ()),
+    }
+    .with_context(|| "Failed to send email")
+    .map_err(|e| e.into())
 }
 
 async fn resend_verification(

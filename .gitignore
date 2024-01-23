@@ -1,4 +1,5 @@
 /.env
+/config.yaml
 /Cargo.lock
 /certs/server.crt
 /certs/server.csr
