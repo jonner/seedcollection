@@ -400,4 +400,21 @@ mod tests {
         // emails should be ok
         assert!(User::validate_username("foo@bar.com").is_ok());
     }
+
+    #[test]
+    fn hash_password() {
+        let pw = "my-super-secret-password";
+        let user = User::new(
+            "my-user-name".to_string(),
+            "my-address@domain.co.uk".to_string(),
+            User::hash_password(pw).expect("Failed to hash password"),
+            UserStatus::Unverified,
+            None,
+            None,
+            None,
+        );
+
+        assert!(user.verify_password(pw).is_ok());
+        assert!(user.verify_password("wrong-password").is_err());
+    }
 }
