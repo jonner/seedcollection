@@ -162,6 +162,8 @@ struct Ports {
 #[derive(Deserialize, PartialEq)]
 struct RemoteSmtpCredentials {
     username: String,
+    passwordfile: String,
+    #[serde(skip)]
     password: String,
 }
 
@@ -169,7 +171,7 @@ impl std::fmt::Debug for RemoteSmtpCredentials {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RemoteSmtpCredentials")
             .field("username", &self.username)
-            .field("password", &"<obscured>")
+            .field("passwordfile", &self.passwordfile)
             .finish()
     }
 }
@@ -229,6 +231,21 @@ struct EnvConfig {
     mail: MailSender,
 }
 
+impl EnvConfig {
+    fn init(&mut self) -> Result<()> {
+        match &mut self.mail {
+            MailSender::SmtpTransport(ref mut cfg) => match cfg.credentials {
+                Some(ref mut creds) => {
+                    creds.password = std::fs::read_to_string(&creds.passwordfile)?;
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+        Ok(())
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let configyaml = tokio::fs::read_to_string("config.yaml").await?;
@@ -245,13 +262,15 @@ async fn main() -> Result<()> {
         .with_env_filter(EnvFilter::from_env("SEEDWEB_LOG"))
         .init();
 
-    let env = configs.remove(&args.env).ok_or_else(|| {
+    let mut env = configs.remove(&args.env).ok_or_else(|| {
         anyhow!(
             "Unknown environment '{}'. Possible values: {}",
             &args.env,
             configs.keys().cloned().collect::<Vec<_>>().join(", ")
         )
     })?;
+    // we want to fail early if the config isn't valid or the password can't be read
+    env.init()?;
     info!("Using environment '{}'", args.env);
     let listen = env.listen.clone();
 

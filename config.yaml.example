@@ -13,4 +13,4 @@ prod:
     port: 465
     credentials:
       username: "user@domain.com"
-      password: "top-secret-password"
+      passwordfile: "/path/to/smtpd/password"
