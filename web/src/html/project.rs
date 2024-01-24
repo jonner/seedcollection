@@ -17,9 +17,9 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, FilterBuilder, FilterOp},
+    filter::{Cmp, FilterBuilder, FilterOp, SortOrder, SortSpec},
     loadable::{ExternalRef, Loadable},
-    project::{self, Project},
+    project::{self, allocation::SortField, Project},
     sample::{self, Sample},
     source,
 };
@@ -173,20 +173,34 @@ async fn insert_project(
     }
 }
 
+#[derive(Deserialize)]
+struct ShowProjectQueryParams {
+    sort: Option<SortField>,
+    dir: Option<SortOrder>,
+    _limit: Option<i32>,
+    _offset: Option<i32>,
+}
+
 async fn show_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
+    Query(params): Query<ShowProjectQueryParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let fb = FilterBuilder::new(FilterOp::And)
         .push(Arc::new(project::Filter::Id(id)))
         .push(Arc::new(project::Filter::User(user.id)));
+
     let mut projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
     let Some(mut project) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
-    project.fetch_samples(None, None, &state.dbpool).await?;
+
+    let sort = params
+        .sort
+        .map(|field| SortSpec::new(field, params.dir.unwrap_or(SortOrder::Ascending)));
+    project.fetch_samples(None, sort, &state.dbpool).await?;
 
     Ok(RenderHtml(
         key,

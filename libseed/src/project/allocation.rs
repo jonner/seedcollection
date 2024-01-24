@@ -72,12 +72,18 @@ impl Loadable for Allocation {
     }
 }
 
-#[derive(strum_macros::Display)]
+#[derive(strum_macros::Display, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum SortField {
     Taxon,
+    #[serde(rename = "id")]
     SampleId,
-    UpdateDate,
+    #[serde(rename = "date")]
+    CollectionDate,
+    Activity,
+    #[serde(rename = "qty")]
     Quantity,
+    #[serde(rename = "src")]
     Source,
 }
 
@@ -126,9 +132,10 @@ impl Allocation {
         match sort.field {
             SortField::SampleId => _ = builder.push(" S.sampleid"),
             SortField::Taxon => _ = builder.push(" T.phylo_sort_seq"),
-            SortField::UpdateDate => _ = builder.push(" N.notedate"),
+            SortField::Activity => _ = builder.push(" N.notedate"),
             SortField::Quantity => _ = builder.push(" S.quantity"),
             SortField::Source => _ = builder.push(" L.srcname"),
+            SortField::CollectionDate => _ = builder.push(" CONCAT(S.year, S.month)"),
         }
 
         match sort.order {
