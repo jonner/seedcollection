@@ -1,5 +1,13 @@
-use std::sync::Arc;
-
+use super::{
+    note::{self, Note},
+    Project,
+};
+use crate::{
+    error::Result,
+    filter::{DynFilterPart, FilterPart, SortOrder, SortSpec},
+    loadable::Loadable,
+    sample::Sample,
+};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -7,18 +15,7 @@ use sqlx::{
     sqlite::{SqliteQueryResult, SqliteRow},
     Pool, QueryBuilder, Sqlite,
 };
-
-use crate::{
-    error::Result,
-    filter::{DynFilterPart, FilterPart},
-    loadable::Loadable,
-    sample::Sample,
-};
-
-use super::{
-    note::{self, Note},
-    Project,
-};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub enum AllocationFilter {
@@ -75,8 +72,21 @@ impl Loadable for Allocation {
     }
 }
 
+#[derive(strum_macros::Display)]
+pub enum SortField {
+    Taxon,
+    SampleId,
+    UpdateDate,
+    Quantity,
+    Source,
+}
+
 impl Allocation {
-    pub fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    pub fn build_query(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpec<SortField>>,
+    ) -> QueryBuilder<'static, Sqlite> {
+        let sort = sort.unwrap_or(SortSpec::new(SortField::Taxon, SortOrder::Ascending));
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
             SELECT PS.psid,
@@ -111,15 +121,30 @@ impl Allocation {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" GROUP BY PS.psid, T.tsn ORDER BY phylo_sort_seq");
+        builder.push(" GROUP BY PS.psid, T.tsn ORDER BY ");
+
+        match sort.field {
+            SortField::SampleId => _ = builder.push(" S.sampleid"),
+            SortField::Taxon => _ = builder.push(" T.phylo_sort_seq"),
+            SortField::UpdateDate => _ = builder.push(" N.notedate"),
+            SortField::Quantity => _ = builder.push(" S.quantity"),
+            SortField::Source => _ = builder.push(" L.srcname"),
+        }
+
+        match sort.order {
+            SortOrder::Ascending => _ = builder.push(" ASC"),
+            SortOrder::Descending => _ = builder.push(" DESC"),
+        }
+
         builder
     }
 
     pub async fn fetch_all(
         filter: Option<DynFilterPart>,
+        sort: Option<SortSpec<SortField>>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Self>, sqlx::Error> {
-        Self::build_query(filter)
+        Self::build_query(filter, sort)
             .build_query_as()
             .fetch_all(pool)
             .await
@@ -129,14 +154,14 @@ impl Allocation {
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> Result<Self, sqlx::Error> {
-        Self::build_query(filter)
+        Self::build_query(filter, None)
             .build_query_as()
             .fetch_one(pool)
             .await
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut builder = Self::build_query(Some(Arc::new(AllocationFilter::Id(id))));
+        let mut builder = Self::build_query(Some(Arc::new(AllocationFilter::Id(id))), None);
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
@@ -180,7 +205,7 @@ mod tests {
             scripts("users", "sources", "taxa", "assigned-samples")
         )
     ))]
-    async fn fetch_allocations(pool: Pool<Sqlite>) {
+    async fn fetch_allocations(sort: Option<SortSpec<SortField>>, pool: Pool<Sqlite>) {
         async fn check_sample(a: &Allocation, pool: &Pool<Sqlite>) {
             tracing::debug!("loading sample");
             let s = Sample::load(a.sample.id, pool)
@@ -195,9 +220,10 @@ mod tests {
         }
 
         // check allocations for project 1
-        let assigned = Allocation::fetch_all(Some(Arc::new(AllocationFilter::Project(1))), &pool)
-            .await
-            .expect("Failed to load assigned samples for first project");
+        let assigned =
+            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Project(1))), None, &pool)
+                .await
+                .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
@@ -223,9 +249,10 @@ mod tests {
         check_sample(&assigned[1], &pool).await;
 
         // check allocations for project 2
-        let assigned = Allocation::fetch_all(Some(Arc::new(AllocationFilter::Project(2))), &pool)
-            .await
-            .expect("Failed to load assigned samples for first project");
+        let assigned =
+            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Project(2))), None, &pool)
+                .await
+                .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
@@ -238,9 +265,10 @@ mod tests {
         check_sample(&assigned[1], &pool).await;
 
         // check allocations for sample 1
-        let assigned = Allocation::fetch_all(Some(Arc::new(AllocationFilter::Sample(1))), &pool)
-            .await
-            .expect("Failed to load assigned samples for first project");
+        let assigned =
+            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Sample(1))), None, &pool)
+                .await
+                .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 

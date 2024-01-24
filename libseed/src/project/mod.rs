@@ -3,16 +3,13 @@
 //! particular restoration project, etc.
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
+    filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart, SortSpec},
     loadable::{ExternalRef, Loadable},
     sample::Sample,
 };
-pub use allocation::Allocation;
-pub use allocation::AllocationFilter;
+pub use allocation::{Allocation, AllocationFilter};
 use async_trait::async_trait;
-pub use note::Note;
-pub use note::NoteFilter;
-pub use note::NoteType;
+pub use note::{Note, NoteFilter, NoteType};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Row, Sqlite};
 use std::sync::Arc;
@@ -161,6 +158,7 @@ impl Project {
     pub async fn fetch_samples(
         &mut self,
         filter: Option<DynFilterPart>,
+        sort: Option<SortSpec<allocation::SortField>>,
         pool: &Pool<Sqlite>,
     ) -> Result<()> {
         let mut fbuilder =
@@ -169,7 +167,7 @@ impl Project {
             fbuilder = fbuilder.push(filter);
         }
 
-        self.allocations = Allocation::fetch_all(Some(fbuilder.build()), pool).await?;
+        self.allocations = Allocation::fetch_all(Some(fbuilder.build()), sort, pool).await?;
         Ok(())
     }
 

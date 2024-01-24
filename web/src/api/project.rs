@@ -43,7 +43,7 @@ async fn show_project(
     Path(id): Path<i64>,
 ) -> Result<Json<Project>, error::Error> {
     let mut project = Project::fetch(id, &state.dbpool).await?;
-    project.fetch_samples(None, &state.dbpool).await?;
+    project.fetch_samples(None, None, &state.dbpool).await?;
     Ok(Json(project))
 }
 

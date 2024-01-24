@@ -186,7 +186,7 @@ async fn show_project(
     let Some(mut project) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
-    project.fetch_samples(None, &state.dbpool).await?;
+    project.fetch_samples(None, None, &state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
@@ -461,7 +461,7 @@ async fn filter_project_samples(
 
     let mut project = Project::fetch(id, &state.dbpool).await?;
     project
-        .fetch_samples(Some(fbuilder.build()), &state.dbpool)
+        .fetch_samples(Some(fbuilder.build()), None, &state.dbpool)
         .await?;
     Ok(RenderHtml(
         key,

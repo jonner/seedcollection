@@ -209,7 +209,7 @@ async fn main() -> Result<()> {
             }
             ProjectCommands::Show { id, full } => {
                 let mut projectinfo = Project::fetch(id, &dbpool).await?;
-                projectinfo.fetch_samples(None, &dbpool).await?;
+                projectinfo.fetch_samples(None, None, &dbpool).await?;
                 println!("Project ID: {}", id);
                 println!("Project name: {}", projectinfo.name);
                 if let Some(desc) = &projectinfo.description {

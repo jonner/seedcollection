@@ -114,4 +114,21 @@ impl std::fmt::Display for Cmp {
 /// An object that allows you to specify the limit and offset for an SQL query
 pub struct LimitSpec(pub i32, pub Option<i32>);
 
+pub enum SortOrder {
+    Ascending,
+    Descending,
+}
+
+/// An object that allows you to specify the sort for an SQL query
+pub struct SortSpec<T: ToString> {
+    pub field: T,
+    pub order: SortOrder,
+}
+
+impl<T: ToString> SortSpec<T> {
+    pub fn new(field: T, order: SortOrder) -> Self {
+        Self { field, order }
+    }
+}
+
 pub type DynFilterPart = Arc<dyn FilterPart + Sync>;

@@ -103,8 +103,12 @@ async fn show_sample(
     // needed for edit form
     let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
 
-    let mut allocations =
-        Allocation::fetch_all(Some(Arc::new(AllocationFilter::Sample(id))), &state.dbpool).await?;
+    let mut allocations = Allocation::fetch_all(
+        Some(Arc::new(AllocationFilter::Sample(id))),
+        None,
+        &state.dbpool,
+    )
+    .await?;
     for alloc in allocations.iter_mut() {
         alloc.fetch_notes(&state.dbpool).await?;
     }
