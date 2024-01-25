@@ -27,7 +27,6 @@ use crate::{error, state::AppState};
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(add_source).post(new_source))
-        .route("/filter", get(filter_sources))
         .route("/new/modal", get(add_source))
         .route(
             "/:id",
@@ -38,16 +37,41 @@ pub fn router() -> Router<AppState> {
         .route("/list/options", get(list_sources))
 }
 
+#[derive(Deserialize)]
+struct SourceListParams {
+    filter: Option<String>,
+}
+
 async fn list_sources(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
+    Query(params): Query<SourceListParams>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
-    let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
+    let mut fbuilder =
+        FilterBuilder::new(FilterOp::And).push(Arc::new(source::Filter::User(user.id)));
+
+    if let Some(filterstring) = params.filter {
+        let subfilter = FilterBuilder::new(FilterOp::Or)
+            .push(Arc::new(source::Filter::Name(
+                Cmp::Like,
+                filterstring.clone(),
+            )))
+            .push(Arc::new(source::Filter::Description(
+                Cmp::Like,
+                filterstring.clone(),
+            )))
+            .build();
+        fbuilder = fbuilder.push(subfilter);
+    }
+    let sources = Source::fetch_all(Some(fbuilder.build()), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => user, sources => sources),
+        context!(user => user,
+                 sources => sources,
+                 filteronly => headers.get("HX-Request").is_some()),
     )
     .into_response())
 }
@@ -252,38 +276,4 @@ async fn delete_source(
         .execute(&state.dbpool)
         .await?;
     Ok([("HX-redirect", app_url("/source/list"))])
-}
-
-#[derive(Deserialize)]
-struct FilterParams {
-    fragment: String,
-}
-
-async fn filter_sources(
-    user: SqliteUser,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-    Query(params): Query<FilterParams>,
-) -> Result<impl IntoResponse, error::Error> {
-    let namefilter = FilterBuilder::new(FilterOp::Or)
-        .push(Arc::new(source::Filter::Name(
-            Cmp::Like,
-            params.fragment.clone(),
-        )))
-        .push(Arc::new(source::Filter::Description(
-            Cmp::Like,
-            params.fragment.clone(),
-        )))
-        .build();
-    let filter = FilterBuilder::new(FilterOp::And)
-        .push(namefilter)
-        .push(Arc::new(source::Filter::User(user.id)))
-        .build();
-    let sources = Source::fetch_all(Some(filter), &state.dbpool).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => user, sources => sources),
-    )
-    .into_response())
 }
