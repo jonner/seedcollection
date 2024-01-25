@@ -33,7 +33,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(show_new_project).post(insert_project))
         .route("/list", get(list_projects))
-        .route("/filter", get(filter_projects))
         .route(
             "/:id",
             get(show_project).put(modify_project).delete(delete_project),
@@ -43,57 +42,42 @@ pub fn router() -> Router<AppState> {
         .nest("/:id/sample/", super::allocation::router())
 }
 
+#[derive(Deserialize, Serialize)]
+struct ProjectListParams {
+    filter: Option<String>,
+}
+
 async fn list_projects(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
+    Query(params): Query<ProjectListParams>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
-    let projects = Project::fetch_all(
-        Some(Arc::new(project::Filter::User(user.id))),
-        &state.dbpool,
-    )
-    .await?;
+    let namefilter = match params.filter {
+        Some(filter) => Some(
+            FilterBuilder::new(FilterOp::Or)
+                .push(Arc::new(project::Filter::Name(Cmp::Like, filter.clone())))
+                .push(Arc::new(project::Filter::Description(
+                    Cmp::Like,
+                    filter.clone(),
+                )))
+                .build(),
+        ),
+        _ => None,
+    };
+    let mut filter =
+        FilterBuilder::new(FilterOp::And).push(Arc::new(project::Filter::User(user.id)));
+    if let Some(f) = namefilter {
+        filter = filter.push(f);
+    }
+    let projects = Project::fetch_all(Some(filter.build()), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 projects => projects),
-    )
-    .into_response())
-}
-
-#[derive(Deserialize)]
-struct FilterParams {
-    fragment: String,
-}
-
-async fn filter_projects(
-    user: SqliteUser,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-    Query(params): Query<FilterParams>,
-) -> Result<impl IntoResponse, error::Error> {
-    let namefilter = FilterBuilder::new(FilterOp::Or)
-        .push(Arc::new(project::Filter::Name(
-            Cmp::Like,
-            params.fragment.clone(),
-        )))
-        .push(Arc::new(project::Filter::Description(
-            Cmp::Like,
-            params.fragment.clone(),
-        )))
-        .build();
-    let filter = FilterBuilder::new(FilterOp::And)
-        .push(namefilter)
-        .push(Arc::new(project::Filter::User(user.id)))
-        .build();
-
-    let projects = Project::fetch_all(Some(filter), &state.dbpool).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => user,
-                 projects => projects),
+                 projects => projects,
+                 filteronly => headers.get("HX-Request").is_some()),
     )
     .into_response())
 }
