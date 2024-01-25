@@ -135,11 +135,14 @@ enum VerifyStatus {
 }
 
 struct VerificationRow {
+    #[allow(dead_code)]
     uvid: i64,
     userid: i64,
+    #[allow(dead_code)]
     uvkey: String,
     uvrequested: String,
     uvexpiration: i64,
+    #[allow(dead_code)]
     uvconfirmed: i64,
 }
 
