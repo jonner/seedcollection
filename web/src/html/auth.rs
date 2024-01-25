@@ -9,7 +9,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
-    routing::get,
+    routing::{get, post},
     Form, Router,
 };
 use axum_template::RenderHtml;
@@ -27,7 +27,7 @@ use tracing::debug;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(show_login).post(do_login))
-        .route("/logout", get(logout))
+        .route("/logout", post(logout))
         .route("/verify/:key", get(show_verification).post(verify_user))
 }
 

@@ -44,7 +44,10 @@
                 <ul class="navbar-nav">
                     {% if user %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ "/auth/logout" | app_url }}">Log out</a>
+                        <form method="POST"
+                              action="{{ "/auth/logout" | app_url }}">
+                            <button type="submit" class="nav-link">Log out</button>
+                        </form>
                     </li>
                     {% else %}
                     <!-- disabled for now
