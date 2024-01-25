@@ -1,6 +1,6 @@
 //! utilities for filtering database queries for the various objects
 //!
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -115,7 +115,7 @@ impl std::fmt::Display for Cmp {
 /// An object that allows you to specify the limit and offset for an SQL query
 pub struct LimitSpec(pub i32, pub Option<i32>);
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub enum SortOrder {
     #[serde(rename = "asc")]
     Ascending,

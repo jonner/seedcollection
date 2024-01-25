@@ -72,7 +72,7 @@ impl Loadable for Allocation {
     }
 }
 
-#[derive(strum_macros::Display, Deserialize)]
+#[derive(strum_macros::Display, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum SortField {
     Taxon,

@@ -9,7 +9,7 @@ use crate::{
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -39,7 +39,6 @@ pub fn router() -> Router<AppState> {
             get(show_project).put(modify_project).delete(delete_project),
         )
         .route("/:id/edit", get(show_project))
-        .route("/:id/filter", get(filter_project_samples))
         .route("/:id/add", get(show_add_sample).post(add_sample))
         .nest("/:id/sample/", super::allocation::router())
 }
@@ -173,10 +172,11 @@ async fn insert_project(
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct ShowProjectQueryParams {
     sort: Option<SortField>,
     dir: Option<SortOrder>,
+    filter: Option<String>,
     _limit: Option<i32>,
     _offset: Option<i32>,
 }
@@ -187,6 +187,7 @@ async fn show_project(
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Query(params): Query<ShowProjectQueryParams>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
     let fb = FilterBuilder::new(FilterOp::And)
         .push(Arc::new(project::Filter::Id(id)))
@@ -197,16 +198,33 @@ async fn show_project(
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
 
-    let sort = params
-        .sort
-        .map(|field| SortSpec::new(field, params.dir.unwrap_or(SortOrder::Ascending)));
-    project.fetch_samples(None, sort, &state.dbpool).await?;
+    let sort = params.sort.as_ref().cloned().map(|field| {
+        SortSpec::new(
+            field,
+            params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending),
+        )
+    });
+    let sample_filter = match params.filter {
+        Some(ref fragment) if !fragment.trim().is_empty() => Some(
+            FilterBuilder::new(FilterOp::Or)
+                .push(Arc::new(sample::Filter::TaxonNameLike(fragment.clone())))
+                .push(Arc::new(source::Filter::Name(Cmp::Like, fragment.clone())))
+                .push(Arc::new(sample::Filter::Notes(Cmp::Like, fragment.clone())))
+                .build(),
+        ),
+        _ => None,
+    };
+    project
+        .fetch_samples(sample_filter, sort, &state.dbpool)
+        .await?;
 
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 project => project),
+                 project => project,
+                 query => params,
+                 filteronly => headers.get("HX-Request").is_some()),
     )
     .into_response())
 }
@@ -442,46 +460,6 @@ async fn add_sample(
         context!(project => project,
                  messages => messages,
                  samples => samples),
-    )
-    .into_response())
-}
-
-async fn filter_project_samples(
-    user: SqliteUser,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-    Query(params): Query<FilterParams>,
-) -> Result<impl IntoResponse, error::Error> {
-    let fragment = params.fragment.trim();
-    let mut fbuilder =
-        FilterBuilder::new(FilterOp::And).push(Arc::new(sample::Filter::User(user.id)));
-    if !fragment.is_empty() {
-        let subfilter = FilterBuilder::new(FilterOp::Or)
-            .push(Arc::new(sample::Filter::TaxonNameLike(
-                params.fragment.clone(),
-            )))
-            .push(Arc::new(source::Filter::Name(
-                Cmp::Like,
-                params.fragment.clone(),
-            )))
-            .push(Arc::new(sample::Filter::Notes(
-                Cmp::Like,
-                params.fragment.clone(),
-            )))
-            .build();
-        fbuilder = fbuilder.push(subfilter);
-    }
-
-    let mut project = Project::fetch(id, &state.dbpool).await?;
-    project
-        .fetch_samples(Some(fbuilder.build()), None, &state.dbpool)
-        .await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => user,
-                 project => project),
     )
     .into_response())
 }
