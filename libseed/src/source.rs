@@ -93,7 +93,7 @@ impl FilterPart for Filter {
                     Cmp::Like => format!("%{frag}%"),
                     _ => frag.to_string(),
                 };
-                builder.push(" locdescription ").push(cmp).push_bind(s);
+                builder.push(" L.srcdesc ").push(cmp).push_bind(s);
             }
         }
     }
