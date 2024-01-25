@@ -1,20 +1,28 @@
+{% from "_sample_macros.html" import sample_list %}
+{% if not filteronly %}
 {% extends "root.html" %}
 {% from "_macros.html" import icon %}
-{% from "_sample_macros.html" import sample_list %}
 {% block title %}Samples{% endblock %}
 {% block content %}
 <h2><span class="me-2">{{ icon("box-seam") }}</span>Samples <a class="ms-2" href="{{ "/sample/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
     <form 
-           hx-target="#sample-table"
-           hx-get="{{ "/sample/filter" | app_url }}"
-           hx-trigger="submit, input changed delay:500ms from:input">
-    <input type="text"
-           class="form-control"
-           autofocus
-           placeholder="Filter list..."
-           name="fragment">
+         method="GET"
+         action="{{ "/sample/list" | app_url }}"
+         hx-push-url="true"
+         hx-boost="true"
+         hx-target="#sample-table"
+         hx-get="{{ "/sample/list" | app_url }}"
+         hx-trigger="submit, input changed delay:500ms from:input">
+        <input type="text"
+               class="form-control"
+               autofocus
+               placeholder="Filter list..."
+               name="filter">
     </form>
     </div>
     {{ sample_list(samples, "sample-table") }}
 {% endblock %}
+{% else %}
+{{ sample_list(samples, "sample-table") }}
+{% endif %}

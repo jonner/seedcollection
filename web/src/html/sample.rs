@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
+    http::HeaderMap,
     response::IntoResponse,
     routing::get,
     Form, Router,
@@ -31,7 +32,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/list", get(list_samples))
         .route("/new", get(new_sample).post(insert_sample))
-        .route("/filter", get(filter_samples))
         .route(
             "/:id",
             get(show_sample).put(update_sample).delete(delete_sample),
@@ -40,47 +40,31 @@ pub fn router() -> Router<AppState> {
 }
 
 #[derive(Deserialize)]
-struct FilterParams {
-    fragment: String,
-}
-
-async fn filter_samples(
-    user: SqliteUser,
-    Query(FilterParams { fragment }): Query<FilterParams>,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
-    let mut fbuilder =
-        FilterBuilder::new(FilterOp::And).push(Arc::new(sample::Filter::User(user.id)));
-    if !fragment.is_empty() {
-        let subfilter = FilterBuilder::new(FilterOp::Or)
-            .push(Arc::new(sample::Filter::TaxonNameLike(fragment.clone())))
-            .push(Arc::new(sample::Filter::Notes(Cmp::Like, fragment.clone())))
-            .push(Arc::new(source::Filter::Name(Cmp::Like, fragment.clone())))
-            .build();
-        fbuilder = fbuilder.push(subfilter);
-    };
-    let samples = Sample::fetch_all_user(user.id, Some(fbuilder.build()), &state.dbpool).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => user,
-                 samples => samples),
-    )
-    .into_response())
+struct SampleListParams {
+    filter: Option<String>,
 }
 
 async fn list_samples(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
+    Query(params): Query<SampleListParams>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
-    match Sample::fetch_all_user(user.id, None, &state.dbpool).await {
+    let filter = params.filter.map(|f| {
+        FilterBuilder::new(FilterOp::Or)
+            .push(Arc::new(sample::Filter::TaxonNameLike(f.clone())))
+            .push(Arc::new(sample::Filter::Notes(Cmp::Like, f.clone())))
+            .push(Arc::new(source::Filter::Name(Cmp::Like, f.clone())))
+            .build()
+    });
+    match Sample::fetch_all_user(user.id, filter, &state.dbpool).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),
             context!(user => user,
-                     samples => samples),
+                     samples => samples,
+                     filteronly => headers.get("HX-Request").is_some()),
         )
         .into_response(),
         Err(e) => error::Error::from(e).into_response(),
