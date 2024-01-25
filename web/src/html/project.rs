@@ -54,18 +54,15 @@ async fn list_projects(
     Query(params): Query<ProjectListParams>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
-    let namefilter = match params.filter {
-        Some(filter) => Some(
-            FilterBuilder::new(FilterOp::Or)
-                .push(Arc::new(project::Filter::Name(Cmp::Like, filter.clone())))
-                .push(Arc::new(project::Filter::Description(
-                    Cmp::Like,
-                    filter.clone(),
-                )))
-                .build(),
-        ),
-        _ => None,
-    };
+    let namefilter = params.filter.map(|filter| {
+        FilterBuilder::new(FilterOp::Or)
+            .push(Arc::new(project::Filter::Name(Cmp::Like, filter.clone())))
+            .push(Arc::new(project::Filter::Description(
+                Cmp::Like,
+                filter.clone(),
+            )))
+            .build()
+    });
     let mut filter =
         FilterBuilder::new(FilterOp::And).push(Arc::new(project::Filter::User(user.id)));
     if let Some(f) = namefilter {
@@ -420,7 +417,7 @@ async fn add_sample(
                 msg: format!(
                     "Failed to add sample {}: {}",
                     format_id_number(sample, Some("S"), None),
-                    e.to_string()
+                    e
                 ),
             }),
             Ok(res) => n_inserted += res.rows_affected(),

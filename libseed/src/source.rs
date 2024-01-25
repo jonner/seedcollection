@@ -34,8 +34,8 @@ pub struct Source {
 impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Source::from_row(row)
-            .map(|t| ExternalRef::Object(t))
-            .or_else(|_| row.try_get("tsn").map(|id| ExternalRef::Stub(id)))
+            .map(ExternalRef::Object)
+            .or_else(|_| row.try_get("tsn").map(ExternalRef::Stub))
     }
 }
 
@@ -232,9 +232,9 @@ impl Source {
             .execute(pool)
             .await
             .map_err(|e| e.into())
-            .and_then(|r| {
+            .map(|r| {
                 self.id = -1;
-                Ok(r)
+                r
             })
     }
 

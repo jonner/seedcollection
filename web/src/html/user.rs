@@ -146,22 +146,20 @@ async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), err
         .header(ContentType::TEXT_PLAIN)
         .body(emailbody)
         .with_context(|| "Failed to create email message")?;
-    match state.config.mail {
-        crate::MailSender::FileTransport(ref path) => {
-            AsyncFileTransport::<Tokio1Executor>::new(path)
-                .send(email)
-                .await
-                .map_err(anyhow::Error::from)
-                .map(|_| ())
-        }
-        crate::MailSender::LocalSmtpTransport => {
+    match state.config.mail_transport {
+        crate::MailTransport::File(ref path) => AsyncFileTransport::<Tokio1Executor>::new(path)
+            .send(email)
+            .await
+            .map_err(anyhow::Error::from)
+            .map(|_| ()),
+        crate::MailTransport::LocalSmtp => {
             AsyncSmtpTransport::<Tokio1Executor>::unencrypted_localhost()
                 .send(email)
                 .await
                 .map_err(anyhow::Error::from)
                 .map(|_| ())
         }
-        crate::MailSender::SmtpTransport(ref cfg) => cfg
+        crate::MailTransport::Smtp(ref cfg) => cfg
             .build()?
             .send(email)
             .await

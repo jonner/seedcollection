@@ -119,8 +119,8 @@ pub struct Germination {
 impl FromRow<'_, SqliteRow> for ExternalRef<Taxon> {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Taxon::from_row(row)
-            .map(|t| ExternalRef::Object(t))
-            .or_else(|_| row.try_get("tsn").map(|id| ExternalRef::Stub(id)))
+            .map(ExternalRef::Object)
+            .or_else(|_| row.try_get("tsn").map(ExternalRef::Stub))
     }
 }
 

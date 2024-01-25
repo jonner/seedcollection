@@ -211,10 +211,10 @@ enum SmtpConfig {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
-enum MailSender {
-    FileTransport(String),
-    LocalSmtpTransport,
-    SmtpTransport(RemoteSmtpConfig),
+enum MailTransport {
+    File(String),
+    LocalSmtp,
+    Smtp(RemoteSmtpConfig),
 }
 
 #[derive(Debug, Deserialize, PartialEq, Clone)]
@@ -228,19 +228,15 @@ struct ListenConfig {
 struct EnvConfig {
     listen: ListenConfig,
     database: String,
-    mail: MailSender,
+    mail_transport: MailTransport,
 }
 
 impl EnvConfig {
     fn init(&mut self) -> Result<()> {
-        match &mut self.mail {
-            MailSender::SmtpTransport(ref mut cfg) => match cfg.credentials {
-                Some(ref mut creds) => {
-                    creds.password = std::fs::read_to_string(&creds.passwordfile)?;
-                }
-                _ => {}
-            },
-            _ => {}
+        if let MailTransport::Smtp(ref mut cfg) = self.mail_transport {
+            if let Some(ref mut creds) = cfg.credentials {
+                creds.password = std::fs::read_to_string(&creds.passwordfile)?;
+            }
         }
         Ok(())
     }
@@ -253,7 +249,7 @@ async fn main() -> Result<()> {
     let args = Cli::parse();
 
     if args.list_envs {
-        for (key, _) in &configs {
+        for key in configs.keys() {
             println!("{key}");
         }
     }
@@ -387,7 +383,7 @@ mod test {
     fn test_parse_config() {
         let yaml = r#"dev:
   database: dev-database.sqlite
-  mail: !FileTransport
+  mail_transport: !File
     "/tmp/"
   listen: !ListenConfig &LISTEN
     host: "0.0.0.0"
@@ -395,7 +391,7 @@ mod test {
     https_port: 8443
 prod:
   database: prod-database.sqlite
-  mail: !LocalSmtpTransport
+  mail_transport: !LocalSmtp
   listen: *LISTEN"#;
         let configs: HashMap<String, EnvConfig> =
             serde_yaml::from_str(yaml).expect("Failed to parse yaml");
@@ -404,7 +400,7 @@ prod:
             configs["dev"],
             EnvConfig {
                 database: "dev-database.sqlite".to_string(),
-                mail: MailSender::FileTransport("/tmp/".to_string()),
+                mail_transport: MailTransport::File("/tmp/".to_string()),
                 listen: ListenConfig {
                     host: "0.0.0.0".to_string(),
                     http_port: 8080,
@@ -416,7 +412,7 @@ prod:
             configs["prod"],
             EnvConfig {
                 database: "prod-database.sqlite".to_string(),
-                mail: MailSender::LocalSmtpTransport,
+                mail_transport: MailTransport::LocalSmtp,
                 listen: ListenConfig {
                     host: "0.0.0.0".to_string(),
                     http_port: 8080,

@@ -250,6 +250,7 @@ impl Sample {
             .await.map_err(|e| e.into())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         taxonid: i64,
         userid: i64,

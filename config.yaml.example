@@ -1,6 +1,6 @@
 dev:
   database: seedcollection.sqlite
-  mail: !LocalSmtpTransport
+  mail_transport: !LocalSmtp
   listen: !ListenConfig &DEFAULT_LISTEN
     host: "0.0.0.0"
     http_port: 8080
@@ -8,7 +8,7 @@ dev:
 prod:
   database: seedcollection.sqlite.prod
   listen: *DEFAULT_LISTEN
-  mail: !SmtpTransport
+  mail_transport: !Smtp
     url: "smtps://smtp.domain.com"
     port: 465
     credentials:
