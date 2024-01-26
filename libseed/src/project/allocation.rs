@@ -96,45 +96,31 @@ impl Allocation {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
             SELECT PS.psid,
-
-            S.sampleid, quantity, month, year, notes, certainty,
-
-            T.tsn, T.parent_tsn as parentid,
-            T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
-            GROUP_CONCAT(V.vernacular_name, "@") as cnames,
-
-            L.srcid, L.srcname, L.srcdesc, T.complete_name,
-
-            S.userid,
-
+            S.*,
             P.projectid, P.projname, P.projdescription,
             N.pnoteid, N.notedate, N.notetype, N.notesummary, N.notedetails
 
             FROM sc_project_samples PS
-            INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-            INNER JOIN sc_sources L on L.srcid=S.srcid
-            INNER JOIN sc_samples S ON PS.sampleid=S.sampleid
+            INNER JOIN vsamples S ON PS.sampleid=S.sampleid
             INNER JOIN sc_projects P on P.projectid=PS.projectid
             LEFT JOIN ( SELECT * FROM
             (SELECT *, ROW_NUMBER() OVER (PARTITION BY psid ORDER BY DATE(notedate) DESC, pnoteid DESC) AS rownr
             FROM sc_project_notes ORDER BY pnoteid DESC)
             WHERE rownr = 1) N ON N.psid = PS.psid
-            LEFT JOIN (SELECT * FROM vernaculars WHERE
-            (language="English" or language="unspecified")) V on V.tsn=T.tsn
             "#,
         );
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" GROUP BY PS.psid, T.tsn ORDER BY ");
+        builder.push(" ORDER BY ");
 
         match sort.field {
             SortField::SampleId => _ = builder.push(" S.sampleid"),
-            SortField::Taxon => _ = builder.push(" T.phylo_sort_seq"),
+            SortField::Taxon => _ = builder.push(" seq"),
             SortField::Activity => _ = builder.push(" N.notedate"),
             SortField::Quantity => _ = builder.push(" S.quantity"),
-            SortField::Source => _ = builder.push(" L.srcname"),
+            SortField::Source => _ = builder.push(" S.srcname"),
             SortField::CollectionDate => _ = builder.push(" CONCAT(S.year, S.month)"),
         }
 

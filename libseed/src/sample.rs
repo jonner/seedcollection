@@ -78,88 +78,56 @@ impl Loadable for Sample {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Sample(cmp, id) => _ = builder.push("S.sampleid").push(cmp).push_bind(*id),
+            Self::Sample(cmp, id) => _ = builder.push("sampleid").push(cmp).push_bind(*id),
             Self::SampleNotIn(list) => {
-                _ = builder.push("S.sampleid NOT IN (");
+                _ = builder.push("sampleid NOT IN (");
                 let mut sep = builder.separated(", ");
                 for id in list {
                     sep.push_bind(*id);
                 }
                 builder.push(")");
             }
-            Self::Source(cmp, id) => _ = builder.push("L.srcid").push(cmp).push_bind(*id),
-            Self::Taxon(cmp, id) => _ = builder.push("S.tsn").push(cmp).push_bind(*id),
+            Self::Source(cmp, id) => _ = builder.push("srcid").push(cmp).push_bind(*id),
+            Self::Taxon(cmp, id) => _ = builder.push("tsn").push(cmp).push_bind(*id),
             Self::TaxonNameLike(s) => {
                 if !s.is_empty() {
                     let wildcard = format!("%{s}%");
                     builder.push(" (");
-                    builder.push(" T.unit_name1 LIKE ");
+                    builder.push(" unit_name1 LIKE ");
                     builder.push_bind(wildcard.clone());
-                    builder.push(" OR T.unit_name2 LIKE ");
+                    builder.push(" OR unit_name2 LIKE ");
                     builder.push_bind(wildcard.clone());
-                    builder.push(" OR T.unit_name3 LIKE ");
+                    builder.push(" OR unit_name3 LIKE ");
                     builder.push_bind(wildcard.clone());
-                    builder.push(" OR V.vernacular_name LIKE ");
+                    builder.push(" OR vernacular_name LIKE ");
                     builder.push_bind(wildcard.clone());
                     builder.push(") ");
                 }
             }
-            Self::User(id) => _ = builder.push("S.userid=").push_bind(*id),
-            Self::Notes(cmp, s) => {
-                _ = builder
-                    .push("S.notes")
-                    .push(cmp)
-                    .push_bind(format!("%{s}%"))
-            }
+            Self::User(id) => _ = builder.push("userid=").push_bind(*id),
+            Self::Notes(cmp, s) => _ = builder.push("notes").push(cmp).push_bind(format!("%{s}%")),
         };
     }
 }
 
 impl Sample {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
-        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-            r#"SELECT S.sampleid, T.tsn, T.parent_tsn as parentid, L.srcid, L.srcname, L.srcdesc,
-            T.complete_name, T.unit_name1, T.unit_name2, T.unit_name3, T.phylo_sort_seq as seq,
-                    quantity, month, year, notes, certainty,
-                    GROUP_CONCAT(V.vernacular_name, "@") as cnames,
-                    U.userid as userid
-                    FROM sc_samples S
-                    INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-                    INNER JOIN sc_sources L on L.srcid=S.srcid
-                    INNER JOIN sc_users U on U.userid=S.userid
-                    LEFT JOIN (SELECT * FROM vernaculars WHERE
-                    (language="English" or language="unspecified")) V on V.tsn=T.tsn
-                    "#,
-        );
+        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("SELECT * FROM vsamples");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" GROUP BY S.sampleid, T.tsn ORDER BY phylo_sort_seq");
+        builder.push(" ORDER BY seq");
         builder
     }
 
     fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
-        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-            r#"SELECT
-                COUNT(*) as nsamples
-                FROM (
-                    SELECT
-                        S.sampleid
-                    FROM
-                        sc_samples S
-                    INNER JOIN taxonomic_units T ON T.tsn=S.tsn
-                    INNER JOIN sc_sources L on L.srcid=S.srcid
-                    INNER JOIN sc_users U on U.userid=S.userid
-                    LEFT JOIN (SELECT * FROM vernaculars WHERE
-                    (language="English" or language="unspecified")) V on V.tsn=T.tsn
-                "#,
-        );
+        let mut builder: QueryBuilder<Sqlite> =
+            QueryBuilder::new("SELECT COUNT(*) as nsamples FROM vsamples");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" GROUP BY S.sampleid, T.tsn)");
         builder
     }
 
