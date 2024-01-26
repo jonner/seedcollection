@@ -117,27 +117,11 @@ impl Source {
     }
 
     fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
-        let mut qb = QueryBuilder::new(
-            r#"SELECT
-                COUNT(*) as nsources
-            FROM (
-                SELECT
-                    L.srcid,
-                    L.srcname,
-                    L.srcdesc,
-                    L.latitude,
-                    L.longitude,
-                    L.userid,
-                    U.username
-                FROM
-                    sc_sources L
-                INNER JOIN sc_users U ON U.userid=L.userid"#,
-        );
+        let mut qb = QueryBuilder::new("SELECT COUNT(*) as nsources FROM sc_sources L");
         if let Some(f) = filter {
             qb.push(" WHERE ");
             f.add_to_query(&mut qb);
         }
-        qb.push(")");
         qb
     }
 
