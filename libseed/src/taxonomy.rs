@@ -103,7 +103,7 @@ impl Loadable for Taxon {
     }
 
     async fn delete_id(_id: &Self::Id, _pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        Err(Error::NotAllowed("Cannot delete taxon".to_string()))
+        Err(Error::InvalidOperation("Cannot delete taxon".to_string()))
     }
 }
 

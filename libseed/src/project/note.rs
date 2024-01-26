@@ -139,7 +139,7 @@ impl Note {
 
     pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<Note> {
         if self.summary.is_empty() {
-            return Err(Error::InvalidData("No summary specified".to_string()));
+            return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
         }
         sqlx::query_as(
             r#"INSERT INTO sc_project_notes

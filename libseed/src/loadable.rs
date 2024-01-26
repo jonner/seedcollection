@@ -48,14 +48,14 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
     pub fn object(&self) -> Result<&T> {
         match self {
             Self::Object(obj) => Ok(obj),
-            _ => Err(Error::InvalidData("Object is not loaded".to_string())),
+            _ => Err(Error::InvalidStateNotLoaded),
         }
     }
 
     pub fn object_mut(&mut self) -> Result<&mut T> {
         match self {
             Self::Object(obj) => Ok(obj),
-            _ => Err(Error::InvalidData("Object is not loaded".to_string())),
+            _ => Err(Error::InvalidStateNotLoaded),
         }
     }
 

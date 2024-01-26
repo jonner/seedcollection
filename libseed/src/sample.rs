@@ -202,10 +202,7 @@ impl Sample {
 
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
-            return Err(Error::InvalidData(format!(
-                "Sample already has an id assigned ({}), can't insert a new item",
-                self.id
-            )));
+            return Err(Error::InvalidOperationObjectAlreadyExists(self.id));
         }
         sqlx::query("INSERT INTO sc_samples (tsn, userid, srcid, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(self.taxon.id())
@@ -224,17 +221,13 @@ impl Sample {
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(Error::InvalidData("No id set, cannot update".to_string()));
+            return Err(Error::InvalidOperationObjectNotFound);
         }
         if self.taxon.id() < 0 {
-            return Err(Error::InvalidData(
-                "No taxon set, cannot update".to_string(),
-            ));
+            return Err(Error::InvalidStateMissingAttribute("taxon".to_string()));
         }
         if self.source.id() < 0 {
-            return Err(Error::InvalidData(
-                "No source set, cannot update".to_string(),
-            ));
+            return Err(Error::InvalidStateMissingAttribute("source".to_string()));
         }
 
         sqlx::query("Update sc_samples SET tsn=?, srcid=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")

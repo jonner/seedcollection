@@ -151,7 +151,7 @@ impl User {
     /// Update the database to match the values currently stored in the object
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(Error::InvalidData("No id set, cannot update".to_string()));
+            return Err(Error::InvalidOperationObjectNotFound);
         }
 
         sqlx::query(
@@ -226,10 +226,11 @@ impl User {
 
     /// Insert a new row into the database with the values stored in this object
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        if self.username.trim().is_empty() || self.email.trim().is_empty() {
-            return Err(Error::InvalidData(
-                "Username and email must not be empty".to_string(),
-            ));
+        if self.username.trim().is_empty() {
+            return Err(Error::InvalidStateMissingAttribute("username".to_string()));
+        }
+        if self.email.trim().is_empty() {
+            return Err(Error::InvalidStateMissingAttribute("email".to_string()));
         }
         // Don't insert the register_date, the database will set it to the current timestamp
         sqlx::query(
@@ -262,31 +263,25 @@ impl User {
 
     pub fn validate_username(username: &str) -> Result<()> {
         if username.len() < 5 {
-            return Err(Error::InvalidData(
-                "Usernames must be at least 5 characters long".to_string(),
-            ));
+            return Err(Error::AuthInvalidUsernameTooShort);
         }
 
         let mut chars = username.chars();
         match chars.next() {
             Some(first_char) => {
                 if !first_char.is_alphanumeric() {
-                    return Err(Error::InvalidData(
-                        "First character of username must be alphanumeric".to_string(),
-                    ));
+                    return Err(Error::AuthInvalidUsernameFirstCharacter);
                 }
             }
             // this should never happen since we checked length above
             None => {
-                return Err(Error::InvalidData(
-                    "Username must be at least 5 characters long".to_string(),
-                ))
+                return Err(Error::AuthInvalidUsernameTooShort);
             }
         }
 
         let allowed_chars = "@.-_";
         if !chars.all(|c| c.is_alphanumeric() || allowed_chars.contains(c)) {
-            return Err(Error::InvalidData(format!(
+            return Err(Error::AuthInvalidUsernameInvalidCharacters(format!(
                 "Usernames can only contain alphanumeric characters or one of {}",
                 allowed_chars
                     .chars()

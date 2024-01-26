@@ -212,7 +212,7 @@ mod tests {
             scripts("users", "sources", "taxa", "assigned-samples")
         )
     ))]
-    async fn fetch_allocations(sort: Option<SortSpec<SortField>>, pool: Pool<Sqlite>) {
+    async fn fetch_allocations(pool: Pool<Sqlite>) {
         async fn check_sample(a: &Allocation, pool: &Pool<Sqlite>) {
             tracing::debug!("loading sample");
             let s = Sample::load(a.sample.id, pool)

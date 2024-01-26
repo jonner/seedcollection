@@ -200,10 +200,10 @@ impl Project {
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.name.is_empty() {
-            return Err(Error::InvalidData("No name specified".to_string()));
+            return Err(Error::InvalidStateMissingAttribute("name".to_string()));
         }
         if self.id < 0 {
-            return Err(Error::InvalidData("No id set".to_string()));
+            return Err(Error::InvalidStateMissingAttribute("id".to_string()));
         }
         sqlx::query(
             "UPDATE sc_projects SET projname=?, projdescription=?, userid=? WHERE projectid=?",
