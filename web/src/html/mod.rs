@@ -1,12 +1,12 @@
-use crate::{
-    app_url,
-    auth::{AuthSession, SqliteAuthBackend},
-    error,
-    state::AppState,
-    TemplateKey,
+use crate::{auth::AuthSession, error, state::AppState, TemplateKey};
+use axum::{
+    extract::{OriginalUri, Request, State},
+    http::StatusCode,
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::get,
+    Router,
 };
-use axum::{extract::State, response::IntoResponse, routing::get, Router};
-use axum_login::login_required;
 use axum_template::RenderHtml;
 use minijinja::context;
 
@@ -19,7 +19,31 @@ mod source;
 mod taxonomy;
 mod user;
 
-pub fn router() -> Router<AppState> {
+async fn login_required(
+    State(state): State<AppState>,
+    auth: AuthSession,
+    OriginalUri(uri): OriginalUri,
+    request: Request,
+    next_layer: Next,
+) -> Response {
+    if auth.user.is_some() {
+        next_layer.run(request).await
+    } else {
+        (
+            StatusCode::UNAUTHORIZED,
+            RenderHtml(
+                "auth_login.html",
+                state.tmpl.clone(),
+                context!(
+                next => uri.to_string(),
+                ),
+            ),
+        )
+            .into_response()
+    }
+}
+
+pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .nest("/info/", info::router())
         .nest("/project/", project::router())
@@ -28,10 +52,7 @@ pub fn router() -> Router<AppState> {
         .nest("/taxonomy/", taxonomy::router())
         .nest("/user/", user::router())
         /* Anything above here is only available to logged-in users */
-        .route_layer(login_required!(
-            SqliteAuthBackend,
-            login_url = &app_url("/auth/login")
-        ))
+        .route_layer(middleware::from_fn_with_state(state, login_required))
         .route("/", get(root))
         .nest("/auth/", auth::router())
 }

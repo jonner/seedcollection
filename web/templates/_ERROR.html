@@ -1,0 +1,12 @@
+{% from "_macros.html" import icon %}
+{% extends "root.html" %}
+{% block title %}{{ status_code }}: {{ status_reason }}{% endblock %}
+{% block content %}
+<h1 class="display-1">{{ self.title() }}</h1>
+<p>Well, that's unfortunate. It looks like something went wrong.</p>
+<p>Here's some information about the error:</p>
+<p class="lead my-3 py-3 px-3 text-bg-light rounded">{{ client_error }}</p>
+{% if request_id %}
+<p class="text-secondary">Request ID: <i>{{ request_id }}</i></p>
+{% endif %}
+{% endblock %}

@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use axum::{
-    extract::{Path, Query, State},
+    extract::{rejection::QueryRejection, Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
@@ -167,9 +167,10 @@ async fn show_project(
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
-    Query(params): Query<ShowProjectQueryParams>,
+    query: Result<Query<ShowProjectQueryParams>, QueryRejection>,
     headers: HeaderMap,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
+    let Query(params) = query.map_err(|e| Error::BadRequestQueryRejection(e))?;
     let fb = FilterBuilder::new(FilterOp::And)
         .push(Arc::new(project::Filter::Id(id)))
         .push(Arc::new(project::Filter::User(user.id)));

@@ -1,11 +1,14 @@
+use crate::error::Error;
 use anyhow::{anyhow, Context, Result};
+use auth::AuthSession;
 use axum::{
     async_trait,
     error_handling::HandleErrorLayer,
-    extract::{rejection::MatchedPathRejection, FromRequestParts, Host, MatchedPath},
+    extract::{rejection::MatchedPathRejection, FromRequestParts, Host, MatchedPath, State},
     handler::HandlerWithoutStateExt,
-    http::{request::Parts, HeaderValue, Method, Request, StatusCode, Uri},
-    response::{IntoResponse, Redirect},
+    http::{request::Parts, HeaderMap, HeaderValue, Method, Request, StatusCode, Uri},
+    middleware::{self, Next},
+    response::{IntoResponse, Redirect, Response},
     routing::get,
     BoxError, RequestPartsExt, Router,
 };
@@ -14,12 +17,12 @@ use axum_login::{
     AuthManagerLayerBuilder,
 };
 use axum_server::tls_rustls::RustlsConfig;
-use axum_template::engine::Engine;
+use axum_template::{engine::Engine, RenderHtml};
 use clap::Parser;
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
-use minijinja::{Environment, ErrorKind};
+use minijinja::{context, Environment, ErrorKind};
 use serde::{Deserialize, Serialize};
-use state::SharedState;
+use state::{AppState, SharedState};
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
 use tower::ServiceBuilder;
@@ -330,8 +333,7 @@ async fn main() -> Result<()> {
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
         .nest_service("/static", ServeDir::new("web/static"))
-        .nest(APP_PREFIX, html::router())
-        .with_state(shared_state)
+        .nest(APP_PREFIX, html::router(shared_state.clone()))
         .layer(
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUuid::default())
@@ -341,8 +343,13 @@ async fn main() -> Result<()> {
                         .on_response(DefaultOnResponse::new().include_headers(true)),
                 )
                 .propagate_x_request_id()
-                .layer(auth_service),
-        );
+                .layer(auth_service)
+                .layer(middleware::from_fn_with_state(
+                    shared_state.clone(),
+                    error_mapper,
+                )),
+        )
+        .with_state(shared_state);
 
     let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
     info!("Listening on https://{}", addr);
@@ -350,6 +357,44 @@ async fn main() -> Result<()> {
         .serve(app.into_make_service())
         .await?;
     Ok(())
+}
+
+async fn error_mapper(
+    State(state): State<AppState>,
+    auth: AuthSession,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+    next: Next,
+) -> Response {
+    let is_htmx = headers.get("HX-Request").is_some();
+    let response = next.run(request).await;
+    if is_htmx {
+        // don't print out a fancy error page for HTMX since it will just get inserted inside a
+        // section of the page and look weird.
+        return response;
+    }
+
+    let server_error = response.extensions().get::<Arc<Error>>();
+    let client_status = server_error.map(|se| se.as_ref().to_client_status());
+
+    let error_response = client_status.as_ref().map(|(status_code, client_error)| {
+        (
+            *status_code,
+            RenderHtml(
+                "_ERROR.html",
+                state.tmpl.clone(),
+                context!(status_code => status_code.as_u16(),
+                status_reason => status_code.canonical_reason(),
+                client_error => client_error,
+                user => auth.user,
+                request_id => headers.get("x-request-id").map(|h| h.to_str().unwrap_or("")),
+                ),
+            ),
+        )
+            .into_response()
+    });
+
+    error_response.unwrap_or(response)
 }
 
 async fn redirect_http_to_https(addr: String, ports: Ports) {

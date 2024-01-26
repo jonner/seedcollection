@@ -41,6 +41,7 @@ pub fn router() -> Router<AppState> {
 
 #[derive(Deserialize)]
 struct SampleListParams {
+    #[serde(deserialize_with = "empty_string_as_none")]
     filter: Option<String>,
 }
 
@@ -48,16 +49,20 @@ async fn list_samples(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Query(params): Query<SampleListParams>,
+    query: Option<Query<SampleListParams>>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    let filter = params.filter.map(|f| {
-        FilterBuilder::new(FilterOp::Or)
-            .push(Arc::new(sample::Filter::TaxonNameLike(f.clone())))
-            .push(Arc::new(sample::Filter::Notes(Cmp::Like, f.clone())))
-            .push(Arc::new(source::Filter::Name(Cmp::Like, f.clone())))
-            .build()
-    });
+    let filter = query
+        .map(|params| {
+            params.filter.as_ref().map(|f| {
+                FilterBuilder::new(FilterOp::Or)
+                    .push(Arc::new(sample::Filter::TaxonNameLike(f.clone())))
+                    .push(Arc::new(sample::Filter::Notes(Cmp::Like, f.clone())))
+                    .push(Arc::new(source::Filter::Name(Cmp::Like, f.clone())))
+                    .build()
+            })
+        })
+        .flatten();
     match Sample::fetch_all_user(user.id, filter, &state.dbpool).await {
         Ok(samples) => RenderHtml(
             key,
