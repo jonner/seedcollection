@@ -4,7 +4,7 @@ use axum::{
     error_handling::HandleErrorLayer,
     extract::{rejection::MatchedPathRejection, FromRequestParts, Host, MatchedPath},
     handler::HandlerWithoutStateExt,
-    http::{request::Parts, Method, StatusCode, Uri},
+    http::{request::Parts, HeaderValue, Method, Request, StatusCode, Uri},
     response::{IntoResponse, Redirect},
     routing::get,
     BoxError, RequestPartsExt, Router,
@@ -23,9 +23,15 @@ use state::SharedState;
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
 use tower::ServiceBuilder;
-use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_http::{
+    request_id::{MakeRequestId, RequestId},
+    services::ServeDir,
+    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
+    ServiceBuilderExt,
+};
 use tracing::{debug, info};
 use tracing_subscriber::filter::EnvFilter;
+use uuid::Uuid;
 
 mod api;
 mod auth;
@@ -242,6 +248,17 @@ impl EnvConfig {
     }
 }
 
+#[derive(Clone, Default)]
+struct MakeRequestUuid;
+
+impl MakeRequestId for MakeRequestUuid {
+    fn make_request_id<B>(&mut self, _: &Request<B>) -> Option<RequestId> {
+        let uuidstr = Uuid::new_v4().to_string();
+        let headerval = HeaderValue::from_str(&uuidstr).ok()?;
+        Some(RequestId::new(headerval))
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let configyaml = tokio::fs::read_to_string("config.yaml").await?;
@@ -325,7 +342,13 @@ async fn main() -> Result<()> {
         .with_state(shared_state)
         .layer(
             ServiceBuilder::new()
-                .layer(TraceLayer::new_for_http())
+                .set_x_request_id(MakeRequestUuid::default())
+                .layer(
+                    TraceLayer::new_for_http()
+                        .make_span_with(DefaultMakeSpan::new().include_headers(true))
+                        .on_response(DefaultOnResponse::new().include_headers(true)),
+                )
+                .propagate_x_request_id()
                 .layer(auth_service),
         );
 
