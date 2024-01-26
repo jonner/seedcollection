@@ -23,7 +23,7 @@ use state::SharedState;
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
 use tower::ServiceBuilder;
-use tower_http::services::ServeDir;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing::{debug, info};
 use tracing_subscriber::filter::EnvFilter;
 
@@ -323,7 +323,11 @@ async fn main() -> Result<()> {
         .nest(APP_PREFIX, html::router())
         .nest(API_PREFIX, api::router())
         .with_state(shared_state)
-        .layer(auth_service);
+        .layer(
+            ServiceBuilder::new()
+                .layer(TraceLayer::new_for_http())
+                .layer(auth_service),
+        );
 
     let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
     info!("Listening on https://{}", addr);
