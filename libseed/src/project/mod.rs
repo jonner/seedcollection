@@ -105,25 +105,11 @@ impl Project {
     }
 
     fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
-        let mut builder = QueryBuilder::new(
-            r#"SELECT
-                COUNT(*) as nprojects
-            FROM (
-                SELECT
-                    P.projectid,
-                    P.projname,
-                    P.projdescription,
-                    P.userid,
-                    U.username
-                FROM
-                    sc_projects P
-                INNER JOIN sc_users U ON U.userid=P.userid"#,
-        );
+        let mut builder = QueryBuilder::new("SELECT COUNT(*) as nprojects FROM sc_projects P");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(")");
         builder
     }
 
