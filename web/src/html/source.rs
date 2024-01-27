@@ -50,7 +50,7 @@ async fn list_sources(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut fbuilder =
-        FilterBuilder::new(FilterOp::And).push(Arc::new(source::Filter::User(user.id)));
+        FilterBuilder::new(FilterOp::And).push(Arc::new(source::Filter::UserId(user.id)));
 
     if let Some(filterstring) = params.filter {
         let subfilter = FilterBuilder::new(FilterOp::Or)
@@ -93,7 +93,7 @@ async fn show_source(
     let src = Source::fetch(id, &state.dbpool).await?;
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Arc::new(Filter::Source(Cmp::Equal, id))),
+        Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;
@@ -170,7 +170,7 @@ async fn update_source(
     };
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Arc::new(Filter::Source(Cmp::Equal, id))),
+        Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;

@@ -173,7 +173,7 @@ impl FromRow<'_, SqliteRow> for Taxon {
 }
 
 #[derive(Deserialize, Clone)]
-pub enum FilterField {
+pub enum Filter {
     Id(i64),
     Rank(Rank),
     Genus(String),
@@ -186,7 +186,7 @@ pub enum FilterField {
     ParentId(i64),
 }
 
-impl FilterPart for FilterField {
+impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(n) => builder.push("T.tsn=").push_bind(*n),
@@ -204,7 +204,7 @@ impl FilterPart for FilterField {
                 .push("T.unit_name3 LIKE ")
                 .push_bind(format!("%{s}%")),
             Self::Vernacular(s) => builder
-                .push("V.vernacular_name LIKE ")
+                .push("T.vernacular_name LIKE ")
                 .push_bind(format!("%{s}%")),
             Self::Minnesota(val) => match val {
                 true => builder.push("M.tsn IS NOT NULL"),
@@ -224,22 +224,22 @@ pub fn filter_by(
 ) -> Option<DynFilterPart> {
     let mut f = FilterBuilder::new(FilterOp::And);
     if let Some(id) = id {
-        f = f.push(Arc::new(FilterField::Id(id)));
+        f = f.push(Arc::new(Filter::Id(id)));
     }
     if let Some(rank) = rank {
-        f = f.push(Arc::new(FilterField::Rank(rank)));
+        f = f.push(Arc::new(Filter::Rank(rank)));
     }
     if let Some(genus) = genus {
-        f = f.push(Arc::new(FilterField::Genus(genus)));
+        f = f.push(Arc::new(Filter::Genus(genus)));
     }
     if let Some(species) = species {
-        f = f.push(Arc::new(FilterField::Species(species)));
+        f = f.push(Arc::new(Filter::Species(species)));
     }
     if let Some(s) = any {
         f = f.push(any_filter(&s));
     }
     if let Some(val) = minnesota {
-        f = f.push(Arc::new(FilterField::Minnesota(val)));
+        f = f.push(Arc::new(Filter::Minnesota(val)));
     }
 
     Some(f.build())
@@ -247,10 +247,10 @@ pub fn filter_by(
 
 pub fn any_filter(s: &str) -> DynFilterPart {
     FilterBuilder::new(FilterOp::Or)
-        .push(Arc::new(FilterField::Name1(s.to_string())))
-        .push(Arc::new(FilterField::Name2(s.to_string())))
-        .push(Arc::new(FilterField::Name3(s.to_string())))
-        .push(Arc::new(FilterField::Vernacular(s.to_string())))
+        .push(Arc::new(Filter::Name1(s.to_string())))
+        .push(Arc::new(Filter::Name2(s.to_string())))
+        .push(Arc::new(Filter::Name3(s.to_string())))
+        .push(Arc::new(Filter::Vernacular(s.to_string())))
         .build()
 }
 
@@ -272,7 +272,7 @@ pub fn count_query(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static,
 
 impl Taxon {
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut query = Taxon::build_query(Some(Arc::new(FilterField::Id(id))), None);
+        let mut query = Taxon::build_query(Some(Arc::new(Filter::Id(id))), None);
         Ok(query.build_query_as().fetch_one(pool).await?)
     }
 
@@ -294,7 +294,7 @@ impl Taxon {
     }
 
     pub async fn fetch_children(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
-        let filter: Option<DynFilterPart> = Some(Arc::new(FilterField::ParentId(self.id)));
+        let filter: Option<DynFilterPart> = Some(Arc::new(Filter::ParentId(self.id)));
         let mut query = Taxon::build_query(filter, None);
         Ok(query.build_query_as().fetch_all(pool).await?)
     }
@@ -401,7 +401,7 @@ mod tests {
     ))]
     async fn fetch_many(pool: Pool<Sqlite>) {
         let taxa = Taxon::fetch_all(
-            Some(Arc::new(FilterField::Genus("Elymus".to_string()))),
+            Some(Arc::new(Filter::Genus("Elymus".to_string()))),
             None,
             &pool,
         )

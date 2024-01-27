@@ -37,12 +37,12 @@ pub struct Sample {
 
 #[derive(Clone)]
 pub enum Filter {
-    Sample(Cmp, i64),
-    SampleNotIn(Vec<i64>),
-    Source(Cmp, i64),
-    Taxon(Cmp, i64),
+    Id(Cmp, i64),
+    IdNotIn(Vec<i64>),
+    SourceId(Cmp, i64),
+    TaxonId(Cmp, i64),
     TaxonNameLike(String),
-    User(i64),
+    UserId(i64),
     Notes(Cmp, String),
 }
 
@@ -78,8 +78,8 @@ impl Loadable for Sample {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Sample(cmp, id) => _ = builder.push("sampleid").push(cmp).push_bind(*id),
-            Self::SampleNotIn(list) => {
+            Self::Id(cmp, id) => _ = builder.push("sampleid").push(cmp).push_bind(*id),
+            Self::IdNotIn(list) => {
                 _ = builder.push("sampleid NOT IN (");
                 let mut sep = builder.separated(", ");
                 for id in list {
@@ -87,8 +87,8 @@ impl FilterPart for Filter {
                 }
                 builder.push(")");
             }
-            Self::Source(cmp, id) => _ = builder.push("srcid").push(cmp).push_bind(*id),
-            Self::Taxon(cmp, id) => _ = builder.push("tsn").push(cmp).push_bind(*id),
+            Self::SourceId(cmp, id) => _ = builder.push("srcid").push(cmp).push_bind(*id),
+            Self::TaxonId(cmp, id) => _ = builder.push("tsn").push(cmp).push_bind(*id),
             Self::TaxonNameLike(s) => {
                 if !s.is_empty() {
                     let wildcard = format!("%{s}%");
@@ -99,12 +99,12 @@ impl FilterPart for Filter {
                     builder.push_bind(wildcard.clone());
                     builder.push(" OR unit_name3 LIKE ");
                     builder.push_bind(wildcard.clone());
-                    builder.push(" OR vernacular_name LIKE ");
+                    builder.push(" OR cnames LIKE ");
                     builder.push_bind(wildcard.clone());
                     builder.push(") ");
                 }
             }
-            Self::User(id) => _ = builder.push("userid=").push_bind(*id),
+            Self::UserId(id) => _ = builder.push("userid=").push_bind(*id),
             Self::Notes(cmp, s) => _ = builder.push("notes").push(cmp).push_bind(format!("%{s}%")),
         };
     }
@@ -136,7 +136,7 @@ impl Sample {
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
-        let mut fbuilder = FilterBuilder::new(FilterOp::And).push(Arc::new(Filter::User(userid)));
+        let mut fbuilder = FilterBuilder::new(FilterOp::And).push(Arc::new(Filter::UserId(userid)));
         if let Some(f) = filter {
             fbuilder = fbuilder.push(f);
         }
@@ -154,7 +154,7 @@ impl Sample {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Sample> {
-        let mut builder = Self::build_query(Some(Arc::new(Filter::Sample(Cmp::Equal, id))));
+        let mut builder = Self::build_query(Some(Arc::new(Filter::Id(Cmp::Equal, id))));
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 

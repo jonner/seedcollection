@@ -10,7 +10,7 @@ use libseed::{
     empty_string_as_none,
     filter::{FilterBuilder, FilterOp},
     loadable::Loadable,
-    project::{self, Allocation, AllocationFilter, Note, NoteType, Project},
+    project::{self, allocation, Allocation, Note, NoteType, Project},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -49,9 +49,9 @@ async fn show_allocation(
     let mut allocation = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AllocationFilter::Id(allocid)))
-                .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Project(projectid)))
+                .push(Arc::new(allocation::Filter::Id(allocid)))
+                .push(Arc::new(allocation::Filter::UserId(user.id)))
+                .push(Arc::new(allocation::Filter::ProjectId(projectid)))
                 .build(),
         ),
         &state.dbpool,
@@ -94,9 +94,9 @@ async fn add_allocation_note(
     let alloc = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AllocationFilter::Id(allocid)))
-                .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Project(projectid)))
+                .push(Arc::new(allocation::Filter::Id(allocid)))
+                .push(Arc::new(allocation::Filter::UserId(user.id)))
+                .push(Arc::new(allocation::Filter::ProjectId(projectid)))
                 .build(),
         ),
         &state.dbpool,
@@ -142,9 +142,9 @@ async fn show_add_allocation_note(
     let allocation = Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
-                .push(Arc::new(AllocationFilter::Id(allocid)))
-                .push(Arc::new(AllocationFilter::User(user.id)))
-                .push(Arc::new(AllocationFilter::Project(projectid)))
+                .push(Arc::new(allocation::Filter::Id(allocid)))
+                .push(Arc::new(allocation::Filter::UserId(user.id)))
+                .push(Arc::new(allocation::Filter::ProjectId(projectid)))
                 .build(),
         ),
         &state.dbpool,

@@ -7,7 +7,7 @@ use crate::{
     loadable::{ExternalRef, Loadable},
     sample::Sample,
 };
-pub use allocation::{Allocation, AllocationFilter};
+pub use allocation::Allocation;
 use async_trait::async_trait;
 pub use note::{Note, NoteFilter, NoteType};
 use serde::{Deserialize, Serialize};
@@ -147,8 +147,8 @@ impl Project {
         sort: Option<SortSpec<allocation::SortField>>,
         pool: &Pool<Sqlite>,
     ) -> Result<()> {
-        let mut fbuilder =
-            FilterBuilder::new(FilterOp::And).push(Arc::new(AllocationFilter::Project(self.id)));
+        let mut fbuilder = FilterBuilder::new(FilterOp::And)
+            .push(Arc::new(allocation::Filter::ProjectId(self.id)));
         if let Some(filter) = filter {
             fbuilder = fbuilder.push(filter);
         }

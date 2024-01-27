@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
 use axum::{
     extract::{Path, Query, Request, State},
     response::IntoResponse,
@@ -10,16 +9,15 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, CompoundFilter, FilterOp, LimitSpec},
-    sample::{Filter, Sample},
-    taxonomy::{self, any_filter, FilterField, Germination, Rank, Taxon},
+    sample::{self, Sample},
+    taxonomy::{self, any_filter, Germination, Rank, Taxon},
 };
 use minijinja::context;
 use serde::Deserialize;
 use sqlx::Row;
+use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::debug;
-
-use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -64,14 +62,14 @@ async fn list_taxa(
         None => Rank::Species,
     };
     let pg = params.page.unwrap_or(1);
-    let row = taxonomy::count_query(Some(Arc::new(FilterField::Rank(rank.clone()))))
+    let row = taxonomy::count_query(Some(Arc::new(taxonomy::Filter::Rank(rank.clone()))))
         .build()
         .fetch_one(&state.dbpool)
         .await?;
     let count = row.try_get::<i32, _>("count")?;
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
     let taxa: Vec<Taxon> = Taxon::fetch_all(
-        Some(Arc::new(FilterField::Rank(rank))),
+        Some(Arc::new(taxonomy::Filter::Rank(rank))),
         Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
         &state.dbpool,
     )
@@ -177,7 +175,7 @@ async fn show_taxon(
     let children = taxon.fetch_children(&state.dbpool).await?;
     let samples = Sample::fetch_all_user(
         user.id,
-        Some(Arc::new(Filter::Taxon(Cmp::Equal, id))),
+        Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, id))),
         &state.dbpool,
     )
     .await?;
@@ -244,10 +242,10 @@ async fn quickfind(
                 filter.add_filter(any_filter(part));
             }
             if let Some(rank) = rank {
-                filter.add_filter(Arc::new(FilterField::Rank(rank)));
+                filter.add_filter(Arc::new(taxonomy::Filter::Rank(rank)));
             }
             if Some(true) == minnesota {
-                filter.add_filter(Arc::new(FilterField::Minnesota(true)));
+                filter.add_filter(Arc::new(taxonomy::Filter::Minnesota(true)));
             }
             /* FIXME: pagination for /search endpoing? */
             Taxon::fetch_all(

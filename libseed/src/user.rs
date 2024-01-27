@@ -84,16 +84,16 @@ impl Loadable for User {
     }
 }
 
-enum UserFilter {
+enum Filter {
     Id(i64),
     Username(String),
 }
 
-impl FilterPart for UserFilter {
+impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut QueryBuilder<Sqlite>) {
         match self {
-            UserFilter::Id(id) => builder.push(" userid=").push_bind(*id),
-            UserFilter::Username(name) => builder.push(" username=").push_bind(name.clone()),
+            Filter::Id(id) => builder.push(" userid=").push_bind(*id),
+            Filter::Username(name) => builder.push(" username=").push_bind(name.clone()),
         };
     }
 }
@@ -132,7 +132,7 @@ impl User {
 
     /// Fetch the user with the given id from the database
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<User> {
-        Self::build_query(Some(Arc::new(UserFilter::Id(id))))
+        Self::build_query(Some(Arc::new(Filter::Id(id))))
             .build_query_as()
             .fetch_one(pool)
             .await
@@ -141,7 +141,7 @@ impl User {
 
     /// Fetch the user with the given username from the database
     pub async fn fetch_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
-        Self::build_query(Some(Arc::new(UserFilter::Username(username.to_string()))))
+        Self::build_query(Some(Arc::new(Filter::Username(username.to_string()))))
             .build_query_as()
             .fetch_optional(pool)
             .await

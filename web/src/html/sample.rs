@@ -11,7 +11,7 @@ use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::{ExternalRef, Loadable},
-    project::{Allocation, AllocationFilter},
+    project::{allocation, Allocation},
     sample::{self, Certainty, Sample},
     source::{self, Source},
 };
@@ -19,6 +19,7 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 use std::sync::Arc;
+use tracing::debug;
 
 use crate::{
     app_url,
@@ -39,7 +40,7 @@ pub fn router() -> Router<AppState> {
         .route("/:id/edit", get(show_sample))
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct SampleListParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     filter: Option<String>,
@@ -52,6 +53,7 @@ async fn list_samples(
     query: Option<Query<SampleListParams>>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
+    debug!("query params: {:?}", query);
     let filter = query
         .map(|params| {
             params.filter.as_ref().map(|f| {
@@ -93,7 +95,7 @@ async fn show_sample(
     let sources = Source::fetch_all_user(user.id, &state.dbpool).await?;
 
     let mut allocations = Allocation::fetch_all(
-        Some(Arc::new(AllocationFilter::Sample(id))),
+        Some(Arc::new(allocation::Filter::SampleId(id))),
         None,
         &state.dbpool,
     )

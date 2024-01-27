@@ -18,20 +18,20 @@ use sqlx::{
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub enum AllocationFilter {
+pub enum Filter {
     Id(i64),
-    User(i64),
-    Project(i64),
-    Sample(i64),
+    UserId(i64),
+    ProjectId(i64),
+    SampleId(i64),
 }
 
-impl FilterPart for AllocationFilter {
+impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(id) => _ = builder.push(" PS.psid = ").push_bind(*id),
-            Self::User(id) => _ = builder.push(" S.userid = ").push_bind(*id),
-            Self::Project(id) => _ = builder.push(" PS.projectid = ").push_bind(*id),
-            Self::Sample(id) => _ = builder.push(" PS.sampleid = ").push_bind(*id),
+            Self::UserId(id) => _ = builder.push(" S.userid = ").push_bind(*id),
+            Self::ProjectId(id) => _ = builder.push(" PS.projectid = ").push_bind(*id),
+            Self::SampleId(id) => _ = builder.push(" PS.sampleid = ").push_bind(*id),
         }
     }
 }
@@ -154,7 +154,7 @@ impl Allocation {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut builder = Self::build_query(Some(Arc::new(AllocationFilter::Id(id))), None);
+        let mut builder = Self::build_query(Some(Arc::new(Filter::Id(id))), None);
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
@@ -213,10 +213,9 @@ mod tests {
         }
 
         // check allocations for project 1
-        let assigned =
-            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Project(1))), None, &pool)
-                .await
-                .expect("Failed to load assigned samples for first project");
+        let assigned = Allocation::fetch_all(Some(Arc::new(Filter::ProjectId(1))), None, &pool)
+            .await
+            .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
@@ -242,10 +241,9 @@ mod tests {
         check_sample(&assigned[1], &pool).await;
 
         // check allocations for project 2
-        let assigned =
-            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Project(2))), None, &pool)
-                .await
-                .expect("Failed to load assigned samples for first project");
+        let assigned = Allocation::fetch_all(Some(Arc::new(Filter::ProjectId(2))), None, &pool)
+            .await
+            .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
@@ -258,10 +256,9 @@ mod tests {
         check_sample(&assigned[1], &pool).await;
 
         // check allocations for sample 1
-        let assigned =
-            Allocation::fetch_all(Some(Arc::new(AllocationFilter::Sample(1))), None, &pool)
-                .await
-                .expect("Failed to load assigned samples for first project");
+        let assigned = Allocation::fetch_all(Some(Arc::new(Filter::SampleId(1))), None, &pool)
+            .await
+            .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 

@@ -71,7 +71,7 @@ impl Loadable for Source {
 #[derive(Clone)]
 pub enum Filter {
     Id(i64),
-    User(i64),
+    UserId(i64),
     Name(Cmp, String),
     Description(Cmp, String),
 }
@@ -80,7 +80,7 @@ impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
             Self::Id(id) => _ = builder.push(" L.srcid = ").push_bind(*id),
-            Self::User(id) => _ = builder.push(" L.userid = ").push_bind(*id),
+            Self::UserId(id) => _ = builder.push(" L.userid = ").push_bind(*id),
             Self::Name(cmp, frag) => {
                 let s = match cmp {
                     Cmp::Like => format!("%{frag}%"),
@@ -152,7 +152,7 @@ impl Source {
     }
 
     pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Source>> {
-        Self::fetch_all(Some(Arc::new(Filter::User(userid))), pool).await
+        Self::fetch_all(Some(Arc::new(Filter::UserId(userid))), pool).await
     }
 
     pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
