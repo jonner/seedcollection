@@ -19,9 +19,12 @@ use libseed::{
     empty_string_as_none,
     filter::{Cmp, FilterBuilder, FilterOp, SortOrder, SortSpec},
     loadable::{ExternalRef, Loadable},
-    project::{self, allocation::SortField, Project},
+    project::{
+        self,
+        allocation::{self, SortField},
+        Project,
+    },
     sample::{self, Sample},
-    source,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -189,9 +192,17 @@ async fn show_project(
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
             FilterBuilder::new(FilterOp::Or)
-                .push(Arc::new(sample::Filter::TaxonNameLike(fragment.clone())))
-                .push(Arc::new(source::Filter::Name(Cmp::Like, fragment.clone())))
-                .push(Arc::new(sample::Filter::Notes(Cmp::Like, fragment.clone())))
+                .push(Arc::new(allocation::Filter::TaxonNameLike(
+                    fragment.clone(),
+                )))
+                .push(Arc::new(allocation::Filter::SourceName(
+                    Cmp::Like,
+                    fragment.clone(),
+                )))
+                .push(Arc::new(allocation::Filter::Notes(
+                    Cmp::Like,
+                    fragment.clone(),
+                )))
                 .build(),
         ),
         _ => None,

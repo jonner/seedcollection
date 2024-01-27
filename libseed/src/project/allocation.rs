@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     error::Result,
-    filter::{DynFilterPart, FilterPart, SortOrder, SortSpec},
+    filter::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec},
     loadable::Loadable,
     sample::Sample,
 };
@@ -23,6 +23,9 @@ pub enum Filter {
     UserId(i64),
     ProjectId(i64),
     SampleId(i64),
+    TaxonNameLike(String),
+    SourceName(Cmp, String),
+    Notes(Cmp, String),
 }
 
 impl FilterPart for Filter {
@@ -32,6 +35,29 @@ impl FilterPart for Filter {
             Self::UserId(id) => _ = builder.push(" S.userid = ").push_bind(*id),
             Self::ProjectId(id) => _ = builder.push(" PS.projectid = ").push_bind(*id),
             Self::SampleId(id) => _ = builder.push(" PS.sampleid = ").push_bind(*id),
+            Self::TaxonNameLike(s) => {
+                if !s.is_empty() {
+                    let wildcard = format!("%{s}%");
+                    builder.push(" (");
+                    builder.push(" unit_name1 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR unit_name2 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR unit_name3 LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(" OR cnames LIKE ");
+                    builder.push_bind(wildcard.clone());
+                    builder.push(") ");
+                }
+            }
+            Self::SourceName(cmp, s) => {
+                let s = match cmp {
+                    Cmp::Like => format!("%{s}%"),
+                    _ => s.to_string(),
+                };
+                builder.push(" S.srcname ").push(cmp).push_bind(s);
+            }
+            Self::Notes(cmp, s) => _ = builder.push("notes").push(cmp).push_bind(format!("%{s}%")),
         }
     }
 }

@@ -204,7 +204,7 @@ impl FilterPart for Filter {
                 .push("T.unit_name3 LIKE ")
                 .push_bind(format!("%{s}%")),
             Self::Vernacular(s) => builder
-                .push("T.vernacular_name LIKE ")
+                .push("V.vernacular_name LIKE ")
                 .push_bind(format!("%{s}%")),
             Self::Minnesota(val) => match val {
                 true => builder.push("M.tsn IS NOT NULL"),
