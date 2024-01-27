@@ -33,14 +33,12 @@ use tracing::{debug, info};
 use tracing_subscriber::filter::EnvFilter;
 use uuid::Uuid;
 
-mod api;
 mod auth;
 mod db;
 mod error;
 mod html;
 mod state;
 
-const API_PREFIX: &str = "/api/v1/";
 const APP_PREFIX: &str = "/app/";
 
 #[derive(Serialize)]
@@ -100,10 +98,6 @@ pub struct Cli {
         help = "shows all valid values for the --env option"
     )]
     pub list_envs: bool,
-}
-
-pub fn api_url(value: &str) -> String {
-    [API_PREFIX, &value.trim_start_matches('/')].join("")
 }
 
 pub fn app_url(value: &str) -> String {
@@ -304,7 +298,6 @@ async fn main() -> Result<()> {
     let mut jinja = Environment::new();
     jinja.set_loader(minijinja::path_loader("web/templates"));
     jinja.add_filter("app_url", app_url);
-    jinja.add_filter("api_url", api_url);
     jinja.add_filter("append_query_param", append_query_param);
     jinja.add_filter("truncate", truncate_text);
     jinja.add_filter("idfmt", format_id_number);
@@ -338,7 +331,6 @@ async fn main() -> Result<()> {
         .route("/favicon.ico", get(favicon_redirect))
         .nest_service("/static", ServeDir::new("web/static"))
         .nest(APP_PREFIX, html::router())
-        .nest(API_PREFIX, api::router())
         .with_state(shared_state)
         .layer(
             ServiceBuilder::new()
