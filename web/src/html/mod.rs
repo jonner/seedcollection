@@ -1,4 +1,4 @@
-use crate::{auth::AuthSession, error, state::AppState, TemplateKey};
+use crate::{auth::AuthSession, error, state::AppState, Message, MessageType, TemplateKey};
 use axum::{
     extract::{OriginalUri, Request, State},
     http::StatusCode,
@@ -18,6 +18,24 @@ mod sample;
 mod source;
 mod taxonomy;
 mod user;
+
+pub fn error_alert_response(
+    state: &AppState,
+    status: StatusCode,
+    message: String,
+) -> impl IntoResponse {
+    (
+        status,
+        RenderHtml(
+            "_ALERT.html",
+            state.tmpl.clone(),
+            context!(message => Message {
+                r#type: MessageType::Error,
+                msg: message,
+            }),
+        ),
+    )
+}
 
 async fn login_required(
     State(state): State<AppState>,
