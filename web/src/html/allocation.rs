@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use axum::{
-    extract::{Path, State},
+    extract::{rejection::FormRejection, Path, State},
+    http::StatusCode,
     response::IntoResponse,
     routing::{delete, get},
     Form, Router,
@@ -24,6 +25,8 @@ use crate::{
     state::AppState,
     Message, MessageType, TemplateKey,
 };
+
+use super::error_alert_response;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -85,11 +88,22 @@ struct NoteParams {
 
 async fn add_allocation_note(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
-    Form(params): Form<NoteParams>,
+    form: Result<Form<NoteParams>, FormRejection>,
 ) -> Result<impl IntoResponse, error::Error> {
+    let params = match form {
+        Ok(Form(params)) => params,
+        Err(e) => {
+            return Ok(error_alert_response(
+                &state,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                e.to_string(),
+            )
+            .into_response())
+        }
+    };
+
     // make sure that this is our sample
     let alloc = Allocation::fetch_one(
         Some(
@@ -102,6 +116,17 @@ async fn add_allocation_note(
         &state.dbpool,
     )
     .await?;
+    if alloc.sample.user.id() != user.id {
+        return Ok(error_alert_response(
+            &state,
+            StatusCode::FORBIDDEN,
+            format!(
+                "You are not authorized to add notes to allocation {}",
+                allocid
+            ),
+        )
+        .into_response());
+    }
     let note = Note::new(
         allocid,
         params.date,
@@ -114,22 +139,12 @@ async fn add_allocation_note(
             let url = app_url(&format!("/project/{}/sample/{}", projectid, allocid));
             [("HX-Redirect", url)].into_response()
         }
-        Err(e) => {
-            let note_types: Vec<NoteType> = NoteType::iter().collect();
-            RenderHtml(
-                key,
-                state.tmpl.clone(),
-                context!(user => user,
-                note_types => note_types,
-                allocation => alloc,
-                request => params,
-                message => Message {
-                    r#type: MessageType::Error,
-                    msg: format!("Failed to save note: {}", e),
-                }),
-            )
-            .into_response()
-        }
+        Err(e) => error_alert_response(
+            &state,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to save note: {}", e),
+        )
+        .into_response(),
     })
 }
 

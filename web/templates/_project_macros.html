@@ -115,8 +115,12 @@ hx-post="{{ "/project/new" | app_url }}"
 
 {% macro allocation_note_form(sample, note=none, request=none, message=none) -%}
 {% from "_macros.html" import show_message %}
-<form hx-{% if note %}put{% else %}post{% endif %}="" hx-swap="outerHTML">
+<form hx-{% if note %}put{% else %}post{% endif %}=""
+      hx-target="this"
+      hx-target-error="#message-box">
+    <div id="message-box">
     {{ show_message(message) }}
+    </div>
     <div class="row">
         <div class="col-sm-6 mb-3">
             <label for="SampleNoteDate" class="form-label">Date</label>
