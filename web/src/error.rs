@@ -18,8 +18,8 @@ pub enum Error {
     Libseed(#[from] libseed::Error),
     #[error("Not Found")]
     NotFound(String),
-    #[error("Bad request")]
-    BadRequestQueryRejection(#[source] QueryRejection),
+    #[error("The provided query string was rejected")]
+    UnprocessableEntityQueryRejection(#[source] QueryRejection),
 }
 
 impl Error {
@@ -37,9 +37,9 @@ impl Error {
             Error::Libseed(_) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Library error")),
             Error::Unauthorized(_) => (StatusCode::UNAUTHORIZED, "Not authorized".to_string()),
             Error::NotFound(_) => (StatusCode::NOT_FOUND, "Page not found".to_string()),
-            Error::BadRequestQueryRejection(_) => (
-                StatusCode::BAD_REQUEST,
-                "Query string was malformed. The request could not be handled.".to_string(),
+            Error::UnprocessableEntityQueryRejection(_) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "The query string was not in the expected format. The request could not be processed.".to_string(),
             ),
         }
     }

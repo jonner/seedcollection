@@ -173,7 +173,7 @@ async fn show_project(
     query: Result<Query<ShowProjectQueryParams>, QueryRejection>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, Error> {
-    let Query(params) = query.map_err(|e| Error::BadRequestQueryRejection(e))?;
+    let Query(params) = query.map_err(|e| Error::UnprocessableEntityQueryRejection(e))?;
     let fb = FilterBuilder::new(FilterOp::And)
         .push(Arc::new(project::Filter::Id(id)))
         .push(Arc::new(project::Filter::User(user.id)));
