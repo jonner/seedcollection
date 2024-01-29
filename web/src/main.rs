@@ -231,6 +231,7 @@ struct ListenConfig {
 struct EnvConfig {
     listen: ListenConfig,
     database: String,
+    asset_root: PathBuf,
     mail_transport: MailTransport,
 }
 
@@ -256,14 +257,12 @@ impl MakeRequestId for MakeRequestUuid {
     }
 }
 
-fn template_engine(envname: &str) -> Engine<minijinja::Environment<'static>> {
+fn template_engine<T>(envname: &str, template_dir: T) -> Engine<minijinja::Environment<'static>>
+where
+    T: AsRef<std::path::Path>,
+{
     let mut jinja = Environment::new();
-    if cfg!(test) {
-        // tests are run from the workspace directory
-        jinja.set_loader(minijinja::path_loader("./templates"));
-    } else {
-        jinja.set_loader(minijinja::path_loader("./web/templates"));
-    }
+    jinja.set_loader(minijinja::path_loader(template_dir));
     jinja.add_filter("app_url", app_url);
     jinja.add_filter("append_query_param", append_query_param);
     jinja.add_filter("truncate", truncate_text);
@@ -296,10 +295,11 @@ async fn app(shared_state: AppState) -> Result<Router> {
         .layer(AuthManagerLayerBuilder::new(auth_backend, session_layer).build());
 
     debug!("Creating routers");
+    let static_path = shared_state.config.asset_root.join("static");
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
-        .nest_service("/static", ServeDir::new("web/static"))
+        .nest_service("/static", ServeDir::new(static_path))
         .nest(APP_PREFIX, html::router(shared_state.clone()))
         .layer(
             ServiceBuilder::new()
@@ -363,10 +363,7 @@ async fn main() -> Result<()> {
     .await
     .with_context(|| "Unable to load TLS key and certificate. See certs/README for more info")?;
 
-    let app = app(Arc::new(
-        SharedState::new(env, template_engine(&args.env)).await?,
-    ))
-    .await?;
+    let app = app(Arc::new(SharedState::new(&args.env, env).await?)).await?;
 
     let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
     info!("Listening on https://{}", addr);
@@ -452,13 +449,14 @@ async fn root() -> impl IntoResponse {
     Redirect::permanent(APP_PREFIX)
 }
 
-async fn favicon_redirect() -> impl IntoResponse {
-    Redirect::permanent("/static/favicon.ico")
+async fn favicon_redirect(State(state): State<AppState>) -> impl IntoResponse {
+    let path = state.config.asset_root.join("static/favicon.ico");
+    Redirect::permanent(path.to_str().unwrap_or_default())
 }
 
 #[cfg(test)]
 async fn test_app(pool: sqlx::Pool<sqlx::Sqlite>) -> Result<Router> {
-    let state = Arc::new(SharedState::test(pool, template_engine("test")));
+    let state = Arc::new(SharedState::test(pool));
     app(state).await
 }
 
@@ -470,6 +468,7 @@ mod test {
     fn test_parse_config() {
         let yaml = r#"dev:
   database: dev-database.sqlite
+  asset_root: "/path/to/assets"
   mail_transport: !File
     "/tmp/"
   listen: !ListenConfig &LISTEN
@@ -479,6 +478,7 @@ mod test {
 prod:
   database: prod-database.sqlite
   mail_transport: !LocalSmtp
+  asset_root: "/path/to/assets2"
   listen: *LISTEN"#;
         let configs: HashMap<String, EnvConfig> =
             serde_yaml::from_str(yaml).expect("Failed to parse yaml");
@@ -486,6 +486,7 @@ prod:
         assert_eq!(
             configs["dev"],
             EnvConfig {
+                asset_root: PathBuf::from("/path/to/assets"),
                 database: "dev-database.sqlite".to_string(),
                 mail_transport: MailTransport::File("/tmp/".to_string()),
                 listen: ListenConfig {
@@ -498,6 +499,7 @@ prod:
         assert_eq!(
             configs["prod"],
             EnvConfig {
+                asset_root: PathBuf::from("/path/to/assets2"),
                 database: "prod-database.sqlite".to_string(),
                 mail_transport: MailTransport::LocalSmtp,
                 listen: ListenConfig {

@@ -1,4 +1,4 @@
-use crate::{db, EnvConfig};
+use crate::{db, template_engine, EnvConfig};
 use anyhow::{Context, Result};
 use axum_template::engine::Engine;
 use lettre::{AsyncSmtpTransport, Tokio1Executor};
@@ -15,7 +15,9 @@ pub struct SharedState {
 }
 
 impl SharedState {
-    pub async fn new(env: EnvConfig, template: TemplateEngine) -> Result<Self> {
+    pub async fn new(envname: &str, env: EnvConfig) -> Result<Self> {
+        let tmpl_path = env.asset_root.join("templates");
+        let template = template_engine(envname, &tmpl_path);
         debug!("Creating shared app state");
         // do a quick sanity check on the mail transport
         debug!(
@@ -42,12 +44,16 @@ impl SharedState {
     }
 
     #[cfg(test)]
-    pub fn test(pool: sqlx::Pool<sqlx::Sqlite>, template: TemplateEngine) -> Self {
+    pub fn test(pool: sqlx::Pool<sqlx::Sqlite>) -> Self {
+        use std::path::PathBuf;
+
+        let template = template_engine("test", "./templates");
         debug!("Creating test shared app state");
         Self {
             dbpool: pool,
             tmpl: template,
             config: EnvConfig {
+                asset_root: PathBuf::from("."),
                 listen: crate::ListenConfig {
                     host: "127.0.0.1".to_string(),
                     http_port: 8080,
