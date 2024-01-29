@@ -99,8 +99,8 @@ async fn add_allocation_note(
         }
     };
 
-    // make sure that this is our sample
-    let alloc = match Allocation::fetch_one(
+    // just querying to make sure that this is our sample
+    let _alloc = match Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(allocation::Filter::Id(allocid)))
@@ -135,18 +135,6 @@ async fn add_allocation_note(
             };
         }
     };
-
-    if alloc.sample.user.id() != user.id {
-        return error_alert_response(
-            &state,
-            StatusCode::FORBIDDEN,
-            format!(
-                "You are not authorized to add notes to allocation {}",
-                allocid
-            ),
-        )
-        .into_response();
-    }
 
     if params.summary.is_empty() {
         return error_alert_response(

@@ -452,6 +452,12 @@ async fn favicon_redirect() -> impl IntoResponse {
 }
 
 #[cfg(test)]
+async fn test_app(pool: sqlx::Pool<sqlx::Sqlite>) -> Result<Router> {
+    let state = Arc::new(SharedState::test(pool, template_engine("test")));
+    app(state).await
+}
+
+#[cfg(test)]
 mod test {
     use super::*;
 

@@ -17,6 +17,8 @@ mod project;
 mod sample;
 mod source;
 mod taxonomy;
+#[cfg(test)]
+mod tests;
 mod user;
 
 pub fn error_alert_response(

@@ -40,6 +40,24 @@ impl SharedState {
             config: env,
         })
     }
+
+    #[cfg(test)]
+    pub fn test(pool: sqlx::Pool<sqlx::Sqlite>, template: TemplateEngine) -> Self {
+        debug!("Creating test shared app state");
+        Self {
+            dbpool: pool,
+            tmpl: template,
+            config: EnvConfig {
+                listen: crate::ListenConfig {
+                    host: "127.0.0.1".to_string(),
+                    http_port: 8080,
+                    https_port: 8443,
+                },
+                database: "test-database.sqlite".to_string(),
+                mail_transport: crate::MailTransport::File("/tmp/".to_string()),
+            },
+        }
+    }
 }
 
 pub type AppState = Arc<SharedState>;

@@ -60,7 +60,7 @@ impl AuthUser for SqliteUser {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Credentials {
     pub username: String,
     pub password: String,
