@@ -256,6 +256,66 @@ impl MakeRequestId for MakeRequestUuid {
     }
 }
 
+fn template_engine(envname: &str) -> Engine<minijinja::Environment<'static>> {
+    let mut jinja = Environment::new();
+    jinja.set_loader(minijinja::path_loader("web/templates"));
+    jinja.add_filter("app_url", app_url);
+    jinja.add_filter("append_query_param", append_query_param);
+    jinja.add_filter("truncate", truncate_text);
+    jinja.add_filter("idfmt", format_id_number);
+    jinja.add_filter("markdown", markdown);
+    jinja.add_global("environment", envname);
+    minijinja_contrib::add_to_environment(&mut jinja);
+
+    Engine::from(jinja)
+}
+
+async fn app(shared_state: AppState) -> Result<Router> {
+    sqlx::migrate!("../db/migrations")
+        .run(&shared_state.dbpool)
+        .await?;
+
+    debug!("Creating session layer");
+    let session_store = SqliteStore::new(shared_state.dbpool.clone());
+    session_store.migrate().await?;
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(true)
+        .with_expiry(Expiry::OnInactivity(Duration::days(7)));
+
+    debug!("Creating auth backend");
+    let auth_backend = auth::SqliteAuthBackend::new(shared_state.dbpool.clone());
+    let auth_service = ServiceBuilder::new()
+        .layer(HandleErrorLayer::new(|_: BoxError| async {
+            StatusCode::BAD_REQUEST
+        }))
+        .layer(AuthManagerLayerBuilder::new(auth_backend, session_layer).build());
+
+    debug!("Creating routers");
+    let app = Router::new()
+        .route("/", get(root))
+        .route("/favicon.ico", get(favicon_redirect))
+        .nest_service("/static", ServeDir::new("web/static"))
+        .nest(APP_PREFIX, html::router(shared_state.clone()))
+        .layer(
+            ServiceBuilder::new()
+                .set_x_request_id(MakeRequestUuid::default())
+                .layer(
+                    TraceLayer::new_for_http()
+                        .make_span_with(DefaultMakeSpan::new().include_headers(true))
+                        .on_response(DefaultOnResponse::new().include_headers(true)),
+                )
+                .propagate_x_request_id()
+                .layer(auth_service)
+                .layer(middleware::from_fn_with_state(
+                    shared_state.clone(),
+                    error_mapper,
+                )),
+        )
+        .with_state(shared_state);
+
+    Ok(app)
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let configyaml = tokio::fs::read_to_string("config.yaml").await?;
@@ -298,58 +358,10 @@ async fn main() -> Result<()> {
     .await
     .with_context(|| "Unable to load TLS key and certificate. See certs/README for more info")?;
 
-    let mut jinja = Environment::new();
-    jinja.set_loader(minijinja::path_loader("web/templates"));
-    jinja.add_filter("app_url", app_url);
-    jinja.add_filter("append_query_param", append_query_param);
-    jinja.add_filter("truncate", truncate_text);
-    jinja.add_filter("idfmt", format_id_number);
-    jinja.add_filter("markdown", markdown);
-    jinja.add_global("environment", args.env);
-    minijinja_contrib::add_to_environment(&mut jinja);
-
-    let shared_state = Arc::new(SharedState::new(env, Engine::from(jinja)).await?);
-    sqlx::migrate!("../db/migrations")
-        .run(&shared_state.dbpool)
-        .await?;
-
-    debug!("Creating session layer");
-    let session_store = SqliteStore::new(shared_state.dbpool.clone());
-    session_store.migrate().await?;
-    let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(true)
-        .with_expiry(Expiry::OnInactivity(Duration::days(7)));
-
-    debug!("Creating auth backend");
-    let auth_backend = auth::SqliteAuthBackend::new(shared_state.dbpool.clone());
-    let auth_service = ServiceBuilder::new()
-        .layer(HandleErrorLayer::new(|_: BoxError| async {
-            StatusCode::BAD_REQUEST
-        }))
-        .layer(AuthManagerLayerBuilder::new(auth_backend, session_layer).build());
-
-    debug!("Creating routers");
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/favicon.ico", get(favicon_redirect))
-        .nest_service("/static", ServeDir::new("web/static"))
-        .nest(APP_PREFIX, html::router(shared_state.clone()))
-        .layer(
-            ServiceBuilder::new()
-                .set_x_request_id(MakeRequestUuid::default())
-                .layer(
-                    TraceLayer::new_for_http()
-                        .make_span_with(DefaultMakeSpan::new().include_headers(true))
-                        .on_response(DefaultOnResponse::new().include_headers(true)),
-                )
-                .propagate_x_request_id()
-                .layer(auth_service)
-                .layer(middleware::from_fn_with_state(
-                    shared_state.clone(),
-                    error_mapper,
-                )),
-        )
-        .with_state(shared_state);
+    let app = app(Arc::new(
+        SharedState::new(env, template_engine(&args.env)).await?,
+    ))
+    .await?;
 
     let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
     info!("Listening on https://{}", addr);
