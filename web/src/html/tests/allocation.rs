@@ -1,35 +1,11 @@
-use crate::{app_url, Result};
-use crate::{auth::Credentials, test_app};
+use super::*;
+use crate::app_url;
+use crate::test_app;
 use axum::http::StatusCode;
-use axum::{
-    http::{header::CONTENT_TYPE, Request},
-    Router,
-};
+use axum::http::{header::CONTENT_TYPE, Request};
 use sqlx::{Pool, Sqlite};
 use test_log::test;
 use tower::Service;
-
-async fn login(app: &mut Router) -> Result<String> {
-    let creds = serde_urlencoded::to_string(Credentials {
-        username: "testuser".to_string(),
-        password: "topsecret123".to_string(),
-        next: Some("url".to_string()),
-    })?;
-    let request = Request::builder()
-        .uri(app_url("/auth/login"))
-        .method("POST")
-        .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-        .body(creds)?;
-    let response = app.as_service().call(request).await?;
-    assert_eq!(response.status(), StatusCode::OK);
-    // extract cookie
-    Ok(response
-        .headers()
-        .get("set-cookie")
-        .expect("no set-cookie header")
-        .to_str()?
-        .to_string())
-}
 
 #[test(sqlx::test(
     migrations = "../db/migrations/",

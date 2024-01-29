@@ -258,7 +258,12 @@ impl MakeRequestId for MakeRequestUuid {
 
 fn template_engine(envname: &str) -> Engine<minijinja::Environment<'static>> {
     let mut jinja = Environment::new();
-    jinja.set_loader(minijinja::path_loader("web/templates"));
+    if cfg!(test) {
+        // tests are run from the workspace directory
+        jinja.set_loader(minijinja::path_loader("./templates"));
+    } else {
+        jinja.set_loader(minijinja::path_loader("./web/templates"));
+    }
     jinja.add_filter("app_url", app_url);
     jinja.add_filter("append_query_param", append_query_param);
     jinja.add_filter("truncate", truncate_text);
