@@ -1,3 +1,11 @@
+use super::error_alert_response;
+use crate::{
+    app_url,
+    auth::SqliteUser,
+    error::{self, Error},
+    state::AppState,
+    Message, MessageType, TemplateKey,
+};
 use anyhow::anyhow;
 use axum::{
     extract::{rejection::FormRejection, Path, State},
@@ -17,16 +25,7 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use strum::IntoEnumIterator;
-
-use crate::{
-    app_url,
-    auth::SqliteUser,
-    error::{self, Error},
-    state::AppState,
-    Message, MessageType, TemplateKey,
-};
-
-use super::error_alert_response;
+use tracing::error;
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -91,21 +90,17 @@ async fn add_allocation_note(
     State(state): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
     form: Result<Form<NoteParams>, FormRejection>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> impl IntoResponse {
     let params = match form {
         Ok(Form(params)) => params,
         Err(e) => {
-            return Ok(error_alert_response(
-                &state,
-                StatusCode::UNPROCESSABLE_ENTITY,
-                e.to_string(),
-            )
-            .into_response())
+            return error_alert_response(&state, StatusCode::UNPROCESSABLE_ENTITY, e.to_string())
+                .into_response()
         }
     };
 
     // make sure that this is our sample
-    let alloc = Allocation::fetch_one(
+    let alloc = match Allocation::fetch_one(
         Some(
             FilterBuilder::new(FilterOp::And)
                 .push(Arc::new(allocation::Filter::Id(allocid)))
@@ -115,9 +110,34 @@ async fn add_allocation_note(
         ),
         &state.dbpool,
     )
-    .await?;
+    .await
+    {
+        Ok(alloc) => alloc,
+        Err(e) => {
+            error!("Failed to fetch allocation: {}", e);
+            match e {
+                sqlx::Error::RowNotFound => {
+                    return error_alert_response(
+                        &state,
+                        StatusCode::NOT_FOUND,
+                        format!("Allocation {allocid} not found for project {projectid}"),
+                    )
+                    .into_response()
+                }
+                _ => {
+                    return error_alert_response(
+                        &state,
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to fetch allocation".to_string(),
+                    )
+                    .into_response()
+                }
+            };
+        }
+    };
+
     if alloc.sample.user.id() != user.id {
-        return Ok(error_alert_response(
+        return error_alert_response(
             &state,
             StatusCode::FORBIDDEN,
             format!(
@@ -125,8 +145,18 @@ async fn add_allocation_note(
                 allocid
             ),
         )
-        .into_response());
+        .into_response();
     }
+
+    if params.summary.is_empty() {
+        return error_alert_response(
+            &state,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Summary cannot be empty".to_string(),
+        )
+        .into_response();
+    }
+
     let note = Note::new(
         allocid,
         params.date,
@@ -134,18 +164,21 @@ async fn add_allocation_note(
         params.summary.clone(),
         params.details.as_ref().cloned(),
     );
-    Ok(match note.insert(&state.dbpool).await {
+    match note.insert(&state.dbpool).await {
         Ok(_) => {
             let url = app_url(&format!("/project/{}/sample/{}", projectid, allocid));
             [("HX-Redirect", url)].into_response()
         }
-        Err(e) => error_alert_response(
-            &state,
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to save note: {}", e),
-        )
-        .into_response(),
-    })
+        Err(e) => {
+            error!("Failed to save note: {}", e);
+            error_alert_response(
+                &state,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to save note"),
+            )
+            .into_response()
+        }
+    }
 }
 
 async fn show_add_allocation_note(
