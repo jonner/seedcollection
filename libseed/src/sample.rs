@@ -40,6 +40,7 @@ pub enum Filter {
     Id(Cmp, i64),
     IdNotIn(Vec<i64>),
     SourceId(Cmp, i64),
+    SourceNameLike(String),
     TaxonId(Cmp, i64),
     TaxonNameLike(String),
     UserId(i64),
@@ -106,6 +107,13 @@ impl FilterPart for Filter {
             }
             Self::UserId(id) => _ = builder.push("userid=").push_bind(*id),
             Self::Notes(cmp, s) => _ = builder.push("notes").push(cmp).push_bind(format!("%{s}%")),
+            Self::SourceNameLike(s) => {
+                if !s.is_empty() {
+                    let wildcard = format!("%{s}%");
+                    builder.push(" srcname LIKE ");
+                    builder.push_bind(wildcard);
+                }
+            }
         };
     }
 }

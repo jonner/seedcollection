@@ -10,6 +10,7 @@ use test_log::test;
 use tower::Service;
 
 mod allocation;
+mod sample;
 
 /// usage:
 /// let (_parts, body) = response.into_parts();

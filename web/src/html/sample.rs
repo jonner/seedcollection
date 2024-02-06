@@ -13,7 +13,7 @@ use libseed::{
     loadable::{ExternalRef, Loadable},
     project::{allocation, Allocation},
     sample::{self, Certainty, Sample},
-    source::{self, Source},
+    source::Source,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -60,7 +60,7 @@ async fn list_samples(
                 FilterBuilder::new(FilterOp::Or)
                     .push(Arc::new(sample::Filter::TaxonNameLike(f.clone())))
                     .push(Arc::new(sample::Filter::Notes(Cmp::Like, f.clone())))
-                    .push(Arc::new(source::Filter::Name(Cmp::Like, f.clone())))
+                    .push(Arc::new(sample::Filter::SourceNameLike(f.clone())))
                     .build()
             })
         })
