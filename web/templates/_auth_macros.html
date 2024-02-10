@@ -1,7 +1,11 @@
 {% from "_macros.html" import show_message %}
 {% macro login_form(username=none, message=none) %}
-<form hx-post="{{ "/auth/login" | app_url }}" id="login-user">
+<form hx-post="{{ "/auth/login" | app_url }}"
+      hx-target-error="#message-box"
+      id="login-user">
+    <div id="message-box">
     {{ show_message(message) }}
+    </div>
     <div class="row px-3 mb-3">
         <label class="form-label" for="UsernameInput">Username</label>
         <input id="UsernameInput"

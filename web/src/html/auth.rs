@@ -1,9 +1,10 @@
+use super::error_alert_response;
 use crate::{
     app_url,
     auth::{AuthSession, Credentials},
     error,
     state::AppState,
-    Message, MessageType, TemplateKey,
+    TemplateKey,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -22,7 +23,7 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
 use time::{macros::format_description, Duration, OffsetDateTime, PrimitiveDateTime};
-use tracing::debug;
+use tracing::{debug, error};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -76,44 +77,48 @@ async fn show_login(
     ))
 }
 
+fn login_failure_response<E: std::fmt::Debug>(
+    state: &AppState,
+    context: &str,
+    err: Option<E>,
+) -> impl IntoResponse {
+    error!("{context}: {err:?}");
+    error_alert_response(
+        state,
+        StatusCode::UNAUTHORIZED,
+        "Incorrect username or password. Please double-check and try again.".to_string(),
+    )
+}
+
 async fn do_login(
-    TemplateKey(key): TemplateKey,
     mut auth: AuthSession,
     State(state): State<AppState>,
     Form(creds): Form<Credentials>,
 ) -> impl IntoResponse {
-    let res = match auth.authenticate(creds.clone()).await {
+    match auth.authenticate(creds.clone()).await {
         Ok(authenticated) => match authenticated {
             Some(user) => match auth.login(&user).await {
-                Ok(()) => Ok((
+                Ok(()) => (
                     [(
                         "HX-Redirect",
                         creds.next.as_ref().cloned().unwrap_or(app_url("/")),
                     )],
                     "",
                 )
-                    .into_response()),
-                Err(e) => Err(format!("Failed to log in: {}", e)),
+                    .into_response(),
+                Err(e) => {
+                    login_failure_response(&state, "Failed to login", Some(e)).into_response()
+                }
             },
-            None => Err(format!("Failed to find a user '{}'", creds.username)),
-        },
-        Err(e) => Err(format!("Failed to authenticate: {}", e)),
-    };
-    match res {
-        Ok(resp) => resp,
-        Err(msg) => {
-            debug!(msg);
-            RenderHtml(
-                key,
-                state.tmpl.clone(),
-                context!(message => Message {
-                   r#type: MessageType::Error,
-                   msg: "Login failed".to_string(),
-               },
-               username => creds.username,
-               next => creds.next),
+            None => login_failure_response::<&str>(
+                &state,
+                &format!("Failed to find a user '{}'", creds.username),
+                None,
             )
-            .into_response()
+            .into_response(),
+        },
+        Err(e) => {
+            login_failure_response(&state, "Failed to authenticate", Some(&e)).into_response()
         }
     }
 }
