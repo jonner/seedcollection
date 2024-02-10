@@ -32,6 +32,8 @@ use sqlx::{sqlite::SqliteQueryResult, Row};
 use std::sync::Arc;
 use tracing::warn;
 
+use super::error_alert_response;
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(show_new_project).post(insert_project))
@@ -93,7 +95,7 @@ async fn show_new_project(
 #[derive(Deserialize, Serialize)]
 struct ProjectParams {
     name: String,
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     description: Option<String>,
 }
 
@@ -102,10 +104,6 @@ async fn do_insert(
     params: &ProjectParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    if params.name.is_empty() {
-        return Err(anyhow!("No name specified").into());
-    }
-
     let mut project = Project::new(
         params.name.clone(),
         params.description.as_ref().cloned(),
@@ -116,21 +114,27 @@ async fn do_insert(
 
 async fn insert_project(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    match do_insert(user, &params, &state).await {
-        Err(e) => Ok(RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!( message => Message {
-                    r#type: MessageType::Error,
-                    msg: format!("Failed to save project: {}", e),
-                },
-                request => params),
+    if params.name.is_empty() {
+        return Ok(error_alert_response(
+            &state,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "No name specified".to_string(),
         )
-        .into_response()),
+        .into_response());
+    }
+    match do_insert(user, &params, &state).await {
+        Err(e) => {
+            warn!("Failed to insert project: {e:?}");
+            return Ok(error_alert_response(
+                &state,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to save project".to_string(),
+            )
+            .into_response());
+        }
         Ok(result) => {
             let id = result.last_insert_rowid();
             let projecturl = app_url(&format!("/project/{}", id));
@@ -138,7 +142,7 @@ async fn insert_project(
             Ok((
                 [("HX-Redirect", projecturl)],
                 RenderHtml(
-                    key,
+                    "_ALERT.html",
                     state.tmpl.clone(),
                     context!( message =>
                     Message {

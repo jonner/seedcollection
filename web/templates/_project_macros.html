@@ -7,8 +7,11 @@ hx-put="{{ ("/project/" ~ project.id) | app_url }}"
 {% else %}
 hx-post="{{ "/project/new" | app_url }}"
 {% endif %}
- hx-swap="outerHTML" id="{{ id }}">
+hx-target-error="#message-box"
+ id="{{ id }}">
+    <div id="message-box">
     {{ show_message(message) }}
+    </div>
     <div class="row px-3 mb-3">
         <label class="form-label" for="ProjectNameInput">Name</label>
         <input id="ProjectNameInput"
