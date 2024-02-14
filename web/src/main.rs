@@ -32,7 +32,7 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     ServiceBuilderExt,
 };
-use tracing::{debug, info};
+use tracing::{info, trace};
 use tracing_subscriber::filter::EnvFilter;
 use uuid::Uuid;
 
@@ -156,7 +156,7 @@ pub fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> 
     format!("{}{:0>width$}", prefix, id, width = width)
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 struct Ports {
     http: u16,
     https: u16,
@@ -275,18 +275,19 @@ where
 }
 
 async fn app(shared_state: AppState) -> Result<Router> {
+    trace!("Running database migrations");
     sqlx::migrate!("../db/migrations")
         .run(&shared_state.dbpool)
         .await?;
 
-    debug!("Creating session layer");
+    trace!("Creating session layer");
     let session_store = SqliteStore::new(shared_state.dbpool.clone());
     session_store.migrate().await?;
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(true)
         .with_expiry(Expiry::OnInactivity(Duration::days(7)));
 
-    debug!("Creating auth backend");
+    trace!("Creating auth backend");
     let auth_backend = auth::SqliteAuthBackend::new(shared_state.dbpool.clone());
     let auth_service = ServiceBuilder::new()
         .layer(HandleErrorLayer::new(|_: BoxError| async {
@@ -294,7 +295,7 @@ async fn app(shared_state: AppState) -> Result<Router> {
         }))
         .layer(AuthManagerLayerBuilder::new(auth_backend, session_layer).build());
 
-    debug!("Creating routers");
+    trace!("Creating routers");
     let static_path = shared_state.config.asset_root.join("static");
     let app = Router::new()
         .route("/", get(root))
@@ -346,7 +347,7 @@ async fn main() -> Result<()> {
     })?;
     // we want to fail early if the config isn't valid or the password can't be read
     env.init()?;
-    info!("Using environment '{}'", args.env);
+    info!(args.env, ?env);
     let listen = env.listen.clone();
 
     let ports = Ports {
@@ -428,6 +429,7 @@ async fn redirect_http_to_https(addr: String, ports: Ports) {
     }
 
     let redirect = move |Host(host): Host, uri: Uri| async move {
+        info!("Redirecting {uri:?} to https");
         match make_https(host, uri, ports) {
             Ok(uri) => Ok(Redirect::permanent(&uri.to_string())),
             Err(error) => {
@@ -439,7 +441,10 @@ async fn redirect_http_to_https(addr: String, ports: Ports) {
 
     let addr: SocketAddr = format!("{}:{}", addr, ports.http).parse().unwrap();
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    tracing::debug!("listening on http://{}", listener.local_addr().unwrap());
+    info!(
+        "Redirector listening on http://{}",
+        listener.local_addr().unwrap()
+    );
     axum::serve(listener, redirect.into_make_service())
         .await
         .unwrap();

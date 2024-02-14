@@ -4,6 +4,7 @@ use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Sqlite};
 use std::sync::Arc;
 use strum_macros::{EnumIter, EnumString, FromRepr};
 use time::Date;
+use tracing::debug;
 
 use crate::{
     error::{Error, Result},
@@ -141,6 +142,7 @@ impl Note {
         if self.summary.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
         }
+        debug!(?self, "Inserting note into database");
         sqlx::query_as(
             r#"INSERT INTO sc_project_notes
             (psid, notedate, notetype, notesummary, notedetails)
@@ -157,6 +159,7 @@ impl Note {
     }
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
+        debug!(?self, "Updating note in database");
         sqlx::query_as(
             r#"UPDATE sc_project_notes
             SET psid=?, notedate=?, notetype=?, notesummary=?, notedetails=? WHERE pnoteid=?

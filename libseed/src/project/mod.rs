@@ -13,6 +13,7 @@ pub use note::{Note, NoteFilter, NoteType};
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Row, Sqlite};
 use std::sync::Arc;
+use tracing::debug;
 
 pub mod allocation;
 pub mod note;
@@ -171,6 +172,7 @@ impl Project {
     }
 
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        debug!(?self, "Inserting project into database");
         sqlx::query("INSERT INTO sc_projects (projname, projdescription, userid) VALUES (?, ?, ?)")
             .bind(self.name.clone())
             .bind(self.description.clone())
@@ -191,6 +193,7 @@ impl Project {
         if self.id < 0 {
             return Err(Error::InvalidStateMissingAttribute("id".to_string()));
         }
+        debug!(?self, "Updating project in database");
         sqlx::query(
             "UPDATE sc_projects SET projname=?, projdescription=?, userid=? WHERE projectid=?",
         )

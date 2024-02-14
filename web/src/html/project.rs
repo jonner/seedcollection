@@ -30,7 +30,7 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Row};
 use std::sync::Arc;
-use tracing::warn;
+use tracing::{debug, trace, warn};
 
 use super::error_alert_response;
 
@@ -92,7 +92,7 @@ async fn show_new_project(
     Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct ProjectParams {
     name: String,
     #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -137,6 +137,7 @@ async fn insert_project(
         }
         Ok(result) => {
             let id = result.last_insert_rowid();
+            debug!(id, "successfully inserted project");
             let projecturl = app_url(&format!("/project/{}", id));
 
             Ok((
@@ -297,6 +298,11 @@ async fn delete_project(
         .await
         .map_err(|_| Error::NotFound("That project does not exist".to_string()))?;
     if project.userid != user.id {
+        warn!(
+            user.id,
+            ?project,
+            "User tried to delete project they don't own"
+        );
         return Err(Error::Unauthorized(
             "No permission to delete this project".to_string(),
         ));
@@ -304,16 +310,17 @@ async fn delete_project(
 
     let errmsg = match project.delete(&state.dbpool).await {
         Err(e) => {
-            warn!("{e:?}");
+            warn!(?e, "Failed to delete project");
             e.to_string()
         }
         Ok(res) if (res.rows_affected() == 0) => "No project found".to_string(),
         Ok(_) => {
+            debug!(id, "Successfully deleted project");
             return Ok((
                 [("HX-Redirect", app_url("/project/list"))],
                 RenderHtml(key, state.tmpl.clone(), context!(deleted => true, id => id)),
             )
-                .into_response())
+                .into_response());
         }
     };
     Ok(RenderHtml(

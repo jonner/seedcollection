@@ -13,6 +13,7 @@ use rand::{
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite, SqlitePool};
 use std::ops::{Deref, DerefMut};
+use tracing::debug;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SqliteUser(User);
@@ -20,6 +21,7 @@ pub struct SqliteUser(User);
 impl SqliteUser {
     pub async fn new_verification_code(&self, pool: &Pool<Sqlite>) -> Result<String, error::Error> {
         let key = Alphanumeric.sample_string(&mut OsRng, 24);
+        debug!(key, "Generated a new verification code");
         sqlx::query!(
             r#"UPDATE sc_user_verification SET uvexpiration=0 WHERE userid=?;
             INSERT into sc_user_verification (userid, uvkey, uvexpiration) VALUES(?, ?, ?)"#,
@@ -85,7 +87,7 @@ impl AuthnBackend for SqliteAuthBackend {
     ) -> Result<Option<Self::User>, Self::Error> {
         tracing::info!("authenticating...");
         let user = self.get_user(&credentials.username).await?;
-        tracing::info!("Got user {user:?}");
+        tracing::info!(?user, "Got user");
         match user {
             Some(user) => user
                 .verify_password(&credentials.password)

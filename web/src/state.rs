@@ -4,10 +4,11 @@ use axum_template::engine::Engine;
 use lettre::{AsyncSmtpTransport, Tokio1Executor};
 use sqlx::SqlitePool;
 use std::sync::Arc;
-use tracing::debug;
+use tracing::{debug, trace};
 
 type TemplateEngine = Engine<minijinja::Environment<'static>>;
 
+#[derive(Debug)]
 pub struct SharedState {
     pub dbpool: SqlitePool,
     pub tmpl: TemplateEngine,
@@ -18,11 +19,10 @@ impl SharedState {
     pub async fn new(envname: &str, env: EnvConfig) -> Result<Self> {
         let tmpl_path = env.asset_root.join("templates");
         let template = template_engine(envname, &tmpl_path);
-        debug!("Creating shared app state");
+        trace!("Creating shared app state");
         // do a quick sanity check on the mail transport
-        debug!(
-            "Sanity checking the mail transport '{:?}'",
-            env.mail_transport
+        debug!(?env.mail_transport,
+            "Sanity checking the mail transport",
         );
         match env.mail_transport {
             crate::MailTransport::File(_) => Ok(()),

@@ -15,6 +15,7 @@ use sqlx::{
 };
 use std::sync::Arc;
 use time::OffsetDateTime;
+use tracing::debug;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[repr(i64)]
@@ -154,6 +155,7 @@ impl User {
             return Err(Error::InvalidOperationObjectNotFound);
         }
 
+        debug!(?self, "Updating user in database");
         sqlx::query(
             "UPDATE
                         sc_users
@@ -232,6 +234,7 @@ impl User {
         if self.email.trim().is_empty() {
             return Err(Error::InvalidStateMissingAttribute("email".to_string()));
         }
+        debug!(?self, "Inserting user into database");
         // Don't insert the register_date, the database will set it to the current timestamp
         sqlx::query(
             r#"INSERT INTO
