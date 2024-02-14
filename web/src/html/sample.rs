@@ -1,3 +1,10 @@
+use crate::{
+    app_url,
+    auth::SqliteUser,
+    error::{self, Error},
+    state::AppState,
+    Message, MessageType, TemplateKey,
+};
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
@@ -20,14 +27,6 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 use std::sync::Arc;
 use tracing::debug;
-
-use crate::{
-    app_url,
-    auth::SqliteUser,
-    error::{self, Error},
-    state::AppState,
-    Message, MessageType, TemplateKey,
-};
 
 pub fn router() -> Router<AppState> {
     Router::new()
