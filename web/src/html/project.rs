@@ -47,8 +47,9 @@ pub fn router() -> Router<AppState> {
         .nest("/:id/sample/", super::allocation::router())
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct ProjectListParams {
+    #[serde(deserialize_with = "empty_string_as_none")]
     filter: Option<String>,
 }
 
@@ -56,24 +57,32 @@ async fn list_projects(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Query(params): Query<ProjectListParams>,
+    params: Option<Query<ProjectListParams>>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
-    let namefilter = params.filter.map(|filter| {
-        FilterBuilder::new(FilterOp::Or)
-            .push(Arc::new(project::Filter::Name(Cmp::Like, filter.clone())))
-            .push(Arc::new(project::Filter::Description(
-                Cmp::Like,
-                filter.clone(),
-            )))
-            .build()
-    });
-    let mut filter =
+    trace!(?params, "Listing projects");
+    let mut fbuilder =
         FilterBuilder::new(FilterOp::And).push(Arc::new(project::Filter::User(user.id)));
-    if let Some(f) = namefilter {
-        filter = filter.push(f);
+    let namefilter = params
+        .map(|Query(p)| p.filter)
+        .flatten()
+        .map(|filterstring| {
+            debug!(?filterstring, "Got project filter");
+            FilterBuilder::new(FilterOp::Or)
+                .push(Arc::new(project::Filter::Name(
+                    Cmp::Like,
+                    filterstring.clone(),
+                )))
+                .push(Arc::new(project::Filter::Description(
+                    Cmp::Like,
+                    filterstring.clone(),
+                )))
+                .build()
+        });
+    if let Some(namefilter) = namefilter {
+        fbuilder = fbuilder.push(namefilter);
     }
-    let projects = Project::fetch_all(Some(filter.build()), &state.dbpool).await?;
+    let projects = Project::fetch_all(Some(fbuilder.build()), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
