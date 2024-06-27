@@ -161,6 +161,8 @@ pub enum SampleCommands {
         quantity: Option<u32>,
         #[arg(short, long)]
         notes: Option<String>,
+        #[arg(short, long)]
+        userid: Option<i64>,
     },
     #[command(about = "Remove an existing sample from the database")]
     Remove { id: i64 },

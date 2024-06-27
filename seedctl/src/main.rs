@@ -316,16 +316,18 @@ async fn main() -> Result<()> {
                 year,
                 quantity,
                 notes,
+                userid,
             } => {
                 let newid = sqlx::query!(
-                    r#"INSERT INTO sc_samples (tsn, month, year, srcid, quantity, notes)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#,
+                    r#"INSERT INTO sc_samples (tsn, month, year, srcid, quantity, notes, userid)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"#,
                     taxon,
                     month,
                     year,
                     source,
                     quantity,
                     notes,
+                    userid,
                 )
                 .execute(&dbpool)
                 .await?
