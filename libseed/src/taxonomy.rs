@@ -191,8 +191,8 @@ impl FilterPart for Filter {
         match self {
             Self::Id(n) => builder.push("T.tsn=").push_bind(*n),
             Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(*n),
-            Self::Genus(s) => builder.push("T.unit_name1=").push_bind(s.clone()),
-            Self::Species(s) => builder.push("T.unit_name2=").push_bind(s.clone()),
+            Self::Genus(s) => builder.push("T.unit_name1 LIKE ").push_bind(s.clone()),
+            Self::Species(s) => builder.push("T.unit_name2 LIKE ").push_bind(s.clone()),
             Self::Rank(rank) => builder.push("T.rank_id=").push_bind(rank.clone() as i64),
             Self::Name1(s) => builder
                 .push("T.unit_name1 LIKE ")
