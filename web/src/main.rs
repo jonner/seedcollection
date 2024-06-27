@@ -93,8 +93,8 @@ where
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub struct Cli {
-    #[arg(long, required(true))]
-    pub env: String,
+    #[arg(long, required_unless_present("list_envs"))]
+    pub env: Option<String>,
     #[arg(
         long,
         exclusive(true),
@@ -332,22 +332,24 @@ async fn main() -> Result<()> {
         for key in configs.keys() {
             println!("{key}");
         }
+        return Ok(());
     }
 
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_env("SEEDWEB_LOG"))
         .init();
 
-    let mut env = configs.remove(&args.env).ok_or_else(|| {
+    let envarg = args.env.as_ref().expect("'env' argument required");
+    let mut env = configs.remove(envarg).ok_or_else(|| {
         anyhow!(
             "Unknown environment '{}'. Possible values: {}",
-            &args.env,
+            envarg,
             configs.keys().cloned().collect::<Vec<_>>().join(", ")
         )
     })?;
     // we want to fail early if the config isn't valid or the password can't be read
     env.init()?;
-    info!(args.env, ?env);
+    info!(envarg, ?env);
     let listen = env.listen.clone();
 
     let ports = Ports {
@@ -364,7 +366,7 @@ async fn main() -> Result<()> {
     .await
     .with_context(|| "Unable to load TLS key and certificate. See certs/README for more info")?;
 
-    let app = app(Arc::new(SharedState::new(&args.env, env).await?)).await?;
+    let app = app(Arc::new(SharedState::new(envarg, env).await?)).await?;
 
     let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
     info!("Listening on https://{}", addr);
