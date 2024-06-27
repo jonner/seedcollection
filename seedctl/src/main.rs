@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::*;
+use libseed::sample::Certainty;
 use libseed::{
     loadable::{ExternalRef, Loadable},
     project::{Allocation, Project},
@@ -317,21 +318,23 @@ async fn main() -> Result<()> {
                 quantity,
                 notes,
                 userid,
+                uncertain,
             } => {
-                let newid = sqlx::query!(
-                    r#"INSERT INTO sc_samples (tsn, month, year, srcid, quantity, notes, userid)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"#,
+                let certainty = match uncertain {
+                    true => Certainty::Uncertain,
+                    _ => Certainty::Certain,
+                };
+                let mut sample = Sample::new(
                     taxon,
+                    userid.ok_or(anyhow!("No User ID specified"))?,
+                    source.ok_or(anyhow!("No source ID provided"))?,
                     month,
                     year,
-                    source,
                     quantity,
                     notes,
-                    userid,
-                )
-                .execute(&dbpool)
-                .await?
-                .last_insert_rowid();
+                    certainty,
+                );
+                let newid = sample.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added sample {newid} to database");
                 Ok(())
             }

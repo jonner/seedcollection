@@ -154,15 +154,17 @@ pub enum SampleCommands {
         #[arg(short, long)]
         source: Option<i64>,
         #[arg(short, long)]
-        month: Option<u16>,
+        month: Option<u32>,
         #[arg(short, long)]
-        year: Option<u16>,
+        year: Option<u32>,
         #[arg(short, long)]
-        quantity: Option<u32>,
+        quantity: Option<i64>,
         #[arg(short, long)]
         notes: Option<String>,
         #[arg(short, long)]
         userid: Option<i64>,
+        #[arg(short = '?', long)]
+        uncertain: bool,
     },
     #[command(about = "Remove an existing sample from the database")]
     Remove { id: i64 },
