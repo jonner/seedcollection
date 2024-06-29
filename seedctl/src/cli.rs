@@ -5,14 +5,19 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub struct Cli {
-    #[arg(short, long, default_value = "seedcollection.sqlite")]
-    pub database: PathBuf,
     #[command(subcommand)]
     pub command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
+    #[command(about = "Login to the database")]
+    Login {
+        #[arg(short, long, required(true))]
+        username: String,
+        #[arg(short, long, required(true))]
+        database: PathBuf,
+    },
     #[command(about = "Query taxonomy")]
     Taxonomy {
         #[command(subcommand)]
@@ -54,7 +59,7 @@ pub enum ProjectCommands {
         #[arg(short, long)]
         description: Option<String>,
         #[arg(short, long)]
-        userid: i64,
+        userid: Option<i64>,
     },
     #[command(
         about="Modify properties of a project",
@@ -114,7 +119,7 @@ pub enum SourceCommands {
         #[arg(long = "long")]
         longitude: Option<f64>,
         #[arg(long)]
-        userid: i64,
+        userid: Option<i64>,
     },
     #[command(about = "Remove an existing source from the database")]
     Remove { id: i64 },

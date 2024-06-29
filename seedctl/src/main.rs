@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::*;
+use config::*;
 use libseed::sample::Certainty;
 use libseed::{
     loadable::{ExternalRef, Loadable},
@@ -101,6 +102,7 @@ impl ConstructTable for Project {
 }
 
 mod cli;
+mod config;
 
 fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
     use tabled::settings::{object::Segment, width::Width, Modify, Style};
@@ -133,10 +135,36 @@ async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow:
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let args = Cli::parse();
+    let xdgdirs = xdg::BaseDirectories::new()?;
+    let config_file = xdgdirs.place_config_file("seedctl/config")?;
+    let cfg = match &args.command {
+        Commands::Login { username, database } => {
+            let pwd = inquire::Password::new("Password:")
+                .with_display_toggle_enabled()
+                .with_display_mode(inquire::PasswordDisplayMode::Masked)
+                .without_confirmation()
+                .prompt()?;
+            let cfg = Config::new(username.clone(), pwd, database.clone());
+            cfg.save_to_file(&config_file).await.map(|_| cfg)
+        }
+        _ => config::Config::load_from_file(&config_file).await,
+    }
+    .with_context(|| "Must log in before issuing any other commands")?;
+
+    debug!(?cfg.username, ?cfg.database, "logging in");
     let dbpool =
-        SqlitePool::connect(&format!("sqlite://{}", args.database.to_string_lossy())).await?;
+        SqlitePool::connect(&format!("sqlite://{}", cfg.database.to_string_lossy())).await?;
     sqlx::migrate!("../db/migrations").run(&dbpool).await?;
+    let user = User::fetch_by_username(&cfg.username, &dbpool)
+        .await
+        .with_context(|| format!("Failed to fetch user from database"))?
+        .ok_or_else(|| anyhow!("Unable to find user {}", cfg.username))?;
+    user.verify_password(&cfg.password)?;
+
     match args.command {
+        Commands::Login { .. } => {
+            Ok(()) // already handled above
+        }
         Commands::Project { command } => match command {
             ProjectCommands::List { full } => {
                 let projects = Project::fetch_all(None, &dbpool).await?;
@@ -161,7 +189,7 @@ async fn main() -> Result<()> {
                 description,
                 userid,
             } => {
-                let mut project = Project::new(name, description, userid);
+                let mut project = Project::new(name, description, userid.unwrap_or(user.id));
                 let id = project.insert(&dbpool).await?.last_insert_rowid();
                 let project = Project::fetch(id, &dbpool).await?;
                 println!("Added project to database:");
@@ -260,7 +288,13 @@ async fn main() -> Result<()> {
                 longitude,
                 userid,
             } => {
-                let mut source = Source::new(name, description, latitude, longitude, userid);
+                let mut source = Source::new(
+                    name,
+                    description,
+                    latitude,
+                    longitude,
+                    userid.unwrap_or(user.id),
+                );
 
                 let newid = source.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added source {newid} to database");
