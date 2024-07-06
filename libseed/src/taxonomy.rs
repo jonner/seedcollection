@@ -214,6 +214,20 @@ impl FilterPart for Filter {
     }
 }
 
+pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
+    match taxon.is_empty() {
+        true => None,
+        false => {
+            let parts = taxon.split(' ');
+            let mut filter = FilterBuilder::new(FilterOp::And);
+            for part in parts {
+                filter = filter.push(any_filter(part));
+            }
+            Some(filter.build())
+        }
+    }
+}
+
 pub fn filter_by(
     id: Option<i64>,
     rank: Option<Rank>,

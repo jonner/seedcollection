@@ -154,8 +154,10 @@ pub enum SampleCommands {
     },
     #[command(about = "Add a new sample to the database")]
     Add {
+        #[arg(short, long, exclusive(true))]
+        interactive: bool,
         #[arg(short, long)]
-        taxon: i64,
+        taxon: Option<i64>,
         #[arg(short, long)]
         source: Option<i64>,
         #[arg(short, long)]

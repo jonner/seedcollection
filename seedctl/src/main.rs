@@ -1,20 +1,115 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use cli::*;
 use config::*;
-use libseed::sample::Certainty;
+use inquire::{autocompletion::Autocomplete, validator::Validation, CustomUserError};
 use libseed::{
+    filter::{Cmp, FilterBuilder, FilterOp},
     loadable::{ExternalRef, Loadable},
     project::{Allocation, Project},
-    sample::Sample,
-    source::Source,
-    taxonomy::{filter_by, Taxon},
+    sample::{Certainty, Sample},
+    source::{self, Source},
+    taxonomy::{filter_by, quickfind, Taxon},
     user::{User, UserStatus},
 };
-use sqlx::SqlitePool;
+use sqlx::{Pool, Sqlite, SqlitePool};
 use std::io::{stdin, stdout, Write};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::fs;
+use tracing::debug;
+
+#[derive(Clone)]
+struct TaxonCompleter {
+    dbpool: Pool<Sqlite>,
+}
+
+impl Autocomplete for TaxonCompleter {
+    fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
+        let mut taxa = Ok(vec![]);
+        if input.len() > 2 {
+            taxa = futures::executor::block_on(Taxon::fetch_all(
+                quickfind(input.to_string()),
+                None,
+                &self.dbpool,
+            ));
+        }
+        taxa.map(|taxa| {
+            taxa.iter()
+                .map(|t| {
+                    let mut cnames = t.vernaculars.join(", ");
+                    if !cnames.is_empty() {
+                        cnames = format!(" - {cnames}");
+                    }
+                    format!("{:6}. {}{}", t.id(), t.complete_name.clone(), cnames)
+                })
+                .collect::<Vec<String>>()
+        })
+        .map_err(|e| e.into())
+    }
+
+    fn get_completion(
+        &mut self,
+        _input: &str,
+        highlighted_suggestion: Option<String>,
+    ) -> Result<inquire::autocompletion::Replacement, CustomUserError> {
+        {
+            Ok(highlighted_suggestion)
+        }
+    }
+}
+
+#[derive(Clone)]
+struct SourceCompleter {
+    dbpool: Pool<Sqlite>,
+    userid: i64,
+}
+
+impl Autocomplete for SourceCompleter {
+    fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
+        let mut fbuilder = FilterBuilder::new(FilterOp::And);
+        fbuilder = fbuilder.push(Arc::new(source::Filter::UserId(self.userid)));
+        fbuilder = fbuilder.push(Arc::new(source::Filter::Name(Cmp::Like, input.to_string())));
+        let mut sources = Ok(vec![]);
+        if input.len() > 2 {
+            sources = futures::executor::block_on(Source::fetch_all(
+                Some(fbuilder.build()),
+                &self.dbpool,
+            ));
+        }
+        sources
+            .map(|taxa| {
+                taxa.iter()
+                    .map(|src| format!("{}. {}", src.id(), src.name))
+                    .collect::<Vec<String>>()
+            })
+            .map_err(|e| e.into())
+    }
+
+    fn get_completion(
+        &mut self,
+        _input: &str,
+        highlighted_suggestion: Option<String>,
+    ) -> Result<inquire::autocompletion::Replacement, CustomUserError> {
+        {
+            Ok(highlighted_suggestion)
+        }
+    }
+}
+
+fn extract_dbid(s: &str) -> Result<i64> {
+    let splits = s.split(".");
+    for split in splits {
+        let split = split.trim();
+        println!("<<{split}>>");
+    }
+    //println!("{:?}", s.split("."));
+    s.split(".")
+        .next()
+        .map(|s| s.trim().parse::<i64>())
+        .ok_or_else(|| anyhow!("Couldn't find taxon ID"))?
+        .map_err(|e| e.into())
+}
 
 trait ConstructTableRow {
     fn row_values(&self, full: bool) -> Result<Vec<String>>;
@@ -345,6 +440,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Add {
+                interactive,
                 taxon,
                 source,
                 month,
@@ -354,20 +450,79 @@ async fn main() -> Result<()> {
                 userid,
                 uncertain,
             } => {
-                let certainty = match uncertain {
-                    true => Certainty::Uncertain,
-                    _ => Certainty::Certain,
+                let mut sample = if interactive {
+                    let taxon_string = inquire::Text::new("Taxon: ")
+                        .with_autocomplete(TaxonCompleter {
+                            dbpool: dbpool.clone(),
+                        })
+                        .prompt()?;
+                    debug!(?taxon_string, "got taxon string");
+                    // HACK: the autocompleter puts the database ID at the beginning of the string. If it's not there, it's an error.
+                    let taxonid = extract_dbid(&taxon_string)?;
+
+                    let source_string = inquire::Text::new("Source: ")
+                        .with_autocomplete(SourceCompleter {
+                            dbpool: dbpool.clone(),
+                            userid: user.id,
+                        })
+                        .prompt()?;
+                    debug!(?source_string, "got source string");
+                    // HACK
+                    let srcid = extract_dbid(&source_string)?;
+
+                    let month = inquire::Text::new("Month:")
+                        .with_validator(|input: &str| match input.parse::<u32>() {
+                            Ok(n) if n <= 12 => Ok(Validation::Valid),
+                            Ok(_) => Ok(Validation::Invalid("Invalid value for month".into())),
+                            Err(_) => Ok(Validation::Invalid("Month should be an integer".into())),
+                        })
+                        .prompt_skippable()?
+                        .map(|s| s.parse::<u32>().unwrap());
+
+                    let year = inquire::Text::new("Year:")
+                        .with_validator(|input: &str| match input.parse::<u32>() {
+                            Ok(_) => Ok(Validation::Valid),
+                            Err(_) => Ok(Validation::Invalid("Year should be an integer".into())),
+                        })
+                        .prompt_skippable()?
+                        .map(|s| s.parse::<u32>().unwrap());
+                    let qty = inquire::Text::new("Quantity:")
+                        .with_validator(|input: &str| match input.parse::<i64>() {
+                            Ok(_) => Ok(Validation::Valid),
+                            Err(_) => {
+                                Ok(Validation::Invalid("Quantity should be an integer".into()))
+                            }
+                        })
+                        .prompt_skippable()?;
+
+                    let notes = inquire::Text::new("Notes:").prompt_skippable()?;
+                    let certainty = match inquire::Confirm::new("Uncertain ID?")
+                        .with_default(false)
+                        .prompt()?
+                    {
+                        true => Certainty::Uncertain,
+                        _ => Certainty::Certain,
+                    };
+
+                    Sample::new(
+                        taxonid, user.id, srcid, month, year, quantity, notes, certainty,
+                    )
+                } else {
+                    let certainty = match uncertain {
+                        true => Certainty::Uncertain,
+                        _ => Certainty::Certain,
+                    };
+                    Sample::new(
+                        taxon.ok_or_else(|| anyhow!("Taxon not specified"))?,
+                        userid.unwrap_or(user.id),
+                        source.ok_or(anyhow!("No source ID provided"))?,
+                        month,
+                        year,
+                        quantity,
+                        notes,
+                        certainty,
+                    )
                 };
-                let mut sample = Sample::new(
-                    taxon,
-                    userid.ok_or(anyhow!("No User ID specified"))?,
-                    source.ok_or(anyhow!("No source ID provided"))?,
-                    month,
-                    year,
-                    quantity,
-                    notes,
-                    certainty,
-                );
                 let newid = sample.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added sample {newid} to database");
                 Ok(())
@@ -500,7 +655,10 @@ async fn main() -> Result<()> {
                 println!("{}: {}", id, username);
                 Ok(())
             }
-            UserCommands::Remove { id } => User::delete_id(&id, &dbpool).await.map(|_| ()),
+            UserCommands::Remove { id } => User::delete_id(&id, &dbpool)
+                .await
+                .map(|_| ())
+                .with_context(|| "failed to remove user"),
             UserCommands::Modify {
                 id,
                 username,
@@ -515,7 +673,10 @@ async fn main() -> Result<()> {
                     let password = get_password(password_file, None).await?;
                     user.change_password(&password)?;
                 }
-                user.update(&dbpool).await.map(|_| ())
+                user.update(&dbpool)
+                    .await
+                    .map(|_| ())
+                    .with_context(|| "Failed to modify user")
             }
         },
     }
