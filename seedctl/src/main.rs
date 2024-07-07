@@ -1,7 +1,5 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use cli::*;
-use config::*;
 use libseed::{
     loadable::{ExternalRef, Loadable},
     project::{Allocation, Project},
@@ -16,6 +14,8 @@ use std::path::PathBuf;
 use tokio::fs;
 use tracing::debug;
 
+use crate::cli::*;
+use crate::config::*;
 use crate::prompt::*;
 
 trait ConstructTableRow {
@@ -160,7 +160,7 @@ async fn main() -> Result<()> {
     sqlx::migrate!("../db/migrations").run(&dbpool).await?;
     let user = User::fetch_by_username(&cfg.username, &dbpool)
         .await
-        .with_context(|| format!("Failed to fetch user from database"))?
+        .with_context(|| "Failed to fetch user from database".to_string())?
         .ok_or_else(|| anyhow!("Unable to find user {}", cfg.username))?;
     user.verify_password(&cfg.password)?;
 
@@ -559,5 +559,4 @@ async fn main() -> Result<()> {
             }
         },
     }
-    .map_err(|e| e.into())
 }

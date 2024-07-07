@@ -162,7 +162,7 @@ async fn add_allocation_note(
             error_alert_response(
                 &state,
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to save note"),
+                "Failed to save note".to_string(),
             )
             .into_response()
         }

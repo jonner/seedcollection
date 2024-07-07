@@ -63,22 +63,19 @@ async fn list_projects(
     trace!(?params, "Listing projects");
     let mut fbuilder =
         FilterBuilder::new(FilterOp::And).push(Arc::new(project::Filter::User(user.id)));
-    let namefilter = params
-        .map(|Query(p)| p.filter)
-        .flatten()
-        .map(|filterstring| {
-            debug!(?filterstring, "Got project filter");
-            FilterBuilder::new(FilterOp::Or)
-                .push(Arc::new(project::Filter::Name(
-                    Cmp::Like,
-                    filterstring.clone(),
-                )))
-                .push(Arc::new(project::Filter::Description(
-                    Cmp::Like,
-                    filterstring.clone(),
-                )))
-                .build()
-        });
+    let namefilter = params.and_then(|Query(p)| p.filter).map(|filterstring| {
+        debug!(?filterstring, "Got project filter");
+        FilterBuilder::new(FilterOp::Or)
+            .push(Arc::new(project::Filter::Name(
+                Cmp::Like,
+                filterstring.clone(),
+            )))
+            .push(Arc::new(project::Filter::Description(
+                Cmp::Like,
+                filterstring.clone(),
+            )))
+            .build()
+    });
     if let Some(namefilter) = namefilter {
         fbuilder = fbuilder.push(namefilter);
     }
@@ -137,12 +134,12 @@ async fn insert_project(
     match do_insert(user, &params, &state).await {
         Err(e) => {
             warn!("Failed to insert project: {e:?}");
-            return Ok(error_alert_response(
+            Ok(error_alert_response(
                 &state,
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to save project".to_string(),
             )
-            .into_response());
+            .into_response())
         }
         Ok(result) => {
             let id = result.last_insert_rowid();
@@ -187,7 +184,7 @@ async fn show_project(
     query: Result<Query<ShowProjectQueryParams>, QueryRejection>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, Error> {
-    let Query(params) = query.map_err(|e| Error::UnprocessableEntityQueryRejection(e))?;
+    let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
     let fb = FilterBuilder::new(FilterOp::And)
         .push(Arc::new(project::Filter::Id(id)))
         .push(Arc::new(project::Filter::User(user.id)));
@@ -245,8 +242,8 @@ async fn do_update(
         return Err(anyhow!("No name specified").into());
     }
     let mut project = Project::fetch(id, &state.dbpool).await?;
-    project.name = params.name.clone();
-    project.description = params.description.clone();
+    project.name.clone_from(&params.name);
+    project.description.clone_from(&params.description);
     project.update(&state.dbpool).await.map_err(|e| e.into())
 }
 

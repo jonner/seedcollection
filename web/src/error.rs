@@ -34,7 +34,7 @@ impl Error {
                 "Unknown error".to_string(),
             ),
             // FIXME: make this more specific
-            Error::Libseed(_) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Library error")),
+            Error::Libseed(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Library error".to_string()),
             Error::Unauthorized(_) => (StatusCode::UNAUTHORIZED, "Not authorized".to_string()),
             Error::NotFound(_) => (StatusCode::NOT_FOUND, "Page not found".to_string()),
             Error::UnprocessableEntityQueryRejection(_) => (

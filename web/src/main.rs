@@ -104,7 +104,7 @@ pub struct Cli {
 }
 
 pub fn app_url(value: &str) -> String {
-    [APP_PREFIX, &value.trim_start_matches('/')].join("")
+    [APP_PREFIX, value.trim_start_matches('/')].join("")
 }
 
 pub fn markdown(value: Option<&str>) -> minijinja::Value {
@@ -304,7 +304,7 @@ async fn app(shared_state: AppState) -> Result<Router> {
         .nest(APP_PREFIX, html::router(shared_state.clone()))
         .layer(
             ServiceBuilder::new()
-                .set_x_request_id(MakeRequestUuid::default())
+                .set_x_request_id(MakeRequestUuid)
                 .layer(
                     TraceLayer::new_for_http()
                         .make_span_with(DefaultMakeSpan::new().include_headers(true))

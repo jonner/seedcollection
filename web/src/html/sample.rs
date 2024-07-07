@@ -53,17 +53,15 @@ async fn list_samples(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     debug!("query params: {:?}", query);
-    let filter = query
-        .map(|params| {
-            params.filter.as_ref().map(|f| {
-                FilterBuilder::new(FilterOp::Or)
-                    .push(Arc::new(sample::Filter::TaxonNameLike(f.clone())))
-                    .push(Arc::new(sample::Filter::Notes(Cmp::Like, f.clone())))
-                    .push(Arc::new(sample::Filter::SourceNameLike(f.clone())))
-                    .build()
-            })
+    let filter = query.and_then(|params| {
+        params.filter.as_ref().map(|f| {
+            FilterBuilder::new(FilterOp::Or)
+                .push(Arc::new(sample::Filter::TaxonNameLike(f.clone())))
+                .push(Arc::new(sample::Filter::Notes(Cmp::Like, f.clone())))
+                .push(Arc::new(sample::Filter::SourceNameLike(f.clone())))
+                .build()
         })
-        .flatten();
+    });
     match Sample::fetch_all_user(user.id, filter, &state.dbpool).await {
         Ok(samples) => RenderHtml(
             key,

@@ -137,14 +137,14 @@ impl Autocomplete for SourceCompleter {
 // The autocompletion suggestions have the form "$DBID. $DESCRIPTION"
 // This code simply splits the string at the first '.' character and returns the ID before that.
 fn extract_dbid(s: &str) -> Result<i64> {
-    s.split(".")
+    s.split('.')
         .next()
         .map(|s| s.trim().parse::<i64>())
         .ok_or_else(|| anyhow!("Internal Error: Couldn't extract database ID"))?
         .map_err(|e| e.into())
 }
 
-pub fn u32_prompt<'a>(message: &'a str, min: u32, max: u32) -> Result<Option<u32>> {
+pub fn u32_prompt(message: &str, min: u32, max: u32) -> Result<Option<u32>> {
     inquire::Text::new(message)
         .with_validator(move |input: &str| match input.parse::<u32>() {
             Ok(n) if n >= min && n <= max => Ok(Validation::Valid),
@@ -156,7 +156,7 @@ pub fn u32_prompt<'a>(message: &'a str, min: u32, max: u32) -> Result<Option<u32
         .map_err(|e| e.into())
 }
 
-pub fn i64_prompt<'a>(message: &'a str, min: i64, max: i64) -> Result<Option<i64>> {
+pub fn i64_prompt(message: &str, min: i64, max: i64) -> Result<Option<i64>> {
     inquire::Text::new(message)
         .with_validator(move |input: &str| match input.parse::<i64>() {
             Ok(n) if n >= min && n <= max => Ok(Validation::Valid),
@@ -168,7 +168,7 @@ pub fn i64_prompt<'a>(message: &'a str, min: i64, max: i64) -> Result<Option<i64
         .map_err(|e| e.into())
 }
 
-pub fn f64_prompt<'a>(message: &'a str, min: f64, max: f64) -> Result<Option<f64>> {
+pub fn f64_prompt(message: &str, min: f64, max: f64) -> Result<Option<f64>> {
     inquire::Text::new(message)
         .with_validator(move |input: &str| match input.parse::<f64>() {
             Ok(n) if n >= min && n <= max => Ok(Validation::Valid),

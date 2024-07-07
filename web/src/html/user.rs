@@ -102,11 +102,11 @@ async fn update_profile(
         need_reverify = true;
     }
     user.display_name = match params.displayname.trim() {
-        s if s.is_empty() => None,
+        "" => None,
         s => Some(s.to_string()),
     };
     user.profile = match params.profile.trim() {
-        s if s.is_empty() => None,
+        "" => None,
         s => Some(s.to_string()),
     };
     user.update(&state.dbpool).await?;
