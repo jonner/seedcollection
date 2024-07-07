@@ -110,8 +110,10 @@ pub enum SourceCommands {
     },
     #[command(about = "Add a new source to the database")]
     Add {
+        #[arg(short, long, exclusive(true))]
+        interactive: bool,
         #[arg(long)]
-        name: String,
+        name: Option<String>,
         #[arg(long)]
         description: Option<String>,
         #[arg(long = "lat")]

@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use tokio::fs;
 use tracing::debug;
 
-use crate::prompt::{i64_prompt, u32_prompt, SourceIdPrompt, TaxonIdPrompt};
+use crate::prompt::*;
 
 trait ConstructTableRow {
     fn row_values(&self, full: bool) -> Result<Vec<String>>;
@@ -285,19 +285,29 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SourceCommands::Add {
+                interactive,
                 name,
                 description,
                 latitude,
                 longitude,
                 userid,
             } => {
-                let mut source = Source::new(
-                    name,
-                    description,
-                    latitude,
-                    longitude,
-                    userid.unwrap_or(user.id),
-                );
+                let mut source = if interactive {
+                    let name = inquire::Text::new("Name:").prompt()?;
+                    let description = inquire::Text::new("Description:").prompt_skippable()?;
+                    let latitude = f64_prompt("Latitude:", f64::MIN, f64::MAX)?;
+                    let longitude = f64_prompt("Longitude:", f64::MIN, f64::MAX)?;
+
+                    Source::new(name, description, latitude, longitude, user.id)
+                } else {
+                    Source::new(
+                        name.ok_or_else(|| anyhow!("No name specified"))?,
+                        description,
+                        latitude,
+                        longitude,
+                        userid.unwrap_or(user.id),
+                    )
+                };
 
                 let newid = source.insert(&dbpool).await?.last_insert_rowid();
                 println!("Added source {newid} to database");

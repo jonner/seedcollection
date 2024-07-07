@@ -167,3 +167,15 @@ pub fn i64_prompt<'a>(message: &'a str, min: i64, max: i64) -> Result<Option<i64
         .map(|o| o.map(|s| s.parse::<i64>().unwrap()))
         .map_err(|e| e.into())
 }
+
+pub fn f64_prompt<'a>(message: &'a str, min: f64, max: f64) -> Result<Option<f64>> {
+    inquire::Text::new(message)
+        .with_validator(move |input: &str| match input.parse::<f64>() {
+            Ok(n) if n >= min && n <= max => Ok(Validation::Valid),
+            Ok(_) => Ok(Validation::Invalid("Invalid value for number".into())),
+            Err(_) => Ok(Validation::Invalid("Input should be an number".into())),
+        })
+        .prompt_skippable()
+        .map(|o| o.map(|s| s.parse::<f64>().unwrap()))
+        .map_err(|e| e.into())
+}
