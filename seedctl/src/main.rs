@@ -168,6 +168,11 @@ async fn main() -> Result<()> {
         Commands::Login { .. } => {
             Ok(()) // already handled above
         }
+        Commands::Status => {
+            println!("Using database '{}'", cfg.database.to_string_lossy());
+            println!("Logged in as user '{}'", cfg.username);
+            Ok(())
+        }
         Commands::Project { command } => match command {
             ProjectCommands::List { full } => {
                 let projects = Project::fetch_all(None, &dbpool).await?;

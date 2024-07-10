@@ -18,6 +18,8 @@ pub enum Commands {
         #[arg(short, long, required(true))]
         database: PathBuf,
     },
+    #[command(about = "Show current config status")]
+    Status,
     #[command(about = "Query taxonomy")]
     Taxonomy {
         #[command(subcommand)]
