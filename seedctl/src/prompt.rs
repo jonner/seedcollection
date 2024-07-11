@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use inquire::{autocompletion::Autocomplete, validator::Validation, CustomUserError};
+use inquire::{autocompletion::Autocomplete, CustomUserError};
 use libseed::{
     filter::{Cmp, FilterBuilder, FilterOp},
     source::{self, Source},
@@ -141,41 +141,5 @@ fn extract_dbid(s: &str) -> Result<i64> {
         .next()
         .map(|s| s.trim().parse::<i64>())
         .ok_or_else(|| anyhow!("Internal Error: Couldn't extract database ID"))?
-        .map_err(|e| e.into())
-}
-
-pub fn u32_prompt(message: &str, min: u32, max: u32) -> Result<Option<u32>> {
-    inquire::Text::new(message)
-        .with_validator(move |input: &str| match input.parse::<u32>() {
-            Ok(n) if n >= min && n <= max => Ok(Validation::Valid),
-            Ok(_) => Ok(Validation::Invalid("Invalid value for integer".into())),
-            Err(_) => Ok(Validation::Invalid("Input should be an integer".into())),
-        })
-        .prompt_skippable()
-        .map(|o| o.map(|s| s.parse::<u32>().unwrap()))
-        .map_err(|e| e.into())
-}
-
-pub fn i64_prompt(message: &str, min: i64, max: i64) -> Result<Option<i64>> {
-    inquire::Text::new(message)
-        .with_validator(move |input: &str| match input.parse::<i64>() {
-            Ok(n) if n >= min && n <= max => Ok(Validation::Valid),
-            Ok(_) => Ok(Validation::Invalid("Invalid value for integer".into())),
-            Err(_) => Ok(Validation::Invalid("Input should be an integer".into())),
-        })
-        .prompt_skippable()
-        .map(|o| o.map(|s| s.parse::<i64>().unwrap()))
-        .map_err(|e| e.into())
-}
-
-pub fn f64_prompt(message: &str, min: f64, max: f64) -> Result<Option<f64>> {
-    inquire::Text::new(message)
-        .with_validator(move |input: &str| match input.parse::<f64>() {
-            Ok(n) if n >= min && n <= max => Ok(Validation::Valid),
-            Ok(_) => Ok(Validation::Invalid("Invalid value for number".into())),
-            Err(_) => Ok(Validation::Invalid("Input should be an number".into())),
-        })
-        .prompt_skippable()
-        .map(|o| o.map(|s| s.parse::<f64>().unwrap()))
         .map_err(|e| e.into())
 }

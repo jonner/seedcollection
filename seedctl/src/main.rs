@@ -304,8 +304,10 @@ async fn main() -> Result<()> {
                 let mut source = if interactive {
                     let name = inquire::Text::new("Name:").prompt()?;
                     let description = inquire::Text::new("Description:").prompt_skippable()?;
-                    let latitude = f64_prompt("Latitude:", f64::MIN, f64::MAX)?;
-                    let longitude = f64_prompt("Longitude:", f64::MIN, f64::MAX)?;
+                    let latitude =
+                        inquire::CustomType::<f64>::new("Latitude:").prompt_skippable()?;
+                    let longitude =
+                        inquire::CustomType::<f64>::new("Longitude:").prompt_skippable()?;
 
                     Source::new(name, description, latitude, longitude, user.id)
                 } else {
@@ -404,9 +406,10 @@ async fn main() -> Result<()> {
                 let mut sample = if interactive {
                     let taxon = TaxonIdPrompt::new("Taxon:", &dbpool).prompt()?;
                     let source = SourceIdPrompt::new("Source:", user.id, &dbpool).prompt()?;
-                    let month = u32_prompt("Month:", 1, 12)?;
-                    let year = u32_prompt("Year:", 0, 3000)?;
-                    let quantity = i64_prompt("Quantity:", 0, i64::MAX)?;
+                    let month = inquire::CustomType::<u32>::new("Month:").prompt_skippable()?;
+                    let year = inquire::CustomType::<u32>::new("Year:").prompt_skippable()?;
+                    let quantity =
+                        inquire::CustomType::<i64>::new("Quantity:").prompt_skippable()?;
                     let notes = inquire::Text::new("Notes:").prompt_skippable()?;
                     let certainty = match inquire::Confirm::new("Uncertain ID?")
                         .with_default(false)
