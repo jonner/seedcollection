@@ -356,8 +356,14 @@ async fn main() -> Result<()> {
             }
         },
         Commands::Sample { command } => match command {
-            SampleCommands::List { full } => {
-                let samples = Sample::fetch_all(None, &dbpool).await?;
+            SampleCommands::List {
+                full,
+                user: useronly,
+            } => {
+                let samples = match useronly {
+                    true => Sample::fetch_all_user(user.id, None, &dbpool).await?,
+                    false => Sample::fetch_all(None, &dbpool).await?,
+                };
                 let (builder, nitems) = samples.construct_table(full)?;
                 print_table(builder, nitems);
                 Ok(())
