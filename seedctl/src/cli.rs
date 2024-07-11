@@ -157,6 +157,8 @@ pub enum SampleCommands {
         full: bool,
         #[arg(short, long)]
         user: bool,
+        #[arg(short, long)]
+        limit: Option<String>,
     },
     #[command(about = "Add a new sample to the database")]
     Add {

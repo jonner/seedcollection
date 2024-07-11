@@ -1,16 +1,20 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use libseed::{
+    filter::{FilterBuilder, FilterOp},
     loadable::{ExternalRef, Loadable},
     project::{Allocation, Project},
-    sample::{Certainty, Sample},
+    sample::{self, Certainty, Sample},
     source::Source,
     taxonomy::{filter_by, Taxon},
     user::{User, UserStatus},
 };
 use sqlx::SqlitePool;
-use std::io::{stdin, stdout, Write};
 use std::path::PathBuf;
+use std::{
+    io::{stdin, stdout, Write},
+    sync::Arc,
+};
 use tokio::fs;
 use tracing::debug;
 
@@ -359,10 +363,21 @@ async fn main() -> Result<()> {
             SampleCommands::List {
                 full,
                 user: useronly,
+                limit,
             } => {
+                let filter = limit.map(|s| {
+                    let fbuilder = FilterBuilder::new(FilterOp::Or)
+                        .push(Arc::new(sample::Filter::TaxonNameLike(s.clone())))
+                        .push(Arc::new(sample::Filter::SourceNameLike(s.clone())))
+                        .push(Arc::new(sample::Filter::Notes(
+                            libseed::filter::Cmp::Like,
+                            s.clone(),
+                        )));
+                    fbuilder.build()
+                });
                 let samples = match useronly {
-                    true => Sample::fetch_all_user(user.id, None, &dbpool).await?,
-                    false => Sample::fetch_all(None, &dbpool).await?,
+                    true => Sample::fetch_all_user(user.id, filter, &dbpool).await?,
+                    false => Sample::fetch_all(filter, &dbpool).await?,
                 };
                 let (builder, nitems) = samples.construct_table(full)?;
                 print_table(builder, nitems);
