@@ -176,6 +176,7 @@ async fn show_taxon(
     let samples = Sample::fetch_all_user(
         user.id,
         Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, id))),
+        None,
         &state.dbpool,
     )
     .await?;

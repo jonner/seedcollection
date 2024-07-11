@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use libseed::taxonomy;
 use std::path::PathBuf;
 
@@ -149,6 +149,14 @@ pub enum SourceCommands {
     },
 }
 
+#[derive(ValueEnum, Clone, Debug)]
+pub enum SampleSortField {
+    Id,
+    Taxon,
+    Name,
+    Source,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum SampleCommands {
     #[command(about = "List all samples")]
@@ -159,6 +167,8 @@ pub enum SampleCommands {
         user: bool,
         #[arg(short, long)]
         limit: Option<String>,
+        #[arg(short, long)]
+        sort: Option<SampleSortField>,
     },
     #[command(about = "Add a new sample to the database")]
     Add {

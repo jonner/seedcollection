@@ -118,14 +118,33 @@ impl FilterPart for Filter {
     }
 }
 
+pub enum Sort {
+    Id,
+    TaxonName,
+    TaxonSequence,
+    SourceId,
+    SourceName,
+}
+
 impl Sample {
-    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn build_query(
+        filter: Option<DynFilterPart>,
+        sort: Option<Sort>,
+    ) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("SELECT * FROM vsamples");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" ORDER BY seq");
+        builder.push(" ORDER BY ");
+        let s = match sort.unwrap_or(Sort::TaxonSequence) {
+            Sort::Id => "sampleid",
+            Sort::TaxonName => "complete_name",
+            Sort::TaxonSequence => "seq",
+            Sort::SourceId => "srcid",
+            Sort::SourceName => "srcname",
+        };
+        builder.push(s);
         builder
     }
 
@@ -142,6 +161,7 @@ impl Sample {
     pub async fn fetch_all_user(
         userid: i64,
         filter: Option<DynFilterPart>,
+        sort: Option<Sort>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
         let mut fbuilder = FilterBuilder::new(FilterOp::And).push(Arc::new(Filter::UserId(userid)));
@@ -149,20 +169,21 @@ impl Sample {
             fbuilder = fbuilder.push(f);
         }
         let newfilter = fbuilder.build();
-        let mut builder = Self::build_query(Some(newfilter));
+        let mut builder = Self::build_query(Some(newfilter), sort);
         Ok(builder.build_query_as().fetch_all(pool).await?)
     }
 
     pub async fn fetch_all(
         filter: Option<DynFilterPart>,
+        sort: Option<Sort>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
-        let mut builder = Self::build_query(filter);
+        let mut builder = Self::build_query(filter, sort);
         Ok(builder.build_query_as().fetch_all(pool).await?)
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Sample> {
-        let mut builder = Self::build_query(Some(Arc::new(Filter::Id(Cmp::Equal, id))));
+        let mut builder = Self::build_query(Some(Arc::new(Filter::Id(Cmp::Equal, id))), None);
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 

@@ -94,6 +94,7 @@ async fn show_source(
     let samples = Sample::fetch_all_user(
         user.id,
         Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
+        None,
         &state.dbpool,
     )
     .await?;
@@ -171,6 +172,7 @@ async fn update_source(
     let samples = Sample::fetch_all_user(
         user.id,
         Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
+        None,
         &state.dbpool,
     )
     .await?;

@@ -367,6 +367,7 @@ async fn add_sample_prep(
     let samples = Sample::fetch_all_user(
         user.id,
         Some(Arc::new(sample::Filter::IdNotIn(ids))),
+        None,
         &state.dbpool,
     )
     .await?;

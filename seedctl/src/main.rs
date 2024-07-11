@@ -364,6 +364,7 @@ async fn main() -> Result<()> {
                 full,
                 user: useronly,
                 limit,
+                sort,
             } => {
                 let filter = limit.map(|s| {
                     let fbuilder = FilterBuilder::new(FilterOp::Or)
@@ -375,9 +376,15 @@ async fn main() -> Result<()> {
                         )));
                     fbuilder.build()
                 });
+                let sort = sort.map(|v| match v {
+                    SampleSortField::Id => sample::Sort::Id,
+                    SampleSortField::Taxon => sample::Sort::TaxonSequence,
+                    SampleSortField::Name => sample::Sort::TaxonName,
+                    SampleSortField::Source => sample::Sort::SourceName,
+                });
                 let samples = match useronly {
-                    true => Sample::fetch_all_user(user.id, filter, &dbpool).await?,
-                    false => Sample::fetch_all(filter, &dbpool).await?,
+                    true => Sample::fetch_all_user(user.id, filter, sort, &dbpool).await?,
+                    false => Sample::fetch_all(filter, sort, &dbpool).await?,
                 };
                 let (builder, nitems) = samples.construct_table(full)?;
                 print_table(builder, nitems);

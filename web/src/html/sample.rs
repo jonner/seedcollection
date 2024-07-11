@@ -62,7 +62,7 @@ async fn list_samples(
                 .build()
         })
     });
-    match Sample::fetch_all_user(user.id, filter, &state.dbpool).await {
+    match Sample::fetch_all_user(user.id, filter, None, &state.dbpool).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),
