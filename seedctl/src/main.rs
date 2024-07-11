@@ -447,6 +447,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Modify {
+                interactive,
                 id,
                 taxon,
                 source,
@@ -461,30 +462,129 @@ async fn main() -> Result<()> {
                     && year.is_none()
                     && quantity.is_none()
                     && notes.is_none()
+                    && !interactive
                 {
                     return Err(anyhow!("Cannot modify without new values"));
                 }
-                let mut sample = Sample::fetch(id, &dbpool).await?;
-                if let Some(taxon) = taxon {
-                    sample.taxon = ExternalRef::Stub(taxon);
+
+                let oldsample = Sample::fetch(id, &dbpool).await?;
+                let mut sample = oldsample.clone();
+                if interactive {
+                    println!("Interactively modifying sample {id}. Press <esc> to skip any field.");
+                    let current = sample.taxon.object()?;
+                    println!("Current taxon: {}. {}", current.id, current.complete_name);
+                    if let Some(id) = TaxonIdPrompt::new("Taxon:", &dbpool).prompt_skippable() {
+                        sample.taxon = ExternalRef::Stub(id);
+                    }
+
+                    let current = sample.source.object()?;
+                    println!("Current source: {}. {}", current.id, current.name);
+                    if let Some(id) =
+                        SourceIdPrompt::new("Source:", user.id, &dbpool).prompt_skippable()
+                    {
+                        sample.source = ExternalRef::Stub(id);
+                    }
+
+                    println!(
+                        "Current month: {}",
+                        sample
+                            .month
+                            .map(|v| v.to_string())
+                            .unwrap_or_else(|| "<missing>".into())
+                    );
+                    if let Some(month) =
+                        inquire::CustomType::<u32>::new("Month:").prompt_skippable()?
+                    {
+                        sample.month = Some(month);
+                    }
+
+                    println!(
+                        "Current year: {}",
+                        sample
+                            .year
+                            .map(|v| v.to_string())
+                            .unwrap_or_else(|| "<missing>".into())
+                    );
+                    if let Some(year) =
+                        inquire::CustomType::<u32>::new("Year:").prompt_skippable()?
+                    {
+                        sample.year = Some(year);
+                    }
+
+                    println!(
+                        "Current quantity: {}",
+                        sample
+                            .quantity
+                            .map(|v| v.to_string())
+                            .unwrap_or_else(|| "<missing>".into())
+                    );
+                    if let Some(quantity) =
+                        inquire::CustomType::<i64>::new("Quantity:").prompt_skippable()?
+                    {
+                        sample.quantity = Some(quantity);
+                    }
+
+                    println!(
+                        "Current notes: {}",
+                        sample
+                            .notes
+                            .as_ref()
+                            .cloned()
+                            .map(|mut v| {
+                                v.insert(0, '\n');
+                                v.replace('\n', "\n   ")
+                            })
+                            .unwrap_or_else(|| "<missing>".into())
+                    );
+                    if let Some(notes) = inquire::Editor::new("Notes:")
+                        .with_predefined_text(
+                            sample
+                                .notes
+                                .as_ref()
+                                .map(|v| v.as_str())
+                                .unwrap_or_else(|| ""),
+                        )
+                        .prompt_skippable()?
+                    {
+                        sample.notes = Some(notes);
+                    }
+
+                    println!("Current certainty: {:?}", sample.certainty);
+                    if let Some(val) = inquire::Confirm::new("Uncertain ID?")
+                        .with_default(false)
+                        .prompt_skippable()?
+                    {
+                        sample.certainty = match val {
+                            true => Certainty::Uncertain,
+                            false => Certainty::Certain,
+                        };
+                    };
+                } else {
+                    if let Some(taxon) = taxon {
+                        sample.taxon = ExternalRef::Stub(taxon);
+                    }
+                    if let Some(source) = source {
+                        sample.source = ExternalRef::Stub(source);
+                    }
+                    if let Some(month) = month {
+                        sample.month = Some(month.into());
+                    }
+                    if let Some(year) = year {
+                        sample.year = Some(year.into());
+                    }
+                    if let Some(notes) = notes {
+                        sample.notes = Some(notes);
+                    }
+                    if let Some(quantity) = quantity {
+                        sample.quantity = Some(quantity.into());
+                    }
                 }
-                if let Some(source) = source {
-                    sample.source = ExternalRef::Stub(source);
+                if oldsample != sample {
+                    sample.update(&dbpool).await?;
+                    println!("Modified sample...");
+                } else {
+                    println!("Sample unchanged.")
                 }
-                if let Some(month) = month {
-                    sample.month = Some(month.into());
-                }
-                if let Some(year) = year {
-                    sample.year = Some(year.into());
-                }
-                if let Some(notes) = notes {
-                    sample.notes = Some(notes);
-                }
-                if let Some(quantity) = quantity {
-                    sample.quantity = Some(quantity.into());
-                }
-                sample.update(&dbpool).await?;
-                println!("Modified sample...");
                 Ok(())
             }
         },

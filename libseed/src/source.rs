@@ -16,7 +16,7 @@ use sqlx::{
 };
 use std::sync::Arc;
 
-#[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Source {
     #[sqlx(rename = "srcid")]
     pub id: i64,

@@ -29,7 +29,7 @@ pub trait Loadable {
     async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult>;
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum ExternalRef<T: Loadable + Sync + Send> {
     Stub(T::Id),

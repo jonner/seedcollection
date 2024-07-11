@@ -29,6 +29,15 @@ impl<'a> TaxonIdPrompt<'a> {
         // end up with the database id, just parse the database id from the string.
         extract_dbid(&res)
     }
+
+    pub fn prompt_skippable(self) -> Option<i64> {
+        let res = self.text.prompt_skippable().ok()?;
+        // HACK -- the completer generates a string with the following format:
+        // $DBID. Genus Species
+        // Since we want to be able to choose species by name, but we want to
+        // end up with the database id, just parse the database id from the string.
+        res.and_then(|val| extract_dbid(&val).ok())
+    }
 }
 
 #[derive(Clone)]
@@ -92,6 +101,15 @@ impl<'a> SourceIdPrompt<'a> {
         // Since we want to be able to choose species by name, but we want to
         // end up with the database id, just parse the database id from the string.
         extract_dbid(&res)
+    }
+
+    pub fn prompt_skippable(self) -> Option<i64> {
+        let res = self.text.prompt_skippable().ok()?;
+        // HACK -- the completer generates a string with the following format:
+        // $DBID. Source name
+        // Since we want to be able to choose species by name, but we want to
+        // end up with the database id, just parse the database id from the string.
+        res.and_then(|val| extract_dbid(&val).ok())
     }
 }
 

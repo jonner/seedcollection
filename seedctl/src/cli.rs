@@ -195,13 +195,16 @@ pub enum SampleCommands {
     Remove { id: i64 },
     #[command(
         group(
-            clap::ArgGroup::new("modify")
-                .required(true)
+            clap::ArgGroup::new("modifyargs")
+                .required(false)
                 .multiple(true)
+                .conflicts_with("interactive")
                 .args(&["taxon", "source", "month", "year", "quantity", "notes"]),
         ),
         about="Modify properties of a sample")]
     Modify {
+        #[arg(short, long, conflicts_with("modifyargs"))]
+        interactive: bool,
         #[arg(long)]
         id: i64,
         #[arg(long)]

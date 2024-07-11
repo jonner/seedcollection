@@ -56,7 +56,7 @@ pub enum Rank {
     Subform = 270,
 }
 
-#[derive(Debug, Display, EnumString, FromRepr, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Display, EnumString, FromRepr, Serialize, Deserialize, PartialEq, Clone)]
 pub enum NativeStatus {
     #[strum(serialize = "Native", serialize = "N")]
     Native,
@@ -66,7 +66,7 @@ pub enum NativeStatus {
     Unknown,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 /// An object representing a particular taxon from the database
 pub struct Taxon {
     pub id: i64,
@@ -107,7 +107,7 @@ impl Loadable for Taxon {
     }
 }
 
-#[derive(FromRow, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(FromRow, Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Germination {
     #[sqlx(rename = "germid")]
     pub id: i64,
