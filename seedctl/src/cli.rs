@@ -18,29 +18,44 @@ pub enum Commands {
         #[arg(short, long, required(true))]
         database: PathBuf,
     },
-    #[command(about = "Show current config status")]
+    #[command(
+        about = "Show current config status",
+        after_help = "Shows the current configuration, including the path to the database and the logged in user"
+    )]
     Status,
+    #[command(
+        about = "Manage seed sources",
+        after_help = "A seed source is a way to track the origin of a particular seed sample. It could be a geographical location where it was collected, or a commercial supplier, or anything else you want to track."
+    )]
+    Source {
+        #[command(subcommand)]
+        command: SourceCommands,
+    },
+    #[command(
+        about = "Manage seed samples",
+        after_help = "A seed sample is a specific acquisition of a single type of seeds. It could be a purchased pack of seeds, or a single collection event from a specific location."
+    )]
+    Sample {
+        #[command(subcommand)]
+        command: SampleCommands,
+    },
+    #[command(
+        about = "Manage seed projects",
+        after_help = "A project is simply a way to keep track of groups of seed samples. For example, if you want to use certain seed samples for a particular planting event, you could create a project for that event and add all of those samples to the project."
+    )]
+    Project {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
     #[command(about = "Query taxonomy")]
     Taxonomy {
         #[command(subcommand)]
         command: TaxonomyCommands,
     },
-    #[command(about = "Manage seed projects")]
-    Project {
-        #[command(subcommand)]
-        command: ProjectCommands,
-    },
-    #[command(about = "Manage sources")]
-    Source {
-        #[command(subcommand)]
-        command: SourceCommands,
-    },
-    #[command(about = "Manage samples")]
-    Sample {
-        #[command(subcommand)]
-        command: SampleCommands,
-    },
-    #[command(about = "Manage users")]
+    #[command(
+        about = "Manage users",
+        after_help = "The database can track the collections of multiple users. This command can be used to manage the users defined for this database."
+    )]
     User {
         #[command(subcommand)]
         command: UserCommands,
