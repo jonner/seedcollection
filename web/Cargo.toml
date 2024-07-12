@@ -12,9 +12,9 @@ libseed.workspace = true
 anyhow = "1.0.75"
 axum = { version = "0.7.2", features = ["macros"] }
 axum-login = "0.11.1"
-axum-template = { version = "2.0.0", features = ["minijinja"] }
+axum-template = { version = "2.3.0", features = ["minijinja"] }
 clap = { version = "4.4.11", features = ["derive"] }
-minijinja = { version = "1.0.10", features = ["loader"] }
+minijinja = { version = "2.0.3", features = ["loader"] }
 serde = { version = "1.0.193", features = ["serde_derive"] }
 sqlx = { version = "0.7.3", features = [ "sqlite", "runtime-tokio" ] }
 strum = "0.25.0"
@@ -29,7 +29,7 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }
 serde_urlencoded = "0.7.1"
 serde_yaml = "0.9.30"
-minijinja-contrib = { version = "1.0.11", features = ["datetime"] }
+minijinja-contrib = { version = "2.0.3", features = ["datetime"] }
 pulldown-cmark = "0.9.3"
 rand = "0.8.5"
 lettre = { version = "0.11.3", features = ["serde", "tracing", "sendmail-transport", "file-transport", "tokio1", "tokio1-native-tls"] }
