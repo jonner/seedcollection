@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
+use inquire::validator::Validation;
 use libseed::{
     filter::{FilterBuilder, FilterOp},
     loadable::{ExternalRef, Loadable},
@@ -304,10 +305,27 @@ async fn main() -> Result<()> {
                 let mut source = if interactive {
                     let name = inquire::Text::new("Name:").prompt()?;
                     let description = inquire::Text::new("Description:").prompt_skippable()?;
-                    let latitude =
-                        inquire::CustomType::<f64>::new("Latitude:").prompt_skippable()?;
-                    let longitude =
-                        inquire::CustomType::<f64>::new("Longitude:").prompt_skippable()?;
+                    let latitude = inquire::CustomType::<f64>::new("Latitude:")
+                        .with_validator(|val: &f64| {
+                            if *val < -90.0 || *val > 90.0 {
+                                return Ok(Validation::Invalid(
+                                    "Value must be between -90 and 90".into(),
+                                ));
+                            }
+                            Ok(Validation::Valid)
+                        })
+                        .prompt_skippable()?;
+                    let longitude = inquire::CustomType::<f64>::new("Longitude:")
+                        .with_validator(|val: &f64| {
+                            if *val < -180.0 || *val > 180.0 {
+                                return Ok(Validation::Invalid(
+                                    "Value must be betwen -180 and 180".into(),
+                                ));
+                            }
+                            Ok(Validation::Valid)
+                        })
+                        .prompt_skippable()?;
+
 
                     Source::new(name, description, latitude, longitude, user.id)
                 } else {
