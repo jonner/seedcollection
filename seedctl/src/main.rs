@@ -326,6 +326,12 @@ async fn main() -> Result<()> {
                         })
                         .prompt_skippable()?;
 
+                    if !inquire::Confirm::new("Save to database?")
+                        .with_default(false)
+                        .prompt()?
+                    {
+                        return Err(anyhow!("Aborted"));
+                    }
 
                     Source::new(name, description, latitude, longitude, user.id)
                 } else {
@@ -436,6 +442,13 @@ async fn main() -> Result<()> {
                         true => Certainty::Uncertain,
                         _ => Certainty::Certain,
                     };
+
+                    if !inquire::Confirm::new("Save to database?")
+                        .with_default(false)
+                        .prompt()?
+                    {
+                        return Err(anyhow!("Aborted"));
+                    }
 
                     Sample::new(
                         taxon, user.id, source, month, year, quantity, notes, certainty,
@@ -577,6 +590,13 @@ async fn main() -> Result<()> {
                             false => Certainty::Certain,
                         };
                     };
+
+                    if !inquire::Confirm::new("Save to database?")
+                        .with_default(false)
+                        .prompt()?
+                    {
+                        return Err(anyhow!("Aborted"));
+                    }
                 } else {
                     if let Some(taxon) = taxon {
                         sample.taxon = ExternalRef::Stub(taxon);
