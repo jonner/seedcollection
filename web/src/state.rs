@@ -37,7 +37,9 @@ impl SharedState {
         }
         .with_context(|| "Sanity check of mail transport failed")?;
         Ok(Self {
-            dbpool: db::pool(env.database.clone()).await?,
+            dbpool: db::pool(env.database.clone())
+                .await
+                .with_context(|| format!("Unable to open database {}", &env.database))?,
             tmpl: template,
             config: env,
         })
