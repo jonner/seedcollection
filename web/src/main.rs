@@ -93,6 +93,8 @@ where
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub struct Cli {
+    #[arg(long)]
+    pub configdir: Option<PathBuf>,
     #[arg(long, required_unless_present("list_envs"))]
     pub env: Option<String>,
     #[arg(
@@ -324,9 +326,15 @@ async fn app(shared_state: AppState) -> Result<Router> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let configyaml = tokio::fs::read_to_string("config.yaml").await?;
-    let mut configs: HashMap<String, EnvConfig> = serde_yaml::from_str(&configyaml)?;
     let args = Cli::parse();
+    let default_configdir = PathBuf::from("/etc/seedweb");
+    let configdir = args.configdir.unwrap_or(default_configdir);
+
+    let configfile = configdir.join("config.yaml");
+    let configyaml = tokio::fs::read_to_string(&configfile)
+        .await
+        .with_context(|| format!("Couldn't read configuration file {:?}", &configfile))?;
+    let mut configs: HashMap<String, EnvConfig> = serde_yaml::from_str(&configyaml)?;
 
     if args.list_envs {
         for key in configs.keys() {
@@ -359,12 +367,13 @@ async fn main() -> Result<()> {
 
     tokio::spawn(redirect_http_to_https(listen.host.clone(), ports));
 
-    let tlsconfig = RustlsConfig::from_pem_file(
-        PathBuf::from("certs").join("server.crt"),
-        PathBuf::from("certs").join("server.key"),
-    )
-    .await
-    .with_context(|| "Unable to load TLS key and certificate. See certs/README for more info")?;
+    let certdir = configdir.join("certs");
+    let tlsconfig =
+        RustlsConfig::from_pem_file(certdir.join("server.crt"), certdir.join("server.key"))
+            .await
+            .with_context(|| {
+                "Unable to load TLS key and certificate. See certs/README for more info"
+            })?;
 
     let app = app(Arc::new(SharedState::new(envarg, env).await?)).await?;
 
