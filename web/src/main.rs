@@ -241,7 +241,8 @@ impl EnvConfig {
     fn init(&mut self) -> Result<()> {
         if let MailTransport::Smtp(ref mut cfg) = self.mail_transport {
             if let Some(ref mut creds) = cfg.credentials {
-                creds.password = std::fs::read_to_string(&creds.passwordfile)?;
+                creds.password = std::fs::read_to_string(&creds.passwordfile)
+                    .with_context(|| "Failed to read smtp password to file")?;
             }
         }
         Ok(())
