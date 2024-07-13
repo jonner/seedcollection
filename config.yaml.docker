@@ -1,0 +1,19 @@
+dev:
+  database: /usr/share/seedweb/db/seedcollection.sqlite.dev
+  mail_transport: !File "/tmp/"
+  asset_root: "/usr/share/seedweb"
+  listen: !ListenConfig &DEFAULT_LISTEN
+    host: "0.0.0.0"
+    http_port: 80
+    https_port: 443
+prod:
+  database: /usr/share/seedweb/db/seedcollection.sqlite.prod
+  asset_root: "/usr/share/seedweb"
+  mail_transport: !Smtp
+    url: "smtps://smtp.gmail.com"
+    port: 465
+    credentials:
+      username: "jonathon@quotidian.org"
+      passwordfile: "/run/secrets/seedweb-smtp-password"
+  listen: *DEFAULT_LISTEN
+
