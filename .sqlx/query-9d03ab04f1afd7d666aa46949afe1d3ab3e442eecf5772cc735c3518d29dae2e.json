@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE sc_user_verification SET uvexpiration=0 WHERE userid=?;\n            INSERT into sc_user_verification (userid, uvkey, uvexpiration) VALUES(?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "9d03ab04f1afd7d666aa46949afe1d3ab3e442eecf5772cc735c3518d29dae2e"
+}
