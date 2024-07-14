@@ -328,7 +328,9 @@ async fn app(shared_state: AppState) -> Result<Router> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Cli::parse();
-    let default_configdir = PathBuf::from("/etc/seedweb");
+    let default_configdir = xdg::BaseDirectories::new()?
+        .get_config_home()
+        .join("seedweb");
     let configdir = args.configdir.unwrap_or(default_configdir);
 
     let configfile = configdir.join("config.yaml");
