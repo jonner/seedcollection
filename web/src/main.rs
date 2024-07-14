@@ -32,7 +32,7 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     ServiceBuilderExt,
 };
-use tracing::{info, trace};
+use tracing::{debug, info, trace};
 use tracing_subscriber::filter::EnvFilter;
 use uuid::Uuid;
 
@@ -233,7 +233,6 @@ struct ListenConfig {
 struct EnvConfig {
     listen: ListenConfig,
     database: String,
-    asset_root: PathBuf,
     mail_transport: MailTransport,
 }
 
@@ -299,7 +298,7 @@ async fn app(shared_state: AppState) -> Result<Router> {
         .layer(AuthManagerLayerBuilder::new(auth_backend, session_layer).build());
 
     trace!("Creating routers");
-    let static_path = shared_state.config.asset_root.join("static");
+    let static_path = shared_state.datadir.join("static");
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
@@ -327,11 +326,17 @@ async fn app(shared_state: AppState) -> Result<Router> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_env("SEEDWEB_LOG"))
+        .init();
+
     let args = Cli::parse();
-    let default_configdir = xdg::BaseDirectories::new()?
-        .get_config_home()
-        .join("seedweb");
+    let xdgdirs = xdg::BaseDirectories::new()?;
+    let default_configdir = xdgdirs.get_config_home().join("seedweb");
     let configdir = args.configdir.unwrap_or(default_configdir);
+    debug!(?configdir, "Configuration directory");
+    let datadir = xdgdirs.get_data_home().join("seedweb");
+    debug!(?datadir, "Data directory");
 
     let configfile = configdir.join("config.yaml");
     let configyaml = tokio::fs::read_to_string(&configfile)
@@ -345,10 +350,6 @@ async fn main() -> Result<()> {
         }
         return Ok(());
     }
-
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_env("SEEDWEB_LOG"))
-        .init();
 
     let envarg = args.env.as_ref().expect("'env' argument required");
     let mut env = configs.remove(envarg).ok_or_else(|| {
@@ -378,7 +379,7 @@ async fn main() -> Result<()> {
                 "Unable to load TLS key and certificate. See certs/README for more info"
             })?;
 
-    let app = app(Arc::new(SharedState::new(envarg, env).await?)).await?;
+    let app = app(Arc::new(SharedState::new(envarg, env, datadir).await?)).await?;
 
     let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
     info!("Listening on https://{}", addr);
@@ -469,7 +470,7 @@ async fn root() -> impl IntoResponse {
 }
 
 async fn favicon_redirect(State(state): State<AppState>) -> impl IntoResponse {
-    let path = state.config.asset_root.join("static/favicon.ico");
+    let path = state.datadir.join("static/favicon.ico");
     Redirect::permanent(path.to_str().unwrap_or_default())
 }
 
@@ -505,7 +506,6 @@ prod:
         assert_eq!(
             configs["dev"],
             EnvConfig {
-                asset_root: PathBuf::from("/path/to/assets"),
                 database: "dev-database.sqlite".to_string(),
                 mail_transport: MailTransport::File("/tmp/".to_string()),
                 listen: ListenConfig {
@@ -518,7 +518,6 @@ prod:
         assert_eq!(
             configs["prod"],
             EnvConfig {
-                asset_root: PathBuf::from("/path/to/assets2"),
                 database: "prod-database.sqlite".to_string(),
                 mail_transport: MailTransport::LocalSmtp,
                 listen: ListenConfig {
