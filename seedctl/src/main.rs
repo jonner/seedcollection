@@ -64,7 +64,7 @@ trait ConstructTable {
     fn construct_table(&self, full: bool) -> Result<(tabled::builder::Builder, usize)> {
         let mut tbuilder = tabled::builder::Builder::new();
         let headers = self.table_headers(full);
-        tbuilder.set_header(headers);
+        tbuilder.push_record(headers);
         for item in self.items() {
             let vals = item.row_values(full)?;
             tbuilder.push_record(vals);
@@ -186,7 +186,7 @@ async fn main() -> Result<()> {
                 if full {
                     header.push("Description");
                 }
-                tbuilder.set_header(header);
+                tbuilder.push_record(header);
                 for project in &projects {
                     let mut vals = vec![project.id.to_string(), project.name.clone()];
                     if full {
@@ -273,7 +273,7 @@ async fn main() -> Result<()> {
                     header.push("latitude");
                     header.push("longitude");
                 };
-                tbuilder.set_header(header);
+                tbuilder.push_record(header);
                 for src in &sources {
                     let mut vals = vec![src.id.to_string(), src.name.clone()];
                     if full {
@@ -649,7 +649,7 @@ async fn main() -> Result<()> {
                     return Err(anyhow!("No results found"));
                 }
                 let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.set_header(["ID", "Rank", "Name", "Common Names", "MN Status"]);
+                tbuilder.push_record(["ID", "Rank", "Name", "Common Names", "MN Status"]);
                 for taxon in &taxa {
                     tbuilder.push_record([
                         taxon.id.to_string(),
@@ -671,7 +671,7 @@ async fn main() -> Result<()> {
             UserCommands::List {} => {
                 let users = User::fetch_all(&dbpool).await?;
                 let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.set_header(["ID", "Username", "Email"]);
+                tbuilder.push_record(["ID", "Username", "Email"]);
                 for user in &users {
                     tbuilder.push_record([
                         user.id.to_string(),
