@@ -209,12 +209,6 @@ impl RemoteSmtpConfig {
     }
 }
 
-#[derive(Deserialize)]
-enum SmtpConfig {
-    Local,
-    Remote(RemoteSmtpConfig),
-}
-
 #[derive(Debug, Deserialize, PartialEq)]
 enum MailTransport {
     File(String),
