@@ -3,7 +3,6 @@ use anyhow::{anyhow, Context, Result};
 use auth::AuthSession;
 use axum::{
     async_trait,
-    error_handling::HandleErrorLayer,
     extract::{rejection::MatchedPathRejection, FromRequestParts, Host, MatchedPath, State},
     handler::HandlerWithoutStateExt,
     http::{request::Parts, HeaderMap, HeaderValue, Method, Request, StatusCode, Uri},
@@ -13,7 +12,7 @@ use axum::{
     BoxError, RequestPartsExt, Router,
 };
 use axum_login::{
-    tower_sessions::{Expiry, SessionManagerLayer, SqliteStore},
+    tower_sessions::{Expiry, SessionManagerLayer},
     AuthManagerLayerBuilder,
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -32,6 +31,7 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     ServiceBuilderExt,
 };
+use tower_sessions_sqlx_store::SqliteStore;
 use tracing::{debug, info, trace};
 use tracing_subscriber::filter::EnvFilter;
 use uuid::Uuid;
@@ -291,11 +291,7 @@ async fn app(shared_state: AppState) -> Result<Router> {
 
     trace!("Creating auth backend");
     let auth_backend = auth::SqliteAuthBackend::new(shared_state.dbpool.clone());
-    let auth_service = ServiceBuilder::new()
-        .layer(HandleErrorLayer::new(|_: BoxError| async {
-            StatusCode::BAD_REQUEST
-        }))
-        .layer(AuthManagerLayerBuilder::new(auth_backend, session_layer).build());
+    let auth_layer = AuthManagerLayerBuilder::new(auth_backend, session_layer).build();
 
     trace!("Creating routers");
     let static_path = shared_state.datadir.join("static");
@@ -313,7 +309,7 @@ async fn app(shared_state: AppState) -> Result<Router> {
                         .on_response(DefaultOnResponse::new().include_headers(true)),
                 )
                 .propagate_x_request_id()
-                .layer(auth_service)
+                .layer(auth_layer)
                 .layer(middleware::from_fn_with_state(
                     shared_state.clone(),
                     error_mapper,
