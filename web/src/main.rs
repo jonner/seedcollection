@@ -314,6 +314,38 @@ async fn app(shared_state: AppState) -> Result<Router> {
     Ok(app)
 }
 
+fn config_dir() -> PathBuf {
+    let mut dir = PathBuf::from("/etc");
+    if let Ok(xdgdirs) = xdg::BaseDirectories::new() {
+        let tocheck = vec![xdgdirs.get_config_home(), dir.clone()];
+        for d in tocheck {
+            let testdir = d.join("seedweb");
+            debug!(?testdir, "checking config dir");
+            if testdir.exists() {
+                dir = d;
+                break;
+            }
+        }
+    }
+    dir.join("seedweb")
+}
+
+fn data_dir() -> PathBuf {
+    let mut dir = PathBuf::from("/usr/share");
+    if let Ok(xdgdirs) = xdg::BaseDirectories::new() {
+        let tocheck = vec![xdgdirs.get_data_home(), dir.clone()];
+        for d in tocheck {
+            let testdir = d.join("seedweb");
+            debug!(?testdir, "checking data dir");
+            if testdir.exists() {
+                dir = d;
+                break;
+            }
+        }
+    }
+    dir.join("seedweb")
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
@@ -321,11 +353,9 @@ async fn main() -> Result<()> {
         .init();
 
     let args = Cli::parse();
-    let xdgdirs = xdg::BaseDirectories::new()?;
-    let default_configdir = xdgdirs.get_config_home().join("seedweb");
-    let configdir = args.configdir.unwrap_or(default_configdir);
+    let configdir = args.configdir.unwrap_or_else(|| config_dir());
     debug!(?configdir, "Configuration directory");
-    let datadir = xdgdirs.get_data_home().join("seedweb");
+    let datadir = data_dir();
     debug!(?datadir, "Data directory");
 
     let configfile = configdir.join("config.yaml");
