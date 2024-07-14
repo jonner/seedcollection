@@ -3,6 +3,7 @@ container: Dockerfile config.yaml.docker
 
 run-container: container
 	podman run --detach \
+	--tty \
 	--secret seedweb-smtp-password \
 	-p 8080:80 -p 8443:443 \
 	-v ~/.local/share/seedcollection/:/usr/share/seedweb/db:Z \

@@ -19,4 +19,5 @@ COPY ./web/static /usr/share/seedweb/static/
 COPY ./web/templates /usr/share/seedweb/templates/
 EXPOSE 80
 EXPOSE 443
+ENV SEEDWEB_LOG=debug
 CMD ["seedweb", "--env", "prod"]
