@@ -23,18 +23,13 @@ use tracing::debug;
 use crate::cli::*;
 use crate::config::*;
 use crate::prompt::*;
+use crate::table::SeedctlTable;
 use crate::table::*;
 
 mod cli;
 mod config;
 mod prompt;
 mod table;
-
-fn apply_style(table: &mut tabled::Table) -> &mut Table {
-    use tabled::settings::{object::Segment, width::Width, Modify, Style};
-    let m = Modify::new(Segment::all()).with(Width::wrap(60).keep_words());
-    table.with(m).with(Style::psql())
-}
 
 async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow::Result<String> {
     let password = match path {
@@ -94,7 +89,7 @@ async fn main() -> Result<()> {
             ProjectCommands::List {} => {
                 let projects = Project::fetch_all(None, &dbpool).await?;
                 let mut table = Table::new(projects.iter().map(|val| ProjectRow::new(&val)));
-                println!("{}\n", apply_style(&mut table));
+                println!("{}\n", table.styled());
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
@@ -167,7 +162,7 @@ async fn main() -> Result<()> {
                             .map(|alloc| AllocationRow::new(alloc).unwrap()),
                     ),
                 };
-                println!("{}\n", apply_style(&mut table));
+                println!("{}\n", table.styled());
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
@@ -179,7 +174,7 @@ async fn main() -> Result<()> {
                     true => Table::new(sources.iter().map(|src| SourceRowFull::new(src))),
                     false => Table::new(sources.iter().map(|src| SourceRow::new(src))),
                 };
-                println!("{}\n", apply_style(&mut table));
+                println!("{}\n", table.styled());
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
@@ -189,7 +184,7 @@ async fn main() -> Result<()> {
                     .index()
                     .column(0)
                     .transpose();
-                println!("{}\n", apply_style(&mut tbuilder.build()));
+                println!("{}\n", tbuilder.build().styled());
                 Ok(())
             }
             SourceCommands::Add {
@@ -320,7 +315,7 @@ async fn main() -> Result<()> {
                         Table::new(samples.iter().map(|sample| SampleRow::new(sample).unwrap()))
                     }
                 };
-                println!("{}\n", apply_style(&mut table));
+                println!("{}\n", table.styled());
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
@@ -332,7 +327,7 @@ async fn main() -> Result<()> {
                         .index()
                         .column(0)
                         .transpose();
-                println!("{}\n", apply_style(&mut tbuilder.build()));
+                println!("{}\n", tbuilder.build().styled());
                 Ok(())
             }
             SampleCommands::Add {
@@ -567,7 +562,7 @@ async fn main() -> Result<()> {
                     return Err(anyhow!("No results found"));
                 }
                 let mut table = Table::new(taxa.iter().map(|t| TaxonRow::new(t)));
-                println!("{}\n", apply_style(&mut table));
+                println!("{}\n", table.styled());
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
@@ -578,7 +573,7 @@ async fn main() -> Result<()> {
                         .index()
                         .column(0)
                         .transpose();
-                println!("{}\n", apply_style(&mut tbuilder.build()));
+                println!("{}\n", tbuilder.build().styled());
                 Ok(())
             }
         },
@@ -586,7 +581,7 @@ async fn main() -> Result<()> {
             UserCommands::List {} => {
                 let users = User::fetch_all(&dbpool).await?;
                 let mut table = Table::new(users.iter().map(|u| UserRow::new(u)));
-                println!("{}\n", apply_style(&mut table));
+                println!("{}\n", table.styled());
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
