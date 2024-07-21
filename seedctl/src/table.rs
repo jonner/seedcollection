@@ -8,6 +8,7 @@ use libseed::{
 use tabled::Tabled;
 
 #[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
 pub struct SampleRow {
     id: i64,
     taxon: String,
@@ -25,6 +26,7 @@ impl SampleRow {
 }
 
 #[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
 pub struct SampleRowFull {
     id: i64,
     taxon: String,
@@ -58,6 +60,7 @@ impl SampleRowFull {
 }
 
 #[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
 pub struct ProjectRow {
     id: i64,
     name: String,
@@ -76,8 +79,10 @@ impl ProjectRow {
 }
 
 #[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
 pub struct AllocationRow {
     id: i64,
+    #[tabled(rename = "Sample ID")]
     sample_id: i64,
     taxon: String,
     source: String,
@@ -96,8 +101,10 @@ impl AllocationRow {
 }
 
 #[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
 pub struct AllocationRowFull {
     id: i64,
+    #[tabled(rename = "Sample ID")]
     sample_id: i64,
     taxon: String,
     source: String,
@@ -128,6 +135,7 @@ impl AllocationRowFull {
 }
 
 #[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
 pub struct SourceRowFull {
     id: i64,
     name: String,
@@ -152,6 +160,7 @@ impl SourceRowFull {
 }
 
 #[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
 pub struct SourceRow {
     id: i64,
     name: String,
@@ -171,11 +180,14 @@ fn format_string_vec(names: &Vec<String>) -> String {
 }
 
 #[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
 pub struct TaxonRow {
     id: i64,
     rank: Rank,
     name: String,
+    #[tabled(display_with = "format_string_vec", rename = "Common Names")]
     common_names: Vec<String>,
+    #[tabled(display_with = "table_display_option", rename = "MN Status")]
     mn_status: Option<NativeStatus>,
 }
 
