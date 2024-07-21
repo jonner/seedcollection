@@ -577,63 +577,65 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
-        Commands::User { command } => match command {
-            UserCommands::List {} => {
-                let users = User::fetch_all(&dbpool).await?;
-                let mut table = Table::new(users.iter().map(|u| UserRow::new(u)));
-                println!("{}\n", table.styled());
-                println!("{} records found", table.count_rows());
-                Ok(())
-            }
-            UserCommands::Add {
-                username,
-                email,
-                passwordfile,
-            } => {
-                let password = get_password(
+        Commands::Admin { command } => match command {
+            AdminCommands::User { command } => match command {
+                UserCommands::List {} => {
+                    let users = User::fetch_all(&dbpool).await?;
+                    let mut table = Table::new(users.iter().map(|u| UserRow::new(u)));
+                    println!("{}\n", table.styled());
+                    println!("{} records found", table.count_rows());
+                    Ok(())
+                }
+                UserCommands::Add {
+                    username,
+                    email,
                     passwordfile,
-                    Some(format!("New password for '{username}': ")),
-                )
-                .await?;
-                // hash the password
-                let pwhash = User::hash_password(&password)?;
-                let mut user = User::new(
-                    username.clone(),
-                    email.clone(),
-                    pwhash,
-                    UserStatus::Unverified,
-                    None,
-                    None,
-                    None,
-                );
-                let id = user.insert(&dbpool).await?.last_insert_rowid();
-                println!("Added user to database:");
-                println!("{}: {}", id, username);
-                Ok(())
-            }
-            UserCommands::Remove { id } => User::delete_id(&id, &dbpool)
-                .await
-                .map(|_| ())
-                .with_context(|| "failed to remove user"),
-            UserCommands::Modify {
-                id,
-                username,
-                change_password,
-                password_file,
-            } => {
-                let mut user = User::fetch(id, &dbpool).await?;
-                if let Some(username) = username {
-                    user.username = username;
+                } => {
+                    let password = get_password(
+                        passwordfile,
+                        Some(format!("New password for '{username}': ")),
+                    )
+                    .await?;
+                    // hash the password
+                    let pwhash = User::hash_password(&password)?;
+                    let mut user = User::new(
+                        username.clone(),
+                        email.clone(),
+                        pwhash,
+                        UserStatus::Unverified,
+                        None,
+                        None,
+                        None,
+                    );
+                    let id = user.insert(&dbpool).await?.last_insert_rowid();
+                    println!("Added user to database:");
+                    println!("{}: {}", id, username);
+                    Ok(())
                 }
-                if change_password {
-                    let password = get_password(password_file, None).await?;
-                    user.change_password(&password)?;
-                }
-                user.update(&dbpool)
+                UserCommands::Remove { id } => User::delete_id(&id, &dbpool)
                     .await
                     .map(|_| ())
-                    .with_context(|| "Failed to modify user")
-            }
+                    .with_context(|| "failed to remove user"),
+                UserCommands::Modify {
+                    id,
+                    username,
+                    change_password,
+                    password_file,
+                } => {
+                    let mut user = User::fetch(id, &dbpool).await?;
+                    if let Some(username) = username {
+                        user.username = username;
+                    }
+                    if change_password {
+                        let password = get_password(password_file, None).await?;
+                        user.change_password(&password)?;
+                    }
+                    user.update(&dbpool)
+                        .await
+                        .map(|_| ())
+                        .with_context(|| "Failed to modify user")
+                }
+            },
         },
     }
 }

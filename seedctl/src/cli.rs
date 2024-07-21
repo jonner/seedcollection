@@ -52,13 +52,10 @@ pub enum Commands {
         #[command(subcommand)]
         command: TaxonomyCommands,
     },
-    #[command(
-        about = "Manage users",
-        after_help = "The database can track the collections of multiple users. This command can be used to manage the users defined for this database."
-    )]
-    User {
+    #[command(about = "Administrative commands")]
+    Admin {
         #[command(subcommand)]
-        command: UserCommands,
+        command: AdminCommands,
     },
 }
 
@@ -255,6 +252,18 @@ pub enum TaxonomyCommands {
     },
     #[command(about = "Show information about a taxon")]
     Show { id: i64 },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum AdminCommands {
+    #[command(
+        about = "Manage users",
+        after_help = "The database can track the collections of multiple users. This command can be used to manage the users defined for this database."
+    )]
+    User {
+        #[command(subcommand)]
+        command: UserCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
