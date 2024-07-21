@@ -36,21 +36,6 @@ fn apply_style(table: &mut tabled::Table) -> &mut Table {
     table.with(m).with(Style::psql())
 }
 
-fn print_table(builder: tabled::builder::Builder, show_count: bool) {
-    use tabled::settings::{object::Segment, width::Width, Modify, Style};
-    let mut table = builder.build();
-    println!(
-        "{}\n",
-        table
-            .with(Style::psql())
-            .with(Modify::new(Segment::all()).with(Width::wrap(60).keep_words()))
-    );
-    if show_count {
-        let nrecs = table.count_rows();
-        println!("{} records found", nrecs);
-    }
-}
-
 async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow::Result<String> {
     let password = match path {
         None => {
@@ -217,7 +202,7 @@ async fn main() -> Result<()> {
                         .unwrap_or("".to_string()),
                 ]);
                 tbuilder.push_record(["Description", &src.description.unwrap_or("".to_string())]);
-                print_table(tbuilder, false);
+                println!("{}\n", apply_style(&mut tbuilder.build()));
                 Ok(())
             }
             SourceCommands::Add {
@@ -388,7 +373,7 @@ async fn main() -> Result<()> {
                     ])
                 }
                 tbuilder.push_record(["Notes", &sample.notes.unwrap_or("".to_string())]);
-                print_table(tbuilder, false);
+                println!("{}\n", apply_style(&mut tbuilder.build()));
                 Ok(())
             }
             SampleCommands::Add {
@@ -662,7 +647,7 @@ async fn main() -> Result<()> {
                         .collect::<Vec<String>>()
                         .join("\n"),
                 ]);
-                print_table(tbuilder, false);
+                println!("{}\n", apply_style(&mut tbuilder.build()));
                 Ok(())
             }
         },
