@@ -125,6 +125,8 @@ pub enum SourceCommands {
         #[arg(short, long)]
         full: bool,
     },
+    #[command(about = "Show details about a single source")]
+    Show { id: i64 },
     #[command(about = "Add a new source to the database")]
     Add {
         #[arg(short, long, exclusive(true))]

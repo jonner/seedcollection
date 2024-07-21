@@ -296,6 +296,28 @@ async fn main() -> Result<()> {
                 print_table(tbuilder, sources.len());
                 Ok(())
             }
+            SourceCommands::Show { id } => {
+                let src = Source::fetch(id, &dbpool).await?;
+                let mut tbuilder = tabled::builder::Builder::new();
+                tbuilder.push_record(["Field", "Value"]);
+                tbuilder.push_record(["Id", &src.id.to_string()]);
+                tbuilder.push_record(["Name", &src.name]);
+                tbuilder.push_record([
+                    "Latitude",
+                    &src.latitude
+                        .map(|l| l.to_string())
+                        .unwrap_or("".to_string()),
+                ]);
+                tbuilder.push_record([
+                    "Longitude",
+                    &src.longitude
+                        .map(|l| l.to_string())
+                        .unwrap_or("".to_string()),
+                ]);
+                tbuilder.push_record(["Description", &src.description.unwrap_or("".to_string())]);
+                print_table(tbuilder, 0);
+                Ok(())
+            }
             SourceCommands::Add {
                 interactive,
                 name,
