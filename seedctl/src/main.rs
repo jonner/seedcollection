@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use inquire::validator::Validation;
 use libseed::{
-    filter::{Cmp, FilterBuilder, FilterOp},
+    filter::{FilterBuilder, FilterOp},
     loadable::{ExternalRef, Loadable},
     project::Project,
     sample::{self, Certainty, Sample},
@@ -185,23 +185,10 @@ async fn main() -> Result<()> {
             }
             SourceCommands::Show { id } => {
                 let src = Source::fetch(id, &dbpool).await?;
-                let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.push_record(["Field", "Value"]);
-                tbuilder.push_record(["Id", &src.id.to_string()]);
-                tbuilder.push_record(["Name", &src.name]);
-                tbuilder.push_record([
-                    "Latitude",
-                    &src.latitude
-                        .map(|l| l.to_string())
-                        .unwrap_or("".to_string()),
-                ]);
-                tbuilder.push_record([
-                    "Longitude",
-                    &src.longitude
-                        .map(|l| l.to_string())
-                        .unwrap_or("".to_string()),
-                ]);
-                tbuilder.push_record(["Description", &src.description.unwrap_or("".to_string())]);
+                let tbuilder = Table::builder(vec![SourceRowFull::new(&src)])
+                    .index()
+                    .column(0)
+                    .transpose();
                 println!("{}\n", apply_style(&mut tbuilder.build()));
                 Ok(())
             }
@@ -338,41 +325,13 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Show { id } => {
-                let sample = Sample::fetch(id, &dbpool).await?;
-                let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.push_record(["Name", "Value"]);
-                tbuilder.push_record(["ID", &id.to_string()]);
-                let mut taxon = sample.taxon.object()?.clone();
-                tbuilder.push_record(["Taxon", &format!("{} ({})", taxon.complete_name, taxon.id)]);
-                tbuilder.push_record(["Common Names", &taxon.vernaculars.join("\n")]);
-                let src = sample.source.object()?;
-                tbuilder.push_record(["Source", &format!("{} ({})", src.name, src.id)]);
-                let datestring = match (sample.month, sample.year) {
-                    (Some(m), Some(y)) => &format!("{m}/{y}"),
-                    (None, Some(y)) => &y.to_string(),
-                    _ => "Unknown",
-                };
-                tbuilder.push_record(["Collection Date", datestring]);
-                tbuilder.push_record([
-                    "Quantity",
-                    &sample
-                        .quantity
-                        .map(|i| i.to_string())
-                        .unwrap_or("".to_string()),
-                ]);
-                tbuilder.push_record(["Certainty", &sample.certainty.to_string()]);
-                taxon.fetch_germination_info(&dbpool).await?;
-                if let Some(ref germ) = taxon.germination {
-                    tbuilder.push_record([
-                        "Germination Codes",
-                        &germ
-                            .iter()
-                            .map(|g| g.code.clone())
-                            .collect::<Vec<String>>()
-                            .join(", "),
-                    ])
-                }
-                tbuilder.push_record(["Notes", &sample.notes.unwrap_or("".to_string())]);
+                let mut sample = Sample::fetch(id, &dbpool).await?;
+
+                let tbuilder =
+                    Table::builder(vec![SampleRowDetails::new(&mut sample, &dbpool).await?])
+                        .index()
+                        .column(0)
+                        .transpose();
                 println!("{}\n", apply_style(&mut tbuilder.build()));
                 Ok(())
             }
@@ -614,39 +573,11 @@ async fn main() -> Result<()> {
             }
             TaxonomyCommands::Show { id } => {
                 let mut taxon = Taxon::fetch(id, &dbpool).await?;
-                let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.push_record(["Property", "Value"]);
-                // tbuilder.push_record(["ID", &taxon.id().to_string()]);
-                tbuilder.push_record(["Name", &taxon.complete_name]);
-                tbuilder.push_record(["Rank", &taxon.rank.to_string()]);
-                tbuilder.push_record(["Common Names", &taxon.vernaculars.join("\n")]);
-                taxon.fetch_germination_info(&dbpool).await?;
-                if let Some(germ) = taxon.germination {
-                    tbuilder.push_record([
-                        "Germination Codes",
-                        &germ
-                            .iter()
-                            .map(|g| g.code.clone())
-                            .collect::<Vec<String>>()
-                            .join(", "),
-                    ])
-                }
-                // Figure out how many samples of this taxon in the database:
-                let samples = libseed::sample::Sample::fetch_all_user(
-                    user.id,
-                    Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, id))),
-                    None,
-                    &dbpool,
-                )
-                .await?;
-                tbuilder.push_record([
-                    "Samples",
-                    &samples
-                        .iter()
-                        .map(|s| s.id.to_string())
-                        .collect::<Vec<String>>()
-                        .join("\n"),
-                ]);
+                let tbuilder =
+                    Table::builder(vec![TaxonRowDetails::new(&mut taxon, &dbpool).await?])
+                        .index()
+                        .column(0)
+                        .transpose();
                 println!("{}\n", apply_style(&mut tbuilder.build()));
                 Ok(())
             }

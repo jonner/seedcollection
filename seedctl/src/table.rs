@@ -1,11 +1,15 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use libseed::{
-    project::{Allocation, Project},
-    sample::Sample,
+    filter::Cmp,
+    project::{allocation, Allocation, Project},
+    sample::{self, Certainty, Sample},
     source::Source,
-    taxonomy::{NativeStatus, Rank, Taxon},
+    taxonomy::{Germination, NativeStatus, Rank, Taxon},
     user::User,
 };
+use sqlx::{Pool, Sqlite};
 use tabled::Tabled;
 
 #[derive(Tabled)]
@@ -60,6 +64,85 @@ impl SampleRowFull {
     }
 }
 
+fn table_display_germination(germ: &Option<Vec<Germination>>) -> String {
+    germ.as_ref()
+        .map(|v| {
+            v.iter()
+                .map(|g| {
+                    format!(
+                        "{}: {}",
+                        g.code.clone(),
+                        g.summary
+                            .as_ref()
+                            .map(|r| r.as_str())
+                            .unwrap_or_else(|| "Unknown")
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("\n")
+        })
+        .unwrap_or_else(|| "".to_string())
+}
+
+fn table_display_allocations(allocations: &Vec<Allocation>) -> String {
+    allocations
+        .iter()
+        .map(|a| format!("{} ({})", a.project.name, a.project.id))
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+#[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
+pub struct SampleRowDetails {
+    id: i64,
+    taxon: String,
+    #[tabled(display_with = "format_string_vec", rename = "Common Names")]
+    common_names: Vec<String>,
+    source: String,
+    #[tabled(rename = "Collection Date")]
+    date: String,
+    #[tabled(display_with = "table_display_option")]
+    quantity: Option<i64>,
+    certainty: Certainty,
+    #[tabled(
+        display_with = "table_display_germination",
+        rename = "Germination Codes"
+    )]
+    germination: Option<Vec<Germination>>,
+    #[tabled(display_with = "table_display_option")]
+    notes: Option<String>,
+    #[tabled(display_with = "table_display_allocations")]
+    allocations: Vec<Allocation>,
+}
+
+impl SampleRowDetails {
+    pub async fn new(sample: &mut Sample, pool: &Pool<Sqlite>) -> Result<Self> {
+        let taxon = sample.taxon.load_mut(pool).await?;
+        taxon.fetch_germination_info(pool).await?;
+        let src = sample.source.object()?;
+        let allocations = Allocation::fetch_all(
+            Some(Arc::new(allocation::Filter::SampleId(sample.id))),
+            None,
+            pool,
+        )
+        .await?;
+
+        Ok(Self {
+            id: sample.id,
+            taxon: format!("{} ({})", taxon.complete_name, taxon.id),
+            common_names: taxon.vernaculars.clone(),
+            source: format!("{} ({})", src.name, src.id),
+            date: datestring(sample.month, sample.year),
+            quantity: sample.quantity,
+            certainty: sample.certainty.clone(),
+            germination: taxon.germination.clone(),
+            notes: sample.notes.as_ref().cloned(),
+            allocations,
+        })
+    }
+}
+
 #[derive(Tabled)]
 #[tabled(rename_all = "PascalCase")]
 pub struct ProjectRow {
@@ -101,6 +184,14 @@ impl AllocationRow {
     }
 }
 
+fn datestring(m: Option<u32>, y: Option<u32>) -> String {
+    match (m, y) {
+        (Some(m), Some(y)) => format!("{m}/{y}"),
+        (None, Some(y)) => y.to_string(),
+        _ => "Unknown".to_string(),
+    }
+}
+
 #[derive(Tabled)]
 #[tabled(rename_all = "PascalCase")]
 pub struct AllocationRowFull {
@@ -124,11 +215,7 @@ impl AllocationRowFull {
             sample_id: sample.id,
             taxon: sample.taxon.object()?.complete_name.clone(),
             source: sample.source.object()?.name.clone(),
-            date: match (sample.month, sample.year) {
-                (Some(m), Some(y)) => format!("{m}/{y}"),
-                (None, Some(y)) => y.to_string(),
-                _ => "Unknown".to_string(),
-            },
+            date: datestring(sample.month, sample.year),
             quantity: sample.quantity,
             notes: sample.notes.clone(),
         })
@@ -201,6 +288,67 @@ impl TaxonRow {
             common_names: taxon.vernaculars.clone(),
             mn_status: taxon.native_status.clone(),
         }
+    }
+}
+
+#[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
+pub struct TaxonRowDetails {
+    id: i64,
+    name: String,
+    #[tabled(display_with = "format_string_vec", rename = "Common Names")]
+    common_names: Vec<String>,
+    rank: Rank,
+    #[tabled(display_with = "table_display_option", rename = "MN Status")]
+    mn_status: Option<NativeStatus>,
+    #[tabled(
+        display_with = "table_display_germination",
+        rename = "Germination Codes"
+    )]
+    germination: Option<Vec<Germination>>,
+    #[tabled(display_with = "table_display_samples")]
+    samples: Vec<Sample>,
+}
+
+fn table_display_samples(samples: &Vec<Sample>) -> String {
+    samples
+        .iter()
+        .map(|s| {
+            format!(
+                "{}: {} ({})",
+                s.id,
+                s.source.object().unwrap().name,
+                s.year
+                    .map(|y| y.to_string())
+                    .unwrap_or_else(|| "Unknown date".to_string())
+            )
+        })
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+impl TaxonRowDetails {
+    pub async fn new(taxon: &mut Taxon, pool: &Pool<Sqlite>) -> Result<Self> {
+        taxon.fetch_germination_info(pool).await?;
+        let mut samples = Sample::fetch_all(
+            Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, taxon.id))),
+            None,
+            pool,
+        )
+        .await?;
+        for ref mut s in &mut samples {
+            s.source.load(pool).await?;
+        }
+
+        Ok(Self {
+            id: taxon.id,
+            rank: taxon.rank.clone(),
+            name: taxon.complete_name.clone(),
+            common_names: taxon.vernaculars.clone(),
+            mn_status: taxon.native_status.clone(),
+            germination: taxon.germination.clone(),
+            samples,
+        })
     }
 }
 
