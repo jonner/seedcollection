@@ -119,7 +119,7 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
         builder
             .build()
             .with(Style::psql())
-            .with(Modify::new(Segment::all()).with(Width::wrap(60)))
+            .with(Modify::new(Segment::all()).with(Width::wrap(60).keep_words()))
     );
     if nrecs > 0 {
         println!("{} records found", nrecs);
