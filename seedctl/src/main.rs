@@ -669,16 +669,9 @@ async fn main() -> Result<()> {
         Commands::User { command } => match command {
             UserCommands::List {} => {
                 let users = User::fetch_all(&dbpool).await?;
-                let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.push_record(["ID", "Username", "Email"]);
-                for user in &users {
-                    tbuilder.push_record([
-                        user.id.to_string(),
-                        user.username.clone(),
-                        user.email.clone(),
-                    ]);
-                }
-                print_table(tbuilder, true);
+                let mut table = Table::new(users.iter().map(|u| UserRow::new(u)));
+                println!("{}\n", apply_style(&mut table));
+                println!("{} records found", table.count_rows());
                 Ok(())
             }
             UserCommands::Add {

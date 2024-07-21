@@ -4,6 +4,7 @@ use libseed::{
     sample::Sample,
     source::Source,
     taxonomy::{NativeStatus, Rank, Taxon},
+    user::User,
 };
 use tabled::Tabled;
 
@@ -199,6 +200,24 @@ impl TaxonRow {
             name: taxon.complete_name.clone(),
             common_names: taxon.vernaculars.clone(),
             mn_status: taxon.native_status.clone(),
+        }
+    }
+}
+
+#[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
+pub struct UserRow {
+    id: i64,
+    username: String,
+    email: String,
+}
+
+impl UserRow {
+    pub fn new(user: &User) -> Self {
+        Self {
+            id: user.id,
+            username: user.username.clone(),
+            email: user.email.clone(),
         }
     }
 }
