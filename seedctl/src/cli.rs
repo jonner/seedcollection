@@ -65,10 +65,7 @@ pub enum Commands {
 #[derive(Subcommand, Debug)]
 pub enum ProjectCommands {
     #[command(about = "List all projects")]
-    List {
-        #[arg(short, long)]
-        full: bool,
-    },
+    List {},
     #[command(about = "Add a new project to the database")]
     Add {
         #[arg(short, long)]

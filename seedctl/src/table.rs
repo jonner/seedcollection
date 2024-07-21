@@ -1,5 +1,5 @@
 use anyhow::Result;
-use libseed::sample::Sample;
+use libseed::{project::Project, sample::Sample};
 use tabled::Tabled;
 
 #[derive(Tabled)]
@@ -49,5 +49,23 @@ impl SampleRowFull {
             },
             quantity: sample.quantity,
         })
+    }
+}
+
+#[derive(Tabled)]
+pub struct ProjectRow {
+    id: i64,
+    name: String,
+    #[tabled(display_with = "table_display_option")]
+    description: Option<String>,
+}
+
+impl ProjectRow {
+    pub fn new(project: &Project) -> Self {
+        ProjectRow {
+            id: project.id,
+            name: project.name.clone(),
+            description: project.description.as_ref().cloned(),
+        }
     }
 }

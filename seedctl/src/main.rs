@@ -191,22 +191,11 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Commands::Project { command } => match command {
-            ProjectCommands::List { full } => {
+            ProjectCommands::List {} => {
                 let projects = Project::fetch_all(None, &dbpool).await?;
-                let mut tbuilder = tabled::builder::Builder::new();
-                let mut header = vec!["ID", "Name"];
-                if full {
-                    header.push("Description");
-                }
-                tbuilder.push_record(header);
-                for project in &projects {
-                    let mut vals = vec![project.id.to_string(), project.name.clone()];
-                    if full {
-                        vals.push(project.description.clone().unwrap_or("".to_string()));
-                    }
-                    tbuilder.push_record(vals);
-                }
-                print_table(tbuilder, true);
+                let mut table = Table::new(projects.iter().map(|val| ProjectRow::new(&val)));
+                println!("{}\n", apply_style(&mut table));
+                println!("{} records found", table.count_rows());
                 Ok(())
             }
             ProjectCommands::Add {
