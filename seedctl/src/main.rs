@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use inquire::validator::Validation;
 use libseed::{
-    filter::{FilterBuilder, FilterOp},
+    filter::{Cmp, FilterBuilder, FilterOp},
     loadable::{ExternalRef, Loadable},
     project::{Allocation, Project},
     sample::{self, Certainty, Sample},
@@ -121,7 +121,9 @@ fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
             .with(Style::psql())
             .with(Modify::new(Segment::all()).with(Width::wrap(60)))
     );
-    println!("{} records found", nrecs);
+    if nrecs > 0 {
+        println!("{} records found", nrecs);
+    }
 }
 
 async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow::Result<String> {
@@ -628,7 +630,6 @@ async fn main() -> Result<()> {
         },
         Commands::Taxonomy { command } => match command {
             TaxonomyCommands::Find {
-                id,
                 rank,
                 genus,
                 species,
@@ -640,7 +641,7 @@ async fn main() -> Result<()> {
                     false => None,
                 };
                 let taxa: Vec<Taxon> = Taxon::fetch_all(
-                    filter_by(id, rank, genus, species, any, minnesota),
+                    filter_by(None, rank, genus, species, any, minnesota),
                     None,
                     &dbpool,
                 )
@@ -664,6 +665,44 @@ async fn main() -> Result<()> {
                     ]);
                 }
                 print_table(tbuilder, taxa.len());
+                Ok(())
+            }
+            TaxonomyCommands::Show { id } => {
+                let mut taxon = Taxon::fetch(id, &dbpool).await?;
+                let mut tbuilder = tabled::builder::Builder::new();
+                tbuilder.push_record(["Property", "Value"]);
+                // tbuilder.push_record(["ID", &taxon.id().to_string()]);
+                tbuilder.push_record(["Name", &taxon.complete_name]);
+                tbuilder.push_record(["Rank", &taxon.rank.to_string()]);
+                tbuilder.push_record(["Common Names", &taxon.vernaculars.join("\n")]);
+                taxon.fetch_germination_info(&dbpool).await?;
+                if let Some(germ) = taxon.germination {
+                    tbuilder.push_record([
+                        "Germination Codes",
+                        &germ
+                            .iter()
+                            .map(|g| g.code.clone())
+                            .collect::<Vec<String>>()
+                            .join(", "),
+                    ])
+                }
+                // Figure out how many samples of this taxon in the database:
+                let samples = libseed::sample::Sample::fetch_all_user(
+                    user.id,
+                    Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, id))),
+                    None,
+                    &dbpool,
+                )
+                .await?;
+                tbuilder.push_record([
+                    "Samples",
+                    &samples
+                        .iter()
+                        .map(|s| s.id.to_string())
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+                ]);
+                print_table(tbuilder, 0);
                 Ok(())
             }
         },

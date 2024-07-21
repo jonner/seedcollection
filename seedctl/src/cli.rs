@@ -241,8 +241,6 @@ pub enum SampleCommands {
 pub enum TaxonomyCommands {
     #[command(about = "Find a taxon in the database")]
     Find {
-        #[arg(long, help = "Only show taxa with the given ID")]
-        id: Option<i64>,
         #[arg(long, help = "Only show taxa with the given rank (e.g. 'family')")]
         rank: Option<taxonomy::Rank>,
         #[arg(long, help = "Only show taxa in the given genus")]
@@ -254,6 +252,8 @@ pub enum TaxonomyCommands {
         #[arg(long, help = "Show only taxa found in Minnesota")]
         minnesota: bool,
     },
+    #[command(about = "Show information about a taxon")]
+    Show { id: i64 },
 }
 
 #[derive(Subcommand, Debug)]
