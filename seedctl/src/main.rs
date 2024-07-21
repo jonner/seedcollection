@@ -61,7 +61,7 @@ trait ConstructTable {
 
     fn table_headers(&self, full: bool) -> Vec<&'static str>;
     fn items(&self) -> impl Iterator<Item = &Self::Item>;
-    fn construct_table(&self, full: bool) -> Result<(tabled::builder::Builder, usize)> {
+    fn construct_table(&self, full: bool) -> Result<tabled::builder::Builder> {
         let mut tbuilder = tabled::builder::Builder::new();
         let headers = self.table_headers(full);
         tbuilder.push_record(headers);
@@ -69,7 +69,7 @@ trait ConstructTable {
             let vals = item.row_values(full)?;
             tbuilder.push_record(vals);
         }
-        Ok((tbuilder, self.items().count()))
+        Ok(tbuilder)
     }
 }
 
@@ -112,16 +112,17 @@ mod cli;
 mod config;
 mod prompt;
 
-fn print_table(builder: tabled::builder::Builder, nrecs: usize) {
+fn print_table(builder: tabled::builder::Builder, show_count: bool) {
     use tabled::settings::{object::Segment, width::Width, Modify, Style};
+    let mut table = builder.build();
     println!(
         "{}\n",
-        builder
-            .build()
+        table
             .with(Style::psql())
             .with(Modify::new(Segment::all()).with(Width::wrap(60).keep_words()))
     );
-    if nrecs > 0 {
+    if show_count {
+        let nrecs = table.count_rows();
         println!("{} records found", nrecs);
     }
 }
@@ -196,7 +197,7 @@ async fn main() -> Result<()> {
                     }
                     tbuilder.push_record(vals);
                 }
-                print_table(tbuilder, projects.len());
+                print_table(tbuilder, true);
                 Ok(())
             }
             ProjectCommands::Add {
@@ -260,8 +261,8 @@ async fn main() -> Result<()> {
                     println!("  {}", desc);
                 }
                 println!();
-                let (builder, nitems) = projectinfo.construct_table(full)?;
-                print_table(builder, nitems);
+                let builder = projectinfo.construct_table(full)?;
+                print_table(builder, true);
                 Ok(())
             }
         },
@@ -293,7 +294,7 @@ async fn main() -> Result<()> {
                     }
                     tbuilder.push_record(vals);
                 }
-                print_table(tbuilder, sources.len());
+                print_table(tbuilder, true);
                 Ok(())
             }
             SourceCommands::Show { id } => {
@@ -315,7 +316,7 @@ async fn main() -> Result<()> {
                         .unwrap_or("".to_string()),
                 ]);
                 tbuilder.push_record(["Description", &src.description.unwrap_or("".to_string())]);
-                print_table(tbuilder, 0);
+                print_table(tbuilder, false);
                 Ok(())
             }
             SourceCommands::Add {
@@ -436,8 +437,8 @@ async fn main() -> Result<()> {
                     true => Sample::fetch_all_user(user.id, filter, sort, &dbpool).await?,
                     false => Sample::fetch_all(filter, sort, &dbpool).await?,
                 };
-                let (builder, nitems) = samples.construct_table(full)?;
-                print_table(builder, nitems);
+                let builder = samples.construct_table(full)?;
+                print_table(builder, true);
                 Ok(())
             }
             SampleCommands::Show { id } => {
@@ -446,7 +447,7 @@ async fn main() -> Result<()> {
                 tbuilder.push_record(["Name", "Value"]);
                 tbuilder.push_record(["ID", &id.to_string()]);
                 let mut taxon = sample.taxon.object()?.clone();
-                tbuilder.push_record(["Taxon", &taxon.complete_name]);
+                tbuilder.push_record(["Taxon", &format!("{} ({})", taxon.complete_name, taxon.id)]);
                 tbuilder.push_record(["Common Names", &taxon.vernaculars.join("\n")]);
                 let src = sample.source.object()?;
                 tbuilder.push_record(["Source", &format!("{} ({})", src.name, src.id)]);
@@ -476,7 +477,7 @@ async fn main() -> Result<()> {
                     ])
                 }
                 tbuilder.push_record(["Notes", &sample.notes.unwrap_or("".to_string())]);
-                print_table(tbuilder, 0);
+                print_table(tbuilder, false);
                 Ok(())
             }
             SampleCommands::Add {
@@ -725,7 +726,7 @@ async fn main() -> Result<()> {
                             .unwrap_or("".to_string()),
                     ]);
                 }
-                print_table(tbuilder, taxa.len());
+                print_table(tbuilder, true);
                 Ok(())
             }
             TaxonomyCommands::Show { id } => {
@@ -763,7 +764,7 @@ async fn main() -> Result<()> {
                         .collect::<Vec<String>>()
                         .join("\n"),
                 ]);
-                print_table(tbuilder, 0);
+                print_table(tbuilder, false);
                 Ok(())
             }
         },
@@ -779,7 +780,7 @@ async fn main() -> Result<()> {
                         user.email.clone(),
                     ]);
                 }
-                print_table(tbuilder, users.len());
+                print_table(tbuilder, true);
                 Ok(())
             }
             UserCommands::Add {
