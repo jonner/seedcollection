@@ -77,6 +77,17 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
         }
     }
 
+    pub async fn load_mut(&mut self, pool: &Pool<Sqlite>) -> Result<&mut T> {
+        match self {
+            Self::Stub(id) => {
+                let obj = T::load(id.clone(), pool).await?;
+                *self = Self::Object(obj);
+                self.object_mut()
+            }
+            Self::Object(ref mut obj) => Ok(obj),
+        }
+    }
+
     pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         match self {
             Self::Stub(id) => T::delete_id(id, pool).await,
