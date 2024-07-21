@@ -1,5 +1,8 @@
 use anyhow::Result;
-use libseed::{project::Project, sample::Sample};
+use libseed::{
+    project::{Allocation, Project},
+    sample::Sample,
+};
 use tabled::Tabled;
 
 #[derive(Tabled)]
@@ -67,5 +70,57 @@ impl ProjectRow {
             name: project.name.clone(),
             description: project.description.as_ref().cloned(),
         }
+    }
+}
+
+#[derive(Tabled)]
+pub struct AllocationRow {
+    id: i64,
+    sample_id: i64,
+    taxon: String,
+    source: String,
+}
+
+impl AllocationRow {
+    pub fn new(allocation: &Allocation) -> Result<Self> {
+        let sample = &allocation.sample;
+        Ok(Self {
+            id: allocation.id,
+            sample_id: sample.id,
+            taxon: sample.taxon.object()?.complete_name.clone(),
+            source: sample.source.object()?.name.clone(),
+        })
+    }
+}
+
+#[derive(Tabled)]
+pub struct AllocationRowFull {
+    id: i64,
+    sample_id: i64,
+    taxon: String,
+    source: String,
+    date: String,
+    #[tabled(display_with = "table_display_option")]
+    quantity: Option<i64>,
+    #[tabled(display_with = "table_display_option")]
+    notes: Option<String>,
+}
+
+impl AllocationRowFull {
+    pub fn new(allocation: &Allocation) -> Result<Self> {
+        let sample = &allocation.sample;
+        Ok(Self {
+            id: allocation.id,
+            sample_id: sample.id,
+            taxon: sample.taxon.object()?.complete_name.clone(),
+            source: sample.source.object()?.name.clone(),
+            date: match (sample.month, sample.year) {
+                (Some(m), Some(y)) => format!("{m}/{y}"),
+                (None, Some(y)) => y.to_string(),
+                _ => "Unknown".to_string(),
+            },
+            quantity: sample.quantity,
+            notes: sample.notes.clone(),
+        })
     }
 }

@@ -4,7 +4,7 @@ use inquire::validator::Validation;
 use libseed::{
     filter::{Cmp, FilterBuilder, FilterOp},
     loadable::{ExternalRef, Loadable},
-    project::{Allocation, Project},
+    project::Project,
     sample::{self, Certainty, Sample},
     source::Source,
     taxonomy::{filter_by, Taxon},
@@ -24,91 +24,6 @@ use crate::cli::*;
 use crate::config::*;
 use crate::prompt::*;
 use crate::table::*;
-
-trait ConstructTableRow {
-    fn row_values(&self, full: bool) -> Result<Vec<String>>;
-}
-
-impl ConstructTableRow for Sample {
-    fn row_values(&self, full: bool) -> Result<Vec<String>> {
-        let mut vals = vec![
-            self.id.to_string(),
-            self.taxon.object()?.complete_name.clone(),
-            self.source.object()?.name.clone(),
-        ];
-        if full {
-            vals.push(self.month.map(|x| x.to_string()).unwrap_or("".to_string()));
-            vals.push(self.year.map(|x| x.to_string()).unwrap_or("".to_string()));
-            vals.push(
-                self.quantity
-                    .map(|x| x.to_string())
-                    .unwrap_or("".to_string()),
-            );
-            vals.push(self.notes.clone().unwrap_or("".to_string()));
-        }
-        Ok(vals)
-    }
-}
-
-impl ConstructTableRow for Allocation {
-    fn row_values(&self, full: bool) -> Result<Vec<String>> {
-        let mut vals = vec![self.id.to_string()];
-        vals.append(&mut self.sample.row_values(full)?);
-        Ok(vals)
-    }
-}
-
-trait ConstructTable {
-    type Item: ConstructTableRow;
-
-    fn table_headers(&self, full: bool) -> Vec<&'static str>;
-    fn items(&self) -> impl Iterator<Item = &Self::Item>;
-    fn construct_table(&self, full: bool) -> Result<tabled::builder::Builder> {
-        let mut tbuilder = tabled::builder::Builder::new();
-        let headers = self.table_headers(full);
-        tbuilder.push_record(headers);
-        for item in self.items() {
-            let vals = item.row_values(full)?;
-            tbuilder.push_record(vals);
-        }
-        Ok(tbuilder)
-    }
-}
-
-fn sample_headers(full: bool) -> Vec<&'static str> {
-    let mut headers = vec!["ID", "Taxon", "Source"];
-    if full {
-        headers.extend_from_slice(&["Month", "Year", "Qty", "Notes"]);
-    }
-    headers
-}
-
-impl ConstructTable for Vec<Sample> {
-    type Item = Sample;
-
-    fn table_headers(&self, full: bool) -> Vec<&'static str> {
-        sample_headers(full)
-    }
-
-    fn items(&self) -> impl Iterator<Item = &Self::Item> {
-        self.iter()
-    }
-}
-
-impl ConstructTable for Project {
-    type Item = Allocation;
-
-    fn table_headers(&self, full: bool) -> Vec<&'static str> {
-        let mut headers = sample_headers(full);
-        headers.insert(0, "ID");
-        headers[1] = "SampleID";
-        headers
-    }
-
-    fn items(&self) -> impl Iterator<Item = &Self::Item> {
-        self.allocations.iter()
-    }
-}
 
 mod cli;
 mod config;
@@ -253,14 +168,22 @@ async fn main() -> Result<()> {
             ProjectCommands::Show { id, full } => {
                 let mut projectinfo = Project::fetch(id, &dbpool).await?;
                 projectinfo.fetch_samples(None, None, &dbpool).await?;
-                println!("Project ID: {}", id);
-                println!("Project name: {}", projectinfo.name);
-                if let Some(desc) = &projectinfo.description {
-                    println!("  {}", desc);
-                }
-                println!();
-                let builder = projectinfo.construct_table(full)?;
-                print_table(builder, true);
+                let mut table = match full {
+                    true => Table::new(
+                        projectinfo
+                            .allocations
+                            .iter()
+                            .map(|alloc| AllocationRowFull::new(alloc).unwrap()),
+                    ),
+                    false => Table::new(
+                        projectinfo
+                            .allocations
+                            .iter()
+                            .map(|alloc| AllocationRow::new(alloc).unwrap()),
+                    ),
+                };
+                println!("{}\n", apply_style(&mut table));
+                println!("{} records found", table.count_rows());
                 Ok(())
             }
         },
