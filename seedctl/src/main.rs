@@ -16,12 +16,14 @@ use std::{
     io::{stdin, stdout, Write},
     sync::Arc,
 };
+use tabled::Table;
 use tokio::fs;
 use tracing::debug;
 
 use crate::cli::*;
 use crate::config::*;
 use crate::prompt::*;
+use crate::table::*;
 
 trait ConstructTableRow {
     fn row_values(&self, full: bool) -> Result<Vec<String>>;
@@ -111,6 +113,13 @@ impl ConstructTable for Project {
 mod cli;
 mod config;
 mod prompt;
+mod table;
+
+fn apply_style(table: &mut tabled::Table) -> &mut Table {
+    use tabled::settings::{object::Segment, width::Width, Modify, Style};
+    let m = Modify::new(Segment::all()).with(Width::wrap(60).keep_words());
+    table.with(m).with(Style::psql())
+}
 
 fn print_table(builder: tabled::builder::Builder, show_count: bool) {
     use tabled::settings::{object::Segment, width::Width, Modify, Style};
@@ -437,8 +446,18 @@ async fn main() -> Result<()> {
                     true => Sample::fetch_all_user(user.id, filter, sort, &dbpool).await?,
                     false => Sample::fetch_all(filter, sort, &dbpool).await?,
                 };
-                let builder = samples.construct_table(full)?;
-                print_table(builder, true);
+                let mut table = match full {
+                    true => Table::new(
+                        samples
+                            .iter()
+                            .map(|sample| SampleRowFull::new(sample).unwrap()),
+                    ),
+                    false => {
+                        Table::new(samples.iter().map(|sample| SampleRow::new(sample).unwrap()))
+                    }
+                };
+                println!("{}\n", apply_style(&mut table));
+                println!("{} records found", table.count_rows());
                 Ok(())
             }
             SampleCommands::Show { id } => {
