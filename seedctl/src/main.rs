@@ -622,22 +622,9 @@ async fn main() -> Result<()> {
                 if taxa.is_empty() {
                     return Err(anyhow!("No results found"));
                 }
-                let mut tbuilder = tabled::builder::Builder::new();
-                tbuilder.push_record(["ID", "Rank", "Name", "Common Names", "MN Status"]);
-                for taxon in &taxa {
-                    tbuilder.push_record([
-                        taxon.id.to_string(),
-                        taxon.rank.to_string(),
-                        taxon.complete_name.clone(),
-                        taxon.vernaculars.join(", "),
-                        taxon
-                            .native_status
-                            .as_ref()
-                            .map(|v| v.to_string())
-                            .unwrap_or("".to_string()),
-                    ]);
-                }
-                print_table(tbuilder, true);
+                let mut table = Table::new(taxa.iter().map(|t| TaxonRow::new(t)));
+                println!("{}\n", apply_style(&mut table));
+                println!("{} records found", table.count_rows());
                 Ok(())
             }
             TaxonomyCommands::Show { id } => {

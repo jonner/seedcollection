@@ -3,6 +3,7 @@ use libseed::{
     project::{Allocation, Project},
     sample::Sample,
     source::Source,
+    taxonomy::{NativeStatus, Rank, Taxon},
 };
 use tabled::Tabled;
 
@@ -161,6 +162,31 @@ impl SourceRow {
         Self {
             id: source.id,
             name: source.name.clone(),
+        }
+    }
+}
+
+fn format_string_vec(names: &Vec<String>) -> String {
+    names.join(",\n")
+}
+
+#[derive(Tabled)]
+pub struct TaxonRow {
+    id: i64,
+    rank: Rank,
+    name: String,
+    common_names: Vec<String>,
+    mn_status: Option<NativeStatus>,
+}
+
+impl TaxonRow {
+    pub fn new(taxon: &Taxon) -> Self {
+        Self {
+            id: taxon.id,
+            rank: taxon.rank.clone(),
+            name: taxon.complete_name.clone(),
+            common_names: taxon.vernaculars.clone(),
+            mn_status: taxon.native_status.clone(),
         }
     }
 }
