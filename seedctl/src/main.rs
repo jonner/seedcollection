@@ -190,32 +190,12 @@ async fn main() -> Result<()> {
         Commands::Source { command } => match command {
             SourceCommands::List { full } => {
                 let sources = Source::fetch_all(None, &dbpool).await?;
-                let mut tbuilder = tabled::builder::Builder::new();
-                let mut header = vec!["ID", "Name"];
-                if full {
-                    header.push("Description");
-                    header.push("latitude");
-                    header.push("longitude");
+                let mut table = match full {
+                    true => Table::new(sources.iter().map(|src| SourceRowFull::new(src))),
+                    false => Table::new(sources.iter().map(|src| SourceRow::new(src))),
                 };
-                tbuilder.push_record(header);
-                for src in &sources {
-                    let mut vals = vec![src.id.to_string(), src.name.clone()];
-                    if full {
-                        vals.push(src.description.clone().unwrap_or("".to_string()));
-                        vals.push(
-                            src.latitude
-                                .map(|n| n.to_string())
-                                .unwrap_or("".to_string()),
-                        );
-                        vals.push(
-                            src.longitude
-                                .map(|n| n.to_string())
-                                .unwrap_or("".to_string()),
-                        );
-                    }
-                    tbuilder.push_record(vals);
-                }
-                print_table(tbuilder, true);
+                println!("{}\n", apply_style(&mut table));
+                println!("{} records found", table.count_rows());
                 Ok(())
             }
             SourceCommands::Show { id } => {

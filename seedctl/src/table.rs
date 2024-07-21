@@ -2,6 +2,7 @@ use anyhow::Result;
 use libseed::{
     project::{Allocation, Project},
     sample::Sample,
+    source::Source,
 };
 use tabled::Tabled;
 
@@ -122,5 +123,44 @@ impl AllocationRowFull {
             quantity: sample.quantity,
             notes: sample.notes.clone(),
         })
+    }
+}
+
+#[derive(Tabled)]
+pub struct SourceRowFull {
+    id: i64,
+    name: String,
+    #[tabled(display_with = "table_display_option")]
+    latitude: Option<f64>,
+    #[tabled(display_with = "table_display_option")]
+    longitude: Option<f64>,
+    #[tabled(display_with = "table_display_option")]
+    description: Option<String>,
+}
+
+impl SourceRowFull {
+    pub fn new(source: &Source) -> Self {
+        Self {
+            id: source.id,
+            name: source.name.clone(),
+            latitude: source.latitude,
+            longitude: source.longitude,
+            description: source.description.clone(),
+        }
+    }
+}
+
+#[derive(Tabled)]
+pub struct SourceRow {
+    id: i64,
+    name: String,
+}
+
+impl SourceRow {
+    pub fn new(source: &Source) -> Self {
+        Self {
+            id: source.id,
+            name: source.name.clone(),
+        }
     }
 }
