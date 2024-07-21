@@ -14,8 +14,9 @@ use sqlx::{
     FromRow, Pool, QueryBuilder, Row, Sqlite,
 };
 use std::sync::Arc;
+use strum_macros::Display;
 
-#[derive(Clone, Deserialize, Serialize, Debug, sqlx::Type, PartialEq)]
+#[derive(Clone, Deserialize, Serialize, Debug, sqlx::Type, PartialEq, Display)]
 #[repr(i32)]
 pub enum Certainty {
     Certain = 1,

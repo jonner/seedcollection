@@ -185,6 +185,8 @@ pub enum SampleCommands {
         #[arg(short, long)]
         sort: Option<SampleSortField>,
     },
+    #[command(about = "Show details for a single sample")]
+    Show { id: i64 },
     #[command(about = "Add a new sample to the database")]
     Add {
         #[arg(short, long, exclusive(true))]

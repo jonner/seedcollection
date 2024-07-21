@@ -418,6 +418,45 @@ async fn main() -> Result<()> {
                 print_table(builder, nitems);
                 Ok(())
             }
+            SampleCommands::Show { id } => {
+                let sample = Sample::fetch(id, &dbpool).await?;
+                let mut tbuilder = tabled::builder::Builder::new();
+                tbuilder.push_record(["Name", "Value"]);
+                tbuilder.push_record(["ID", &id.to_string()]);
+                let mut taxon = sample.taxon.object()?.clone();
+                tbuilder.push_record(["Taxon", &taxon.complete_name]);
+                tbuilder.push_record(["Common Names", &taxon.vernaculars.join("\n")]);
+                let src = sample.source.object()?;
+                tbuilder.push_record(["Source", &format!("{} ({})", src.name, src.id)]);
+                let datestring = match (sample.month, sample.year) {
+                    (Some(m), Some(y)) => &format!("{m}/{y}"),
+                    (None, Some(y)) => &y.to_string(),
+                    _ => "Unknown",
+                };
+                tbuilder.push_record(["Collection Date", datestring]);
+                tbuilder.push_record([
+                    "Quantity",
+                    &sample
+                        .quantity
+                        .map(|i| i.to_string())
+                        .unwrap_or("".to_string()),
+                ]);
+                tbuilder.push_record(["Certainty", &sample.certainty.to_string()]);
+                taxon.fetch_germination_info(&dbpool).await?;
+                if let Some(ref germ) = taxon.germination {
+                    tbuilder.push_record([
+                        "Germination Codes",
+                        &germ
+                            .iter()
+                            .map(|g| g.code.clone())
+                            .collect::<Vec<String>>()
+                            .join(", "),
+                    ])
+                }
+                tbuilder.push_record(["Notes", &sample.notes.unwrap_or("".to_string())]);
+                print_table(tbuilder, 0);
+                Ok(())
+            }
             SampleCommands::Add {
                 interactive,
                 taxon,
@@ -582,7 +621,7 @@ async fn main() -> Result<()> {
                         sample.notes = Some(notes);
                     }
 
-                    println!("Current certainty: {:?}", sample.certainty);
+                    println!("Current certainty: {}", sample.certainty);
                     if let Some(val) = inquire::Confirm::new("Uncertain ID?")
                         .with_default(false)
                         .prompt_skippable()?
