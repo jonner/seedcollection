@@ -116,6 +116,37 @@ pub struct Germination {
     pub description: Option<String>,
 }
 
+impl Germination {
+    pub async fn fetch_all(pool: &Pool<Sqlite>) -> Result<Vec<Germination>, sqlx::Error> {
+        sqlx::query_as("SELECT * FROM sc_germination_codes")
+            .fetch_all(pool)
+            .await
+    }
+
+    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Germination, sqlx::Error> {
+        sqlx::query_as("SELECT * FROM sc_germination_codes WHERE germid=?")
+            .bind(id)
+            .fetch_one(pool)
+            .await
+    }
+
+    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        if self.id < 0 {
+            return Err(Error::InvalidOperationObjectNotFound);
+        }
+        sqlx::query(
+            "UPDATE sc_germination_codes SET code=?, summary=?, description=? WHERE germid=?",
+        )
+        .bind(&self.code)
+        .bind(&self.summary)
+        .bind(&self.description)
+        .bind(self.id)
+        .execute(pool)
+        .await
+        .map_err(Into::into)
+    }
+}
+
 impl FromRow<'_, SqliteRow> for ExternalRef<Taxon> {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Taxon::from_row(row)
