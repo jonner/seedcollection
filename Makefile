@@ -3,6 +3,8 @@ container: Dockerfile config.yaml.docker
 
 run-container: container
 	podman run --detach \
+	--name seedweb \
+	--replace \
 	--tty \
 	--secret seedweb-smtp-password \
 	-p 8080:80 -p 8443:443 \

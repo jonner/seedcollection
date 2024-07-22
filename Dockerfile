@@ -7,7 +7,10 @@ RUN --mount=type=cache,target=/var/cache/apk \
   pkgconf
 COPY . .
 ENV RUSTFLAGS="-C target-feature=-crt-static"
-RUN cargo install --path ./web --root /usr/local
+RUN \
+  --mount=type=cache,target=/usr/local/cargo/registry \
+  --mount=type=cache,target=/usr/local/seedcollection/target \
+  cargo install --path ./web --root /usr/local
 
 FROM alpine:latest as runtime-base
 RUN --mount=type=cache,target=/var/cache/apk \
