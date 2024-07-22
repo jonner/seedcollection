@@ -1,7 +1,17 @@
-- convert mntaxa xls file to csv
-- Then convert to a format that match-species.py can understand:
-  - columns: X,genus,X,species,subttype,subtaxa,native_status,rarity_status,invasive_status
-- run the script and look at the output indicating not-found species
-- massage the csv file a bit after comparing the missing species to the ITIS taxonomy
-- re-run the script with the --updatedb option to add the mntaxa table to the db
+- Download ITIS sqlite database from: https://www.itis.gov/downloads/index.html
+- To create a list of taxa native to minnesota:
+  - convert MNtaxa xls file to csv
+  - Then convert to a format that match-species.py can understand:
+    - columns: X,genus,X,species,subttype,subtaxa,native_status,rarity_status,invasive_status
+    - This is already done as minnesota-itis-input-modified.csv
+  - run the match-species.py script with the current ITIS database and the csv file from above:
+    - ./match-species.py -d ITIS.sqlite minnesota-itis-input-modified.csv
+    - look at the output indicating not-found species
+  - massage the csv file a bit after comparing the missing species to the ITIS taxonomy
+    - For example, the taxa in the CSV is a variety (e.g. Oenothera biennis var. biennis)
+      but ITIS does not recognize that variety as a valid taxon, either change
+      the value in the CSV file to point to the parent taxon (e.g. Oenothera biennis)
+      or simply ignore it (if the parent taxon is already included in the list)
+  - re-run the script with the --updatedb option to add the mntaxa table to the db
+    - ./match-species.py -d ITIS.sqlite --updatedb minnesota-itis-input-modified.csv
 
