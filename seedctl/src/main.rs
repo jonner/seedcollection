@@ -7,7 +7,7 @@ use libseed::{
     project::Project,
     sample::{self, Certainty, Sample},
     source::Source,
-    taxonomy::{filter_by, Taxon},
+    taxonomy::{filter_by, Germination, Taxon},
     user::{User, UserStatus},
 };
 use sqlx::SqlitePool;
@@ -634,6 +634,83 @@ async fn main() -> Result<()> {
                         .await
                         .map(|_| ())
                         .with_context(|| "Failed to modify user")
+                }
+            },
+            AdminCommands::Germination { command } => match command {
+                GerminationCommands::List {} => {
+                    let codes = Germination::fetch_all(&dbpool).await?;
+                    let mut table = Table::new(codes.iter().map(|g| GerminationRow::new(g)));
+                    println!("{}\n", table.styled());
+                    Ok(())
+                }
+                GerminationCommands::Modify {
+                    id,
+                    interactive,
+                    code,
+                    summary,
+                    description,
+                } => {
+                    let oldval = Germination::fetch(id, &dbpool).await?;
+                    let mut newval = oldval.clone();
+                    if interactive {
+                        println!("Modifying Germination code {id}. Pres <esc to skip any field.");
+                        println!("Current code: '{}'", oldval.code);
+                        if let Some(code) = inquire::Text::new("Code:").prompt_skippable()? {
+                            newval.code = code;
+                        }
+                        println!(
+                            "Current summary: '{}'",
+                            oldval
+                                .summary
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or_else(|| "<null>".to_string())
+                        );
+                        if let Some(summary) = inquire::Text::new("Summary:").prompt_skippable()? {
+                            newval.summary = Some(summary);
+                        }
+                        println!(
+                            "Current description: '{}'",
+                            oldval
+                                .description
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or_else(|| "<null>".to_string())
+                        );
+                        if let Some(description) = inquire::Editor::new("Description:")
+                            .with_predefined_text(
+                                oldval
+                                    .description
+                                    .as_ref()
+                                    .map(|v| v.as_str())
+                                    .unwrap_or_else(|| ""),
+                            )
+                            .prompt_skippable()?
+                        {
+                            newval.description = Some(description);
+                        }
+                    } else {
+                        if code.is_none() && summary.is_none() && description.is_none() {
+                            return Err(anyhow!(
+                                "No fields specified. Cannot modify germination code."
+                            ));
+                        }
+                        if let Some(code) = code {
+                            newval.code = code;
+                        }
+                        if let Some(summary) = summary {
+                            newval.summary = Some(summary);
+                        }
+                        if let Some(description) = description {
+                            newval.description = Some(description);
+                        }
+                    }
+                    if oldval != newval {
+                        debug!("Submitting new value for germination code: {:?}", newval);
+                        newval.update(&dbpool).await?;
+                        println!("Modified germination code...");
+                    }
+                    Ok(())
                 }
             },
         },

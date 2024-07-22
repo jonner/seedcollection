@@ -264,6 +264,14 @@ pub enum AdminCommands {
         #[command(subcommand)]
         command: UserCommands,
     },
+    #[command(
+        about = "Manage germination codes",
+        after_help = "Manage information about germination instructions for different seeds."
+    )]
+    Germination {
+        #[command(subcommand)]
+        command: GerminationCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -298,5 +306,35 @@ pub enum UserCommands {
         change_password: bool,
         #[arg(long, short = 'f', requires("change_password"))]
         password_file: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum GerminationCommands {
+    #[command(about = "List all germination codes")]
+    List {},
+    Modify {
+        id: i64,
+        #[arg(
+            long,
+            short,
+            exclusive(true),
+            help = "Modify the germination code with interactive prompts"
+        )]
+        interactive: bool,
+        #[arg(
+            long,
+            short,
+            help = "A short code representing the germination requirements"
+        )]
+        code: Option<String>,
+        #[arg(long, short, help = "Summary of the germination requirements")]
+        summary: Option<String>,
+        #[arg(
+            long,
+            short,
+            help = "Longer description of the germination requirements"
+        )]
+        description: Option<String>,
     },
 }

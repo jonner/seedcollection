@@ -381,3 +381,25 @@ impl UserRow {
         }
     }
 }
+
+#[derive(Tabled)]
+#[tabled(rename_all = "PascalCase")]
+pub struct GerminationRow {
+    id: i64,
+    code: String,
+    #[tabled(display_with = "table_display_option")]
+    summary: Option<String>,
+    #[tabled(display_with = "table_display_option")]
+    description: Option<String>,
+}
+
+impl GerminationRow {
+    pub fn new(g: &Germination) -> Self {
+        Self {
+            id: g.id.clone(),
+            code: g.code.clone(),
+            summary: g.summary.clone(),
+            description: g.description.clone(),
+        }
+    }
+}
