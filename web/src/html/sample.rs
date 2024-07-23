@@ -16,7 +16,7 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, CompoundFilter, FilterOp},
+    filter::{Cmp, CompoundFilter, Op},
     loadable::{ExternalRef, Loadable},
     project::{allocation, Allocation},
     sample::{self, Certainty, Sample},
@@ -55,7 +55,7 @@ async fn list_samples(
     debug!("query params: {:?}", query);
     let filter = query.and_then(|params| {
         params.filter.as_ref().map(|f| {
-            CompoundFilter::build(FilterOp::Or)
+            CompoundFilter::build(Op::Or)
                 .push(Arc::new(sample::Filter::TaxonNameLike(f.clone())))
                 .push(Arc::new(sample::Filter::Notes(Cmp::Like, f.clone())))
                 .push(Arc::new(sample::Filter::SourceNameLike(f.clone())))

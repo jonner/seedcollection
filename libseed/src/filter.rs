@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub enum FilterOp {
+pub enum Op {
     Or,
     And,
 }
@@ -16,7 +16,7 @@ pub struct CompoundFilterBuilder {
 }
 
 impl CompoundFilterBuilder {
-    pub fn new(op: FilterOp) -> Self {
+    pub fn new(op: Op) -> Self {
         Self {
             top: CompoundFilter::new(op),
         }
@@ -44,18 +44,18 @@ pub trait FilterPart: Send {
 /// conditions
 pub struct CompoundFilter {
     conditions: Vec<DynFilterPart>,
-    op: FilterOp,
+    op: Op,
 }
 
 impl CompoundFilter {
-    pub fn new(op: FilterOp) -> Self {
+    pub fn new(op: Op) -> Self {
         Self {
             conditions: Default::default(),
             op,
         }
     }
 
-    pub fn build(op: FilterOp) -> CompoundFilterBuilder {
+    pub fn build(op: Op) -> CompoundFilterBuilder {
         CompoundFilterBuilder::new(op)
     }
 
@@ -74,8 +74,8 @@ impl FilterPart for CompoundFilter {
         let mut first = true;
         builder.push(" (");
         let separator = match self.op {
-            FilterOp::And => " AND ",
-            FilterOp::Or => " OR ",
+            Op::And => " AND ",
+            Op::Or => " OR ",
         };
 
         for cond in &self.conditions {

@@ -8,7 +8,7 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, CompoundFilter, FilterOp, LimitSpec},
+    filter::{Cmp, CompoundFilter, LimitSpec, Op},
     sample::{self, Sample},
     taxonomy::{self, any_filter, Germination, Rank, Taxon},
 };
@@ -238,7 +238,7 @@ async fn quickfind(
         true => Vec::new(),
         false => {
             let parts = taxon.split(' ');
-            let mut filter = CompoundFilter::new(FilterOp::And);
+            let mut filter = CompoundFilter::new(Op::And);
             for part in parts {
                 filter.add_filter(any_filter(part));
             }

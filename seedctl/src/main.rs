@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use inquire::validator::Validation;
 use libseed::{
-    filter::{CompoundFilter, FilterOp},
+    filter::{CompoundFilter, Op},
     loadable::{ExternalRef, Loadable},
     project::Project,
     sample::{self, Certainty, Sample},
@@ -286,7 +286,7 @@ async fn main() -> Result<()> {
                 sort,
             } => {
                 let filter = limit.map(|s| {
-                    let fbuilder = CompoundFilter::build(FilterOp::Or)
+                    let fbuilder = CompoundFilter::build(Op::Or)
                         .push(Arc::new(sample::Filter::TaxonNameLike(s.clone())))
                         .push(Arc::new(sample::Filter::SourceNameLike(s.clone())))
                         .push(Arc::new(sample::Filter::Notes(
