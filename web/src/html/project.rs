@@ -61,19 +61,15 @@ async fn list_projects(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
     trace!(?params, "Listing projects");
-    let mut fbuilder =
-        CompoundFilter::build(Op::And).push(Arc::new(project::Filter::User(user.id)));
+    let mut fbuilder = CompoundFilter::build(Op::And).push(project::Filter::User(user.id));
     let namefilter = params.and_then(|Query(p)| p.filter).map(|filterstring| {
         debug!(?filterstring, "Got project filter");
         CompoundFilter::build(Op::Or)
-            .push(Arc::new(project::Filter::Name(
+            .push(project::Filter::Name(Cmp::Like, filterstring.clone()))
+            .push(project::Filter::Description(
                 Cmp::Like,
                 filterstring.clone(),
-            )))
-            .push(Arc::new(project::Filter::Description(
-                Cmp::Like,
-                filterstring.clone(),
-            )))
+            ))
             .build()
     });
     if let Some(namefilter) = namefilter {
@@ -186,8 +182,8 @@ async fn show_project(
 ) -> Result<impl IntoResponse, Error> {
     let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
     let fb = CompoundFilter::build(Op::And)
-        .push(Arc::new(project::Filter::Id(id)))
-        .push(Arc::new(project::Filter::User(user.id)));
+        .push(project::Filter::Id(id))
+        .push(project::Filter::User(user.id));
 
     let mut projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
     let Some(mut project) = projects.pop() else {
@@ -203,17 +199,9 @@ async fn show_project(
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
             CompoundFilter::build(Op::Or)
-                .push(Arc::new(allocation::Filter::TaxonNameLike(
-                    fragment.clone(),
-                )))
-                .push(Arc::new(allocation::Filter::SourceName(
-                    Cmp::Like,
-                    fragment.clone(),
-                )))
-                .push(Arc::new(allocation::Filter::Notes(
-                    Cmp::Like,
-                    fragment.clone(),
-                )))
+                .push(allocation::Filter::TaxonNameLike(fragment.clone()))
+                .push(allocation::Filter::SourceName(Cmp::Like, fragment.clone()))
+                .push(allocation::Filter::Notes(Cmp::Like, fragment.clone()))
                 .build(),
         ),
         _ => None,
@@ -255,8 +243,8 @@ async fn modify_project(
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     let fb = CompoundFilter::build(Op::And)
-        .push(Arc::new(project::Filter::Id(id)))
-        .push(Arc::new(project::Filter::User(user.id)));
+        .push(project::Filter::Id(id))
+        .push(project::Filter::User(user.id));
     let projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
     if projects.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());

@@ -76,6 +76,18 @@ pub enum Filter {
     Description(Cmp, String),
 }
 
+impl From<Filter> for DynFilterPart {
+    fn from(value: Filter) -> Self {
+        Arc::new(value)
+    }
+}
+
+impl From<Filter> for Option<DynFilterPart> {
+    fn from(value: Filter) -> Self {
+        Some(Arc::new(value))
+    }
+}
+
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
@@ -133,7 +145,7 @@ impl Source {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Source> {
-        Self::build_query(Some(Arc::new(Filter::Id(id))))
+        Self::build_query(Some(Filter::Id(id).into()))
             .build_query_as()
             .fetch_one(pool)
             .await
@@ -152,7 +164,7 @@ impl Source {
     }
 
     pub async fn fetch_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Source>> {
-        Self::fetch_all(Some(Arc::new(Filter::UserId(userid))), pool).await
+        Self::fetch_all(Some(Filter::UserId(userid).into()), pool).await
     }
 
     pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {

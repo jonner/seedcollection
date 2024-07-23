@@ -11,11 +11,8 @@ use libseed::{
     user::{User, UserStatus},
 };
 use sqlx::SqlitePool;
+use std::io::{stdin, stdout, Write};
 use std::path::PathBuf;
-use std::{
-    io::{stdin, stdout, Write},
-    sync::Arc,
-};
 use tabled::Table;
 use tokio::fs;
 use tracing::debug;
@@ -287,12 +284,9 @@ async fn main() -> Result<()> {
             } => {
                 let filter = limit.map(|s| {
                     let fbuilder = CompoundFilter::build(Op::Or)
-                        .push(Arc::new(sample::Filter::TaxonNameLike(s.clone())))
-                        .push(Arc::new(sample::Filter::SourceNameLike(s.clone())))
-                        .push(Arc::new(sample::Filter::Notes(
-                            libseed::filter::Cmp::Like,
-                            s.clone(),
-                        )));
+                        .push(sample::Filter::TaxonNameLike(s.clone()))
+                        .push(sample::Filter::SourceNameLike(s.clone()))
+                        .push(sample::Filter::Notes(libseed::filter::Cmp::Like, s.clone()));
                     fbuilder.build()
                 });
                 let sort = sort.map(|v| match v {

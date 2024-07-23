@@ -51,9 +51,9 @@ async fn show_allocation(
     let mut allocation = Allocation::fetch_one(
         Some(
             CompoundFilter::build(Op::And)
-                .push(Arc::new(allocation::Filter::Id(allocid)))
-                .push(Arc::new(allocation::Filter::UserId(user.id)))
-                .push(Arc::new(allocation::Filter::ProjectId(projectid)))
+                .push(allocation::Filter::Id(allocid))
+                .push(allocation::Filter::UserId(user.id))
+                .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
         &state.dbpool,
@@ -103,9 +103,9 @@ async fn add_allocation_note(
     let _alloc = match Allocation::fetch_one(
         Some(
             CompoundFilter::build(Op::And)
-                .push(Arc::new(allocation::Filter::Id(allocid)))
-                .push(Arc::new(allocation::Filter::UserId(user.id)))
-                .push(Arc::new(allocation::Filter::ProjectId(projectid)))
+                .push(allocation::Filter::Id(allocid))
+                .push(allocation::Filter::UserId(user.id))
+                .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
         &state.dbpool,
@@ -178,9 +178,9 @@ async fn show_add_allocation_note(
     let allocation = Allocation::fetch_one(
         Some(
             CompoundFilter::build(Op::And)
-                .push(Arc::new(allocation::Filter::Id(allocid)))
-                .push(Arc::new(allocation::Filter::UserId(user.id)))
-                .push(Arc::new(allocation::Filter::ProjectId(projectid)))
+                .push(allocation::Filter::Id(allocid))
+                .push(allocation::Filter::UserId(user.id))
+                .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
         &state.dbpool,

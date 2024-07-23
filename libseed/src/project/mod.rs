@@ -61,6 +61,12 @@ impl Loadable for Project {
     }
 }
 
+impl From<Filter> for DynFilterPart {
+    fn from(value: Filter) -> Self {
+        Arc::new(value)
+    }
+}
+
 #[derive(Clone)]
 pub enum Filter {
     Id(i64),
@@ -115,7 +121,7 @@ impl Project {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        Self::build_query(Some(Arc::new(Filter::Id(id))))
+        Self::build_query(Some(Filter::Id(id).into()))
             .build_query_as()
             .fetch_one(pool)
             .await
@@ -149,7 +155,7 @@ impl Project {
         pool: &Pool<Sqlite>,
     ) -> Result<()> {
         let mut fbuilder =
-            CompoundFilter::build(Op::And).push(Arc::new(allocation::Filter::ProjectId(self.id)));
+            CompoundFilter::build(Op::And).push(allocation::Filter::ProjectId(self.id));
         if let Some(filter) = filter {
             fbuilder = fbuilder.push(filter);
         }

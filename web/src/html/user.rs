@@ -25,7 +25,6 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tracing::warn;
 
 pub fn router() -> Router<AppState> {
@@ -48,21 +47,12 @@ async fn show_profile(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let stats = UserStats {
-        nsamples: Sample::count(
-            Some(Arc::new(sample::Filter::UserId(user.id))),
-            &state.dbpool,
-        )
-        .await?,
-        nprojects: Project::count(
-            Some(Arc::new(project::Filter::User(user.id))),
-            &state.dbpool,
-        )
-        .await?,
-        nsources: Source::count(
-            Some(Arc::new(source::Filter::UserId(user.id))),
-            &state.dbpool,
-        )
-        .await?,
+        nsamples: Sample::count(Some(sample::Filter::UserId(user.id).into()), &state.dbpool)
+            .await?,
+        nprojects: Project::count(Some(project::Filter::User(user.id).into()), &state.dbpool)
+            .await?,
+        nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &state.dbpool)
+            .await?,
     };
     Ok(RenderHtml(
         key,

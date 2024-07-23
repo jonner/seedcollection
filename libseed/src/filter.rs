@@ -22,8 +22,8 @@ impl CompoundFilterBuilder {
         }
     }
 
-    pub fn push(mut self, filter: DynFilterPart) -> Self {
-        self.top.add_filter(filter);
+    pub fn push<F: Into<DynFilterPart>>(mut self, filter: F) -> Self {
+        self.top.add_filter(filter.into());
         self
     }
 

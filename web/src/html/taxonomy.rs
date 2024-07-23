@@ -62,14 +62,14 @@ async fn list_taxa(
         None => Rank::Species,
     };
     let pg = params.page.unwrap_or(1);
-    let row = taxonomy::count_query(Some(Arc::new(taxonomy::Filter::Rank(rank.clone()))))
+    let row = taxonomy::count_query(Some(taxonomy::Filter::Rank(rank.clone()).into()))
         .build()
         .fetch_one(&state.dbpool)
         .await?;
     let count = row.try_get::<i32, _>("count")?;
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
     let taxa: Vec<Taxon> = Taxon::fetch_all(
-        Some(Arc::new(taxonomy::Filter::Rank(rank))),
+        Some(taxonomy::Filter::Rank(rank).into()),
         Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
         &state.dbpool,
     )
@@ -238,19 +238,19 @@ async fn quickfind(
         true => Vec::new(),
         false => {
             let parts = taxon.split(' ');
-            let mut filter = CompoundFilter::new(Op::And);
+            let mut filter = CompoundFilter::build(Op::And);
             for part in parts {
-                filter.add_filter(any_filter(part));
+                filter = filter.push(any_filter(part));
             }
             if let Some(rank) = rank {
-                filter.add_filter(Arc::new(taxonomy::Filter::Rank(rank)));
+                filter = filter.push(taxonomy::Filter::Rank(rank));
             }
             if Some(true) == minnesota {
-                filter.add_filter(Arc::new(taxonomy::Filter::Minnesota(true)));
+                filter = filter.push(taxonomy::Filter::Minnesota(true));
             }
             /* FIXME: pagination for /search endpoing? */
             Taxon::fetch_all(
-                Some(Arc::new(filter)),
+                Some(filter.build()),
                 Some(LimitSpec(200, None)),
                 &state.dbpool,
             )

@@ -343,7 +343,7 @@ impl TaxonRowDetails {
     pub async fn new(taxon: &mut Taxon, pool: &Pool<Sqlite>) -> Result<Self> {
         taxon.fetch_germination_info(pool).await?;
         let mut samples = Sample::fetch_all(
-            Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, taxon.id))),
+            Some(sample::Filter::TaxonId(Cmp::Equal, taxon.id).into()),
             None,
             pool,
         )

@@ -36,6 +36,12 @@ pub struct Sample {
     pub certainty: Certainty,
 }
 
+impl From<Filter> for DynFilterPart {
+    fn from(value: Filter) -> Self {
+        Arc::new(value)
+    }
+}
+
 #[derive(Clone)]
 pub enum Filter {
     Id(Cmp, i64),
@@ -165,7 +171,7 @@ impl Sample {
         sort: Option<Sort>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
-        let mut fbuilder = CompoundFilter::build(Op::And).push(Arc::new(Filter::UserId(userid)));
+        let mut fbuilder = CompoundFilter::build(Op::And).push(Filter::UserId(userid));
         if let Some(f) = filter {
             fbuilder = fbuilder.push(f);
         }
@@ -184,7 +190,7 @@ impl Sample {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Sample> {
-        let mut builder = Self::build_query(Some(Arc::new(Filter::Id(Cmp::Equal, id))), None);
+        let mut builder = Self::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 

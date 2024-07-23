@@ -85,6 +85,12 @@ impl Loadable for User {
     }
 }
 
+impl From<Filter> for DynFilterPart {
+    fn from(value: Filter) -> Self {
+        Arc::new(value)
+    }
+}
+
 enum Filter {
     Id(i64),
     Username(String),
@@ -133,7 +139,7 @@ impl User {
 
     /// Fetch the user with the given id from the database
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<User> {
-        Self::build_query(Some(Arc::new(Filter::Id(id))))
+        Self::build_query(Some(Filter::Id(id).into()))
             .build_query_as()
             .fetch_one(pool)
             .await
@@ -142,7 +148,7 @@ impl User {
 
     /// Fetch the user with the given username from the database
     pub async fn fetch_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
-        Self::build_query(Some(Arc::new(Filter::Username(username.to_string()))))
+        Self::build_query(Some(Filter::Username(username.to_string()).into()))
             .build_query_as()
             .fetch_optional(pool)
             .await

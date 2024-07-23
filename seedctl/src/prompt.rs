@@ -6,7 +6,6 @@ use libseed::{
     taxonomy::{quickfind, Taxon},
 };
 use sqlx::{Pool, Sqlite};
-use std::sync::Arc;
 
 pub struct TaxonIdPrompt<'a> {
     text: inquire::Text<'a>,
@@ -122,8 +121,8 @@ struct SourceCompleter {
 impl Autocomplete for SourceCompleter {
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
         let fbuilder = CompoundFilter::build(Op::And)
-            .push(Arc::new(source::Filter::UserId(self.userid)))
-            .push(Arc::new(source::Filter::Name(Cmp::Like, input.to_string())));
+            .push(source::Filter::UserId(self.userid))
+            .push(source::Filter::Name(Cmp::Like, input.to_string()));
         let mut sources = Ok(vec![]);
         if input.len() > 2 {
             sources = futures::executor::block_on(Source::fetch_all(

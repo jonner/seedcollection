@@ -203,6 +203,12 @@ impl FromRow<'_, SqliteRow> for Taxon {
     }
 }
 
+impl From<Filter> for DynFilterPart {
+    fn from(value: Filter) -> Self {
+        Arc::new(value)
+    }
+}
+
 #[derive(Deserialize, Clone)]
 pub enum Filter {
     Id(i64),
@@ -269,22 +275,22 @@ pub fn filter_by(
 ) -> Option<DynFilterPart> {
     let mut f = CompoundFilter::build(Op::And);
     if let Some(id) = id {
-        f = f.push(Arc::new(Filter::Id(id)));
+        f = f.push(Filter::Id(id));
     }
     if let Some(rank) = rank {
-        f = f.push(Arc::new(Filter::Rank(rank)));
+        f = f.push(Filter::Rank(rank));
     }
     if let Some(genus) = genus {
-        f = f.push(Arc::new(Filter::Genus(genus)));
+        f = f.push(Filter::Genus(genus));
     }
     if let Some(species) = species {
-        f = f.push(Arc::new(Filter::Species(species)));
+        f = f.push(Filter::Species(species));
     }
     if let Some(s) = any {
         f = f.push(any_filter(&s));
     }
     if let Some(val) = minnesota {
-        f = f.push(Arc::new(Filter::Minnesota(val)));
+        f = f.push(Filter::Minnesota(val));
     }
 
     Some(f.build())
@@ -292,10 +298,10 @@ pub fn filter_by(
 
 pub fn any_filter(s: &str) -> DynFilterPart {
     CompoundFilter::build(Op::Or)
-        .push(Arc::new(Filter::Name1(s.to_string())))
-        .push(Arc::new(Filter::Name2(s.to_string())))
-        .push(Arc::new(Filter::Name3(s.to_string())))
-        .push(Arc::new(Filter::Vernacular(s.to_string())))
+        .push(Filter::Name1(s.to_string()))
+        .push(Filter::Name2(s.to_string()))
+        .push(Filter::Name3(s.to_string()))
+        .push(Filter::Vernacular(s.to_string()))
         .build()
 }
 
@@ -317,7 +323,7 @@ pub fn count_query(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static,
 
 impl Taxon {
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut query = Taxon::build_query(Some(Arc::new(Filter::Id(id))), None);
+        let mut query = Taxon::build_query(Some(Filter::Id(id).into()), None);
         Ok(query.build_query_as().fetch_one(pool).await?)
     }
 
@@ -339,8 +345,7 @@ impl Taxon {
     }
 
     pub async fn fetch_children(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
-        let filter: Option<DynFilterPart> = Some(Arc::new(Filter::ParentId(self.id)));
-        let mut query = Taxon::build_query(filter, None);
+        let mut query = Taxon::build_query(Some(Filter::ParentId(self.id).into()), None);
         Ok(query.build_query_as().fetch_all(pool).await?)
     }
 
@@ -446,7 +451,7 @@ mod tests {
     ))]
     async fn fetch_many(pool: Pool<Sqlite>) {
         let taxa = Taxon::fetch_all(
-            Some(Arc::new(Filter::Genus("Elymus".to_string()))),
+            Some(Filter::Genus("Elymus".to_string()).into()),
             None,
             &pool,
         )

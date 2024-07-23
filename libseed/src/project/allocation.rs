@@ -17,6 +17,12 @@ use sqlx::{
 };
 use std::sync::Arc;
 
+impl From<Filter> for DynFilterPart {
+    fn from(value: Filter) -> Self {
+        Arc::new(value)
+    }
+}
+
 #[derive(Clone)]
 pub enum Filter {
     Id(i64),
@@ -180,7 +186,7 @@ impl Allocation {
     }
 
     pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut builder = Self::build_query(Some(Arc::new(Filter::Id(id))), None);
+        let mut builder = Self::build_query(Some(Filter::Id(id).into()), None);
         Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
