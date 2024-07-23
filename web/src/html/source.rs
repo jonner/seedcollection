@@ -10,7 +10,7 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, FilterBuilder, FilterOp},
+    filter::{Cmp, CompoundFilter, FilterOp},
     source,
 };
 use libseed::{
@@ -50,10 +50,10 @@ async fn list_sources(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut fbuilder =
-        FilterBuilder::new(FilterOp::And).push(Arc::new(source::Filter::UserId(user.id)));
+        CompoundFilter::build(FilterOp::And).push(Arc::new(source::Filter::UserId(user.id)));
 
     if let Some(filterstring) = params.filter {
-        let subfilter = FilterBuilder::new(FilterOp::Or)
+        let subfilter = CompoundFilter::build(FilterOp::Or)
             .push(Arc::new(source::Filter::Name(
                 Cmp::Like,
                 filterstring.clone(),

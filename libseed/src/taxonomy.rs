@@ -13,7 +13,7 @@ use tracing::debug;
 
 use crate::{
     error::Result,
-    filter::{DynFilterPart, FilterBuilder, FilterOp, FilterPart, LimitSpec},
+    filter::{CompoundFilter, DynFilterPart, FilterOp, FilterPart, LimitSpec},
     loadable::{ExternalRef, Loadable},
     Error,
 };
@@ -250,7 +250,7 @@ pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
         true => None,
         false => {
             let parts = taxon.split(' ');
-            let mut filter = FilterBuilder::new(FilterOp::And);
+            let mut filter = CompoundFilter::build(FilterOp::And);
             for part in parts {
                 filter = filter.push(any_filter(part));
             }
@@ -267,7 +267,7 @@ pub fn filter_by(
     any: Option<String>,
     minnesota: Option<bool>,
 ) -> Option<DynFilterPart> {
-    let mut f = FilterBuilder::new(FilterOp::And);
+    let mut f = CompoundFilter::build(FilterOp::And);
     if let Some(id) = id {
         f = f.push(Arc::new(Filter::Id(id)));
     }
@@ -291,7 +291,7 @@ pub fn filter_by(
 }
 
 pub fn any_filter(s: &str) -> DynFilterPart {
-    FilterBuilder::new(FilterOp::Or)
+    CompoundFilter::build(FilterOp::Or)
         .push(Arc::new(Filter::Name1(s.to_string())))
         .push(Arc::new(Filter::Name2(s.to_string())))
         .push(Arc::new(Filter::Name3(s.to_string())))

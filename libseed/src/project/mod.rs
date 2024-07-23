@@ -3,7 +3,7 @@
 //! particular restoration project, etc.
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart, SortSpec},
+    filter::{Cmp, CompoundFilter, DynFilterPart, FilterOp, FilterPart, SortSpec},
     loadable::{ExternalRef, Loadable},
     sample::Sample,
 };
@@ -148,7 +148,7 @@ impl Project {
         sort: Option<SortSpec<allocation::SortField>>,
         pool: &Pool<Sqlite>,
     ) -> Result<()> {
-        let mut fbuilder = FilterBuilder::new(FilterOp::And)
+        let mut fbuilder = CompoundFilter::build(FilterOp::And)
             .push(Arc::new(allocation::Filter::ProjectId(self.id)));
         if let Some(filter) = filter {
             fbuilder = fbuilder.push(filter);

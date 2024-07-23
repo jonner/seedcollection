@@ -17,7 +17,7 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{FilterBuilder, FilterOp},
+    filter::{CompoundFilter, FilterOp},
     loadable::Loadable,
     project::{self, allocation, Allocation, Note, NoteType, Project},
 };
@@ -50,7 +50,7 @@ async fn show_allocation(
     // make sure that this is our sample
     let mut allocation = Allocation::fetch_one(
         Some(
-            FilterBuilder::new(FilterOp::And)
+            CompoundFilter::build(FilterOp::And)
                 .push(Arc::new(allocation::Filter::Id(allocid)))
                 .push(Arc::new(allocation::Filter::UserId(user.id)))
                 .push(Arc::new(allocation::Filter::ProjectId(projectid)))
@@ -102,7 +102,7 @@ async fn add_allocation_note(
     // just querying to make sure that this is our sample
     let _alloc = match Allocation::fetch_one(
         Some(
-            FilterBuilder::new(FilterOp::And)
+            CompoundFilter::build(FilterOp::And)
                 .push(Arc::new(allocation::Filter::Id(allocid)))
                 .push(Arc::new(allocation::Filter::UserId(user.id)))
                 .push(Arc::new(allocation::Filter::ProjectId(projectid)))
@@ -177,7 +177,7 @@ async fn show_add_allocation_note(
 ) -> Result<impl IntoResponse, error::Error> {
     let allocation = Allocation::fetch_one(
         Some(
-            FilterBuilder::new(FilterOp::And)
+            CompoundFilter::build(FilterOp::And)
                 .push(Arc::new(allocation::Filter::Id(allocid)))
                 .push(Arc::new(allocation::Filter::UserId(user.id)))
                 .push(Arc::new(allocation::Filter::ProjectId(projectid)))

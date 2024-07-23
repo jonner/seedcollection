@@ -17,7 +17,7 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, FilterBuilder, FilterOp, SortOrder, SortSpec},
+    filter::{Cmp, CompoundFilter, FilterOp, SortOrder, SortSpec},
     loadable::{ExternalRef, Loadable},
     project::{
         self,
@@ -62,10 +62,10 @@ async fn list_projects(
 ) -> Result<impl IntoResponse, error::Error> {
     trace!(?params, "Listing projects");
     let mut fbuilder =
-        FilterBuilder::new(FilterOp::And).push(Arc::new(project::Filter::User(user.id)));
+        CompoundFilter::build(FilterOp::And).push(Arc::new(project::Filter::User(user.id)));
     let namefilter = params.and_then(|Query(p)| p.filter).map(|filterstring| {
         debug!(?filterstring, "Got project filter");
-        FilterBuilder::new(FilterOp::Or)
+        CompoundFilter::build(FilterOp::Or)
             .push(Arc::new(project::Filter::Name(
                 Cmp::Like,
                 filterstring.clone(),
@@ -185,7 +185,7 @@ async fn show_project(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, Error> {
     let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
-    let fb = FilterBuilder::new(FilterOp::And)
+    let fb = CompoundFilter::build(FilterOp::And)
         .push(Arc::new(project::Filter::Id(id)))
         .push(Arc::new(project::Filter::User(user.id)));
 
@@ -202,7 +202,7 @@ async fn show_project(
     });
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
-            FilterBuilder::new(FilterOp::Or)
+            CompoundFilter::build(FilterOp::Or)
                 .push(Arc::new(allocation::Filter::TaxonNameLike(
                     fragment.clone(),
                 )))
@@ -254,7 +254,7 @@ async fn modify_project(
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let fb = FilterBuilder::new(FilterOp::And)
+    let fb = CompoundFilter::build(FilterOp::And)
         .push(Arc::new(project::Filter::Id(id)))
         .push(Arc::new(project::Filter::User(user.id)));
     let projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;

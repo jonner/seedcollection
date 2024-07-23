@@ -11,11 +11,11 @@ pub enum FilterOp {
 
 #[derive(Clone)]
 /// An object that allows you easily build complound filters that can be applied to SQL queries
-pub struct FilterBuilder {
+pub struct CompoundFilterBuilder {
     top: CompoundFilter,
 }
 
-impl FilterBuilder {
+impl CompoundFilterBuilder {
     pub fn new(op: FilterOp) -> Self {
         Self {
             top: CompoundFilter::new(op),
@@ -53,6 +53,10 @@ impl CompoundFilter {
             conditions: Default::default(),
             op,
         }
+    }
+
+    pub fn build(op: FilterOp) -> CompoundFilterBuilder {
+        CompoundFilterBuilder::new(op)
     }
 
     pub fn add_filter(&mut self, filter: DynFilterPart) {

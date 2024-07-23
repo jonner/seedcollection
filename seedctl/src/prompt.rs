@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use inquire::{autocompletion::Autocomplete, CustomUserError};
 use libseed::{
-    filter::{Cmp, FilterBuilder, FilterOp},
+    filter::{Cmp, CompoundFilter, FilterOp},
     source::{self, Source},
     taxonomy::{quickfind, Taxon},
 };
@@ -121,9 +121,9 @@ struct SourceCompleter {
 
 impl Autocomplete for SourceCompleter {
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
-        let mut fbuilder = FilterBuilder::new(FilterOp::And);
-        fbuilder = fbuilder.push(Arc::new(source::Filter::UserId(self.userid)));
-        fbuilder = fbuilder.push(Arc::new(source::Filter::Name(Cmp::Like, input.to_string())));
+        let fbuilder = CompoundFilter::build(FilterOp::And)
+            .push(Arc::new(source::Filter::UserId(self.userid)))
+            .push(Arc::new(source::Filter::Name(Cmp::Like, input.to_string())));
         let mut sources = Ok(vec![]);
         if input.len() > 2 {
             sources = futures::executor::block_on(Source::fetch_all(

@@ -1,7 +1,7 @@
 //! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, DynFilterPart, FilterBuilder, FilterOp, FilterPart},
+    filter::{Cmp, CompoundFilter, DynFilterPart, FilterOp, FilterPart},
     loadable::{ExternalRef, Loadable},
     source::Source,
     taxonomy::Taxon,
@@ -165,7 +165,8 @@ impl Sample {
         sort: Option<Sort>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
-        let mut fbuilder = FilterBuilder::new(FilterOp::And).push(Arc::new(Filter::UserId(userid)));
+        let mut fbuilder =
+            CompoundFilter::build(FilterOp::And).push(Arc::new(Filter::UserId(userid)));
         if let Some(f) = filter {
             fbuilder = fbuilder.push(f);
         }
