@@ -238,7 +238,7 @@ async fn quickfind(
         true => Vec::new(),
         false => {
             let parts = taxon.split(' ');
-            let mut filter = CompoundFilter::build(Op::And);
+            let mut filter = CompoundFilter::builder(Op::And);
             for part in parts {
                 filter = filter.push(any_filter(part));
             }

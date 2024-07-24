@@ -49,10 +49,10 @@ async fn list_sources(
     Query(params): Query<SourceListParams>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut fbuilder = CompoundFilter::build(Op::And).push(source::Filter::UserId(user.id));
+    let mut fbuilder = CompoundFilter::builder(Op::And).push(source::Filter::UserId(user.id));
 
     if let Some(filterstring) = params.filter {
-        let subfilter = CompoundFilter::build(Op::Or)
+        let subfilter = CompoundFilter::builder(Op::Or)
             .push(source::Filter::Name(Cmp::Like, filterstring.clone()))
             .push(source::Filter::Description(Cmp::Like, filterstring.clone()))
             .build();

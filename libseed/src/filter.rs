@@ -55,7 +55,7 @@ impl CompoundFilter {
         }
     }
 
-    pub fn build(op: Op) -> CompoundFilterBuilder {
+    pub fn builder(op: Op) -> CompoundFilterBuilder {
         CompoundFilterBuilder::new(op)
     }
 

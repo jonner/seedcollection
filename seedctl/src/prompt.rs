@@ -120,7 +120,7 @@ struct SourceCompleter {
 
 impl Autocomplete for SourceCompleter {
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
-        let fbuilder = CompoundFilter::build(Op::And)
+        let fbuilder = CompoundFilter::builder(Op::And)
             .push(source::Filter::UserId(self.userid))
             .push(source::Filter::Name(Cmp::Like, input.to_string()));
         let mut sources = Ok(vec![]);

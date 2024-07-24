@@ -171,7 +171,7 @@ impl Sample {
         sort: Option<Sort>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
-        let mut fbuilder = CompoundFilter::build(Op::And).push(Filter::UserId(userid));
+        let mut fbuilder = CompoundFilter::builder(Op::And).push(Filter::UserId(userid));
         if let Some(f) = filter {
             fbuilder = fbuilder.push(f);
         }

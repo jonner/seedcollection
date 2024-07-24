@@ -283,7 +283,7 @@ async fn main() -> Result<()> {
                 sort,
             } => {
                 let filter = limit.map(|s| {
-                    let fbuilder = CompoundFilter::build(Op::Or)
+                    let fbuilder = CompoundFilter::builder(Op::Or)
                         .push(sample::Filter::TaxonNameLike(s.clone()))
                         .push(sample::Filter::SourceNameLike(s.clone()))
                         .push(sample::Filter::Notes(libseed::filter::Cmp::Like, s.clone()));

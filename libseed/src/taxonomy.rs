@@ -256,7 +256,7 @@ pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
         true => None,
         false => {
             let parts = taxon.split(' ');
-            let mut filter = CompoundFilter::build(Op::And);
+            let mut filter = CompoundFilter::builder(Op::And);
             for part in parts {
                 filter = filter.push(any_filter(part));
             }
@@ -273,7 +273,7 @@ pub fn filter_by(
     any: Option<String>,
     minnesota: Option<bool>,
 ) -> Option<DynFilterPart> {
-    let mut f = CompoundFilter::build(Op::And);
+    let mut f = CompoundFilter::builder(Op::And);
     if let Some(id) = id {
         f = f.push(Filter::Id(id));
     }
@@ -297,7 +297,7 @@ pub fn filter_by(
 }
 
 pub fn any_filter(s: &str) -> DynFilterPart {
-    CompoundFilter::build(Op::Or)
+    CompoundFilter::builder(Op::Or)
         .push(Filter::Name1(s.to_string()))
         .push(Filter::Name2(s.to_string()))
         .push(Filter::Name3(s.to_string()))

@@ -50,7 +50,7 @@ async fn show_allocation(
     // make sure that this is our sample
     let mut allocation = Allocation::fetch_one(
         Some(
-            CompoundFilter::build(Op::And)
+            CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
                 .push(allocation::Filter::UserId(user.id))
                 .push(allocation::Filter::ProjectId(projectid))
@@ -102,7 +102,7 @@ async fn add_allocation_note(
     // just querying to make sure that this is our sample
     let _alloc = match Allocation::fetch_one(
         Some(
-            CompoundFilter::build(Op::And)
+            CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
                 .push(allocation::Filter::UserId(user.id))
                 .push(allocation::Filter::ProjectId(projectid))
@@ -177,7 +177,7 @@ async fn show_add_allocation_note(
 ) -> Result<impl IntoResponse, error::Error> {
     let allocation = Allocation::fetch_one(
         Some(
-            CompoundFilter::build(Op::And)
+            CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
                 .push(allocation::Filter::UserId(user.id))
                 .push(allocation::Filter::ProjectId(projectid))

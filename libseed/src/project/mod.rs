@@ -155,7 +155,7 @@ impl Project {
         pool: &Pool<Sqlite>,
     ) -> Result<()> {
         let mut fbuilder =
-            CompoundFilter::build(Op::And).push(allocation::Filter::ProjectId(self.id));
+            CompoundFilter::builder(Op::And).push(allocation::Filter::ProjectId(self.id));
         if let Some(filter) = filter {
             fbuilder = fbuilder.push(filter);
         }

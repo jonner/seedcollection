@@ -61,10 +61,10 @@ async fn list_projects(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
     trace!(?params, "Listing projects");
-    let mut fbuilder = CompoundFilter::build(Op::And).push(project::Filter::User(user.id));
+    let mut fbuilder = CompoundFilter::builder(Op::And).push(project::Filter::User(user.id));
     let namefilter = params.and_then(|Query(p)| p.filter).map(|filterstring| {
         debug!(?filterstring, "Got project filter");
-        CompoundFilter::build(Op::Or)
+        CompoundFilter::builder(Op::Or)
             .push(project::Filter::Name(Cmp::Like, filterstring.clone()))
             .push(project::Filter::Description(
                 Cmp::Like,
@@ -181,7 +181,7 @@ async fn show_project(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, Error> {
     let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
-    let fb = CompoundFilter::build(Op::And)
+    let fb = CompoundFilter::builder(Op::And)
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
 
@@ -198,7 +198,7 @@ async fn show_project(
     });
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
-            CompoundFilter::build(Op::Or)
+            CompoundFilter::builder(Op::Or)
                 .push(allocation::Filter::TaxonNameLike(fragment.clone()))
                 .push(allocation::Filter::SourceName(Cmp::Like, fragment.clone()))
                 .push(allocation::Filter::Notes(Cmp::Like, fragment.clone()))
@@ -242,7 +242,7 @@ async fn modify_project(
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let fb = CompoundFilter::build(Op::And)
+    let fb = CompoundFilter::builder(Op::And)
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
     let projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
