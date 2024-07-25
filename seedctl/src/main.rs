@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
     let dbpool =
         SqlitePool::connect(&format!("sqlite://{}", cfg.database.to_string_lossy())).await?;
     sqlx::migrate!("../db/migrations").run(&dbpool).await?;
-    let user = User::fetch_by_username(&cfg.username, &dbpool)
+    let user = User::load_by_username(&cfg.username, &dbpool)
         .await
         .with_context(|| "Failed to fetch user from database".to_string())?
         .ok_or_else(|| anyhow!("Unable to find user {}", cfg.username))?;
@@ -84,7 +84,7 @@ async fn main() -> Result<()> {
         }
         Commands::Project { command } => match command {
             ProjectCommands::List {} => {
-                let projects = Project::fetch_all(None, &dbpool).await?;
+                let projects = Project::load_all(None, &dbpool).await?;
                 let mut table = Table::new(projects.iter().map(|val| ProjectRow::new(&val)));
                 println!("{}\n", table.styled());
                 println!("{} records found", table.count_rows());
@@ -97,7 +97,7 @@ async fn main() -> Result<()> {
             } => {
                 let mut project = Project::new(name, description, userid.unwrap_or(user.id));
                 let id = project.insert(&dbpool).await?.last_insert_rowid();
-                let project = Project::fetch(id, &dbpool).await?;
+                let project = Project::load(id, &dbpool).await?;
                 println!("Added project to database:");
                 println!("{}: {}", project.id, project.name);
                 Ok(())
@@ -107,7 +107,7 @@ async fn main() -> Result<()> {
                 name,
                 description,
             } => {
-                let mut project = Project::fetch(id, &dbpool).await?;
+                let mut project = Project::load(id, &dbpool).await?;
                 if let Some(name) = name {
                     project.name = name
                 }
@@ -124,7 +124,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             ProjectCommands::AddSample { project, sample } => {
-                let mut project = Project::fetch(project, &dbpool).await?;
+                let mut project = Project::load(project, &dbpool).await?;
                 project
                     .allocate_sample(ExternalRef::Stub(sample), &dbpool)
                     .await?;
@@ -143,8 +143,8 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             ProjectCommands::Show { id, full } => {
-                let mut projectinfo = Project::fetch(id, &dbpool).await?;
-                projectinfo.fetch_samples(None, None, &dbpool).await?;
+                let mut projectinfo = Project::load(id, &dbpool).await?;
+                projectinfo.load_samples(None, None, &dbpool).await?;
                 let mut table = match full {
                     true => Table::new(
                         projectinfo
@@ -166,7 +166,7 @@ async fn main() -> Result<()> {
         },
         Commands::Source { command } => match command {
             SourceCommands::List { full } => {
-                let sources = Source::fetch_all(None, &dbpool).await?;
+                let sources = Source::load_all(None, &dbpool).await?;
                 let mut table = match full {
                     true => Table::new(sources.iter().map(|src| SourceRowFull::new(src))),
                     false => Table::new(sources.iter().map(|src| SourceRow::new(src))),
@@ -176,7 +176,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SourceCommands::Show { id } => {
-                let src = Source::fetch(id, &dbpool).await?;
+                let src = Source::load(id, &dbpool).await?;
                 let tbuilder = Table::builder(vec![SourceRowFull::new(&src)])
                     .index()
                     .column(0)
@@ -257,7 +257,7 @@ async fn main() -> Result<()> {
                 {
                     return Err(anyhow!("Cannot modify source without new values"));
                 }
-                let mut src = Source::fetch(id, &dbpool).await?;
+                let mut src = Source::load(id, &dbpool).await?;
                 if let Some(name) = name {
                     src.name = name;
                 }
@@ -296,8 +296,8 @@ async fn main() -> Result<()> {
                     SampleSortField::Source => sample::Sort::SourceName,
                 });
                 let samples = match useronly {
-                    true => Sample::fetch_all_user(user.id, filter, sort, &dbpool).await?,
-                    false => Sample::fetch_all(filter, sort, &dbpool).await?,
+                    true => Sample::load_all_user(user.id, filter, sort, &dbpool).await?,
+                    false => Sample::load_all(filter, sort, &dbpool).await?,
                 };
                 let mut table = match full {
                     true => Table::new(
@@ -314,7 +314,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             SampleCommands::Show { id } => {
-                let mut sample = Sample::fetch(id, &dbpool).await?;
+                let mut sample = Sample::load(id, &dbpool).await?;
 
                 let tbuilder =
                     Table::builder(vec![SampleRowDetails::new(&mut sample, &dbpool).await?])
@@ -406,7 +406,7 @@ async fn main() -> Result<()> {
                     return Err(anyhow!("Cannot modify without new values"));
                 }
 
-                let oldsample = Sample::fetch(id, &dbpool).await?;
+                let oldsample = Sample::load(id, &dbpool).await?;
                 let mut sample = oldsample.clone();
                 if interactive {
                     println!("Interactively modifying sample {id}. Press <esc> to skip any field.");
@@ -546,7 +546,7 @@ async fn main() -> Result<()> {
                     true => Some(true),
                     false => None,
                 };
-                let taxa: Vec<Taxon> = Taxon::fetch_all(
+                let taxa: Vec<Taxon> = Taxon::load_all(
                     filter_by(None, rank, genus, species, any, minnesota),
                     None,
                     &dbpool,
@@ -561,7 +561,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
             TaxonomyCommands::Show { id } => {
-                let mut taxon = Taxon::fetch(id, &dbpool).await?;
+                let mut taxon = Taxon::load(id, &dbpool).await?;
                 let tbuilder =
                     Table::builder(vec![TaxonRowDetails::new(&mut taxon, &dbpool).await?])
                         .index()
@@ -574,7 +574,7 @@ async fn main() -> Result<()> {
         Commands::Admin { command } => match command {
             AdminCommands::User { command } => match command {
                 UserCommands::List {} => {
-                    let users = User::fetch_all(&dbpool).await?;
+                    let users = User::load_all(&dbpool).await?;
                     let mut table = Table::new(users.iter().map(|u| UserRow::new(u)));
                     println!("{}\n", table.styled());
                     println!("{} records found", table.count_rows());
@@ -616,7 +616,7 @@ async fn main() -> Result<()> {
                     change_password,
                     password_file,
                 } => {
-                    let mut user = User::fetch(id, &dbpool).await?;
+                    let mut user = User::load(id, &dbpool).await?;
                     if let Some(username) = username {
                         user.username = username;
                     }
@@ -632,7 +632,7 @@ async fn main() -> Result<()> {
             },
             AdminCommands::Germination { command } => match command {
                 GerminationCommands::List {} => {
-                    let codes = Germination::fetch_all(&dbpool).await?;
+                    let codes = Germination::load_all(&dbpool).await?;
                     let mut table = Table::new(codes.iter().map(|g| GerminationRow::new(g)));
                     println!("{}\n", table.styled());
                     Ok(())
@@ -644,7 +644,7 @@ async fn main() -> Result<()> {
                     summary,
                     description,
                 } => {
-                    let oldval = Germination::fetch(id, &dbpool).await?;
+                    let oldval = Germination::load(id, &dbpool).await?;
                     let mut newval = oldval.clone();
                     if interactive {
                         println!("Modifying Germination code {id}. Pres <esc to skip any field.");

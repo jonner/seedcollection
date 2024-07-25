@@ -69,7 +69,11 @@ impl Loadable for User {
     }
 
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
-        User::fetch(id, pool).await
+        Self::build_query(Some(Filter::Id(id).into()))
+            .build_query_as()
+            .fetch_one(pool)
+            .await
+            .map_err(|e| e.into())
     }
 
     async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
@@ -125,7 +129,7 @@ impl User {
     }
 
     /// Fetch all users from the database
-    pub async fn fetch_all(pool: &Pool<Sqlite>) -> Result<Vec<User>> {
+    pub async fn load_all(pool: &Pool<Sqlite>) -> Result<Vec<User>> {
         Self::build_query(None)
             .build_query_as()
             .fetch_all(pool)
@@ -133,17 +137,8 @@ impl User {
             .map_err(|e| e.into())
     }
 
-    /// Fetch the user with the given id from the database
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<User> {
-        Self::build_query(Some(Filter::Id(id).into()))
-            .build_query_as()
-            .fetch_one(pool)
-            .await
-            .map_err(|e| e.into())
-    }
-
     /// Fetch the user with the given username from the database
-    pub async fn fetch_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
+    pub async fn load_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
         Self::build_query(Some(Filter::Username(username.to_string()).into()))
             .build_query_as()
             .fetch_optional(pool)
@@ -352,7 +347,7 @@ mod tests {
     ))]
     async fn modify_user(pool: Pool<Sqlite>) {
         const NEWNAME: &str = "TestUsername84902";
-        let mut user = User::fetch(1, &pool)
+        let mut user = User::load(1, &pool)
             .await
             .expect("Failed to fetch user from database");
         user.username = NEWNAME.to_string();

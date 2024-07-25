@@ -67,7 +67,11 @@ impl Loadable for Note {
     }
 
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
-        Note::fetch(id, pool).await.map_err(|e| e.into())
+        Self::build_query(Some(Arc::new(NoteFilter::Id(id))))
+            .build_query_as()
+            .fetch_one(pool)
+            .await
+            .map_err(|e| e.into())
     }
 
     async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
@@ -117,14 +121,7 @@ impl Note {
         builder
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
-        Self::build_query(Some(Arc::new(NoteFilter::Id(id))))
-            .build_query_as()
-            .fetch_one(pool)
-            .await
-    }
-
-    pub async fn fetch_all(
+    pub async fn load_all(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Note>, sqlx::Error> {
@@ -186,7 +183,7 @@ mod tests {
         )
     ))]
     async fn test_query_notes(pool: Pool<Sqlite>) {
-        let mut note = Note::fetch(3, &pool).await.expect("Failed to load notes");
+        let mut note = Note::load(3, &pool).await.expect("Failed to load notes");
         tracing::debug!("{note:?}");
         assert_eq!(note.id, 3);
         assert_eq!(note.psid, 2);
@@ -207,7 +204,7 @@ mod tests {
         assert_eq!(note, loaded);
 
         // fetch all notes for a sample
-        let notes = Note::fetch_all(Some(Arc::new(NoteFilter::AllocationId(1))), &pool)
+        let notes = Note::load_all(Some(Arc::new(NoteFilter::AllocationId(1))), &pool)
             .await
             .expect("Unable to load notes for sample");
         assert_eq!(notes.len(), 2);

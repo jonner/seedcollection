@@ -131,9 +131,9 @@ pub struct SampleRowDetails {
 impl SampleRowDetails {
     pub async fn new(sample: &mut Sample, pool: &Pool<Sqlite>) -> Result<Self> {
         let taxon = sample.taxon.load_mut(pool).await?;
-        taxon.fetch_germination_info(pool).await?;
+        taxon.load_germination_info(pool).await?;
         let src = sample.source.object()?;
-        let allocations = Allocation::fetch_all(
+        let allocations = Allocation::load_all(
             Some(Arc::new(allocation::Filter::SampleId(sample.id))),
             None,
             pool,
@@ -341,8 +341,8 @@ fn table_display_samples(samples: &Vec<Sample>) -> String {
 
 impl TaxonRowDetails {
     pub async fn new(taxon: &mut Taxon, pool: &Pool<Sqlite>) -> Result<Self> {
-        taxon.fetch_germination_info(pool).await?;
-        let mut samples = Sample::fetch_all(
+        taxon.load_germination_info(pool).await?;
+        let mut samples = Sample::load_all(
             Some(sample::Filter::TaxonId(Cmp::Equal, taxon.id).into()),
             None,
             pool,

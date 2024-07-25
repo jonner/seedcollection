@@ -6,6 +6,7 @@ use axum::{
     Form, Router,
 };
 use axum_template::RenderHtml;
+use libseed::loadable::Loadable;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, CompoundFilter, LimitSpec, Op},
@@ -68,7 +69,7 @@ async fn list_taxa(
         .await?;
     let count = row.try_get::<i32, _>("count")?;
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
-    let taxa: Vec<Taxon> = Taxon::fetch_all(
+    let taxa: Vec<Taxon> = Taxon::load_all(
         Some(taxonomy::Filter::Rank(rank).into()),
         Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
         &state.dbpool,
@@ -170,17 +171,17 @@ async fn show_taxon(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut taxon = Taxon::fetch(id, &state.dbpool).await?;
+    let mut taxon = Taxon::load(id, &state.dbpool).await?;
     let hierarchy = taxon.fetch_hierarchy(&state.dbpool).await?;
     let children = taxon.fetch_children(&state.dbpool).await?;
-    let samples = Sample::fetch_all_user(
+    let samples = Sample::load_all_user(
         user.id,
         Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, id))),
         None,
         &state.dbpool,
     )
     .await?;
-    taxon.fetch_germination_info(&state.dbpool).await?;
+    taxon.load_germination_info(&state.dbpool).await?;
 
     Ok(RenderHtml(
         key,
@@ -249,7 +250,7 @@ async fn quickfind(
                 filter = filter.push(taxonomy::Filter::Minnesota(true));
             }
             /* FIXME: pagination for /search endpoing? */
-            Taxon::fetch_all(
+            Taxon::load_all(
                 Some(filter.build()),
                 Some(LimitSpec(200, None)),
                 &state.dbpool,

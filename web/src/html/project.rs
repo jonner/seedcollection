@@ -75,7 +75,7 @@ async fn list_projects(
     if let Some(namefilter) = namefilter {
         fbuilder = fbuilder.push(namefilter);
     }
-    let projects = Project::fetch_all(Some(fbuilder.build()), &state.dbpool).await?;
+    let projects = Project::load_all(Some(fbuilder.build()), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -185,7 +185,7 @@ async fn show_project(
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
 
-    let mut projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
+    let mut projects = Project::load_all(Some(fb.build()), &state.dbpool).await?;
     let Some(mut project) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
@@ -207,7 +207,7 @@ async fn show_project(
         _ => None,
     };
     project
-        .fetch_samples(sample_filter, sort, &state.dbpool)
+        .load_samples(sample_filter, sort, &state.dbpool)
         .await?;
 
     Ok(RenderHtml(
@@ -229,7 +229,7 @@ async fn do_update(
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
-    let mut project = Project::fetch(id, &state.dbpool).await?;
+    let mut project = Project::load(id, &state.dbpool).await?;
     project.name.clone_from(&params.name);
     project.description.clone_from(&params.description);
     project.update(&state.dbpool).await.map_err(|e| e.into())
@@ -245,7 +245,7 @@ async fn modify_project(
     let fb = CompoundFilter::builder(Op::And)
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
-    let projects = Project::fetch_all(Some(fb.build()), &state.dbpool).await?;
+    let projects = Project::load_all(Some(fb.build()), &state.dbpool).await?;
     if projects.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());
     };
@@ -267,7 +267,7 @@ async fn modify_project(
             Some([("HX-Redirect", app_url(&format!("/project/{id}")))]),
         ),
     };
-    let project = Project::fetch(id, &state.dbpool).await?;
+    let project = Project::load(id, &state.dbpool).await?;
     Ok((
         headers,
         RenderHtml(
@@ -288,7 +288,7 @@ async fn delete_project(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut project = Project::fetch(id, &state.dbpool)
+    let mut project = Project::load(id, &state.dbpool)
         .await
         .map_err(|_| Error::NotFound("That project does not exist".to_string()))?;
     if project.userid != user.id {
@@ -336,7 +336,7 @@ async fn add_sample_prep(
     id: i64,
     state: &AppState,
 ) -> Result<(Project, Vec<Sample>), error::Error> {
-    let project = Project::fetch(id, &state.dbpool).await?;
+    let project = Project::load(id, &state.dbpool).await?;
 
     let ids_in_project = sqlx::query!(
         "SELECT PS.sampleid from sc_project_samples PS WHERE PS.projectid=?",
@@ -352,7 +352,7 @@ async fn add_sample_prep(
      * [ query ids first ], then
      *  'WHERE NOT IN (1, 2, 3, 4, 5...)'
      */
-    let samples = Sample::fetch_all_user(
+    let samples = Sample::load_all_user(
         user.id,
         Some(Arc::new(sample::Filter::IdNotIn(ids))),
         None,
@@ -422,7 +422,7 @@ async fn add_sample(
         }
     });
 
-    let mut project = Project::fetch(id, &state.dbpool).await?;
+    let mut project = Project::load(id, &state.dbpool).await?;
     let mut n_inserted = 0;
     let mut messages = Vec::new();
     for sample in valid_samples {

@@ -48,7 +48,7 @@ impl Autocomplete for TaxonCompleter {
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
         let mut taxa = Ok(vec![]);
         if input.len() > 2 {
-            taxa = futures::executor::block_on(Taxon::fetch_all(
+            taxa = futures::executor::block_on(Taxon::load_all(
                 quickfind(input.to_string()),
                 None,
                 &self.dbpool,
@@ -125,10 +125,8 @@ impl Autocomplete for SourceCompleter {
             .push(source::Filter::Name(Cmp::Like, input.to_string()));
         let mut sources = Ok(vec![]);
         if input.len() > 2 {
-            sources = futures::executor::block_on(Source::fetch_all(
-                Some(fbuilder.build()),
-                &self.dbpool,
-            ));
+            sources =
+                futures::executor::block_on(Source::load_all(Some(fbuilder.build()), &self.dbpool));
         }
         sources
             .map(|taxa| {

@@ -67,7 +67,8 @@ impl Loadable for Sample {
     }
 
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
-        Sample::fetch(id, pool).await
+        let mut builder = Self::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
+        Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
     async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
@@ -161,7 +162,7 @@ impl Sample {
         builder
     }
 
-    pub async fn fetch_all_user(
+    pub async fn load_all_user(
         userid: i64,
         filter: Option<DynFilterPart>,
         sort: Option<Sort>,
@@ -176,18 +177,13 @@ impl Sample {
         Ok(builder.build_query_as().fetch_all(pool).await?)
     }
 
-    pub async fn fetch_all(
+    pub async fn load_all(
         filter: Option<DynFilterPart>,
         sort: Option<Sort>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
         let mut builder = Self::build_query(filter, sort);
         Ok(builder.build_query_as().fetch_all(pool).await?)
-    }
-
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Sample> {
-        let mut builder = Self::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
-        Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
     pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {

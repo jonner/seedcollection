@@ -14,7 +14,7 @@ async fn germination(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let germination = Germination::fetch_all(&state.dbpool).await?;
+    let germination = Germination::load_all(&state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),

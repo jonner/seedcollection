@@ -89,7 +89,8 @@ impl Loadable for Allocation {
     }
 
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
-        Allocation::fetch(id, pool).await
+        let mut builder = Self::build_query(Some(Filter::Id(id).into()), None);
+        Ok(builder.build_query_as().fetch_one(pool).await?)
     }
 
     async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
@@ -160,7 +161,7 @@ impl Allocation {
         builder
     }
 
-    pub async fn fetch_all(
+    pub async fn load_all(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpec<SortField>>,
         pool: &Pool<Sqlite>,
@@ -171,7 +172,7 @@ impl Allocation {
             .await
     }
 
-    pub async fn fetch_one(
+    pub async fn load_one(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
     ) -> Result<Self, sqlx::Error> {
@@ -181,13 +182,8 @@ impl Allocation {
             .await
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut builder = Self::build_query(Some(Filter::Id(id).into()), None);
-        Ok(builder.build_query_as().fetch_one(pool).await?)
-    }
-
-    pub async fn fetch_notes(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
-        self.notes = Note::fetch_all(
+    pub async fn load_notes(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
+        self.notes = Note::load_all(
             Some(Arc::new(note::NoteFilter::AllocationId(self.id))),
             pool,
         )
@@ -226,7 +222,7 @@ mod tests {
             scripts("users", "sources", "taxa", "assigned-samples")
         )
     ))]
-    async fn fetch_allocations(pool: Pool<Sqlite>) {
+    async fn load_allocations(pool: Pool<Sqlite>) {
         async fn check_sample(a: &Allocation, pool: &Pool<Sqlite>) {
             tracing::debug!("loading sample");
             let s = Sample::load(a.sample.id, pool)
@@ -241,7 +237,7 @@ mod tests {
         }
 
         // check allocations for project 1
-        let assigned = Allocation::fetch_all(Some(Arc::new(Filter::ProjectId(1))), None, &pool)
+        let assigned = Allocation::load_all(Some(Arc::new(Filter::ProjectId(1))), None, &pool)
             .await
             .expect("Failed to load assigned samples for first project");
 
@@ -269,7 +265,7 @@ mod tests {
         check_sample(&assigned[1], &pool).await;
 
         // check allocations for project 2
-        let assigned = Allocation::fetch_all(Some(Arc::new(Filter::ProjectId(2))), None, &pool)
+        let assigned = Allocation::load_all(Some(Arc::new(Filter::ProjectId(2))), None, &pool)
             .await
             .expect("Failed to load assigned samples for first project");
 
@@ -284,7 +280,7 @@ mod tests {
         check_sample(&assigned[1], &pool).await;
 
         // check allocations for sample 1
-        let assigned = Allocation::fetch_all(Some(Arc::new(Filter::SampleId(1))), None, &pool)
+        let assigned = Allocation::load_all(Some(Arc::new(Filter::SampleId(1))), None, &pool)
             .await
             .expect("Failed to load assigned samples for first project");
 

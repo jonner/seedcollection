@@ -11,10 +11,9 @@ use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     filter::{Cmp, CompoundFilter, Op},
-    source,
-};
-use libseed::{
+    loadable::Loadable,
     sample::{Filter, Sample},
+    source,
     source::Source,
 };
 use minijinja::context;
@@ -58,7 +57,7 @@ async fn list_sources(
             .build();
         fbuilder = fbuilder.push(subfilter);
     }
-    let sources = Source::fetch_all(Some(fbuilder.build()), &state.dbpool).await?;
+    let sources = Source::load_all(Some(fbuilder.build()), &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -83,8 +82,8 @@ async fn show_source(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let src = Source::fetch(id, &state.dbpool).await?;
-    let samples = Sample::fetch_all_user(
+    let src = Source::load(id, &state.dbpool).await?;
+    let samples = Sample::load_all_user(
         user.id,
         Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
         None,
@@ -120,7 +119,7 @@ async fn do_update(
     params: &SourceParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    let mut src = Source::fetch(id, &state.dbpool).await?;
+    let mut src = Source::load(id, &state.dbpool).await?;
     src.name = params
         .name
         .as_ref()
@@ -140,7 +139,7 @@ async fn update_source(
     Path(id): Path<i64>,
     Form(params): Form<SourceParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let src = Source::fetch(id, &state.dbpool).await?;
+    let src = Source::load(id, &state.dbpool).await?;
     if src.userid != user.id {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
@@ -162,14 +161,14 @@ async fn update_source(
             Some([("HX-Redirect", app_url(&format!("/source/{id}")))]),
         ),
     };
-    let samples = Sample::fetch_all_user(
+    let samples = Sample::load_all_user(
         user.id,
         Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
         None,
         &state.dbpool,
     )
     .await?;
-    let src = Source::fetch(id, &state.dbpool).await?;
+    let src = Source::load(id, &state.dbpool).await?;
 
     Ok((
         headers,
@@ -262,7 +261,7 @@ async fn delete_source(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let src = Source::fetch(id, &state.dbpool).await?;
+    let src = Source::load(id, &state.dbpool).await?;
     if src.userid != user.id {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }

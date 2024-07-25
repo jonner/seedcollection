@@ -45,7 +45,11 @@ impl Loadable for Project {
     }
 
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
-        Project::fetch(id, pool).await
+        Self::build_query(Some(Filter::Id(id).into()))
+            .build_query_as()
+            .fetch_one(pool)
+            .await
+            .map_err(|e| e.into())
     }
 
     async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
@@ -116,18 +120,7 @@ impl Project {
         builder
     }
 
-    pub async fn fetch(id: i64, pool: &Pool<Sqlite>) -> Result<Self> {
-        Self::build_query(Some(Filter::Id(id).into()))
-            .build_query_as()
-            .fetch_one(pool)
-            .await
-            .map_err(|e| e.into())
-    }
-
-    pub async fn fetch_all(
-        filter: Option<DynFilterPart>,
-        pool: &Pool<Sqlite>,
-    ) -> Result<Vec<Self>> {
+    pub async fn load_all(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
         Self::build_query(filter)
             .build_query_as()
             .fetch_all(pool)
@@ -144,7 +137,7 @@ impl Project {
             .map_err(|e| e.into())
     }
 
-    pub async fn fetch_samples(
+    pub async fn load_samples(
         &mut self,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpec<allocation::SortField>>,
@@ -156,7 +149,7 @@ impl Project {
             fbuilder = fbuilder.push(filter);
         }
 
-        self.allocations = Allocation::fetch_all(Some(fbuilder.build()), sort, pool).await?;
+        self.allocations = Allocation::load_all(Some(fbuilder.build()), sort, pool).await?;
         Ok(())
     }
 

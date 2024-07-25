@@ -48,7 +48,7 @@ async fn show_allocation(
     Path((projectid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure that this is our sample
-    let mut allocation = Allocation::fetch_one(
+    let mut allocation = Allocation::load_one(
         Some(
             CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
@@ -60,12 +60,12 @@ async fn show_allocation(
     )
     .await?;
 
-    allocation.fetch_notes(&state.dbpool).await?;
+    allocation.load_notes(&state.dbpool).await?;
     allocation
         .sample
         .taxon
         .object_mut()?
-        .fetch_germination_info(&state.dbpool)
+        .load_germination_info(&state.dbpool)
         .await?;
     Ok(RenderHtml(
         key,
@@ -100,7 +100,7 @@ async fn add_allocation_note(
     };
 
     // just querying to make sure that this is our sample
-    let _alloc = match Allocation::fetch_one(
+    let _alloc = match Allocation::load_one(
         Some(
             CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
@@ -175,7 +175,7 @@ async fn show_add_allocation_note(
     State(state): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let allocation = Allocation::fetch_one(
+    let allocation = Allocation::load_one(
         Some(
             CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
@@ -203,7 +203,7 @@ async fn remove_allocation(
     Path((id, psid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut projects =
-        Project::fetch_all(Some(Arc::new(project::Filter::Id(id))), &state.dbpool).await?;
+        Project::load_all(Some(Arc::new(project::Filter::Id(id))), &state.dbpool).await?;
     let Some(c) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
@@ -225,8 +225,8 @@ async fn delete_note(
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can delete
-    let mut note = Note::fetch(noteid, &state.dbpool).await?;
-    let allocation = Allocation::fetch(note.psid, &state.dbpool).await?;
+    let mut note = Note::load(noteid, &state.dbpool).await?;
+    let allocation = Allocation::load(note.psid, &state.dbpool).await?;
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -247,8 +247,8 @@ async fn show_edit_note(
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
-    let note = Note::fetch(noteid, &state.dbpool).await?;
-    let allocation = Allocation::fetch(note.psid, &state.dbpool).await?;
+    let note = Note::load(noteid, &state.dbpool).await?;
+    let allocation = Allocation::load(note.psid, &state.dbpool).await?;
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -278,8 +278,8 @@ async fn modify_note(
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
-    let mut note = Note::fetch(noteid, &state.dbpool).await?;
-    let allocation = Allocation::fetch(note.psid, &state.dbpool).await?;
+    let mut note = Note::load(noteid, &state.dbpool).await?;
+    let allocation = Allocation::load(note.psid, &state.dbpool).await?;
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
