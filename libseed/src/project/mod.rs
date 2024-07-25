@@ -36,10 +36,6 @@ pub struct Project {
 impl Loadable for Project {
     type Id = i64;
 
-    fn invalid_id() -> Self::Id {
-        -1
-    }
-
     fn id(&self) -> Self::Id {
         self.id
     }

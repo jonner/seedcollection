@@ -58,10 +58,6 @@ pub struct Note {
 impl Loadable for Note {
     type Id = i64;
 
-    fn invalid_id() -> Self::Id {
-        -1
-    }
-
     fn id(&self) -> Self::Id {
         self.id
     }

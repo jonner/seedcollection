@@ -43,10 +43,6 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
 impl Loadable for Source {
     type Id = i64;
 
-    fn invalid_id() -> Self::Id {
-        -1
-    }
-
     fn id(&self) -> Self::Id {
         self.id
     }

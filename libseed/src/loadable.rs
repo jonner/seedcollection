@@ -8,11 +8,20 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite};
 
+pub trait Indexable {
+    fn invalid_value() -> Self;
+}
+
+impl Indexable for i64 {
+    fn invalid_value() -> Self {
+        -1
+    }
+}
+
 #[async_trait]
 pub trait Loadable {
-    type Id: Clone + Send;
+    type Id: Clone + Send + Indexable;
 
-    fn invalid_id() -> Self::Id;
     fn id(&self) -> Self::Id;
     fn set_id(&mut self, id: Self::Id);
     async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self>
@@ -21,7 +30,7 @@ pub trait Loadable {
 
     async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         Self::delete_id(&self.id(), pool).await.map(|r| {
-            self.set_id(Self::invalid_id());
+            self.set_id(Self::Id::invalid_value());
             r
         })
     }
