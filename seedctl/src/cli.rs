@@ -27,7 +27,8 @@ pub enum Commands {
         about = "Manage seed sources",
         after_help = "A seed source is a way to track the origin of a particular seed sample. It could be a geographical location where it was collected, or a commercial supplier, or anything else you want to track."
     )]
-    Source {
+    #[clap(alias = "source")]
+    Sources {
         #[command(subcommand)]
         command: SourceCommands,
     },
@@ -35,7 +36,8 @@ pub enum Commands {
         about = "Manage seed samples",
         after_help = "A seed sample is a specific acquisition of a single type of seeds. It could be a purchased pack of seeds, or a single collection event from a specific location."
     )]
-    Sample {
+    #[clap(alias = "sample")]
+    Samples {
         #[command(subcommand)]
         command: SampleCommands,
     },
@@ -43,7 +45,8 @@ pub enum Commands {
         about = "Manage seed projects",
         after_help = "A project is simply a way to keep track of groups of seed samples. For example, if you want to use certain seed samples for a particular planting event, you could create a project for that event and add all of those samples to the project."
     )]
-    Project {
+    #[clap(alias = "project")]
+    Projects {
         #[command(subcommand)]
         command: ProjectCommands,
     },

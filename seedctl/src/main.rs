@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
             println!("Logged in as user '{}'", cfg.username);
             Ok(())
         }
-        Commands::Project { command } => match command {
+        Commands::Projects { command } => match command {
             ProjectCommands::List {} => {
                 let projects = Project::load_all(None, &dbpool).await?;
                 let mut table = Table::new(projects.iter().map(|val| ProjectRow::new(&val)));
@@ -164,7 +164,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
-        Commands::Source { command } => match command {
+        Commands::Sources { command } => match command {
             SourceCommands::List { full } => {
                 let sources = Source::load_all(None, &dbpool).await?;
                 let mut table = match full {
@@ -275,7 +275,7 @@ async fn main() -> Result<()> {
                 Ok(())
             }
         },
-        Commands::Sample { command } => match command {
+        Commands::Samples { command } => match command {
             SampleCommands::List {
                 full,
                 user: useronly,
