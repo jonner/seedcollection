@@ -9,6 +9,7 @@ use libseed::{
     source::Source,
     taxonomy::{filter_by, Germination, Taxon},
     user::{User, UserStatus},
+    Error::DatabaseRowNotFound,
 };
 use sqlx::SqlitePool;
 use std::io::{stdin, stdout, Write};
@@ -142,27 +143,33 @@ async fn main() -> Result<()> {
                 println!("Removed sample from project");
                 Ok(())
             }
-            ProjectCommands::Show { id, full } => {
-                let mut projectinfo = Project::load(id, &dbpool).await?;
-                projectinfo.load_samples(None, None, &dbpool).await?;
-                let mut table = match full {
-                    true => Table::new(
-                        projectinfo
-                            .allocations
-                            .iter()
-                            .map(|alloc| AllocationRowFull::new(alloc).unwrap()),
-                    ),
-                    false => Table::new(
-                        projectinfo
-                            .allocations
-                            .iter()
-                            .map(|alloc| AllocationRow::new(alloc).unwrap()),
-                    ),
-                };
-                println!("{}\n", table.styled());
-                println!("{} records found", table.count_rows());
-                Ok(())
-            }
+            ProjectCommands::Show { id, full } => match Project::load(id, &dbpool).await {
+                Ok(mut projectinfo) => {
+                    projectinfo.load_samples(None, None, &dbpool).await?;
+                    let mut table = match full {
+                        true => Table::new(
+                            projectinfo
+                                .allocations
+                                .iter()
+                                .map(|alloc| AllocationRowFull::new(alloc).unwrap()),
+                        ),
+                        false => Table::new(
+                            projectinfo
+                                .allocations
+                                .iter()
+                                .map(|alloc| AllocationRow::new(alloc).unwrap()),
+                        ),
+                    };
+                    println!("{}\n", table.styled());
+                    println!("{} records found", table.count_rows());
+                    Ok(())
+                }
+                Err(DatabaseRowNotFound(_)) => {
+                    println!("Project {id} not found");
+                    Ok(())
+                }
+                Err(e) => Err(e.into()),
+            },
         },
         Commands::Sources { command } => match command {
             SourceCommands::List { full } => {
@@ -175,15 +182,21 @@ async fn main() -> Result<()> {
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
-            SourceCommands::Show { id } => {
-                let src = Source::load(id, &dbpool).await?;
-                let tbuilder = Table::builder(vec![SourceRowFull::new(&src)])
-                    .index()
-                    .column(0)
-                    .transpose();
-                println!("{}\n", tbuilder.build().styled());
-                Ok(())
-            }
+            SourceCommands::Show { id } => match Source::load(id, &dbpool).await {
+                Ok(src) => {
+                    let tbuilder = Table::builder(vec![SourceRowFull::new(&src)])
+                        .index()
+                        .column(0)
+                        .transpose();
+                    println!("{}\n", tbuilder.build().styled());
+                    Ok(())
+                }
+                Err(DatabaseRowNotFound(_)) => {
+                    println!("Source {id} not found");
+                    Ok(())
+                }
+                Err(e) => Err(e.into()),
+            },
             SourceCommands::Add {
                 interactive,
                 name,
@@ -313,17 +326,22 @@ async fn main() -> Result<()> {
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
-            SampleCommands::Show { id } => {
-                let mut sample = Sample::load(id, &dbpool).await?;
-
-                let tbuilder =
-                    Table::builder(vec![SampleRowDetails::new(&mut sample, &dbpool).await?])
-                        .index()
-                        .column(0)
-                        .transpose();
-                println!("{}\n", tbuilder.build().styled());
-                Ok(())
-            }
+            SampleCommands::Show { id } => match Sample::load(id, &dbpool).await {
+                Ok(mut sample) => {
+                    let tbuilder =
+                        Table::builder(vec![SampleRowDetails::new(&mut sample, &dbpool).await?])
+                            .index()
+                            .column(0)
+                            .transpose();
+                    println!("{}\n", tbuilder.build().styled());
+                    Ok(())
+                }
+                Err(DatabaseRowNotFound(_)) => {
+                    println!("Sample {id} not found");
+                    Ok(())
+                }
+                Err(e) => Err(e.into()),
+            },
             SampleCommands::Add {
                 interactive,
                 taxon,
@@ -560,16 +578,22 @@ async fn main() -> Result<()> {
                 println!("{} records found", table.count_rows());
                 Ok(())
             }
-            TaxonomyCommands::Show { id } => {
-                let mut taxon = Taxon::load(id, &dbpool).await?;
-                let tbuilder =
-                    Table::builder(vec![TaxonRowDetails::new(&mut taxon, &dbpool).await?])
-                        .index()
-                        .column(0)
-                        .transpose();
-                println!("{}\n", tbuilder.build().styled());
-                Ok(())
-            }
+            TaxonomyCommands::Show { id } => match Taxon::load(id, &dbpool).await {
+                Ok(mut taxon) => {
+                    let tbuilder =
+                        Table::builder(vec![TaxonRowDetails::new(&mut taxon, &dbpool).await?])
+                            .index()
+                            .column(0)
+                            .transpose();
+                    println!("{}\n", tbuilder.build().styled());
+                    Ok(())
+                }
+                Err(DatabaseRowNotFound(_)) => {
+                    println!("Taxon {id} not found");
+                    Ok(())
+                }
+                Err(e) => Err(e.into()),
+            },
         },
         Commands::Admin { command } => match command {
             AdminCommands::User { command } => match command {
