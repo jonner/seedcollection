@@ -263,7 +263,8 @@ pub enum AdminCommands {
         about = "Manage users",
         after_help = "The database can track the collections of multiple users. This command can be used to manage the users defined for this database."
     )]
-    User {
+    #[clap(alias = "user")]
+    Users {
         #[command(subcommand)]
         command: UserCommands,
     },

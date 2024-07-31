@@ -39,7 +39,7 @@ pub async fn handle_command(
     dbpool: &Pool<Sqlite>,
 ) -> Result<()> {
     match command {
-        AdminCommands::User { command } => match command {
+        AdminCommands::Users { command } => match command {
             UserCommands::List {} => {
                 let users = User::load_all(dbpool).await?;
                 let mut table = Table::new(users.iter().map(|u| UserRow::new(u)));
