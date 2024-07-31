@@ -313,13 +313,6 @@ pub enum GerminationCommands {
         #[arg(
             long,
             short,
-            exclusive(true),
-            help = "Modify the germination code with interactive prompts"
-        )]
-        interactive: bool,
-        #[arg(
-            long,
-            short,
             help = "A short code representing the germination requirements"
         )]
         code: Option<String>,

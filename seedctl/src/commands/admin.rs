@@ -106,14 +106,13 @@ pub async fn handle_command(
             }
             GerminationCommands::Modify {
                 id,
-                interactive,
                 code,
                 summary,
                 description,
             } => {
                 let oldval = Germination::load(id, dbpool).await?;
                 let mut newval = oldval.clone();
-                if interactive {
+                if code.is_none() && summary.is_none() && description.is_none() {
                     println!("Modifying Germination code {id}. Pres <esc to skip any field.");
                     println!("Current code: '{}'", oldval.code);
                     if let Some(code) = inquire::Text::new("Code:").prompt_skippable()? {
@@ -151,11 +150,6 @@ pub async fn handle_command(
                         newval.description = Some(description);
                     }
                 } else {
-                    if code.is_none() && summary.is_none() && description.is_none() {
-                        return Err(anyhow!(
-                            "No fields specified. Cannot modify germination code."
-                        ));
-                    }
                     if let Some(code) = code {
                         newval.code = code;
                     }
