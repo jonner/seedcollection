@@ -40,14 +40,18 @@ pub async fn handle_command(
             Err(e) => Err(e.into()),
         },
         SourceCommands::Add {
-            interactive,
             name,
             description,
             latitude,
             longitude,
             userid,
         } => {
-            let mut source = if interactive {
+            let userid = userid.unwrap_or(user.id);
+            let mut source = if name.is_none()
+                && description.is_none()
+                && latitude.is_none()
+                && longitude.is_none()
+            {
                 let name = inquire::Text::new("Name:").prompt()?;
                 let description = inquire::Text::new("Description:").prompt_skippable()?;
                 let latitude = inquire::CustomType::<f64>::new("Latitude:")
@@ -78,14 +82,14 @@ pub async fn handle_command(
                     return Err(anyhow!("Aborted"));
                 }
 
-                Source::new(name, description, latitude, longitude, user.id)
+                Source::new(name, description, latitude, longitude, userid)
             } else {
                 Source::new(
                     name.ok_or_else(|| anyhow!("No name specified"))?,
                     description,
                     latitude,
                     longitude,
-                    userid.unwrap_or(user.id),
+                    userid,
                 )
             };
 

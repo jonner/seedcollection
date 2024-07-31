@@ -126,8 +126,6 @@ pub enum SourceCommands {
     Show { id: i64 },
     #[command(about = "Add a new source to the database")]
     Add {
-        #[arg(short, long, exclusive(true))]
-        interactive: bool,
         #[arg(long)]
         name: Option<String>,
         #[arg(long)]
