@@ -186,8 +186,6 @@ pub enum SampleCommands {
     Show { id: i64 },
     #[command(about = "Add a new sample to the database")]
     Add {
-        #[arg(short, long, exclusive(true))]
-        interactive: bool,
         #[arg(short, long)]
         taxon: Option<i64>,
         #[arg(short, long)]
@@ -200,10 +198,10 @@ pub enum SampleCommands {
         quantity: Option<i64>,
         #[arg(short, long)]
         notes: Option<String>,
-        #[arg(short, long)]
-        userid: Option<i64>,
         #[arg(short = '?', long)]
         uncertain: bool,
+        #[arg(short, long)]
+        userid: Option<i64>,
     },
     #[command(about = "Remove an existing sample from the database")]
     Remove { id: i64 },

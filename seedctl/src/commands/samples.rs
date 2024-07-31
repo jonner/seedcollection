@@ -9,7 +9,7 @@ use libseed::{
     loadable::{ExternalRef, Loadable},
     sample::{self, Certainty, Sample},
     user::User,
-    Error::DatabaseRowNotFound,
+    Error::{AuthUserNotFound, DatabaseRowNotFound},
 };
 use sqlx::{Pool, Sqlite};
 use tabled::Table;
@@ -72,19 +72,34 @@ pub async fn handle_command(
             Err(e) => Err(e.into()),
         },
         SampleCommands::Add {
-            interactive,
             taxon,
             source,
             month,
             year,
             quantity,
             notes,
-            userid,
             uncertain,
+            userid,
         } => {
-            let mut sample = if interactive {
+            let userid = match userid {
+                Some(id) => {
+                    let _ = User::load(id, &dbpool)
+                        .await
+                        .map_err(|_| AuthUserNotFound)?;
+                    id
+                }
+                None => user.id,
+            };
+            let mut sample = if taxon.is_none()
+                && source.is_none()
+                && month.is_none()
+                && year.is_none()
+                && quantity.is_none()
+                && notes.is_none()
+                && !uncertain
+            {
                 let taxon = TaxonIdPrompt::new("Taxon:", dbpool).prompt()?;
-                let source = SourceIdPrompt::new("Source:", user.id, dbpool).prompt()?;
+                let source = SourceIdPrompt::new("Source:", userid, dbpool).prompt()?;
                 let month = inquire::CustomType::<u32>::new("Month:").prompt_skippable()?;
                 let year = inquire::CustomType::<u32>::new("Year:").prompt_skippable()?;
                 let quantity = inquire::CustomType::<i64>::new("Quantity:").prompt_skippable()?;
@@ -105,7 +120,7 @@ pub async fn handle_command(
                 }
 
                 Sample::new(
-                    taxon, user.id, source, month, year, quantity, notes, certainty,
+                    taxon, userid, source, month, year, quantity, notes, certainty,
                 )
             } else {
                 let certainty = match uncertain {
@@ -114,7 +129,7 @@ pub async fn handle_command(
                 };
                 Sample::new(
                     taxon.ok_or_else(|| anyhow!("Taxon not specified"))?,
-                    userid.unwrap_or(user.id),
+                    userid,
                     source.ok_or(anyhow!("No source ID provided"))?,
                     month,
                     year,
