@@ -147,7 +147,6 @@ pub async fn handle_command(
             Ok(())
         }
         SampleCommands::Modify {
-            interactive,
             id,
             taxon,
             source,
@@ -155,21 +154,20 @@ pub async fn handle_command(
             year,
             quantity,
             notes,
+            certain,
+            uncertain,
         } => {
+            let oldsample = Sample::load(id, dbpool).await?;
+            let mut sample = oldsample.clone();
             if taxon.is_none()
                 && source.is_none()
                 && month.is_none()
                 && year.is_none()
                 && quantity.is_none()
                 && notes.is_none()
-                && !interactive
+                && !certain
+                && !uncertain
             {
-                return Err(anyhow!("Cannot modify without new values"));
-            }
-
-            let oldsample = Sample::load(id, dbpool).await?;
-            let mut sample = oldsample.clone();
-            if interactive {
                 println!("Interactively modifying sample {id}. Press <esc> to skip any field.");
                 let current = sample.taxon.object()?;
                 println!("Current taxon: {}. {}", current.id, current.complete_name);
@@ -279,6 +277,15 @@ pub async fn handle_command(
                 }
                 if let Some(quantity) = quantity {
                     sample.quantity = Some(quantity.into());
+                }
+                match (certain, uncertain) {
+                    (true, false) => sample.certainty = Certainty::Certain,
+                    (false, true) => sample.certainty = Certainty::Uncertain,
+                    // should never happen due to cli arg conflict definitions
+                    (true, true) => {
+                        return Err(anyhow!("Sample cannot be both certain and uncertain"))
+                    }
+                    _ => (),
                 }
             }
             if oldsample != sample {

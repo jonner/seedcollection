@@ -205,20 +205,10 @@ pub enum SampleCommands {
     },
     #[command(about = "Remove an existing sample from the database")]
     Remove { id: i64 },
-    #[command(
-        group(
-            clap::ArgGroup::new("modifyargs")
-                .required(false)
-                .multiple(true)
-                .conflicts_with("interactive")
-                .args(&["taxon", "source", "month", "year", "quantity", "notes"]),
-        ),
-        about="Modify properties of a sample")]
+    #[command(about = "Modify properties of a sample")]
     #[clap(alias = "edit")]
     Modify {
         id: i64,
-        #[arg(short, long, conflicts_with("modifyargs"))]
-        interactive: bool,
         #[arg(long)]
         taxon: Option<i64>,
         #[arg(long)]
@@ -231,6 +221,10 @@ pub enum SampleCommands {
         quantity: Option<u32>,
         #[arg(short, long)]
         notes: Option<String>,
+        #[arg(long)]
+        certain: bool,
+        #[arg(long, conflicts_with("certain"))]
+        uncertain: bool,
     },
 }
 
