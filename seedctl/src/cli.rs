@@ -84,7 +84,6 @@ pub enum ProjectCommands {
                 .args(&["name", "description"]),
         ))]
     Modify {
-        #[arg(short, long)]
         id: i64,
         #[arg(short, long)]
         name: Option<String>,
@@ -150,7 +149,6 @@ pub enum SourceCommands {
                 .args(&["name", "description", "latitude", "longitude"]),
         ))]
     Modify {
-        #[arg(long)]
         id: i64,
         #[arg(long)]
         name: Option<String>,
@@ -219,10 +217,9 @@ pub enum SampleCommands {
         ),
         about="Modify properties of a sample")]
     Modify {
+        id: i64,
         #[arg(short, long, conflicts_with("modifyargs"))]
         interactive: bool,
-        #[arg(long)]
-        id: i64,
         #[arg(long)]
         taxon: Option<i64>,
         #[arg(long)]
@@ -301,7 +298,6 @@ pub enum UserCommands {
                 .args(&["username", "change_password"]),
         ))]
     Modify {
-        #[arg(long)]
         id: i64,
         #[arg(long)]
         username: Option<String>,
