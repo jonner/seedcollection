@@ -307,6 +307,7 @@ pub enum UserCommands {
 pub enum GerminationCommands {
     #[command(about = "List all germination codes")]
     List {},
+    #[command(about = "Modify properties of a germination code")]
     #[clap(alias = "edit")]
     Modify {
         id: i64,
