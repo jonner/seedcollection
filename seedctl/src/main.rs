@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
                 }
                 let mut table = Table::new(taxa.iter().map(|t| TaxonRow::new(t)));
                 println!("{}\n", table.styled());
-                println!("{} records found", table.count_rows());
+                println!("{} records found", taxa.len());
                 Ok(())
             }
             TaxonomyCommands::Show { id } => match Taxon::load(id, &dbpool).await {

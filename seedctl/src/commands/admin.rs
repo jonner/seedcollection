@@ -44,7 +44,7 @@ pub async fn handle_command(
                 let users = User::load_all(dbpool).await?;
                 let mut table = Table::new(users.iter().map(|u| UserRow::new(u)));
                 println!("{}\n", table.styled());
-                println!("{} records found", table.count_rows());
+                println!("{} records found", users.len());
                 Ok(())
             }
             UserCommands::Add {

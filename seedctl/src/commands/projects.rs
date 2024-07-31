@@ -22,7 +22,7 @@ pub async fn handle_command(
             let projects = Project::load_all(None, dbpool).await?;
             let mut table = Table::new(projects.iter().map(|val| ProjectRow::new(&val)));
             println!("{}\n", table.styled());
-            println!("{} records found", table.count_rows());
+            println!("{} records found", projects.len());
             Ok(())
         }
         ProjectCommands::Add {
@@ -95,7 +95,7 @@ pub async fn handle_command(
                     ),
                 };
                 println!("{}\n", table.styled());
-                println!("{} records found", table.count_rows());
+                println!("{} records found", projectinfo.allocations.len());
                 Ok(())
             }
             Err(DatabaseRowNotFound(_)) => {

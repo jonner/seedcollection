@@ -26,7 +26,7 @@ pub async fn handle_command(
                 false => Table::new(sources.iter().map(|src| SourceRow::new(src))),
             };
             println!("{}\n", table.styled());
-            println!("{} records found", table.count_rows());
+            println!("{} records found", sources.len());
             Ok(())
         }
         SourceCommands::Show { id } => match Source::load(id, &dbpool).await {

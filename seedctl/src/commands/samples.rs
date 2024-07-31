@@ -52,7 +52,7 @@ pub async fn handle_command(
                 false => Table::new(samples.iter().map(|sample| SampleRow::new(sample).unwrap())),
             };
             println!("{}\n", table.styled());
-            println!("{} records found", table.count_rows());
+            println!("{} records found", samples.len());
             Ok(())
         }
         SampleCommands::Show { id } => match Sample::load(id, dbpool).await {
