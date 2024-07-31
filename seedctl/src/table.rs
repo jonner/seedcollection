@@ -97,11 +97,15 @@ fn table_display_germination(germ: &Option<Vec<Germination>>) -> String {
 }
 
 fn table_display_allocations(allocations: &Vec<Allocation>) -> String {
-    allocations
+    let s = allocations
         .iter()
         .map(|a| format!("{} ({})", a.project.name, a.project.id))
         .collect::<Vec<String>>()
-        .join("\n")
+        .join("\n");
+    match s.is_empty() {
+        true => "Not allocated to any project".to_string(),
+        false => s,
+    }
 }
 
 #[derive(Tabled)]
