@@ -7,7 +7,7 @@ use crate::{
     cli::{AdminCommands, GerminationCommands, UserCommands},
     table::{GerminationRow, SeedctlTable, UserRow},
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use libseed::{
     loadable::Loadable,
     taxonomy::Germination,
