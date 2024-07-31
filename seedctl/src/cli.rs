@@ -274,15 +274,21 @@ pub enum UserCommands {
     List {},
     #[command(about = "Add a new user to the database")]
     Add {
-        #[arg(long)]
+        #[arg(long, help = "A unique username for the user")]
         username: String,
-        #[arg(long)]
+        #[arg(long, help = "Email address for the user")]
         email: String,
-        #[arg(long)]
+        #[arg(
+            long,
+            help = "Optional path to a file containing the user's password. If not given, you will be prompted for your password"
+        )]
         passwordfile: Option<PathBuf>,
     },
     #[command(about = "Remove an existing user from the database")]
-    Remove { id: i64 },
+    Remove {
+        #[arg(help = "The user ID of the user to remove from the database")]
+        id: i64,
+    },
     #[command(
         about="Modify properties about a user",
         group(
@@ -293,13 +299,19 @@ pub enum UserCommands {
         ))]
     #[clap(alias = "edit")]
     Modify {
+        #[arg(help = "The user id of the user to modify")]
         id: i64,
-        #[arg(long)]
+        #[arg(long, help = "A new username for the user")]
         username: Option<String>,
-        #[arg(long, short = 'p')]
+        #[arg(long, short = 'p', help = "Change the user's password")]
         change_password: bool,
-        #[arg(long, short = 'f', requires("change_password"))]
-        password_file: Option<PathBuf>,
+        #[arg(
+            long,
+            short = 'f',
+            requires("change_password"),
+            help = "Optional path to a file containing the new password. If not given, you will be prompted for your password"
+        )]
+        passwordfile: Option<PathBuf>,
     },
 }
 

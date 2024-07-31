@@ -81,14 +81,14 @@ pub async fn handle_command(
                 id,
                 username,
                 change_password,
-                password_file,
+                passwordfile,
             } => {
                 let mut user = User::load(id, dbpool).await?;
                 if let Some(username) = username {
                     user.username = username;
                 }
                 if change_password {
-                    let password = get_password(password_file, None).await?;
+                    let password = get_password(passwordfile, None).await?;
                     user.change_password(&password)?;
                 }
                 user.update(dbpool)
