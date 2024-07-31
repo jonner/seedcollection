@@ -15,6 +15,9 @@ pub enum Error {
     #[error("invalid username: contains invalid characters")]
     AuthInvalidUsernameInvalidCharacters(String),
 
+    #[error("The user could not be found")]
+    AuthUserNotFound,
+
     #[error("invalid operation")]
     InvalidOperation(String),
 

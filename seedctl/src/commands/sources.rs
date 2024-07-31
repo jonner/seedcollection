@@ -4,7 +4,12 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use inquire::validator::Validation;
-use libseed::{loadable::Loadable, source::Source, user::User, Error::DatabaseRowNotFound};
+use libseed::{
+    loadable::Loadable,
+    source::Source,
+    user::User,
+    Error::{AuthUserNotFound, DatabaseRowNotFound},
+};
 use sqlx::{Pool, Sqlite};
 use tabled::Table;
 
@@ -46,7 +51,16 @@ pub async fn handle_command(
             longitude,
             userid,
         } => {
-            let userid = userid.unwrap_or(user.id);
+            let userid = match userid {
+                // check if the given userid is valid
+                Some(id) => {
+                    let _ = User::load(id, &dbpool)
+                        .await
+                        .map_err(|_e| AuthUserNotFound)?;
+                    id
+                }
+                None => user.id,
+            };
             let mut source = if name.is_none()
                 && description.is_none()
                 && latitude.is_none()
