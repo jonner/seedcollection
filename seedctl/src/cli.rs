@@ -83,6 +83,7 @@ pub enum ProjectCommands {
                 .multiple(true)
                 .args(&["name", "description"]),
         ))]
+    #[clap(alias = "edit")]
     Modify {
         id: i64,
         #[arg(short, long)]
@@ -148,6 +149,7 @@ pub enum SourceCommands {
                 .multiple(true)
                 .args(&["name", "description", "latitude", "longitude"]),
         ))]
+    #[clap(alias = "edit")]
     Modify {
         id: i64,
         #[arg(long)]
@@ -216,6 +218,7 @@ pub enum SampleCommands {
                 .args(&["taxon", "source", "month", "year", "quantity", "notes"]),
         ),
         about="Modify properties of a sample")]
+    #[clap(alias = "edit")]
     Modify {
         id: i64,
         #[arg(short, long, conflicts_with("modifyargs"))]
@@ -297,6 +300,7 @@ pub enum UserCommands {
                 .multiple(true)
                 .args(&["username", "change_password"]),
         ))]
+    #[clap(alias = "edit")]
     Modify {
         id: i64,
         #[arg(long)]
@@ -312,6 +316,7 @@ pub enum UserCommands {
 pub enum GerminationCommands {
     #[command(about = "List all germination codes")]
     List {},
+    #[clap(alias = "edit")]
     Modify {
         id: i64,
         #[arg(
