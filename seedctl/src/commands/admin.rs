@@ -73,10 +73,18 @@ pub async fn handle_command(
                 println!("{}: {}", id, username);
                 Ok(())
             }
-            UserCommands::Remove { id } => User::delete_id(&id, dbpool)
-                .await
-                .map(|_| ())
-                .with_context(|| "failed to remove user"),
+            UserCommands::Remove { id } => {
+                match inquire::Confirm::new("Really remove user?")
+                    .with_default(false)
+                    .prompt()?
+                {
+                    true => User::delete_id(&id, dbpool)
+                        .await
+                        .map(|_| ())
+                        .with_context(|| "failed to remove user"),
+                    false => Ok(()),
+                }
+            }
             UserCommands::Modify {
                 id,
                 username,
