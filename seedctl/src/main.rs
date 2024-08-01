@@ -1,3 +1,7 @@
+use crate::cli::*;
+use crate::config::*;
+use crate::table::SeedctlTable;
+use crate::table::*;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use libseed::{
@@ -7,13 +11,9 @@ use libseed::{
     Error::DatabaseRowNotFound,
 };
 use sqlx::SqlitePool;
+use std::path::PathBuf;
 use tabled::Table;
 use tracing::debug;
-
-use crate::cli::*;
-use crate::config::*;
-use crate::table::SeedctlTable;
-use crate::table::*;
 
 mod cli;
 mod commands;
@@ -29,6 +29,21 @@ async fn main() -> Result<()> {
     let config_file = xdgdirs.place_config_file("seedctl/config")?;
     let cfg = match &args.command {
         Commands::Login { username, database } => {
+            let username = username
+                .as_ref()
+                .cloned()
+                .or_else(|| inquire::Text::new("Username:").prompt().ok())
+                .ok_or_else(|| anyhow!("No username specified"))?;
+            let database = database
+                .as_ref()
+                .cloned()
+                .or_else(|| {
+                    inquire::Text::new("Database path:")
+                        .prompt()
+                        .map(|p| PathBuf::from(p))
+                        .ok()
+                })
+                .ok_or_else(|| anyhow!("No database specified"))?;
             let pwd = inquire::Password::new("Password:")
                 .with_display_toggle_enabled()
                 .with_display_mode(inquire::PasswordDisplayMode::Masked)

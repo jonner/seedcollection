@@ -13,10 +13,10 @@ pub struct Cli {
 pub enum Commands {
     #[command(about = "Login to the database")]
     Login {
-        #[arg(short, long, required(true))]
-        username: String,
-        #[arg(short, long, required(true))]
-        database: PathBuf,
+        #[arg(short, long)]
+        username: Option<String>,
+        #[arg(short, long)]
+        database: Option<PathBuf>,
     },
     #[command(
         about = "Show current config status",
