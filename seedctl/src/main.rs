@@ -2,17 +2,16 @@ use crate::cli::*;
 use crate::config::*;
 use crate::table::SeedctlTable;
 use crate::table::*;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use libseed::{
     loadable::Loadable,
     taxonomy::{filter_by, Taxon},
-    user::User,
     Error::DatabaseRowNotFound,
 };
-use sqlx::SqlitePool;
 use std::path::PathBuf;
 use tabled::Table;
+use tokio::fs;
 use tracing::debug;
 
 mod cli;
@@ -27,7 +26,7 @@ async fn main() -> Result<()> {
     let args = Cli::parse();
     let xdgdirs = xdg::BaseDirectories::new()?;
     let config_file = xdgdirs.place_config_file("seedctl/config")?;
-    let cfg = match &args.command {
+    match &args.command {
         Commands::Login { username, database } => {
             let username = username
                 .as_ref()
@@ -50,26 +49,33 @@ async fn main() -> Result<()> {
                 .without_confirmation()
                 .prompt()?;
             let cfg = Config::new(username.clone(), pwd, database.clone());
-            cfg.save_to_file(&config_file).await.map(|_| cfg)
+            cfg.validate().await?;
+            cfg.save_to_file(&config_file).await?;
+            println!("Logged in as {username}");
+            return Ok(());
         }
-        _ => config::Config::load_from_file(&config_file).await,
-    }
-    .with_context(|| "Must log in before issuing any other commands")?;
+        Commands::Logout => {
+            fs::remove_file(&config_file)
+                .await
+                .or_else(|e| match e.kind() {
+                    std::io::ErrorKind::NotFound => Ok(()),
+                    _ => Err(anyhow::Error::from(e)),
+                })?;
+            println!("Logged out");
+            return Ok(());
+        }
+        _ => (),
+    };
 
+    let cfg = config::Config::load_from_file(&config_file).await?;
     debug!(?cfg.username, ?cfg.database, "logging in");
-    let dbpool =
-        SqlitePool::connect(&format!("sqlite://{}", cfg.database.to_string_lossy())).await?;
-    sqlx::migrate!("../db/migrations").run(&dbpool).await?;
-    let user = User::load_by_username(&cfg.username, &dbpool)
-        .await
-        .with_context(|| "Failed to fetch user from database".to_string())?
-        .ok_or_else(|| anyhow!("Unable to find user {}", cfg.username))?;
-    user.verify_password(&cfg.password)?;
+    let (dbpool, user) = cfg.validate().await?;
 
     match args.command {
         Commands::Login { .. } => {
             Ok(()) // already handled above
         }
+        Commands::Logout => Ok(()),
         Commands::Status => {
             println!("Using database '{}'", cfg.database.to_string_lossy());
             println!("Logged in as user '{}'", cfg.username);

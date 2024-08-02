@@ -18,6 +18,8 @@ pub enum Commands {
         #[arg(short, long)]
         database: Option<PathBuf>,
     },
+    #[command(about = "Log out of the database")]
+    Logout,
     #[command(
         about = "Show current config status",
         after_help = "Shows the current configuration, including the path to the database and the logged in user"
