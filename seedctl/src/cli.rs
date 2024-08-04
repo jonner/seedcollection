@@ -123,6 +123,8 @@ pub enum SourceCommands {
     List {
         #[arg(short, long)]
         full: bool,
+        #[arg(long)]
+        filter: Option<String>,
     },
     #[command(about = "Show details about a single source")]
     Show { id: i64 },

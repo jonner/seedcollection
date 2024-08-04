@@ -5,8 +5,9 @@ use crate::{
 use anyhow::{anyhow, Result};
 use inquire::validator::Validation;
 use libseed::{
+    filter::{Cmp, CompoundFilter, Op},
     loadable::Loadable,
-    source::Source,
+    source::{self, Source},
     user::User,
     Error::{AuthUserNotFound, DatabaseRowNotFound},
 };
@@ -19,8 +20,14 @@ pub async fn handle_command(
     dbpool: &Pool<Sqlite>,
 ) -> Result<()> {
     match command {
-        SourceCommands::List { full } => {
-            let sources = Source::load_all(None, &dbpool).await?;
+        SourceCommands::List { full, filter } => {
+            let filter = filter.map(|f| {
+                CompoundFilter::builder(Op::Or)
+                    .push(source::Filter::Name(Cmp::Like, f.clone()))
+                    .push(source::Filter::Description(Cmp::Like, f.clone()))
+                    .build()
+            });
+            let sources = Source::load_all(filter, &dbpool).await?;
             let mut table = match full {
                 true => Table::new(sources.iter().map(|src| SourceRowFull::new(src))),
                 false => Table::new(sources.iter().map(|src| SourceRow::new(src))),
