@@ -1,4 +1,6 @@
-use anyhow::{anyhow, Result};
+use std::convert;
+
+use anyhow::Result;
 use inquire::{autocompletion::Autocomplete, CustomUserError};
 use libseed::{
     filter::{Cmp, CompoundFilter, Op},
@@ -6,6 +8,16 @@ use libseed::{
     taxonomy::{quickfind, Taxon},
 };
 use sqlx::{Pool, Sqlite};
+
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Internal Error: completion format was incorrect")]
+    CompletionIdFormatMissingDot,
+    #[error("Internal Error: unable to parse an integer from completion")]
+    CompletionIdFormatParseFailure,
+    #[error("Prompt Error")]
+    PromptError(#[from] inquire::InquireError),
+}
 
 pub struct TaxonIdPrompt<'a> {
     text: inquire::Text<'a>,
@@ -20,7 +32,7 @@ impl<'a> TaxonIdPrompt<'a> {
         }
     }
 
-    pub fn prompt(self) -> Result<i64> {
+    pub fn prompt(self) -> Result<i64, Error> {
         let res = self.text.prompt()?;
         // HACK -- the completer generates a string with the following format:
         // $DBID. Genus Species
@@ -93,7 +105,7 @@ impl<'a> SourceIdPrompt<'a> {
         }
     }
 
-    pub fn prompt(self) -> Result<i64> {
+    pub fn prompt(self) -> Result<i64, Error> {
         let res = self.text.prompt()?;
         // HACK -- the completer generates a string with the following format:
         // $DBID. Source name
@@ -151,10 +163,15 @@ impl Autocomplete for SourceCompleter {
 // This is a hack that relies on the conventions above for autocompleting items from the database.
 // The autocompletion suggestions have the form "$DBID. $DESCRIPTION"
 // This code simply splits the string at the first '.' character and returns the ID before that.
-fn extract_dbid(s: &str) -> Result<i64> {
+fn extract_dbid(s: &str) -> Result<i64, Error> {
     s.split('.')
         .next()
-        .map(|s| s.trim().parse::<i64>())
-        .ok_or_else(|| anyhow!("Internal Error: Couldn't extract database ID"))?
-        .map_err(|e| e.into())
+        .map(|s| {
+            s.trim()
+                .parse::<i64>()
+                .map_err(|_| Error::CompletionIdFormatParseFailure)
+        })
+        .ok_or_else(|| Error::CompletionIdFormatMissingDot)
+        // flatten from Result<Result<T>> to Result<T>
+        .and_then(convert::identity)
 }
