@@ -15,8 +15,8 @@ pub enum Error {
     CompletionIdFormatMissingDot,
     #[error("Internal Error: unable to parse an integer from completion")]
     CompletionIdFormatParseFailure,
-    #[error("Prompt Error")]
-    PromptError(#[from] inquire::InquireError),
+    #[error(transparent)]
+    Prompt(#[from] inquire::InquireError),
 }
 
 pub struct TaxonIdPrompt<'a> {

@@ -24,15 +24,15 @@ pub enum Error {
     #[error("Not Logged in")]
     NotLoggedIn,
     #[error("Failed to parse config file")]
-    ConfigParseFailed(#[source] serde_json::Error),
+    ConfigParseFailed(#[from] serde_json::Error),
     #[error("Incorrect username or password")]
     LoginFailure,
     #[error("Unable to connect to database")]
     DatabaseConnectionFailure,
     #[error("Unable to run database migrations")]
     DatabaseMigrationFailure,
-    #[error("General database error")]
-    DatabaseError,
+    #[error(transparent)]
+    Database(#[from] libseed::Error),
 }
 
 impl Config {
@@ -83,7 +83,7 @@ impl Config {
             .map_err(|_| Error::DatabaseMigrationFailure)?;
         let user = User::load_by_username(&self.username, &dbpool)
             .await
-            .map_err(|_| Error::DatabaseError)?
+            .map_err(Error::Database)?
             .ok_or_else(|| Error::LoginFailure)?;
         user.verify_password(&self.password)
             .map_err(|_| Error::LoginFailure)?;
