@@ -90,10 +90,10 @@ fn table_display_germination(germ: &Option<Vec<Germination>>) -> String {
                 .collect::<Vec<String>>()
                 .join("\n")
         })
-        .unwrap_or_else(|| "".to_string())
+        .unwrap_or_default()
 }
 
-fn table_display_allocations(allocations: &Vec<Allocation>) -> String {
+fn table_display_allocations(allocations: &[Allocation]) -> String {
     let s = allocations
         .iter()
         .map(|a| format!("{} ({})", a.project.name, a.project.id))
@@ -276,7 +276,7 @@ impl SourceRow {
     }
 }
 
-fn format_string_vec(names: &Vec<String>) -> String {
+fn format_string_vec(names: &[String]) -> String {
     names.join(",\n")
 }
 
@@ -323,7 +323,7 @@ pub struct TaxonRowDetails {
     samples: Vec<Sample>,
 }
 
-fn table_display_samples(samples: &Vec<Sample>) -> String {
+fn table_display_samples(samples: &[Sample]) -> String {
     samples
         .iter()
         .map(|s| {
@@ -397,7 +397,7 @@ pub struct GerminationRow {
 impl GerminationRow {
     pub fn new(g: &Germination) -> Self {
         Self {
-            id: g.id.clone(),
+            id: g.id,
             code: g.code.clone(),
             summary: g.summary.clone(),
             description: g.description.clone(),
