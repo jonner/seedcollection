@@ -83,9 +83,7 @@ pub async fn handle_command(
         } => {
             let userid = match userid {
                 Some(id) => {
-                    let _ = User::load(id, &dbpool)
-                        .await
-                        .map_err(|_| AuthUserNotFound)?;
+                    let _ = User::load(id, dbpool).await.map_err(|_| AuthUserNotFound)?;
                     id
                 }
                 None => user.id,

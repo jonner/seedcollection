@@ -27,7 +27,7 @@ pub async fn handle_command(
                     .push(source::Filter::Description(Cmp::Like, f.clone()))
                     .build()
             });
-            let sources = Source::load_all(filter, &dbpool).await?;
+            let sources = Source::load_all(filter, dbpool).await?;
             let mut table = match full {
                 true => Table::new(sources.iter().map(SourceRowFull::new)),
                 false => Table::new(sources.iter().map(SourceRow::new)),
@@ -36,7 +36,7 @@ pub async fn handle_command(
             println!("{} records found", sources.len());
             Ok(())
         }
-        SourceCommands::Show { id } => match Source::load(id, &dbpool).await {
+        SourceCommands::Show { id } => match Source::load(id, dbpool).await {
             Ok(src) => {
                 let tbuilder = Table::builder(vec![SourceRowFull::new(&src)])
                     .index()
@@ -61,7 +61,7 @@ pub async fn handle_command(
             let userid = match userid {
                 // check if the given userid is valid
                 Some(id) => {
-                    let _ = User::load(id, &dbpool)
+                    let _ = User::load(id, dbpool)
                         .await
                         .map_err(|_e| AuthUserNotFound)?;
                     id
@@ -114,12 +114,12 @@ pub async fn handle_command(
                 )
             };
 
-            let newid = source.insert(&dbpool).await?.last_insert_rowid();
+            let newid = source.insert(dbpool).await?.last_insert_rowid();
             println!("Added source {newid} to database");
             Ok(())
         }
         SourceCommands::Remove { id } => {
-            Source::delete_id(&id, &dbpool).await?;
+            Source::delete_id(&id, dbpool).await?;
             println!("Removed source {id} from database");
             Ok(())
         }
@@ -134,7 +134,7 @@ pub async fn handle_command(
             {
                 return Err(anyhow!("Cannot modify source without new values"));
             }
-            let mut src = Source::load(id, &dbpool).await?;
+            let mut src = Source::load(id, dbpool).await?;
             if let Some(name) = name {
                 src.name = name;
             }
@@ -147,7 +147,7 @@ pub async fn handle_command(
             if let Some(longitude) = longitude {
                 src.longitude = Some(longitude);
             }
-            src.update(&dbpool).await?;
+            src.update(dbpool).await?;
             println!("Modified source...");
             Ok(())
         }
