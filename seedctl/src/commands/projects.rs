@@ -20,7 +20,7 @@ pub async fn handle_command(
     match command {
         ProjectCommands::List {} => {
             let projects = Project::load_all(None, dbpool).await?;
-            let mut table = Table::new(projects.iter().map(|val| ProjectRow::new(&val)));
+            let mut table = Table::new(projects.iter().map(ProjectRow::new));
             println!("{}\n", table.styled());
             println!("{} records found", projects.len());
             Ok(())

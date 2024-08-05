@@ -48,7 +48,7 @@ impl Config {
         let p = path.as_ref();
         debug!(?p, "Trying to load login config");
         let contents = read_to_string(path).await.map_err(|_| Error::NotLoggedIn)?;
-        Self::parse(contents).map_err(|e| Error::ConfigParseFailed(e))
+        Self::parse(contents).map_err(Error::ConfigParseFailed)
     }
 
     pub async fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {

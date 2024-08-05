@@ -353,7 +353,7 @@ async fn main() -> Result<()> {
         .init();
 
     let args = Cli::parse();
-    let configdir = args.configdir.unwrap_or_else(|| config_dir());
+    let configdir = args.configdir.unwrap_or_else(config_dir);
     debug!(?configdir, "Configuration directory");
     let datadir = data_dir();
     debug!(?datadir, "Data directory");

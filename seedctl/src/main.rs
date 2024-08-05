@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
                 .or_else(|| {
                     inquire::Text::new("Database path:")
                         .prompt()
-                        .map(|p| PathBuf::from(p))
+                        .map(PathBuf::from)
                         .ok()
                 })
                 .ok_or_else(|| anyhow!("No database specified"))?;
@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
                 if taxa.is_empty() {
                     return Err(anyhow!("No results found"));
                 }
-                let mut table = Table::new(taxa.iter().map(|t| TaxonRow::new(t)));
+                let mut table = Table::new(taxa.iter().map(TaxonRow::new));
                 println!("{}\n", table.styled());
                 println!("{} records found", taxa.len());
                 Ok(())

@@ -29,8 +29,8 @@ pub async fn handle_command(
             });
             let sources = Source::load_all(filter, &dbpool).await?;
             let mut table = match full {
-                true => Table::new(sources.iter().map(|src| SourceRowFull::new(src))),
-                false => Table::new(sources.iter().map(|src| SourceRow::new(src))),
+                true => Table::new(sources.iter().map(SourceRowFull::new)),
+                false => Table::new(sources.iter().map(SourceRow::new)),
             };
             println!("{}\n", table.styled());
             println!("{} records found", sources.len());

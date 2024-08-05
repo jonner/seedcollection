@@ -42,7 +42,7 @@ pub async fn handle_command(
         AdminCommands::Users { command } => match command {
             UserCommands::List {} => {
                 let users = User::load_all(dbpool).await?;
-                let mut table = Table::new(users.iter().map(|u| UserRow::new(u)));
+                let mut table = Table::new(users.iter().map(UserRow::new));
                 println!("{}\n", table.styled());
                 println!("{} records found", users.len());
                 Ok(())
@@ -108,7 +108,7 @@ pub async fn handle_command(
         AdminCommands::Germination { command } => match command {
             GerminationCommands::List {} => {
                 let codes = Germination::load_all(dbpool).await?;
-                let mut table = Table::new(codes.iter().map(|g| GerminationRow::new(g)));
+                let mut table = Table::new(codes.iter().map(GerminationRow::new));
                 println!("{}\n", table.styled());
                 Ok(())
             }
