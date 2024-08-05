@@ -146,13 +146,7 @@ pub async fn handle_command(
                             .unwrap_or_else(|| "<null>".to_string())
                     );
                     if let Some(description) = inquire::Editor::new("Description:")
-                        .with_predefined_text(
-                            oldval
-                                .description
-                                .as_ref()
-                                .map(|v| v.as_str())
-                                .unwrap_or_else(|| ""),
-                        )
+                        .with_predefined_text(oldval.description.as_deref().unwrap_or_default())
                         .prompt_skippable()?
                     {
                         newval.description = Some(description);

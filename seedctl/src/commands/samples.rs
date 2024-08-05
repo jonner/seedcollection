@@ -230,13 +230,7 @@ pub async fn handle_command(
                         .unwrap_or_else(|| "<missing>".into())
                 );
                 if let Some(notes) = inquire::Editor::new("Notes:")
-                    .with_predefined_text(
-                        sample
-                            .notes
-                            .as_ref()
-                            .map(|v| v.as_str())
-                            .unwrap_or_else(|| ""),
-                    )
+                    .with_predefined_text(sample.notes.as_deref().unwrap_or_default())
                     .prompt_skippable()?
                 {
                     sample.notes = Some(notes);

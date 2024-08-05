@@ -84,10 +84,7 @@ fn table_display_germination(germ: &Option<Vec<Germination>>) -> String {
                     format!(
                         "{}: {}",
                         g.code.clone(),
-                        g.summary
-                            .as_ref()
-                            .map(|r| r.as_str())
-                            .unwrap_or_else(|| "Unknown")
+                        g.summary.as_deref().unwrap_or_else(|| "Unknown")
                     )
                 })
                 .collect::<Vec<String>>()
