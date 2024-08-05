@@ -1,6 +1,5 @@
 use std::convert;
 
-use anyhow::Result;
 use inquire::{autocompletion::Autocomplete, CustomUserError};
 use libseed::{
     filter::{Cmp, CompoundFilter, Op},
@@ -11,10 +10,10 @@ use sqlx::{Pool, Sqlite};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Internal Error: completion format was incorrect")]
-    CompletionIdFormatMissingDot,
-    #[error("Internal Error: unable to parse an integer from completion")]
-    CompletionIdFormatParseFailure,
+    #[error("Internal Error: completion format was incorrect for '{0}'")]
+    CompletionIdFormatMissingDot(String),
+    #[error("Internal Error: unable to parse an integer from '{0}'")]
+    CompletionIdFormatParseFailure(String),
     #[error(transparent)]
     Prompt(#[from] inquire::InquireError),
 }
@@ -166,12 +165,12 @@ impl Autocomplete for SourceCompleter {
 fn extract_dbid(s: &str) -> Result<i64, Error> {
     s.split('.')
         .next()
-        .map(|s| {
-            s.trim()
+        .map(|ns| {
+            ns.trim()
                 .parse::<i64>()
-                .map_err(|_| Error::CompletionIdFormatParseFailure)
+                .map_err(|_| Error::CompletionIdFormatParseFailure(ns.to_owned()))
         })
-        .ok_or_else(|| Error::CompletionIdFormatMissingDot)
+        .ok_or_else(|| Error::CompletionIdFormatMissingDot(s.to_owned()))
         // flatten from Result<Result<T>> to Result<T>
         .and_then(convert::identity)
 }
