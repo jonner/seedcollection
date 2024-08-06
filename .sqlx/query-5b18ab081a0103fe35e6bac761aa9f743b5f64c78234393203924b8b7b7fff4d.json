@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM sc_user_verification WHERE uvid=?",
+  "describe": {
+    "columns": [
+      {
+        "name": "uvid",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "userid",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "uvkey",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "uvrequested",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "uvexpiration",
+        "ordinal": 4,
+        "type_info": "Int64"
+      },
+      {
+        "name": "uvconfirmed",
+        "ordinal": 5,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5b18ab081a0103fe35e6bac761aa9f743b5f64c78234393203924b8b7b7fff4d"
+}

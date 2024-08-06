@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO sc_user_verification\n                (uvid, userid, uvkey, uvrequested, uvexpiration, uvconfirmed)\n            VALUES\n                (1, ?, ?, ?, 0, 0);\n            INSERT INTO sc_user_verification\n                (uvid, userid, uvkey, uvrequested, uvexpiration, uvconfirmed)\n            VALUES\n                (2, ?, ?, ?, 1, 0)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "1c86f838a1519a5daad7c2b2963f6303a5d4fdb21c2ebd0b0dc1ee614b7f2dc1"
+}
