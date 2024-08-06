@@ -1,8 +1,15 @@
+# Choose between podman and docker, preferring podman
+ifeq ($(shell command -v podman 2> /dev/null),)
+    CONTAINERCMD=docker
+else
+    CONTAINERCMD=podman
+endif
+
 container: Dockerfile config.yaml.docker
-	podman build -t seedweb:latest .
+	$(CONTAINERCMD) build -t seedweb:latest .
 
 run-container: container
-	podman run --detach \
+	$(CONTAINERCMD) run --detach \
 	--name seedweb \
 	--replace \
 	--tty \
