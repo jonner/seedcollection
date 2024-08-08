@@ -33,14 +33,19 @@ pub async fn handle_command(
                     .push(sample::Filter::Notes(libseed::filter::Cmp::Like, s.clone()));
                 fbuilder.build()
             });
-            let sort = sort.map(|v| {
-                match v {
-                    SampleSortField::Id => sample::Sort::Id,
-                    SampleSortField::Taxon => sample::Sort::TaxonSequence,
-                    SampleSortField::Name => sample::Sort::TaxonName,
-                    SampleSortField::Source => sample::Sort::SourceName,
+            let sort = sort.map(|vec| {
+                {
+                    sample::SortSpecs::from(
+                        vec.iter()
+                            .map(|v| match v {
+                                SampleSortField::Id => sample::Sort::Id,
+                                SampleSortField::Taxon => sample::Sort::TaxonSequence,
+                                SampleSortField::Name => sample::Sort::TaxonName,
+                                SampleSortField::Source => sample::Sort::SourceName,
+                            })
+                            .collect::<Vec<sample::Sort>>(),
+                    )
                 }
-                .into()
             });
             let samples = match useronly {
                 true => Sample::load_all_user(user.id, filter, sort, dbpool).await?,

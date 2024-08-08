@@ -183,8 +183,8 @@ pub enum SampleCommands {
         user: bool,
         #[arg(short, long)]
         limit: Option<String>,
-        #[arg(short, long)]
-        sort: Option<SampleSortField>,
+        #[arg(short, long, value_delimiter = ',')]
+        sort: Option<Vec<SampleSortField>>,
     },
     #[command(about = "Show details for a single sample")]
     Show { id: i64 },
