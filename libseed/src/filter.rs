@@ -127,13 +127,32 @@ pub enum SortOrder {
     Descending,
 }
 
+impl std::fmt::Display for SortOrder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Ascending => "ASC",
+                Self::Descending => "DESC",
+            }
+        )
+    }
+}
+
 /// An object that allows you to specify the sort for an SQL query
-pub struct SortSpec<T: ToString> {
+pub struct SortSpec<T: std::fmt::Display> {
     pub field: T,
     pub order: SortOrder,
 }
 
-impl<T: ToString> SortSpec<T> {
+impl<T: std::fmt::Display> std::fmt::Display for SortSpec<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.field, self.order)
+    }
+}
+
+impl<T: std::fmt::Display> SortSpec<T> {
     pub fn new(field: T, order: SortOrder) -> Self {
         Self { field, order }
     }

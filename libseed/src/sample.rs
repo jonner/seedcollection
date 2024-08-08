@@ -1,7 +1,7 @@
 //! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op},
+    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec},
     loadable::{ExternalRef, Loadable},
     source::Source,
     taxonomy::Taxon,
@@ -122,6 +122,7 @@ impl FilterPart for Filter {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum Sort {
     Id,
     TaxonName,
@@ -130,10 +131,62 @@ pub enum Sort {
     SourceName,
 }
 
+impl std::fmt::Display for Sort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Sort::Id => "sampleid",
+                Sort::TaxonName => "complete_name",
+                Sort::TaxonSequence => "seq",
+                Sort::SourceId => "srcid",
+                Sort::SourceName => "srcname",
+            }
+        )
+    }
+}
+
+pub struct SortSpecs(pub Vec<SortSpec<Sort>>);
+
+impl std::fmt::Display for SortSpecs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.0
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<String>>()
+                .join(",")
+        )
+    }
+}
+
+impl From<Sort> for SortSpecs {
+    fn from(value: Sort) -> Self {
+        SortSpecs(vec![SortSpec {
+            field: value,
+            order: SortOrder::Ascending,
+        }])
+    }
+}
+
+impl From<Vec<Sort>> for SortSpecs {
+    fn from(mut value: Vec<Sort>) -> Self {
+        Self(
+            value
+                .drain(..)
+                .map(|field| SortSpec::new(field, SortOrder::Ascending))
+                .collect(),
+        )
+    }
+}
+
 impl Sample {
     fn build_query(
         filter: Option<DynFilterPart>,
-        sort: Option<Sort>,
+        sort: Option<SortSpecs>,
     ) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("SELECT * FROM vsamples");
         if let Some(f) = filter {
@@ -141,14 +194,8 @@ impl Sample {
             f.add_to_query(&mut builder);
         }
         builder.push(" ORDER BY ");
-        let s = match sort.unwrap_or(Sort::TaxonSequence) {
-            Sort::Id => "sampleid",
-            Sort::TaxonName => "complete_name",
-            Sort::TaxonSequence => "seq",
-            Sort::SourceId => "srcid",
-            Sort::SourceName => "srcname",
-        };
-        builder.push(s);
+        let s: SortSpecs = sort.map(Into::into).unwrap_or(Sort::TaxonSequence.into());
+        builder.push(s.to_string());
         builder
     }
 
@@ -165,7 +212,7 @@ impl Sample {
     pub async fn load_all_user(
         userid: i64,
         filter: Option<DynFilterPart>,
-        sort: Option<Sort>,
+        sort: Option<SortSpecs>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
         let mut fbuilder = CompoundFilter::builder(Op::And).push(Filter::UserId(userid));
@@ -179,7 +226,7 @@ impl Sample {
 
     pub async fn load_all(
         filter: Option<DynFilterPart>,
-        sort: Option<Sort>,
+        sort: Option<SortSpecs>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
         let mut builder = Self::build_query(filter, sort);
