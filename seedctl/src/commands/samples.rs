@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     cli::{SampleCommands, SampleSortField},
     prompt::{SourceIdPrompt, TaxonIdPrompt},
@@ -294,6 +296,32 @@ pub async fn handle_command(
             } else {
                 println!("Sample unchanged.")
             }
+            Ok(())
+        }
+        SampleCommands::Stats => {
+            let samples = Sample::load_all(None, None, &dbpool).await?;
+            let nsamples = samples.len();
+            let ntaxa = samples
+                .iter()
+                .fold(HashSet::new(), |mut set, sample| {
+                    set.insert(sample.taxon.id());
+                    set
+                })
+                .len();
+            let nsources = samples
+                .iter()
+                .fold(HashSet::new(), |mut set, sample| {
+                    set.insert(sample.source.id());
+                    set
+                })
+                .len();
+            println!("Collection stats");
+            let mut builder = tabled::builder::Builder::new();
+            builder.push_record(["Object", "No."]);
+            builder.push_record(["Samples", &nsamples.to_string()]);
+            builder.push_record(["Taxa", &ntaxa.to_string()]);
+            builder.push_record(["Sources", &nsources.to_string()]);
+            println!("{}\n", builder.build().styled());
             Ok(())
         }
     }

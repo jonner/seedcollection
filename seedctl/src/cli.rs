@@ -187,7 +187,9 @@ pub enum SampleCommands {
         sort: Option<Vec<SampleSortField>>,
     },
     #[command(about = "Show details for a single sample")]
-    Show { id: i64 },
+    Show {
+        id: i64,
+    },
     #[command(about = "Add a new sample to the database")]
     Add {
         #[arg(short, long)]
@@ -208,7 +210,9 @@ pub enum SampleCommands {
         userid: Option<i64>,
     },
     #[command(about = "Remove an existing sample from the database")]
-    Remove { id: i64 },
+    Remove {
+        id: i64,
+    },
     #[command(about = "Modify properties of a sample")]
     #[clap(alias = "edit")]
     Modify {
@@ -230,6 +234,7 @@ pub enum SampleCommands {
         #[arg(long, conflicts_with("certain"))]
         uncertain: bool,
     },
+    Stats,
 }
 
 #[derive(Subcommand, Debug)]
