@@ -171,6 +171,7 @@ pub enum SampleSortField {
     Taxon,
     Name,
     Source,
+    Date,
 }
 
 #[derive(Subcommand, Debug)]
