@@ -129,6 +129,8 @@ pub enum Sort {
     TaxonSequence,
     SourceId,
     SourceName,
+    Year,
+    Month,
 }
 
 impl std::fmt::Display for Sort {
@@ -142,6 +144,8 @@ impl std::fmt::Display for Sort {
                 Sort::TaxonSequence => "seq",
                 Sort::SourceId => "srcid",
                 Sort::SourceName => "srcname",
+                Sort::Year => "year",
+                Sort::Month => "month",
             }
         )
     }
