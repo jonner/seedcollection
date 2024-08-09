@@ -119,7 +119,7 @@ impl std::fmt::Display for Cmp {
 /// An object that allows you to specify the limit and offset for an SQL query
 pub struct LimitSpec(pub i32, pub Option<i32>);
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum SortOrder {
     #[serde(rename = "asc")]
     Ascending,
@@ -141,6 +141,7 @@ impl std::fmt::Display for SortOrder {
 }
 
 /// An object that allows you to specify the sort for an SQL query
+#[derive(Clone, Debug)]
 pub struct SortSpec<T: std::fmt::Display> {
     pub field: T,
     pub order: SortOrder,

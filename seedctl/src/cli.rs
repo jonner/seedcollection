@@ -186,6 +186,8 @@ pub enum SampleCommands {
         limit: Option<String>,
         #[arg(short, long, value_delimiter = ',')]
         sort: Option<Vec<SampleSortField>>,
+        #[arg(short, long, help = "Reverse sort order")]
+        reverse: bool,
     },
     #[command(about = "Show details for a single sample")]
     Show {

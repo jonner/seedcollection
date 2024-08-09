@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use libseed::{
-    filter::{CompoundFilter, Op},
+    filter::{CompoundFilter, Op, SortOrder, SortSpec},
     loadable::{ExternalRef, Loadable},
     sample::{self, Certainty, Sample},
     user::User,
@@ -27,6 +27,7 @@ pub async fn handle_command(
             user: useronly,
             limit,
             sort,
+            reverse,
         } => {
             let filter = limit.map(|s| {
                 let fbuilder = CompoundFilter::builder(Op::Or)
@@ -36,22 +37,27 @@ pub async fn handle_command(
                 fbuilder.build()
             });
             let sort = sort.map(|vec| {
-                {
-                    sample::SortSpecs::from(
-                        vec.iter()
-                            .map(|v| match v {
-                                SampleSortField::Id => &[sample::Sort::Id] as &[sample::Sort],
-                                SampleSortField::Taxon => &[sample::Sort::TaxonSequence],
-                                SampleSortField::Name => &[sample::Sort::TaxonName],
-                                SampleSortField::Source => &[sample::Sort::SourceName],
-                                SampleSortField::Date => &[sample::Sort::Year, sample::Sort::Month],
-                            })
-                            .fold(Vec::new(), |mut acc, val| {
-                                acc.extend_from_slice(val);
-                                acc
-                            }),
-                    )
-                }
+                let order = match reverse {
+                    true => SortOrder::Descending,
+                    false => SortOrder::Ascending,
+                };
+                sample::SortSpecs(
+                    vec.iter()
+                        .map(|v| match v {
+                            SampleSortField::Id => &[sample::Sort::Id] as &[sample::Sort],
+                            SampleSortField::Taxon => &[sample::Sort::TaxonSequence],
+                            SampleSortField::Name => &[sample::Sort::TaxonName],
+                            SampleSortField::Source => &[sample::Sort::SourceName],
+                            SampleSortField::Date => &[sample::Sort::Year, sample::Sort::Month],
+                        })
+                        .fold(Vec::new(), |mut acc, val| {
+                            acc.extend_from_slice(val);
+                            acc
+                        })
+                        .iter()
+                        .map(|field| SortSpec::new(field.clone(), order.clone()))
+                        .collect(),
+                )
             });
             let samples = match useronly {
                 true => Sample::load_all_user(user.id, filter, sort, dbpool).await?,
