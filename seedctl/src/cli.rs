@@ -1,13 +1,7 @@
+use crate::output::OutputFormat;
 use clap::{Parser, Subcommand, ValueEnum};
 use libseed::taxonomy;
 use std::path::PathBuf;
-
-#[derive(ValueEnum, Clone, Debug)]
-pub enum OutputFormat {
-    Table,
-    Csv,
-    Json,
-}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]

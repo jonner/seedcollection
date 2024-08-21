@@ -1,10 +1,9 @@
-use crate::{output, SampleRow, SampleRowFull};
-use std::collections::HashSet;
-
 use crate::{
-    cli::{OutputFormat, SampleCommands, SampleSortField},
+    cli::{SampleCommands, SampleSortField},
+    output,
     prompt::{SourceIdPrompt, TaxonIdPrompt},
     table::{SampleRowDetails, SeedctlTable},
+    SampleRow, SampleRowFull,
 };
 use anyhow::{anyhow, Result};
 use libseed::{
@@ -15,6 +14,7 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseRowNotFound},
 };
 use sqlx::{Pool, Sqlite};
+use std::collections::HashSet;
 use tabled::Table;
 
 pub async fn handle_command(
@@ -65,20 +65,11 @@ pub async fn handle_command(
                 true => Sample::load_all_user(user.id, filter, sort, dbpool).await?,
                 false => Sample::load_all(filter, sort, dbpool).await?,
             };
-            match output {
-                OutputFormat::Table => match full {
-                    true => output::table::list_samples::<SampleRowFull>(samples),
-                    false => output::table::list_samples::<SampleRow>(samples),
-                },
-                OutputFormat::Csv => match full {
-                    true => output::csv::list_samples::<SampleRowFull>(samples),
-                    false => output::csv::list_samples::<SampleRow>(samples),
-                },
-                OutputFormat::Json => match full {
-                    true => output::json::list_samples::<SampleRowFull>(samples),
-                    false => output::json::list_samples::<SampleRow>(samples),
-                },
-            }
+            let formatter = match full {
+                true => output::formatter::<SampleRowFull>(output),
+                false => output::formatter::<SampleRow>(output),
+            };
+            formatter.print_samples(samples)
         }
         SampleCommands::Show { id } => match Sample::load(id, dbpool).await {
             Ok(mut sample) => {
