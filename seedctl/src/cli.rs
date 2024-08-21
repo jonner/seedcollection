@@ -2,6 +2,13 @@ use clap::{Parser, Subcommand, ValueEnum};
 use libseed::taxonomy;
 use std::path::PathBuf;
 
+#[derive(ValueEnum, Clone, Debug)]
+pub enum OutputFormat {
+    Table,
+    Csv,
+    Json,
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub struct Cli {
@@ -188,6 +195,8 @@ pub enum SampleCommands {
         sort: Option<Vec<SampleSortField>>,
         #[arg(short, long, help = "Reverse sort order")]
         reverse: bool,
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
     },
     #[command(about = "Show details for a single sample")]
     Show {

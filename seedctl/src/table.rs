@@ -9,6 +9,7 @@ use libseed::{
     taxonomy::{Germination, NativeStatus, Rank, Taxon},
     user::User,
 };
+use serde::Serialize;
 use sqlx::{Pool, Sqlite};
 use tabled::{Table, Tabled};
 
@@ -24,7 +25,7 @@ impl SeedctlTable for Table {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct SampleRow {
     id: i64,
@@ -33,7 +34,7 @@ pub struct SampleRow {
 }
 
 impl SampleRow {
-    pub fn new(sample: &Sample) -> Result<Self> {
+    pub fn new(sample: Sample) -> Result<Self, libseed::Error> {
         Ok(Self {
             id: sample.id,
             taxon: sample.taxon.object()?.complete_name.clone(),
@@ -42,7 +43,15 @@ impl SampleRow {
     }
 }
 
-#[derive(Tabled)]
+impl TryFrom<Sample> for SampleRow {
+    type Error = libseed::Error;
+
+    fn try_from(sample: Sample) -> Result<Self, Self::Error> {
+        Self::new(sample)
+    }
+}
+
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct SampleRowFull {
     id: i64,
@@ -53,6 +62,14 @@ pub struct SampleRowFull {
     quantity: Option<i64>,
 }
 
+impl TryFrom<Sample> for SampleRowFull {
+    type Error = libseed::Error;
+
+    fn try_from(sample: Sample) -> Result<Self, Self::Error> {
+        Self::new(sample)
+    }
+}
+
 fn table_display_option<T: ToString>(o: &Option<T>) -> String {
     match o {
         Some(v) => v.to_string(),
@@ -61,7 +78,7 @@ fn table_display_option<T: ToString>(o: &Option<T>) -> String {
 }
 
 impl SampleRowFull {
-    pub fn new(sample: &Sample) -> Result<Self> {
+    pub fn new(sample: Sample) -> Result<Self, libseed::Error> {
         Ok(Self {
             id: sample.id,
             taxon: sample.taxon.object()?.complete_name.clone(),

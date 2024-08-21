@@ -1,9 +1,10 @@
+use crate::{output, SampleRow, SampleRowFull};
 use std::collections::HashSet;
 
 use crate::{
-    cli::{SampleCommands, SampleSortField},
+    cli::{OutputFormat, SampleCommands, SampleSortField},
     prompt::{SourceIdPrompt, TaxonIdPrompt},
-    table::{SampleRow, SampleRowDetails, SampleRowFull, SeedctlTable},
+    table::{SampleRowDetails, SeedctlTable},
 };
 use anyhow::{anyhow, Result};
 use libseed::{
@@ -28,6 +29,7 @@ pub async fn handle_command(
             limit,
             sort,
             reverse,
+            output,
         } => {
             let filter = limit.map(|s| {
                 let fbuilder = CompoundFilter::builder(Op::Or)
@@ -63,17 +65,20 @@ pub async fn handle_command(
                 true => Sample::load_all_user(user.id, filter, sort, dbpool).await?,
                 false => Sample::load_all(filter, sort, dbpool).await?,
             };
-            let mut table = match full {
-                true => Table::new(
-                    samples
-                        .iter()
-                        .map(|sample| SampleRowFull::new(sample).unwrap()),
-                ),
-                false => Table::new(samples.iter().map(|sample| SampleRow::new(sample).unwrap())),
-            };
-            println!("{}\n", table.styled());
-            println!("{} records found", samples.len());
-            Ok(())
+            match output {
+                OutputFormat::Table => match full {
+                    true => output::table::list_samples::<SampleRowFull>(samples),
+                    false => output::table::list_samples::<SampleRow>(samples),
+                },
+                OutputFormat::Csv => match full {
+                    true => output::csv::list_samples::<SampleRowFull>(samples),
+                    false => output::csv::list_samples::<SampleRow>(samples),
+                },
+                OutputFormat::Json => match full {
+                    true => output::json::list_samples::<SampleRowFull>(samples),
+                    false => output::json::list_samples::<SampleRow>(samples),
+                },
+            }
         }
         SampleCommands::Show { id } => match Sample::load(id, dbpool).await {
             Ok(mut sample) => {
