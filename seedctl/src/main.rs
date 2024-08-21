@@ -1,7 +1,9 @@
-use crate::cli::*;
-use crate::config::*;
-use crate::table::SeedctlTable;
-use crate::table::*;
+use crate::{
+    cli::*,
+    config::*,
+    output::rows::{TaxonRow, TaxonRowDetails},
+    table::SeedctlTable,
+};
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use libseed::{

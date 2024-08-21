@@ -1,6 +1,7 @@
 use crate::{
     cli::SourceCommands,
-    table::{SeedctlTable, SourceRow, SourceRowFull},
+    output::rows::{SourceRow, SourceRowFull},
+    table::SeedctlTable,
 };
 use anyhow::{anyhow, Result};
 use inquire::validator::Validation;

@@ -1,9 +1,11 @@
 use crate::{
     cli::{SampleCommands, SampleSortField},
-    output,
+    output::{
+        formatter,
+        rows::{SampleRow, SampleRowDetails, SampleRowFull},
+    },
     prompt::{SourceIdPrompt, TaxonIdPrompt},
-    table::{SampleRowDetails, SeedctlTable},
-    SampleRow, SampleRowFull,
+    table::SeedctlTable,
 };
 use anyhow::{anyhow, Result};
 use libseed::{
@@ -66,8 +68,8 @@ pub async fn handle_command(
                 false => Sample::load_all(filter, sort, dbpool).await?,
             };
             let formatter = match full {
-                true => output::formatter::<SampleRowFull>(output),
-                false => output::formatter::<SampleRow>(output),
+                true => formatter::<SampleRowFull>(output),
+                false => formatter::<SampleRow>(output),
             };
             println!("{}", formatter.format_samples(samples)?);
             Ok(())

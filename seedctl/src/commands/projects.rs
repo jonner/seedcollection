@@ -1,6 +1,7 @@
 use crate::{
     cli::ProjectCommands,
-    table::{AllocationRow, AllocationRowFull, ProjectRow, SeedctlTable},
+    output::rows::{AllocationRow, AllocationRowFull, ProjectRow},
+    table::SeedctlTable,
 };
 use anyhow::Result;
 use libseed::{

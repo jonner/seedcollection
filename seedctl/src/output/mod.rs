@@ -18,6 +18,7 @@ pub enum OutputFormat {
 
 mod csv;
 mod json;
+pub mod rows;
 mod table;
 mod yaml;
 

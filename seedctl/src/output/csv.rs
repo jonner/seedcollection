@@ -1,4 +1,3 @@
-use std::io::stdout;
 use std::marker::PhantomData;
 
 use crate::output::Error;

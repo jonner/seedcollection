@@ -5,7 +5,8 @@ use std::{
 
 use crate::{
     cli::{AdminCommands, GerminationCommands, UserCommands},
-    table::{GerminationRow, SeedctlTable, UserRow},
+    output::rows::{GerminationRow, UserRow},
+    table::SeedctlTable,
 };
 use anyhow::{Context, Result};
 use libseed::{
