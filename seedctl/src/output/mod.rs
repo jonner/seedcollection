@@ -1,12 +1,11 @@
 use clap::ValueEnum;
-use csv::CsvFormatter;
-use json::JsonFormatter;
-use libseed::sample::Sample;
 use serde::Serialize;
-use table::TableFormatter;
-use tabled::Tabled;
+use tabled::{Table, Tabled};
 use thiserror::Error;
-use yaml::YamlFormatter;
+
+use crate::table::SeedctlTable;
+
+pub mod rows;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum OutputFormat {
@@ -16,31 +15,35 @@ pub enum OutputFormat {
     Yaml,
 }
 
-mod csv;
-mod json;
-pub mod rows;
-mod table;
-mod yaml;
-
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Unable to create row")]
     UnableToCreateRow(#[from] libseed::Error),
 }
 
-pub trait Formatter {
-    fn format_samples(&self, samples: Vec<Sample>) -> Result<String, anyhow::Error>;
-}
-
-pub fn formatter<T>(format: OutputFormat) -> Box<dyn Formatter>
+pub fn format<T>(mut items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
 where
-    T: TryFrom<Sample> + Tabled + Serialize + 'static,
-    <T as TryFrom<Sample>>::Error: Into<Error>,
+    T: Tabled + Serialize + 'static,
 {
-    match format {
-        OutputFormat::Table => TableFormatter::<T>::new(),
-        OutputFormat::Csv => CsvFormatter::<T>::new(),
-        OutputFormat::Json => JsonFormatter::<T>::new(),
-        OutputFormat::Yaml => YamlFormatter::<T>::new(),
+    match fmt {
+        OutputFormat::Table => {
+            let n = items.len();
+            Ok(format!(
+                "{}\n{} records found",
+                Table::new(items).styled(),
+                n
+            ))
+        }
+        OutputFormat::Csv => {
+            let mut writer = csv::Writer::from_writer(vec![]);
+            items
+                .drain(..)
+                .map(|item| writer.serialize(item))
+                .collect::<Result<Vec<_>, _>>()?;
+            writer.flush()?;
+            String::from_utf8(writer.into_inner()?).map_err(|e| e.into())
+        }
+        OutputFormat::Json => serde_json::to_string(&items).map_err(|e| e.into()),
+        OutputFormat::Yaml => serde_yaml::to_string(&items).map_err(|e| e.into()),
     }
 }

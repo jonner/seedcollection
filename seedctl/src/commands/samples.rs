@@ -1,7 +1,7 @@
 use crate::{
     cli::{SampleCommands, SampleSortField},
     output::{
-        formatter,
+        self,
         rows::{SampleRow, SampleRowDetails, SampleRowFull},
     },
     prompt::{SourceIdPrompt, TaxonIdPrompt},
@@ -63,15 +63,27 @@ pub async fn handle_command(
                         .collect(),
                 )
             });
-            let samples = match useronly {
+            let mut samples = match useronly {
                 true => Sample::load_all_user(user.id, filter, sort, dbpool).await?,
                 false => Sample::load_all(filter, sort, dbpool).await?,
             };
-            let formatter = match full {
-                true => formatter::<SampleRowFull>(output),
-                false => formatter::<SampleRow>(output),
+            let str = match full {
+                true => {
+                    let records = samples
+                        .drain(..)
+                        .map(|s| SampleRowFull::new(s))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    output::format(records, output)?
+                }
+                false => {
+                    let records = samples
+                        .drain(..)
+                        .map(|s| SampleRow::new(s))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    output::format(records, output)?
+                }
             };
-            println!("{}", formatter.format_samples(samples)?);
+            println!("{str}",);
             Ok(())
         }
         SampleCommands::Show { id } => match Sample::load(id, dbpool).await {
