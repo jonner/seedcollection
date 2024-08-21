@@ -6,17 +6,20 @@ use serde::Serialize;
 use table::TableFormatter;
 use tabled::Tabled;
 use thiserror::Error;
+use yaml::YamlFormatter;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum OutputFormat {
     Table,
     Csv,
     Json,
+    Yaml,
 }
 
 mod csv;
 mod json;
 mod table;
+mod yaml;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -37,5 +40,6 @@ where
         OutputFormat::Table => TableFormatter::<T>::new(),
         OutputFormat::Csv => CsvFormatter::<T>::new(),
         OutputFormat::Json => JsonFormatter::<T>::new(),
+        OutputFormat::Yaml => YamlFormatter::<T>::new(),
     }
 }
