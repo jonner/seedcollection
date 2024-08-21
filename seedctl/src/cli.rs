@@ -126,6 +126,8 @@ pub enum SourceCommands {
         full: bool,
         #[arg(long)]
         filter: Option<String>,
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
     },
     #[command(about = "Show details about a single source")]
     Show { id: i64 },

@@ -240,7 +240,7 @@ impl AllocationRowFull {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct SourceRowFull {
     id: i64,
@@ -265,7 +265,7 @@ impl SourceRowFull {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct SourceRow {
     id: i64,

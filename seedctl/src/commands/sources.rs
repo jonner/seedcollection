@@ -1,6 +1,9 @@
 use crate::{
     cli::SourceCommands,
-    output::rows::{SourceRow, SourceRowFull},
+    output::{
+        self,
+        rows::{SourceRow, SourceRowFull},
+    },
     table::SeedctlTable,
 };
 use anyhow::{anyhow, Result};
@@ -21,7 +24,11 @@ pub async fn handle_command(
     dbpool: &Pool<Sqlite>,
 ) -> Result<()> {
     match command {
-        SourceCommands::List { full, filter } => {
+        SourceCommands::List {
+            full,
+            filter,
+            output,
+        } => {
             let filter = filter.map(|f| {
                 CompoundFilter::builder(Op::Or)
                     .push(source::Filter::Name(Cmp::Like, f.clone()))
@@ -29,12 +36,23 @@ pub async fn handle_command(
                     .build()
             });
             let sources = Source::load_all(filter, dbpool).await?;
-            let mut table = match full {
-                true => Table::new(sources.iter().map(SourceRowFull::new)),
-                false => Table::new(sources.iter().map(SourceRow::new)),
+            let str = match full {
+                true => {
+                    let rows = sources
+                        .iter()
+                        .map(|s| SourceRowFull::new(s))
+                        .collect::<Vec<_>>();
+                    output::format(rows, output)?
+                }
+                false => {
+                    let rows = sources
+                        .iter()
+                        .map(|s| SourceRow::new(s))
+                        .collect::<Vec<_>>();
+                    output::format(rows, output)?
+                }
             };
-            println!("{}\n", table.styled());
-            println!("{} records found", sources.len());
+            println!("{str}");
             Ok(())
         }
         SourceCommands::Show { id } => match Source::load(id, dbpool).await {
