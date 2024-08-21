@@ -31,15 +31,14 @@ where
     T: TryFrom<Sample> + Tabled,
     <T as TryFrom<Sample>>::Error: Into<output::Error>,
 {
-    fn print_samples(&self, mut samples: Vec<Sample>) -> Result<(), anyhow::Error> {
+    fn format_samples(&self, mut samples: Vec<Sample>) -> Result<String, anyhow::Error> {
+        let n = samples.len();
         let rows = samples
             .drain(..)
             .map(|sample| T::try_from(sample))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.into())?;
         let mut table = Table::new(rows);
-        println!("{}\n", table.styled());
-        println!("{} records found", samples.len());
-        Ok(())
+        Ok(format!("{}\n{} records found", table.styled(), n))
     }
 }

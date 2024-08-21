@@ -25,7 +25,7 @@ pub enum Error {
 }
 
 pub trait Formatter {
-    fn print_samples(&self, samples: Vec<Sample>) -> Result<(), anyhow::Error>;
+    fn format_samples(&self, samples: Vec<Sample>) -> Result<String, anyhow::Error>;
 }
 
 pub fn formatter<T>(format: OutputFormat) -> Box<dyn Formatter>

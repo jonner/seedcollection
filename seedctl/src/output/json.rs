@@ -29,14 +29,12 @@ where
     T: TryFrom<Sample> + Serialize,
     <T as TryFrom<Sample>>::Error: Into<output::Error>,
 {
-    fn print_samples(&self, mut samples: Vec<Sample>) -> Result<(), anyhow::Error> {
+    fn format_samples(&self, mut samples: Vec<Sample>) -> Result<String, anyhow::Error> {
         let rows = samples
             .drain(..)
             .map(|sample| T::try_from(sample))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.into())?;
-        let out = serde_json::to_string(&rows)?;
-        println!("{}", out);
-        Ok(())
+        serde_json::to_string(&rows).map_err(|e| e.into())
     }
 }

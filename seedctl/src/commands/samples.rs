@@ -69,7 +69,8 @@ pub async fn handle_command(
                 true => output::formatter::<SampleRowFull>(output),
                 false => output::formatter::<SampleRow>(output),
             };
-            formatter.print_samples(samples)
+            println!("{}", formatter.format_samples(samples)?);
+            Ok(())
         }
         SampleCommands::Show { id } => match Sample::load(id, dbpool).await {
             Ok(mut sample) => {

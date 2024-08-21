@@ -31,17 +31,17 @@ where
     T: TryFrom<Sample> + Serialize,
     <T as TryFrom<Sample>>::Error: Into<Error>,
 {
-    fn print_samples(&self, mut samples: Vec<Sample>) -> Result<(), anyhow::Error> {
+    fn format_samples(&self, mut samples: Vec<Sample>) -> Result<String, anyhow::Error> {
         let mut rows = samples
             .drain(..)
             .map(|sample| T::try_from(sample))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| e.into())?;
-        let mut writer = csv::Writer::from_writer(stdout());
+        let mut writer = csv::Writer::from_writer(vec![]);
         rows.drain(..)
             .map(|row| writer.serialize(row))
             .collect::<Result<Vec<_>, _>>()?;
         writer.flush()?;
-        Ok(())
+        String::from_utf8(writer.into_inner()?).map_err(|e| e.into())
     }
 }
