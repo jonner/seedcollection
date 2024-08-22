@@ -1,6 +1,9 @@
 use crate::{
     cli::ProjectCommands,
-    output::rows::{AllocationRow, AllocationRowFull, ProjectRow},
+    output::{
+        self,
+        rows::{AllocationRow, AllocationRowFull, ProjectRow},
+    },
     table::SeedctlTable,
 };
 use anyhow::Result;
@@ -19,11 +22,13 @@ pub async fn handle_command(
     dbpool: &Pool<Sqlite>,
 ) -> Result<()> {
     match command {
-        ProjectCommands::List {} => {
+        ProjectCommands::List { output } => {
             let projects = Project::load_all(None, dbpool).await?;
-            let mut table = Table::new(projects.iter().map(ProjectRow::new));
-            println!("{}\n", table.styled());
-            println!("{} records found", projects.len());
+            let str = output::format_seq(
+                projects.iter().map(ProjectRow::new).collect::<Vec<_>>(),
+                output,
+            )?;
+            println!("{str}");
             Ok(())
         }
         ProjectCommands::Add {

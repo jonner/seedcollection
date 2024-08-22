@@ -189,7 +189,7 @@ impl SampleRowDetails {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct ProjectRow {
     id: i64,

@@ -68,7 +68,10 @@ pub enum Commands {
 #[derive(Subcommand, Debug)]
 pub enum ProjectCommands {
     #[command(about = "List all projects")]
-    List {},
+    List {
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
+    },
     #[command(about = "Add a new project to the database")]
     Add {
         #[arg(short, long)]
