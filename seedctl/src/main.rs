@@ -119,14 +119,13 @@ async fn main() -> Result<()> {
                 println!("{} records found", taxa.len());
                 Ok(())
             }
-            TaxonomyCommands::Show { id } => match Taxon::load(id, &dbpool).await {
+            TaxonomyCommands::Show { id, output } => match Taxon::load(id, &dbpool).await {
                 Ok(mut taxon) => {
-                    let tbuilder =
-                        Table::builder(vec![TaxonRowDetails::new(&mut taxon, &dbpool).await?])
-                            .index()
-                            .column(0)
-                            .transpose();
-                    println!("{}\n", tbuilder.build().styled());
+                    let str = output::format_one(
+                        TaxonRowDetails::new(&mut taxon, &dbpool).await?,
+                        output,
+                    )?;
+                    println!("{str}");
                     Ok(())
                 }
                 Err(DatabaseRowNotFound(_)) => {

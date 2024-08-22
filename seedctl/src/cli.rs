@@ -272,7 +272,11 @@ pub enum TaxonomyCommands {
         minnesota: bool,
     },
     #[command(about = "Show information about a taxon")]
-    Show { id: i64 },
+    Show {
+        id: i64,
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
+    },
 }
 
 #[derive(Subcommand, Debug)]

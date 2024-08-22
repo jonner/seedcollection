@@ -337,7 +337,7 @@ impl TaxonRow {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct TaxonRowDetails {
     id: i64,
@@ -351,19 +351,27 @@ pub struct TaxonRowDetails {
         display_with = "table_display_germination",
         rename = "Germination Codes"
     )]
+    #[serde(serialize_with = "serialize_germination")]
     germination: Option<Vec<Germination>>,
     #[tabled(display_with = "table_display_samples")]
-    samples: Vec<Sample>,
+    samples: Vec<TaxonSample>,
 }
 
-fn table_display_samples(samples: &[Sample]) -> String {
+#[derive(Serialize)]
+struct TaxonSample {
+    id: i64,
+    source: String,
+    year: Option<u32>,
+}
+
+fn table_display_samples(samples: &[TaxonSample]) -> String {
     samples
         .iter()
         .map(|s| {
             format!(
                 "{}: {} ({})",
                 s.id,
-                s.source.object().unwrap().name,
+                s.source,
                 s.year
                     .map(|y| y.to_string())
                     .unwrap_or_else(|| "Unknown date".to_string())
@@ -393,7 +401,16 @@ impl TaxonRowDetails {
             common_names: taxon.vernaculars.clone(),
             mn_status: taxon.native_status.clone(),
             germination: taxon.germination.clone(),
-            samples,
+            samples: samples
+                .iter()
+                .map(|s| -> anyhow::Result<TaxonSample> {
+                    Ok(TaxonSample {
+                        id: s.id,
+                        source: s.source.object()?.name.clone(),
+                        year: s.year,
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?,
         })
     }
 }
