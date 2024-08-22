@@ -416,7 +416,7 @@ impl UserRow {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct GerminationRow {
     id: i64,

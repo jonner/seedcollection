@@ -347,7 +347,10 @@ pub enum UserCommands {
 #[derive(Subcommand, Debug)]
 pub enum GerminationCommands {
     #[command(about = "List all germination codes")]
-    List {},
+    List {
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
+    },
     #[command(about = "Modify properties of a germination code")]
     #[clap(alias = "edit")]
     Modify {

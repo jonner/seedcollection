@@ -9,7 +9,6 @@ use crate::{
         self,
         rows::{GerminationRow, UserRow},
     },
-    table::SeedctlTable,
 };
 use anyhow::{Context, Result};
 use libseed::{
@@ -18,7 +17,6 @@ use libseed::{
     user::{User, UserStatus},
 };
 use sqlx::{Pool, Sqlite};
-use tabled::Table;
 use tokio::fs;
 use tracing::debug;
 
@@ -110,10 +108,13 @@ pub async fn handle_command(
             }
         },
         AdminCommands::Germination { command } => match command {
-            GerminationCommands::List {} => {
+            GerminationCommands::List { output } => {
                 let codes = Germination::load_all(dbpool).await?;
-                let mut table = Table::new(codes.iter().map(GerminationRow::new));
-                println!("{}\n", table.styled());
+                let str = output::format_seq(
+                    codes.iter().map(GerminationRow::new).collect::<Vec<_>>(),
+                    output,
+                )?;
+                println!("{str}");
                 Ok(())
             }
             GerminationCommands::Modify {
