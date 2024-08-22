@@ -4,7 +4,6 @@ use crate::{
         self,
         rows::{AllocationRow, AllocationRowFull, ProjectRow},
     },
-    table::SeedctlTable,
 };
 use anyhow::Result;
 use libseed::{
@@ -14,7 +13,6 @@ use libseed::{
     Error::DatabaseRowNotFound,
 };
 use sqlx::{Pool, Sqlite};
-use tabled::Table;
 
 pub async fn handle_command(
     command: ProjectCommands,
@@ -83,25 +81,28 @@ pub async fn handle_command(
             println!("Removed sample from project");
             Ok(())
         }
-        ProjectCommands::Show { id, full } => match Project::load(id, dbpool).await {
+        ProjectCommands::Show { id, full, output } => match Project::load(id, dbpool).await {
             Ok(mut projectinfo) => {
                 projectinfo.load_samples(None, None, dbpool).await?;
-                let mut table = match full {
-                    true => Table::new(
+                let str = match full {
+                    true => output::format_seq(
                         projectinfo
                             .allocations
                             .iter()
-                            .map(|alloc| AllocationRowFull::new(alloc).unwrap()),
-                    ),
-                    false => Table::new(
+                            .map(|alloc| AllocationRowFull::new(alloc))
+                            .collect::<Result<Vec<_>, _>>()?,
+                        output,
+                    )?,
+                    false => output::format_seq(
                         projectinfo
                             .allocations
                             .iter()
-                            .map(|alloc| AllocationRow::new(alloc).unwrap()),
-                    ),
+                            .map(|alloc| AllocationRow::new(alloc))
+                            .collect::<Result<Vec<_>, _>>()?,
+                        output,
+                    )?,
                 };
-                println!("{}\n", table.styled());
-                println!("{} records found", projectinfo.allocations.len());
+                println!("{str}");
                 Ok(())
             }
             Err(DatabaseRowNotFound(_)) => {

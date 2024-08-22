@@ -118,6 +118,8 @@ pub enum ProjectCommands {
         id: i64,
         #[arg(short, long)]
         full: bool,
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
     },
 }
 

@@ -208,7 +208,7 @@ impl ProjectRow {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct AllocationRow {
     id: i64,
@@ -238,7 +238,7 @@ fn datestring(m: Option<u32>, y: Option<u32>) -> String {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct AllocationRowFull {
     id: i64,
