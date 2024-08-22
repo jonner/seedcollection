@@ -73,14 +73,14 @@ pub async fn handle_command(
                         .drain(..)
                         .map(|s| SampleRowFull::new(s))
                         .collect::<Result<Vec<_>, _>>()?;
-                    output::format(records, output)?
+                    output::format_seq(records, output)?
                 }
                 false => {
                     let records = samples
                         .drain(..)
                         .map(|s| SampleRow::new(s))
                         .collect::<Result<Vec<_>, _>>()?;
-                    output::format(records, output)?
+                    output::format_seq(records, output)?
                 }
             };
             println!("{str}",);

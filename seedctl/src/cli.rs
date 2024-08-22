@@ -130,7 +130,11 @@ pub enum SourceCommands {
         output: OutputFormat,
     },
     #[command(about = "Show details about a single source")]
-    Show { id: i64 },
+    Show {
+        id: i64,
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
+    },
     #[command(about = "Add a new source to the database")]
     Add {
         #[arg(long)]

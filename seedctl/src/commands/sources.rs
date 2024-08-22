@@ -4,7 +4,6 @@ use crate::{
         self,
         rows::{SourceRow, SourceRowFull},
     },
-    table::SeedctlTable,
 };
 use anyhow::{anyhow, Result};
 use inquire::validator::Validation;
@@ -16,7 +15,6 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseRowNotFound},
 };
 use sqlx::{Pool, Sqlite};
-use tabled::Table;
 
 pub async fn handle_command(
     command: SourceCommands,
@@ -42,26 +40,23 @@ pub async fn handle_command(
                         .iter()
                         .map(|s| SourceRowFull::new(s))
                         .collect::<Vec<_>>();
-                    output::format(rows, output)?
+                    output::format_seq(rows, output)?
                 }
                 false => {
                     let rows = sources
                         .iter()
                         .map(|s| SourceRow::new(s))
                         .collect::<Vec<_>>();
-                    output::format(rows, output)?
+                    output::format_seq(rows, output)?
                 }
             };
             println!("{str}");
             Ok(())
         }
-        SourceCommands::Show { id } => match Source::load(id, dbpool).await {
+        SourceCommands::Show { id, output } => match Source::load(id, dbpool).await {
             Ok(src) => {
-                let tbuilder = Table::builder(vec![SourceRowFull::new(&src)])
-                    .index()
-                    .column(0)
-                    .transpose();
-                println!("{}\n", tbuilder.build().styled());
+                let str = output::format_one(SourceRowFull::new(&src), output)?;
+                println!("{str}");
                 Ok(())
             }
             Err(DatabaseRowNotFound(_)) => {

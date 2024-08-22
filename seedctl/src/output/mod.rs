@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use clap::ValueEnum;
 use serde::Serialize;
 use tabled::{Table, Tabled};
@@ -7,7 +8,7 @@ use crate::table::SeedctlTable;
 
 pub mod rows;
 
-#[derive(ValueEnum, Clone, Debug)]
+#[derive(ValueEnum, Clone, Debug, PartialEq)]
 pub enum OutputFormat {
     Table,
     Csv,
@@ -21,7 +22,22 @@ pub enum Error {
     UnableToCreateRow(#[from] libseed::Error),
 }
 
-pub fn format<T>(mut items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
+pub fn format_one<T>(item: T, fmt: OutputFormat) -> anyhow::Result<String>
+where
+    T: Tabled + Serialize + 'static,
+{
+    match fmt {
+        OutputFormat::Table => {
+            let tbuilder = Table::builder(vec![item]).index().column(0).transpose();
+            Ok(format!("{}n", tbuilder.build().styled()))
+        }
+        OutputFormat::Csv => Err(anyhow!("CSV format is not valid for single items")),
+        OutputFormat::Json => serde_json::to_string(&item).map_err(|e| e.into()),
+        OutputFormat::Yaml => serde_yaml::to_string(&item).map_err(|e| e.into()),
+    }
+}
+
+pub fn format_seq<T>(mut items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
 where
     T: Tabled + Serialize + 'static,
 {
