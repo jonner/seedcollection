@@ -5,7 +5,10 @@ use std::{
 
 use crate::{
     cli::{AdminCommands, GerminationCommands, UserCommands},
-    output::rows::{GerminationRow, UserRow},
+    output::{
+        self,
+        rows::{GerminationRow, UserRow},
+    },
     table::SeedctlTable,
 };
 use anyhow::{Context, Result};
@@ -41,11 +44,11 @@ pub async fn handle_command(
 ) -> Result<()> {
     match command {
         AdminCommands::Users { command } => match command {
-            UserCommands::List {} => {
+            UserCommands::List { output } => {
                 let users = User::load_all(dbpool).await?;
-                let mut table = Table::new(users.iter().map(UserRow::new));
-                println!("{}\n", table.styled());
-                println!("{} records found", users.len());
+                let str =
+                    output::format_seq(users.iter().map(UserRow::new).collect::<Vec<_>>(), output)?;
+                println!("{str}");
                 Ok(())
             }
             UserCommands::Add {

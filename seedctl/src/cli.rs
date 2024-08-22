@@ -297,7 +297,10 @@ pub enum AdminCommands {
 #[derive(Subcommand, Debug)]
 pub enum UserCommands {
     #[command(about = "List all users")]
-    List {},
+    List {
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
+    },
     #[command(about = "Add a new user to the database")]
     Add {
         #[arg(long, help = "A unique username for the user")]

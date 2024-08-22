@@ -398,7 +398,7 @@ impl TaxonRowDetails {
     }
 }
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct UserRow {
     id: i64,
