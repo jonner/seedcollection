@@ -17,7 +17,6 @@ use libseed::{
 };
 use sqlx::{Pool, Sqlite};
 use std::collections::HashSet;
-use tabled::Table;
 
 pub async fn handle_command(
     command: SampleCommands,
@@ -86,14 +85,11 @@ pub async fn handle_command(
             println!("{str}",);
             Ok(())
         }
-        SampleCommands::Show { id } => match Sample::load(id, dbpool).await {
+        SampleCommands::Show { id, output } => match Sample::load(id, dbpool).await {
             Ok(mut sample) => {
-                let tbuilder =
-                    Table::builder(vec![SampleRowDetails::new(&mut sample, dbpool).await?])
-                        .index()
-                        .column(0)
-                        .transpose();
-                println!("{}\n", tbuilder.build().styled());
+                let str =
+                    output::format_one(SampleRowDetails::new(&mut sample, dbpool).await?, output)?;
+                println!("{str}");
                 Ok(())
             }
             Err(DatabaseRowNotFound(_)) => {

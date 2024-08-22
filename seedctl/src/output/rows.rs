@@ -9,7 +9,7 @@ use libseed::{
     taxonomy::{Germination, NativeStatus, Rank, Taxon},
     user::User,
 };
-use serde::Serialize;
+use serde::{ser::SerializeSeq, Serialize, Serializer};
 use sqlx::{Pool, Sqlite};
 use tabled::Tabled;
 
@@ -81,36 +81,62 @@ impl SampleRowFull {
     }
 }
 
+fn display_germination(germs: &Option<Vec<Germination>>) -> Option<Vec<String>> {
+    germs.as_ref().map(|v| {
+        v.iter()
+            .map(|g| {
+                format!(
+                    "{}: {}",
+                    g.code.clone(),
+                    g.summary.as_deref().unwrap_or("Unknown")
+                )
+            })
+            .collect()
+    })
+}
 fn table_display_germination(germ: &Option<Vec<Germination>>) -> String {
-    germ.as_ref()
-        .map(|v| {
-            v.iter()
-                .map(|g| {
-                    format!(
-                        "{}: {}",
-                        g.code.clone(),
-                        g.summary.as_deref().unwrap_or("Unknown")
-                    )
-                })
-                .collect::<Vec<String>>()
-                .join("\n")
-        })
+    display_germination(germ)
+        .map(|val| val.join("\n"))
         .unwrap_or_default()
 }
 
-fn table_display_allocations(allocations: &[Allocation]) -> String {
-    let s = allocations
+fn serialize_germination<S>(germ: &Option<Vec<Germination>>, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mapped = display_germination(germ);
+    match mapped {
+        Some(vals) => s.serialize_some(&vals),
+        None => s.serialize_none(),
+    }
+}
+
+fn display_allocations(allocations: &[Allocation]) -> Vec<String> {
+    allocations
         .iter()
         .map(|a| format!("{} ({})", a.project.name, a.project.id))
         .collect::<Vec<String>>()
-        .join("\n");
+}
+fn table_display_allocations(allocations: &[Allocation]) -> String {
+    let s = display_allocations(allocations).join("\n");
     match s.is_empty() {
         true => "Not allocated to any project".to_string(),
         false => s,
     }
 }
+fn serialize_allocations<S>(allocations: &[Allocation], s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let vals = display_allocations(allocations);
+    let mut seq = s.serialize_seq(Some(allocations.len()))?;
+    for elem in vals {
+        seq.serialize_element(&elem)?;
+    }
+    seq.end()
+}
 
-#[derive(Tabled)]
+#[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
 pub struct SampleRowDetails {
     id: i64,
@@ -127,10 +153,12 @@ pub struct SampleRowDetails {
         display_with = "table_display_germination",
         rename = "Germination Codes"
     )]
+    #[serde(serialize_with = "serialize_germination")]
     germination: Option<Vec<Germination>>,
     #[tabled(display_with = "table_display_option")]
     notes: Option<String>,
     #[tabled(display_with = "table_display_allocations")]
+    #[serde(serialize_with = "serialize_allocations")]
     allocations: Vec<Allocation>,
 }
 

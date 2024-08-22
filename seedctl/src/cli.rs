@@ -201,6 +201,8 @@ pub enum SampleCommands {
     #[command(about = "Show details for a single sample")]
     Show {
         id: i64,
+        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
+        output: OutputFormat,
     },
     #[command(about = "Add a new sample to the database")]
     Add {
