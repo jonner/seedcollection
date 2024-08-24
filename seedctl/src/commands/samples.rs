@@ -9,7 +9,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use libseed::{
-    filter::{CompoundFilter, Op, SortOrder, SortSpec},
+    filter::{Cmp, CompoundFilter, Op, SortOrder, SortSpec},
     loadable::{ExternalRef, Loadable},
     sample::{self, Certainty, Sample},
     user::User,
@@ -29,15 +29,21 @@ pub async fn handle_command(
             limit,
             sort,
             reverse,
+            all,
             output,
         } => {
-            let filter = limit.map(|s| {
+            let mut builder = CompoundFilter::builder(Op::And);
+            if let Some(s) = limit {
                 let fbuilder = CompoundFilter::builder(Op::Or)
                     .push(sample::Filter::TaxonNameLike(s.clone()))
                     .push(sample::Filter::SourceNameLike(s.clone()))
                     .push(sample::Filter::Notes(libseed::filter::Cmp::Like, s.clone()));
-                fbuilder.build()
-            });
+                builder = builder.push(fbuilder.build());
+            };
+            if !all {
+                builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0))
+            }
+            let filter = builder.build();
             let sort = sort.map(|vec| {
                 let order = match reverse {
                     true => SortOrder::Descending,
@@ -62,8 +68,8 @@ pub async fn handle_command(
                 )
             });
             let mut samples = match useronly {
-                true => Sample::load_all_user(user.id, filter, sort, dbpool).await?,
-                false => Sample::load_all(filter, sort, dbpool).await?,
+                true => Sample::load_all_user(user.id, Some(filter), sort, dbpool).await?,
+                false => Sample::load_all(Some(filter), sort, dbpool).await?,
             };
             let str = match output.full {
                 true => {

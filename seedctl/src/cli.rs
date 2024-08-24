@@ -204,6 +204,8 @@ pub enum SampleCommands {
         reverse: bool,
         #[command(flatten)]
         output: OutputOptions,
+        #[arg(short, long, help = "Display all samples, even if quantity is 0")]
+        all: bool,
     },
     #[command(about = "Show details for a single sample")]
     Show {
