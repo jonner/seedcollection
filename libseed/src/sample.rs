@@ -52,6 +52,7 @@ pub enum Filter {
     TaxonNameLike(String),
     UserId(i64),
     Notes(Cmp, String),
+    Quantity(Cmp, i64),
 }
 
 #[async_trait]
@@ -118,6 +119,7 @@ impl FilterPart for Filter {
                     builder.push_bind(wildcard);
                 }
             }
+            Self::Quantity(cmp, n) => _ = builder.push("quantity").push(cmp).push_bind(*n),
         };
     }
 }
