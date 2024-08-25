@@ -123,7 +123,7 @@ async fn main() -> Result<()> {
                 Ok(mut taxon) => {
                     let str = output::format_one(
                         TaxonRowDetails::new(&mut taxon, &dbpool).await?,
-                        output,
+                        output.format,
                     )?;
                     println!("{str}");
                     Ok(())

@@ -25,7 +25,6 @@ pub async fn handle_command(
 ) -> Result<()> {
     match command {
         SampleCommands::List {
-            full,
             user: useronly,
             limit,
             sort,
@@ -66,20 +65,20 @@ pub async fn handle_command(
                 true => Sample::load_all_user(user.id, filter, sort, dbpool).await?,
                 false => Sample::load_all(filter, sort, dbpool).await?,
             };
-            let str = match full {
+            let str = match output.full {
                 true => {
                     let records = samples
                         .drain(..)
                         .map(|s| SampleRowFull::new(s))
                         .collect::<Result<Vec<_>, _>>()?;
-                    output::format_seq(records, output)?
+                    output::format_seq(records, output.format)?
                 }
                 false => {
                     let records = samples
                         .drain(..)
                         .map(|s| SampleRow::new(s))
                         .collect::<Result<Vec<_>, _>>()?;
-                    output::format_seq(records, output)?
+                    output::format_seq(records, output.format)?
                 }
             };
             println!("{str}",);
@@ -87,8 +86,10 @@ pub async fn handle_command(
         }
         SampleCommands::Show { id, output } => match Sample::load(id, dbpool).await {
             Ok(mut sample) => {
-                let str =
-                    output::format_one(SampleRowDetails::new(&mut sample, dbpool).await?, output)?;
+                let str = output::format_one(
+                    SampleRowDetails::new(&mut sample, dbpool).await?,
+                    output.format,
+                )?;
                 println!("{str}");
                 Ok(())
             }

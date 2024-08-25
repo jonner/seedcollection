@@ -1,5 +1,5 @@
 use crate::output::OutputFormat;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use libseed::taxonomy;
 use std::path::PathBuf;
 
@@ -8,6 +8,14 @@ use std::path::PathBuf;
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
+}
+
+#[derive(Args, Debug)]
+pub struct OutputOptions {
+    #[arg(value_enum, long, default_value_t = OutputFormat::Table, help="generate output in the given format")]
+    pub format: OutputFormat,
+    #[arg(short, long, help = "Output additional details")]
+    pub full: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -69,8 +77,8 @@ pub enum Commands {
 pub enum ProjectCommands {
     #[command(about = "List all projects")]
     List {
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
     #[command(about = "Add a new project to the database")]
     Add {
@@ -116,10 +124,8 @@ pub enum ProjectCommands {
     #[command(about = "Show all details about a project")]
     Show {
         id: i64,
-        #[arg(short, long)]
-        full: bool,
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
 }
 
@@ -127,18 +133,16 @@ pub enum ProjectCommands {
 pub enum SourceCommands {
     #[command(about = "List all sources")]
     List {
-        #[arg(short, long)]
-        full: bool,
         #[arg(long)]
         filter: Option<String>,
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
     #[command(about = "Show details about a single source")]
     Show {
         id: i64,
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
     #[command(about = "Add a new source to the database")]
     Add {
@@ -191,8 +195,6 @@ pub enum SampleCommands {
     #[command(about = "List all samples")]
     List {
         #[arg(short, long)]
-        full: bool,
-        #[arg(short, long)]
         user: bool,
         #[arg(short, long)]
         limit: Option<String>,
@@ -200,14 +202,14 @@ pub enum SampleCommands {
         sort: Option<Vec<SampleSortField>>,
         #[arg(short, long, help = "Reverse sort order")]
         reverse: bool,
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
     #[command(about = "Show details for a single sample")]
     Show {
         id: i64,
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
     #[command(about = "Add a new sample to the database")]
     Add {
@@ -274,8 +276,8 @@ pub enum TaxonomyCommands {
     #[command(about = "Show information about a taxon")]
     Show {
         id: i64,
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
 }
 
@@ -304,8 +306,8 @@ pub enum AdminCommands {
 pub enum UserCommands {
     #[command(about = "List all users")]
     List {
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
     #[command(about = "Add a new user to the database")]
     Add {
@@ -354,8 +356,8 @@ pub enum UserCommands {
 pub enum GerminationCommands {
     #[command(about = "List all germination codes")]
     List {
-        #[arg(value_enum, short, long, default_value_t = OutputFormat::Table)]
-        output: OutputFormat,
+        #[command(flatten)]
+        output: OutputOptions,
     },
     #[command(about = "Modify properties of a germination code")]
     #[clap(alias = "edit")]

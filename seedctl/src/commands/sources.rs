@@ -22,11 +22,7 @@ pub async fn handle_command(
     dbpool: &Pool<Sqlite>,
 ) -> Result<()> {
     match command {
-        SourceCommands::List {
-            full,
-            filter,
-            output,
-        } => {
+        SourceCommands::List { filter, output } => {
             let filter = filter.map(|f| {
                 CompoundFilter::builder(Op::Or)
                     .push(source::Filter::Name(Cmp::Like, f.clone()))
@@ -34,20 +30,20 @@ pub async fn handle_command(
                     .build()
             });
             let sources = Source::load_all(filter, dbpool).await?;
-            let str = match full {
+            let str = match output.full {
                 true => {
                     let rows = sources
                         .iter()
                         .map(|s| SourceRowFull::new(s))
                         .collect::<Vec<_>>();
-                    output::format_seq(rows, output)?
+                    output::format_seq(rows, output.format)?
                 }
                 false => {
                     let rows = sources
                         .iter()
                         .map(|s| SourceRow::new(s))
                         .collect::<Vec<_>>();
-                    output::format_seq(rows, output)?
+                    output::format_seq(rows, output.format)?
                 }
             };
             println!("{str}");
@@ -55,7 +51,7 @@ pub async fn handle_command(
         }
         SourceCommands::Show { id, output } => match Source::load(id, dbpool).await {
             Ok(src) => {
-                let str = output::format_one(SourceRowFull::new(&src), output)?;
+                let str = output::format_one(SourceRowFull::new(&src), output.format)?;
                 println!("{str}");
                 Ok(())
             }

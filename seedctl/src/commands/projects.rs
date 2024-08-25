@@ -24,7 +24,7 @@ pub async fn handle_command(
             let projects = Project::load_all(None, dbpool).await?;
             let str = output::format_seq(
                 projects.iter().map(ProjectRow::new).collect::<Vec<_>>(),
-                output,
+                output.format,
             )?;
             println!("{str}");
             Ok(())
@@ -81,17 +81,17 @@ pub async fn handle_command(
             println!("Removed sample from project");
             Ok(())
         }
-        ProjectCommands::Show { id, full, output } => match Project::load(id, dbpool).await {
+        ProjectCommands::Show { id, output } => match Project::load(id, dbpool).await {
             Ok(mut projectinfo) => {
                 projectinfo.load_samples(None, None, dbpool).await?;
-                let str = match full {
+                let str = match output.full {
                     true => output::format_seq(
                         projectinfo
                             .allocations
                             .iter()
                             .map(|alloc| AllocationRowFull::new(alloc))
                             .collect::<Result<Vec<_>, _>>()?,
-                        output,
+                        output.format,
                     )?,
                     false => output::format_seq(
                         projectinfo
@@ -99,7 +99,7 @@ pub async fn handle_command(
                             .iter()
                             .map(|alloc| AllocationRow::new(alloc))
                             .collect::<Result<Vec<_>, _>>()?,
-                        output,
+                        output.format,
                     )?,
                 };
                 println!("{str}");

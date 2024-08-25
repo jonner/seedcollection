@@ -44,8 +44,10 @@ pub async fn handle_command(
         AdminCommands::Users { command } => match command {
             UserCommands::List { output } => {
                 let users = User::load_all(dbpool).await?;
-                let str =
-                    output::format_seq(users.iter().map(UserRow::new).collect::<Vec<_>>(), output)?;
+                let str = output::format_seq(
+                    users.iter().map(UserRow::new).collect::<Vec<_>>(),
+                    output.format,
+                )?;
                 println!("{str}");
                 Ok(())
             }
@@ -112,7 +114,7 @@ pub async fn handle_command(
                 let codes = Germination::load_all(dbpool).await?;
                 let str = output::format_seq(
                     codes.iter().map(GerminationRow::new).collect::<Vec<_>>(),
-                    output,
+                    output.format,
                 )?;
                 println!("{str}");
                 Ok(())
