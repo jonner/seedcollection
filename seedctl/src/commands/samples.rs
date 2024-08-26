@@ -26,14 +26,14 @@ pub async fn handle_command(
     match command {
         SampleCommands::List {
             user: useronly,
-            limit,
+            filter,
             sort,
             reverse,
             all,
             output,
         } => {
             let mut builder = CompoundFilter::builder(Op::And);
-            if let Some(s) = limit {
+            if let Some(s) = filter {
                 let fbuilder = CompoundFilter::builder(Op::Or)
                     .push(sample::Filter::TaxonNameLike(s.clone()))
                     .push(sample::Filter::SourceNameLike(s.clone()))
