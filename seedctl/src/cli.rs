@@ -194,11 +194,16 @@ pub enum SampleSortField {
 pub enum SampleCommands {
     #[command(about = "List all samples")]
     List {
-        #[arg(short, long)]
+        #[arg(short, long, help = "Only show samples for the current user")]
         user: bool,
         #[arg(long, help = "Filter samples by the given string")]
         filter: Option<String>,
-        #[arg(short, long, value_delimiter = ',')]
+        #[arg(
+            short,
+            long,
+            value_delimiter = ',',
+            help = "Sort the list by the given field"
+        )]
         sort: Option<Vec<SampleSortField>>,
         #[arg(short, long, help = "Reverse sort order")]
         reverse: bool,
