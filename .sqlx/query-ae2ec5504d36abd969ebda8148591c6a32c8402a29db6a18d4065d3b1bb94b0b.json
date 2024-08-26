@@ -6,12 +6,12 @@
       {
         "name": "uvid",
         "ordinal": 0,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "userid",
         "ordinal": 1,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "uvkey",
@@ -26,12 +26,12 @@
       {
         "name": "uvexpiration",
         "ordinal": 4,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "uvconfirmed",
         "ordinal": 5,
-        "type_info": "Int64"
+        "type_info": "Integer"
       }
     ],
     "parameters": {
