@@ -322,8 +322,16 @@ pub async fn handle_command(
             }
             Ok(())
         }
-        SampleCommands::Stats => {
-            let samples = Sample::load_all(None, None, &dbpool).await?;
+        SampleCommands::Stats { all } => {
+            let filter = match all {
+                false => {
+                    let mut builder = CompoundFilter::builder(Op::And);
+                    builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0));
+                    Some(builder.build())
+                }
+                _ => None,
+            };
+            let samples = Sample::load_all(filter, None, &dbpool).await?;
             let nsamples = samples.len();
             let ntaxa = samples
                 .iter()

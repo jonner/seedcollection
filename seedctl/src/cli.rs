@@ -257,7 +257,10 @@ pub enum SampleCommands {
         #[arg(long, conflicts_with("certain"))]
         uncertain: bool,
     },
-    Stats,
+    Stats {
+        #[arg(short, long, help = "Include samples with no inventory")]
+        all: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
