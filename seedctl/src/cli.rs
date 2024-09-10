@@ -238,9 +238,7 @@ pub enum SampleCommands {
         userid: Option<i64>,
     },
     #[command(about = "Remove an existing sample from the database")]
-    Remove {
-        id: i64,
-    },
+    Remove { id: i64 },
     #[command(about = "Modify properties of a sample")]
     #[clap(alias = "edit")]
     Modify {
