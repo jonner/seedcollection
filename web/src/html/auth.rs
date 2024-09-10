@@ -15,7 +15,6 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    empty_string_as_none,
     loadable::Loadable,
     user::{User, UserStatus},
 };
@@ -37,8 +36,6 @@ pub struct RegisterParams {
     pub username: String,
     pub email: String,
     pub password: String,
-    #[serde(deserialize_with = "empty_string_as_none")]
-    pub next: Option<String>,
 }
 
 #[allow(dead_code)]
