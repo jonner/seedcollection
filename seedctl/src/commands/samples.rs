@@ -75,14 +75,14 @@ pub async fn handle_command(
                 true => {
                     let records = samples
                         .drain(..)
-                        .map(|s| SampleRowFull::new(s))
+                        .map(SampleRowFull::new)
                         .collect::<Result<Vec<_>, _>>()?;
                     output::format_seq(records, output.format)?
                 }
                 false => {
                     let records = samples
                         .drain(..)
-                        .map(|s| SampleRow::new(s))
+                        .map(SampleRow::new)
                         .collect::<Result<Vec<_>, _>>()?;
                     output::format_seq(records, output.format)?
                 }
@@ -331,7 +331,7 @@ pub async fn handle_command(
                 }
                 _ => None,
             };
-            let samples = Sample::load_all(filter, None, &dbpool).await?;
+            let samples = Sample::load_all(filter, None, dbpool).await?;
             let nsamples = samples.len();
             let ntaxa = samples
                 .iter()

@@ -29,10 +29,9 @@ pub trait Loadable {
         Self: Sized;
 
     async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        Self::delete_id(&self.id(), pool).await.map(|r| {
-            self.set_id(Self::Id::invalid_value());
-            r
-        })
+        Self::delete_id(&self.id(), pool)
+            .await
+            .inspect(|_| self.set_id(Self::Id::invalid_value()))
     }
 
     async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult>;
