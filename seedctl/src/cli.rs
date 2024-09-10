@@ -133,7 +133,7 @@ pub enum ProjectCommands {
 pub enum SourceCommands {
     #[command(about = "List all sources")]
     List {
-        #[arg(long)]
+        #[arg(long, help = "Filter the list of sources by the given string")]
         filter: Option<String>,
         #[command(flatten)]
         output: OutputOptions,
@@ -194,11 +194,16 @@ pub enum SampleSortField {
 pub enum SampleCommands {
     #[command(about = "List all samples")]
     List {
-        #[arg(short, long)]
+        #[arg(short, long, help = "Only show samples for the current user")]
         user: bool,
-        #[arg(short, long)]
-        limit: Option<String>,
-        #[arg(short, long, value_delimiter = ',')]
+        #[arg(long, help = "Filter samples by the given string")]
+        filter: Option<String>,
+        #[arg(
+            short,
+            long,
+            value_delimiter = ',',
+            help = "Sort the list by the given field"
+        )]
         sort: Option<Vec<SampleSortField>>,
         #[arg(short, long, help = "Reverse sort order")]
         reverse: bool,
