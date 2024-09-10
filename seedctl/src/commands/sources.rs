@@ -1,6 +1,9 @@
 use crate::{
     cli::SourceCommands,
-    table::{SeedctlTable, SourceRow, SourceRowFull},
+    output::{
+        self,
+        rows::{SourceRow, SourceRowFull},
+    },
 };
 use anyhow::{anyhow, Result};
 use inquire::validator::Validation;
@@ -12,7 +15,6 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseRowNotFound},
 };
 use sqlx::{Pool, Sqlite};
-use tabled::Table;
 
 pub async fn handle_command(
     command: SourceCommands,
@@ -20,7 +22,7 @@ pub async fn handle_command(
     dbpool: &Pool<Sqlite>,
 ) -> Result<()> {
     match command {
-        SourceCommands::List { full, filter } => {
+        SourceCommands::List { filter, output } => {
             let filter = filter.map(|f| {
                 CompoundFilter::builder(Op::Or)
                     .push(source::Filter::Name(Cmp::Like, f.clone()))
@@ -28,21 +30,29 @@ pub async fn handle_command(
                     .build()
             });
             let sources = Source::load_all(filter, dbpool).await?;
-            let mut table = match full {
-                true => Table::new(sources.iter().map(SourceRowFull::new)),
-                false => Table::new(sources.iter().map(SourceRow::new)),
+            let str = match output.full {
+                true => {
+                    let rows = sources
+                        .iter()
+                        .map(|s| SourceRowFull::new(s))
+                        .collect::<Vec<_>>();
+                    output::format_seq(rows, output.format)?
+                }
+                false => {
+                    let rows = sources
+                        .iter()
+                        .map(|s| SourceRow::new(s))
+                        .collect::<Vec<_>>();
+                    output::format_seq(rows, output.format)?
+                }
             };
-            println!("{}\n", table.styled());
-            println!("{} records found", sources.len());
+            println!("{str}");
             Ok(())
         }
-        SourceCommands::Show { id } => match Source::load(id, dbpool).await {
+        SourceCommands::Show { id, output } => match Source::load(id, dbpool).await {
             Ok(src) => {
-                let tbuilder = Table::builder(vec![SourceRowFull::new(&src)])
-                    .index()
-                    .column(0)
-                    .transpose();
-                println!("{}\n", tbuilder.build().styled());
+                let str = output::format_one(SourceRowFull::new(&src), output.format)?;
+                println!("{str}");
                 Ok(())
             }
             Err(DatabaseRowNotFound(_)) => {

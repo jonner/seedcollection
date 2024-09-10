@@ -1,6 +1,9 @@
 use crate::{
     cli::ProjectCommands,
-    table::{AllocationRow, AllocationRowFull, ProjectRow, SeedctlTable},
+    output::{
+        self,
+        rows::{AllocationRow, AllocationRowFull, ProjectRow},
+    },
 };
 use anyhow::Result;
 use libseed::{
@@ -10,7 +13,6 @@ use libseed::{
     Error::DatabaseRowNotFound,
 };
 use sqlx::{Pool, Sqlite};
-use tabled::Table;
 
 pub async fn handle_command(
     command: ProjectCommands,
@@ -18,11 +20,13 @@ pub async fn handle_command(
     dbpool: &Pool<Sqlite>,
 ) -> Result<()> {
     match command {
-        ProjectCommands::List {} => {
+        ProjectCommands::List { output } => {
             let projects = Project::load_all(None, dbpool).await?;
-            let mut table = Table::new(projects.iter().map(ProjectRow::new));
-            println!("{}\n", table.styled());
-            println!("{} records found", projects.len());
+            let str = output::format_seq(
+                projects.iter().map(ProjectRow::new).collect::<Vec<_>>(),
+                output.format,
+            )?;
+            println!("{str}");
             Ok(())
         }
         ProjectCommands::Add {
@@ -77,25 +81,28 @@ pub async fn handle_command(
             println!("Removed sample from project");
             Ok(())
         }
-        ProjectCommands::Show { id, full } => match Project::load(id, dbpool).await {
+        ProjectCommands::Show { id, output } => match Project::load(id, dbpool).await {
             Ok(mut projectinfo) => {
                 projectinfo.load_samples(None, None, dbpool).await?;
-                let mut table = match full {
-                    true => Table::new(
+                let str = match output.full {
+                    true => output::format_seq(
                         projectinfo
                             .allocations
                             .iter()
-                            .map(|alloc| AllocationRowFull::new(alloc).unwrap()),
-                    ),
-                    false => Table::new(
+                            .map(|alloc| AllocationRowFull::new(alloc))
+                            .collect::<Result<Vec<_>, _>>()?,
+                        output.format,
+                    )?,
+                    false => output::format_seq(
                         projectinfo
                             .allocations
                             .iter()
-                            .map(|alloc| AllocationRow::new(alloc).unwrap()),
-                    ),
+                            .map(|alloc| AllocationRow::new(alloc))
+                            .collect::<Result<Vec<_>, _>>()?,
+                        output.format,
+                    )?,
                 };
-                println!("{}\n", table.styled());
-                println!("{} records found", projectinfo.allocations.len());
+                println!("{str}");
                 Ok(())
             }
             Err(DatabaseRowNotFound(_)) => {

@@ -1,9 +1,11 @@
-use std::collections::HashSet;
-
 use crate::{
     cli::{SampleCommands, SampleSortField},
+    output::{
+        self,
+        rows::{SampleRow, SampleRowDetails, SampleRowFull},
+    },
     prompt::{SourceIdPrompt, TaxonIdPrompt},
-    table::{SampleRow, SampleRowDetails, SampleRowFull, SeedctlTable},
+    table::SeedctlTable,
 };
 use anyhow::{anyhow, Result};
 use libseed::{
@@ -14,7 +16,7 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseRowNotFound},
 };
 use sqlx::{Pool, Sqlite};
-use tabled::Table;
+use std::collections::HashSet;
 
 pub async fn handle_command(
     command: SampleCommands,
@@ -23,11 +25,11 @@ pub async fn handle_command(
 ) -> Result<()> {
     match command {
         SampleCommands::List {
-            full,
             user: useronly,
             limit,
             sort,
             reverse,
+            output,
         } => {
             let filter = limit.map(|s| {
                 let fbuilder = CompoundFilter::builder(Op::Or)
@@ -59,30 +61,36 @@ pub async fn handle_command(
                         .collect(),
                 )
             });
-            let samples = match useronly {
+            let mut samples = match useronly {
                 true => Sample::load_all_user(user.id, filter, sort, dbpool).await?,
                 false => Sample::load_all(filter, sort, dbpool).await?,
             };
-            let mut table = match full {
-                true => Table::new(
-                    samples
-                        .iter()
-                        .map(|sample| SampleRowFull::new(sample).unwrap()),
-                ),
-                false => Table::new(samples.iter().map(|sample| SampleRow::new(sample).unwrap())),
+            let str = match output.full {
+                true => {
+                    let records = samples
+                        .drain(..)
+                        .map(|s| SampleRowFull::new(s))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    output::format_seq(records, output.format)?
+                }
+                false => {
+                    let records = samples
+                        .drain(..)
+                        .map(|s| SampleRow::new(s))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    output::format_seq(records, output.format)?
+                }
             };
-            println!("{}\n", table.styled());
-            println!("{} records found", samples.len());
+            println!("{str}",);
             Ok(())
         }
-        SampleCommands::Show { id } => match Sample::load(id, dbpool).await {
+        SampleCommands::Show { id, output } => match Sample::load(id, dbpool).await {
             Ok(mut sample) => {
-                let tbuilder =
-                    Table::builder(vec![SampleRowDetails::new(&mut sample, dbpool).await?])
-                        .index()
-                        .column(0)
-                        .transpose();
-                println!("{}\n", tbuilder.build().styled());
+                let str = output::format_one(
+                    SampleRowDetails::new(&mut sample, dbpool).await?,
+                    output.format,
+                )?;
+                println!("{str}");
                 Ok(())
             }
             Err(DatabaseRowNotFound(_)) => {

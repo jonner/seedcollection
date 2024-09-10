@@ -5,7 +5,10 @@ use std::{
 
 use crate::{
     cli::{AdminCommands, GerminationCommands, UserCommands},
-    table::{GerminationRow, SeedctlTable, UserRow},
+    output::{
+        self,
+        rows::{GerminationRow, UserRow},
+    },
 };
 use anyhow::{Context, Result};
 use libseed::{
@@ -14,7 +17,6 @@ use libseed::{
     user::{User, UserStatus},
 };
 use sqlx::{Pool, Sqlite};
-use tabled::Table;
 use tokio::fs;
 use tracing::debug;
 
@@ -40,11 +42,13 @@ pub async fn handle_command(
 ) -> Result<()> {
     match command {
         AdminCommands::Users { command } => match command {
-            UserCommands::List {} => {
+            UserCommands::List { output } => {
                 let users = User::load_all(dbpool).await?;
-                let mut table = Table::new(users.iter().map(UserRow::new));
-                println!("{}\n", table.styled());
-                println!("{} records found", users.len());
+                let str = output::format_seq(
+                    users.iter().map(UserRow::new).collect::<Vec<_>>(),
+                    output.format,
+                )?;
+                println!("{str}");
                 Ok(())
             }
             UserCommands::Add {
@@ -106,10 +110,13 @@ pub async fn handle_command(
             }
         },
         AdminCommands::Germination { command } => match command {
-            GerminationCommands::List {} => {
+            GerminationCommands::List { output } => {
                 let codes = Germination::load_all(dbpool).await?;
-                let mut table = Table::new(codes.iter().map(GerminationRow::new));
-                println!("{}\n", table.styled());
+                let str = output::format_seq(
+                    codes.iter().map(GerminationRow::new).collect::<Vec<_>>(),
+                    output.format,
+                )?;
+                println!("{str}");
                 Ok(())
             }
             GerminationCommands::Modify {

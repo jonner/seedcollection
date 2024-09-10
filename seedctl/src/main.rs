@@ -1,7 +1,9 @@
-use crate::cli::*;
-use crate::config::*;
-use crate::table::SeedctlTable;
-use crate::table::*;
+use crate::{
+    cli::*,
+    config::*,
+    output::rows::{TaxonRow, TaxonRowDetails},
+    table::SeedctlTable,
+};
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use libseed::{
@@ -17,6 +19,7 @@ use tracing::debug;
 mod cli;
 mod commands;
 mod config;
+mod output;
 mod prompt;
 mod table;
 
@@ -116,14 +119,13 @@ async fn main() -> Result<()> {
                 println!("{} records found", taxa.len());
                 Ok(())
             }
-            TaxonomyCommands::Show { id } => match Taxon::load(id, &dbpool).await {
+            TaxonomyCommands::Show { id, output } => match Taxon::load(id, &dbpool).await {
                 Ok(mut taxon) => {
-                    let tbuilder =
-                        Table::builder(vec![TaxonRowDetails::new(&mut taxon, &dbpool).await?])
-                            .index()
-                            .column(0)
-                            .transpose();
-                    println!("{}\n", tbuilder.build().styled());
+                    let str = output::format_one(
+                        TaxonRowDetails::new(&mut taxon, &dbpool).await?,
+                        output.format,
+                    )?;
+                    println!("{str}");
                     Ok(())
                 }
                 Err(DatabaseRowNotFound(_)) => {
