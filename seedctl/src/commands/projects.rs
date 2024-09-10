@@ -89,7 +89,7 @@ pub async fn handle_command(
                         projectinfo
                             .allocations
                             .iter()
-                            .map(|alloc| AllocationRowFull::new(alloc))
+                            .map(AllocationRowFull::new)
                             .collect::<Result<Vec<_>, _>>()?,
                         output.format,
                     )?,
@@ -97,7 +97,7 @@ pub async fn handle_command(
                         projectinfo
                             .allocations
                             .iter()
-                            .map(|alloc| AllocationRow::new(alloc))
+                            .map(AllocationRow::new)
                             .collect::<Result<Vec<_>, _>>()?,
                         output.format,
                     )?,

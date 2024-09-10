@@ -32,17 +32,11 @@ pub async fn handle_command(
             let sources = Source::load_all(filter, dbpool).await?;
             let str = match output.full {
                 true => {
-                    let rows = sources
-                        .iter()
-                        .map(|s| SourceRowFull::new(s))
-                        .collect::<Vec<_>>();
+                    let rows = sources.iter().map(SourceRowFull::new).collect::<Vec<_>>();
                     output::format_seq(rows, output.format)?
                 }
                 false => {
-                    let rows = sources
-                        .iter()
-                        .map(|s| SourceRow::new(s))
-                        .collect::<Vec<_>>();
+                    let rows = sources.iter().map(SourceRow::new).collect::<Vec<_>>();
                     output::format_seq(rows, output.format)?
                 }
             };

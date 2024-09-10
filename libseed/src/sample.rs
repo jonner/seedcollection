@@ -264,7 +264,7 @@ impl Sample {
         .bind(&self.certainty)
         .execute(pool)
         .await
-        .map(|r| { self.id = r.last_insert_rowid(); r})
+        .inspect(|r| self.id = r.last_insert_rowid())
         .map_err(|e| e.into())
     }
 

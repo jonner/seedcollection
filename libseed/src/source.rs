@@ -185,10 +185,7 @@ impl Source {
         .bind(self.userid)
         .execute(pool)
         .await
-        .map(|r| {
-            self.id = r.last_insert_rowid();
-            r
-        })
+        .inspect(|r| self.id = r.last_insert_rowid())
         .map_err(|e| e.into())
     }
 
@@ -216,10 +213,7 @@ impl Source {
             .execute(pool)
             .await
             .map_err(|e| e.into())
-            .map(|r| {
-                self.id = -1;
-                r
-            })
+            .inspect(|_| self.id = -1)
     }
 
     pub fn new(
