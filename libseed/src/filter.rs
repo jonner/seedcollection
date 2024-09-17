@@ -40,7 +40,7 @@ pub trait FilterPart: Send {
 
 #[derive(Clone)]
 /// An object that represents one or more filter conditions that are combined by a single logical
-/// operator ([FilterOp]). Multiple compound filters can be combined together into larger filter
+/// operator ([Op]). Multiple compound filters can be combined together into larger filter
 /// conditions
 pub struct CompoundFilter {
     conditions: Vec<DynFilterPart>,
