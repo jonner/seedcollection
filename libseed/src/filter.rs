@@ -127,33 +127,34 @@ pub enum SortOrder {
     Descending,
 }
 
-impl std::fmt::Display for SortOrder {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Ascending => "ASC",
-                Self::Descending => "DESC",
-            }
-        )
+impl ToSql for SortOrder {
+    fn to_sql(&self) -> String {
+        match self {
+            Self::Ascending => "ASC",
+            Self::Descending => "DESC",
+        }
+        .into()
     }
+}
+
+pub trait ToSql {
+    fn to_sql(&self) -> String;
 }
 
 /// An object that allows you to specify the sort for an SQL query
 #[derive(Clone, Debug)]
-pub struct SortSpec<T: std::fmt::Display> {
+pub struct SortSpec<T: ToSql> {
     pub field: T,
     pub order: SortOrder,
 }
 
-impl<T: std::fmt::Display> std::fmt::Display for SortSpec<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.field, self.order)
+impl<T: ToSql> ToSql for SortSpec<T> {
+    fn to_sql(&self) -> String {
+        format!("{} {}", self.field.to_sql(), self.order.to_sql())
     }
 }
 
-impl<T: std::fmt::Display> SortSpec<T> {
+impl<T: ToSql> SortSpec<T> {
     pub fn new(field: T, order: SortOrder) -> Self {
         Self { field, order }
     }

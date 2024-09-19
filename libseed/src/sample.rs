@@ -1,7 +1,7 @@
 //! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec},
+    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, ToSql},
     loadable::{ExternalRef, Loadable},
     source::Source,
     taxonomy::Taxon,
@@ -135,37 +135,30 @@ pub enum SortField {
     Month,
 }
 
-impl std::fmt::Display for SortField {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                SortField::Id => "sampleid",
-                SortField::TaxonName => "complete_name",
-                SortField::TaxonSequence => "seq",
-                SortField::SourceId => "srcid",
-                SortField::SourceName => "srcname",
-                SortField::Year => "year",
-                SortField::Month => "month",
-            }
-        )
+impl ToSql for SortField {
+    fn to_sql(&self) -> String {
+        match self {
+            SortField::Id => "sampleid",
+            SortField::TaxonName => "complete_name",
+            SortField::TaxonSequence => "seq",
+            SortField::SourceId => "srcid",
+            SortField::SourceName => "srcname",
+            SortField::Year => "year",
+            SortField::Month => "month",
+        }
+        .into()
     }
 }
 
 pub struct SortSpecs(pub Vec<SortSpec<SortField>>);
 
-impl std::fmt::Display for SortSpecs {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            self.0
-                .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<String>>()
-                .join(",")
-        )
+impl ToSql for SortSpecs {
+    fn to_sql(&self) -> String {
+        self.0
+            .iter()
+            .map(ToSql::to_sql)
+            .collect::<Vec<String>>()
+            .join(",")
     }
 }
 
@@ -203,7 +196,7 @@ impl Sample {
         let s: SortSpecs = sort
             .map(Into::into)
             .unwrap_or(SortField::TaxonSequence.into());
-        builder.push(s.to_string());
+        builder.push(s.to_sql());
         builder
     }
 

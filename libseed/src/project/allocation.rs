@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     error::Result,
-    filter::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec},
+    filter::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec, ToSql},
     loadable::Loadable,
     sample::Sample,
 };
@@ -114,6 +114,12 @@ pub enum SortField {
     Quantity,
     #[serde(rename = "src")]
     Source,
+}
+
+impl ToSql for SortField {
+    fn to_sql(&self) -> String {
+        self.to_string()
+    }
 }
 
 impl Allocation {
