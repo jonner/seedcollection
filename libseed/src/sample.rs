@@ -125,7 +125,7 @@ impl FilterPart for Filter {
 }
 
 #[derive(Clone, Debug)]
-pub enum Sort {
+pub enum SortField {
     Id,
     TaxonName,
     TaxonSequence,
@@ -135,25 +135,25 @@ pub enum Sort {
     Month,
 }
 
-impl std::fmt::Display for Sort {
+impl std::fmt::Display for SortField {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                Sort::Id => "sampleid",
-                Sort::TaxonName => "complete_name",
-                Sort::TaxonSequence => "seq",
-                Sort::SourceId => "srcid",
-                Sort::SourceName => "srcname",
-                Sort::Year => "year",
-                Sort::Month => "month",
+                SortField::Id => "sampleid",
+                SortField::TaxonName => "complete_name",
+                SortField::TaxonSequence => "seq",
+                SortField::SourceId => "srcid",
+                SortField::SourceName => "srcname",
+                SortField::Year => "year",
+                SortField::Month => "month",
             }
         )
     }
 }
 
-pub struct SortSpecs(pub Vec<SortSpec<Sort>>);
+pub struct SortSpecs(pub Vec<SortSpec<SortField>>);
 
 impl std::fmt::Display for SortSpecs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -169,8 +169,8 @@ impl std::fmt::Display for SortSpecs {
     }
 }
 
-impl From<Sort> for SortSpecs {
-    fn from(value: Sort) -> Self {
+impl From<SortField> for SortSpecs {
+    fn from(value: SortField) -> Self {
         SortSpecs(vec![SortSpec {
             field: value,
             order: SortOrder::Ascending,
@@ -178,8 +178,8 @@ impl From<Sort> for SortSpecs {
     }
 }
 
-impl From<Vec<Sort>> for SortSpecs {
-    fn from(mut value: Vec<Sort>) -> Self {
+impl From<Vec<SortField>> for SortSpecs {
+    fn from(mut value: Vec<SortField>) -> Self {
         Self(
             value
                 .drain(..)
@@ -200,7 +200,9 @@ impl Sample {
             f.add_to_query(&mut builder);
         }
         builder.push(" ORDER BY ");
-        let s: SortSpecs = sort.map(Into::into).unwrap_or(Sort::TaxonSequence.into());
+        let s: SortSpecs = sort
+            .map(Into::into)
+            .unwrap_or(SortField::TaxonSequence.into());
         builder.push(s.to_string());
         builder
     }

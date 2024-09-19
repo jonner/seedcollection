@@ -52,11 +52,15 @@ pub async fn handle_command(
                 sample::SortSpecs(
                     vec.iter()
                         .map(|v| match v {
-                            SampleSortField::Id => &[sample::Sort::Id] as &[sample::Sort],
-                            SampleSortField::Taxon => &[sample::Sort::TaxonSequence],
-                            SampleSortField::Name => &[sample::Sort::TaxonName],
-                            SampleSortField::Source => &[sample::Sort::SourceName],
-                            SampleSortField::Date => &[sample::Sort::Year, sample::Sort::Month],
+                            SampleSortField::Id => {
+                                &[sample::SortField::Id] as &[sample::SortField]
+                            }
+                            SampleSortField::Taxon => &[sample::SortField::TaxonSequence],
+                            SampleSortField::Name => &[sample::SortField::TaxonName],
+                            SampleSortField::Source => &[sample::SortField::SourceName],
+                            SampleSortField::Date => {
+                                &[sample::SortField::Year, sample::SortField::Month]
+                            }
                         })
                         .fold(Vec::new(), |mut acc, val| {
                             acc.extend_from_slice(val);
