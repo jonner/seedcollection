@@ -16,10 +16,10 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, CompoundFilter, Op},
+    filter::{Cmp, CompoundFilter, Op, SortOrder, SortSpec},
     loadable::{ExternalRef, Loadable},
     project::{allocation, Allocation},
-    sample::{self, Certainty, Sample},
+    sample::{self, Certainty, Sample, SortField, SortSpecs},
     source::Source,
 };
 use minijinja::context;
@@ -43,6 +43,8 @@ pub fn router() -> Router<AppState> {
 struct SampleListParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     filter: Option<String>,
+    sort: Option<SortField>,
+    order: Option<SortOrder>,
 }
 
 async fn list_samples(
@@ -53,16 +55,32 @@ async fn list_samples(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     debug!("query params: {:?}", query);
-    let filter = query.and_then(|params| {
-        params.filter.as_ref().map(|f| {
-            CompoundFilter::builder(Op::Or)
-                .push(sample::Filter::TaxonNameLike(f.clone()))
-                .push(sample::Filter::Notes(Cmp::Like, f.clone()))
-                .push(sample::Filter::SourceNameLike(f.clone()))
-                .build()
-        })
-    });
-    match Sample::load_all_user(user.id, filter, None, &state.dbpool).await {
+    let mut filter = None;
+    let mut sort = None;
+    match query {
+        Some(params) => {
+            filter = params.filter.as_ref().map(|f| {
+                CompoundFilter::builder(Op::Or)
+                    .push(sample::Filter::TaxonNameLike(f.clone()))
+                    .push(sample::Filter::Notes(Cmp::Like, f.clone()))
+                    .push(sample::Filter::SourceNameLike(f.clone()))
+                    .build()
+            });
+            let o = params
+                .order
+                .as_ref()
+                .cloned()
+                .unwrap_or(SortOrder::Ascending);
+            let s = params
+                .sort
+                .as_ref()
+                .cloned()
+                .unwrap_or(SortField::TaxonSequence);
+            sort = Some(SortSpecs(vec![SortSpec::new(s, o)]));
+        }
+        None => (),
+    };
+    match Sample::load_all_user(user.id, filter, sort, &state.dbpool).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),
