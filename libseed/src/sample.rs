@@ -125,19 +125,16 @@ impl FilterPart for Filter {
 }
 
 #[derive(strum_macros::Display, Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum SortField {
     Id,
     #[serde(rename = "name")]
     TaxonName,
     #[serde(rename = "seq")]
     TaxonSequence,
-    #[serde(rename = "srcid")]
     SourceId,
-    #[serde(rename = "srcname")]
     SourceName,
-    #[serde(rename = "year")]
     Year,
-    #[serde(rename = "month")]
     Month,
 }
 

@@ -4,6 +4,9 @@
 {% from "_macros.html" import icon %}
 {% block title %}Samples{% endblock %}
 {% block content %}
+{% macro option(value, name, selected) -%}
+<option value="{{ value }}" {% if selected == value %}selected{% endif %}>{{ name }}</option>
+{%- endmacro %}
 <h2><span class="me-2">{{ icon("box-seam") }}</span>Samples <a class="ms-2" href="{{ "/sample/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
     <form 
@@ -13,12 +16,39 @@
          hx-boost="true"
          hx-target="#sample-table"
          hx-get="{{ "/sample/list" | app_url }}"
-         hx-trigger="submit, input changed delay:500ms from:input">
-        <input type="text"
-               class="form-control"
-               autofocus
-               placeholder="Filter list..."
-               name="filter">
+         hx-trigger="submit, input changed delay:500ms from:input, change changed delay:500ms from:select">
+    <div class="input-group mb-3">
+            <input type="text"
+                   class="form-control"
+                   autofocus
+                   placeholder="Filter list..."
+                   value="{{ query.filter or "" }}"
+                   name="filter">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">Sort</button>
+            <div class="dropdown-menu dropdown-menu-end">
+                <div class="p-3">
+                    <div class="mb-3">
+                        <label for="sortselect" class="dropdown-header">Sort by</label>
+                        {% with order = query.sort or "seq" %}
+                        <select id="sortselect" class="form-select" name="sort">
+                            {{ option("seq",  "Taxonomic order", order) }}
+                            {{ option("name",  "Taxon name", order) }}
+                            {{ option("id",  "Sample Id", order) }}
+                            {{ option("sourcename",  "Seed Source", order) }}
+                            {{ option("year",  "Year", order) }}
+                        </select>
+                        {% endwith %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="directionselect" class="dropdown-header">Sort direction</label>
+                        <select id="directionselect" class="form-select" name="dir">
+                            {{ option("asc", "Ascending", query.dir) }}
+                            {{ option("desc", "Descending", query.dir) }}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
     </form>
     </div>
     {{ sample_list(samples, "sample-table") }}

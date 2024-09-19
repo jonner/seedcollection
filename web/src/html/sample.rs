@@ -39,53 +39,48 @@ pub fn router() -> Router<AppState> {
         .route("/:id/edit", get(show_sample))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct SampleListParams {
-    #[serde(deserialize_with = "empty_string_as_none")]
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     filter: Option<String>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
     sort: Option<SortField>,
-    order: Option<SortOrder>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    dir: Option<SortOrder>,
 }
 
 async fn list_samples(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    query: Option<Query<SampleListParams>>,
+    Query(params): Query<SampleListParams>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-    debug!("query params: {:?}", query);
-    let mut filter = None;
-    let mut sort = None;
-    match query {
-        Some(params) => {
-            filter = params.filter.as_ref().map(|f| {
-                CompoundFilter::builder(Op::Or)
-                    .push(sample::Filter::TaxonNameLike(f.clone()))
-                    .push(sample::Filter::Notes(Cmp::Like, f.clone()))
-                    .push(sample::Filter::SourceNameLike(f.clone()))
-                    .build()
-            });
-            let o = params
-                .order
-                .as_ref()
-                .cloned()
-                .unwrap_or(SortOrder::Ascending);
-            let s = params
-                .sort
-                .as_ref()
-                .cloned()
-                .unwrap_or(SortField::TaxonSequence);
-            sort = Some(SortSpecs(vec![SortSpec::new(s, o)]));
-        }
-        None => (),
-    };
+    debug!("query params: {:?}", params);
+
+    let filter = params.filter.as_ref().map(|f| {
+        CompoundFilter::builder(Op::Or)
+            .push(sample::Filter::TaxonNameLike(f.clone()))
+            .push(sample::Filter::Notes(Cmp::Like, f.clone()))
+            .push(sample::Filter::SourceNameLike(f.clone()))
+            .build()
+    });
+
+    let dir = params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending);
+    let field = params
+        .sort
+        .as_ref()
+        .cloned()
+        .unwrap_or(SortField::TaxonSequence);
+    let sort = Some(SortSpecs(vec![SortSpec::new(field, dir)]));
+
     match Sample::load_all_user(user.id, filter, sort, &state.dbpool).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),
             context!(user => user,
                      samples => samples,
+                     query => params,
                      filteronly => headers.get("HX-Request").is_some()),
         )
         .into_response(),
