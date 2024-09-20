@@ -8,12 +8,12 @@ use crate::{
     user::User,
 };
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use sqlx::{
     sqlite::{SqliteQueryResult, SqliteRow},
     FromRow, Pool, QueryBuilder, Row, Sqlite,
 };
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use strum_macros::Display;
 
 #[derive(Clone, Deserialize, Serialize, Debug, sqlx::Type, PartialEq, Display)]
@@ -136,6 +136,16 @@ pub enum SortField {
     SourceName,
     CollectionDate,
     Quantity,
+}
+
+impl FromStr for SortField {
+    type Err = serde::de::value::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let deserializer = s.into_deserializer();
+        let val: Self = Deserialize::deserialize(deserializer)?;
+        Ok(val)
+    }
 }
 
 impl ToSql for SortField {

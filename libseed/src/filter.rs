@@ -1,7 +1,10 @@
 //! utilities for filtering database queries for the various objects
 //!
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use serde::{
+    de::{value, IntoDeserializer},
+    Deserialize, Serialize,
+};
+use std::{str::FromStr, sync::Arc};
 
 #[derive(Clone)]
 pub enum Op {
@@ -125,6 +128,16 @@ pub enum SortOrder {
     Ascending,
     #[serde(rename = "desc")]
     Descending,
+}
+
+impl FromStr for SortOrder {
+    type Err = value::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let deserializer = s.into_deserializer();
+        let val: Self = Deserialize::deserialize(deserializer)?;
+        Ok(val)
+    }
 }
 
 impl ToSql for SortOrder {
