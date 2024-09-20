@@ -13,7 +13,7 @@ use libseed::{
     loadable::{ExternalRef, Loadable},
     sample::{self, Certainty, Sample},
     user::User,
-    Error::{AuthUserNotFound, DatabaseRowNotFound},
+    Error::{AuthUserNotFound, DatabaseError},
 };
 use sqlx::{Pool, Sqlite};
 use std::collections::HashSet;
@@ -101,7 +101,7 @@ pub async fn handle_command(
                 println!("{str}");
                 Ok(())
             }
-            Err(DatabaseRowNotFound(_)) => {
+            Err(DatabaseError(sqlx::Error::RowNotFound)) => {
                 println!("Sample {id} not found");
                 Ok(())
             }

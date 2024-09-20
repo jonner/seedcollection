@@ -170,7 +170,7 @@ impl Source {
 
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
-            return Err(Error::InvalidOperationObjectAlreadyExists(self.id));
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
 
         sqlx::query(
@@ -191,7 +191,7 @@ impl Source {
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(Error::InvalidStateMissingAttribute("id".to_string()));
+            return Err(Error::InvalidUpdateObjectNotFound);
         }
 
         sqlx::query(

@@ -149,7 +149,7 @@ impl User {
     /// Update the database to match the values currently stored in the object
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(Error::InvalidOperationObjectNotFound);
+            return Err(Error::InvalidUpdateObjectNotFound);
         }
 
         debug!(?self, "Updating user in database");

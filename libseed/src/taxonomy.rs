@@ -144,7 +144,7 @@ impl Germination {
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(Error::InvalidOperationObjectNotFound);
+            return Err(Error::InvalidUpdateObjectNotFound);
         }
         sqlx::query(
             "UPDATE sc_germination_codes SET code=?, summary=?, description=? WHERE germid=?",

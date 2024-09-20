@@ -226,7 +226,7 @@ impl Sample {
 
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
-            return Err(Error::InvalidOperationObjectAlreadyExists(self.id));
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
         sqlx::query("INSERT INTO sc_samples (tsn, userid, srcid, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(self.taxon.id())
@@ -245,7 +245,7 @@ impl Sample {
 
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
-            return Err(Error::InvalidOperationObjectNotFound);
+            return Err(Error::InvalidUpdateObjectNotFound);
         }
         if self.taxon.id() < 0 {
             return Err(Error::InvalidStateMissingAttribute("taxon".to_string()));

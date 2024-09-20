@@ -10,7 +10,6 @@ use libseed::{
     loadable::{ExternalRef, Loadable},
     project::Project,
     user::User,
-    Error::DatabaseRowNotFound,
 };
 use sqlx::{Pool, Sqlite};
 
@@ -105,7 +104,7 @@ pub async fn handle_command(
                 println!("{str}");
                 Ok(())
             }
-            Err(DatabaseRowNotFound(_)) => {
+            Err(libseed::Error::DatabaseError(sqlx::Error::RowNotFound)) => {
                 println!("Project {id} not found");
                 Ok(())
             }

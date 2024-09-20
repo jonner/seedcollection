@@ -8,17 +8,17 @@ use axum::{
 use tracing::warn;
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("Database error")]
+    #[error(transparent)]
     Database(#[from] sqlx::Error),
-    #[error("Other error")]
+    #[error(transparent)]
     Other(#[from] anyhow::Error),
-    #[error("Redirect to another url")]
+    #[error("You are not authorized to perform this action: {0}")]
     Unauthorized(String),
-    #[error("Library error")]
+    #[error(transparent)]
     Libseed(#[from] libseed::Error),
-    #[error("Not Found")]
+    #[error("Resource Not Found: {0}")]
     NotFound(String),
-    #[error("The provided query string was rejected")]
+    #[error("The provided query string was rejected: {0}")]
     UnprocessableEntityQueryRejection(#[source] QueryRejection),
 }
 

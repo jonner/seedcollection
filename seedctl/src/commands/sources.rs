@@ -12,7 +12,7 @@ use libseed::{
     loadable::Loadable,
     source::{self, Source},
     user::User,
-    Error::{AuthUserNotFound, DatabaseRowNotFound},
+    Error::{AuthUserNotFound, DatabaseError},
 };
 use sqlx::{Pool, Sqlite};
 
@@ -49,7 +49,7 @@ pub async fn handle_command(
                 println!("{str}");
                 Ok(())
             }
-            Err(DatabaseRowNotFound(_)) => {
+            Err(DatabaseError(sqlx::Error::RowNotFound)) => {
                 println!("Source {id} not found");
                 Ok(())
             }

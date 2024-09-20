@@ -9,7 +9,7 @@ use clap::Parser;
 use libseed::{
     loadable::Loadable,
     taxonomy::{filter_by, Taxon},
-    Error::DatabaseRowNotFound,
+    Error::DatabaseError,
 };
 use std::path::PathBuf;
 use tabled::Table;
@@ -128,7 +128,7 @@ async fn main() -> Result<()> {
                     println!("{str}");
                     Ok(())
                 }
-                Err(DatabaseRowNotFound(_)) => {
+                Err(DatabaseError(sqlx::Error::RowNotFound)) => {
                     println!("Taxon {id} not found");
                     Ok(())
                 }
