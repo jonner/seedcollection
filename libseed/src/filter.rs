@@ -173,4 +173,42 @@ impl<T: ToSql> SortSpec<T> {
     }
 }
 
+pub struct SortSpecs<T: ToSql>(pub Vec<SortSpec<T>>);
+
+impl<T: ToSql> From<SortSpec<T>> for SortSpecs<T> {
+    fn from(value: SortSpec<T>) -> Self {
+        SortSpecs(vec![value])
+    }
+}
+
+impl<T: ToSql> ToSql for SortSpecs<T> {
+    fn to_sql(&self) -> String {
+        self.0
+            .iter()
+            .map(ToSql::to_sql)
+            .collect::<Vec<String>>()
+            .join(",")
+    }
+}
+
+impl<T: ToSql> From<T> for SortSpecs<T> {
+    fn from(value: T) -> Self {
+        SortSpecs(vec![SortSpec {
+            field: value,
+            order: SortOrder::Ascending,
+        }])
+    }
+}
+
+impl<T: ToSql> From<Vec<T>> for SortSpecs<T> {
+    fn from(mut value: Vec<T>) -> Self {
+        Self(
+            value
+                .drain(..)
+                .map(|field| SortSpec::new(field, SortOrder::Ascending))
+                .collect(),
+        )
+    }
+}
+
 pub type DynFilterPart = Arc<dyn FilterPart + Sync>;

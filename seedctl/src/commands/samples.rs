@@ -9,7 +9,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use libseed::{
-    filter::{Cmp, CompoundFilter, Op, SortOrder, SortSpec},
+    filter::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     loadable::{ExternalRef, Loadable},
     sample::{self, Certainty, Sample},
     user::User,
@@ -49,7 +49,7 @@ pub async fn handle_command(
                     true => SortOrder::Descending,
                     false => SortOrder::Ascending,
                 };
-                sample::SortSpecs(
+                SortSpecs(
                     vec.iter()
                         .map(|v| match v {
                             SampleSortField::Id => {

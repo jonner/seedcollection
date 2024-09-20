@@ -17,10 +17,10 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, CompoundFilter, Op, SortOrder, SortSpec},
+    filter::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     loadable::{ExternalRef, Loadable},
     project::{allocation, Allocation},
-    sample::{self, Certainty, Sample, SortField, SortSpecs},
+    sample::{self, Certainty, Sample, SortField},
     source::Source,
 };
 use minijinja::context;

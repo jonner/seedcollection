@@ -1,7 +1,7 @@
 //! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, ToSql},
+    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
     loadable::{ExternalRef, Loadable},
     source::Source,
     taxonomy::Taxon,
@@ -163,42 +163,10 @@ impl ToSql for SortField {
     }
 }
 
-pub struct SortSpecs(pub Vec<SortSpec<SortField>>);
-
-impl ToSql for SortSpecs {
-    fn to_sql(&self) -> String {
-        self.0
-            .iter()
-            .map(ToSql::to_sql)
-            .collect::<Vec<String>>()
-            .join(",")
-    }
-}
-
-impl From<SortField> for SortSpecs {
-    fn from(value: SortField) -> Self {
-        SortSpecs(vec![SortSpec {
-            field: value,
-            order: SortOrder::Ascending,
-        }])
-    }
-}
-
-impl From<Vec<SortField>> for SortSpecs {
-    fn from(mut value: Vec<SortField>) -> Self {
-        Self(
-            value
-                .drain(..)
-                .map(|field| SortSpec::new(field, SortOrder::Ascending))
-                .collect(),
-        )
-    }
-}
-
 impl Sample {
     fn build_query(
         filter: Option<DynFilterPart>,
-        sort: Option<SortSpecs>,
+        sort: Option<SortSpecs<SortField>>,
     ) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("SELECT * FROM vsamples");
         if let Some(f) = filter {
@@ -206,7 +174,7 @@ impl Sample {
             f.add_to_query(&mut builder);
         }
         builder.push(" ORDER BY ");
-        let s: SortSpecs = sort
+        let s: SortSpecs<SortField> = sort
             .map(Into::into)
             .unwrap_or(SortField::TaxonSequence.into());
         builder.push(s.to_sql());
@@ -226,7 +194,7 @@ impl Sample {
     pub async fn load_all_user(
         userid: i64,
         filter: Option<DynFilterPart>,
-        sort: Option<SortSpecs>,
+        sort: Option<SortSpecs<SortField>>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
         let mut fbuilder = CompoundFilter::builder(Op::And).push(Filter::UserId(userid));
@@ -240,7 +208,7 @@ impl Sample {
 
     pub async fn load_all(
         filter: Option<DynFilterPart>,
-        sort: Option<SortSpecs>,
+        sort: Option<SortSpecs<SortField>>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Sample>> {
         let mut builder = Self::build_query(filter, sort);
