@@ -2,6 +2,7 @@ use crate::{
     app_url,
     auth::SqliteUser,
     error::{self, Error},
+    html::SortOption,
     state::AppState,
     Message, MessageType, TemplateKey,
 };
@@ -72,8 +73,40 @@ async fn list_samples(
         .as_ref()
         .cloned()
         .unwrap_or(SortField::TaxonSequence);
-    let sort = Some(SortSpecs(vec![SortSpec::new(field, dir)]));
+    let sort = Some(SortSpecs(vec![SortSpec::new(field.clone(), dir)]));
 
+    let sort_options = vec![
+        SortOption {
+            code: SortField::TaxonSequence,
+            name: "Taxonomic Order".into(),
+            selected: matches!(field, SortField::TaxonSequence),
+        },
+        SortOption {
+            code: SortField::TaxonName,
+            name: "Taxon name".into(),
+            selected: matches!(field, SortField::TaxonName),
+        },
+        SortOption {
+            code: SortField::Id,
+            name: "Sample Id".into(),
+            selected: matches!(field, SortField::Id),
+        },
+        SortOption {
+            code: SortField::SourceName,
+            name: "Seed Source".into(),
+            selected: matches!(field, SortField::SourceName),
+        },
+        SortOption {
+            code: SortField::CollectionDate,
+            name: "Date Collected".into(),
+            selected: matches!(field, SortField::CollectionDate),
+        },
+        SortOption {
+            code: SortField::Quantity,
+            name: "Quantity".into(),
+            selected: matches!(field, SortField::Quantity),
+        },
+    ];
     match Sample::load_all_user(user.id, filter, sort, &state.dbpool).await {
         Ok(samples) => RenderHtml(
             key,
@@ -81,6 +114,7 @@ async fn list_samples(
             context!(user => user,
                      samples => samples,
                      query => params,
+                     options =>  sort_options,
                      filteronly => headers.get("HX-Request").is_some()),
         )
         .into_response(),

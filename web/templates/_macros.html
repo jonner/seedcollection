@@ -77,3 +77,42 @@
 {%- endmacro %}
 
 
+{% macro filter_sort_widget(url, target, options, query) -%}
+    <form
+         method="GET"
+         action="{{ url }}"
+         hx-push-url="true"
+         hx-boost="true"
+         hx-target="{{ target }}"
+         hx-get="{{ url }}"
+         hx-trigger="submit, input changed delay:500ms from:input, change changed delay:500ms from:select">
+    <div class="input-group mb-3">
+            <input type="text"
+                   class="form-control"
+                   autofocus
+                   placeholder="Filter list..."
+                   value="{{ query.filter or "" }}"
+                   name="filter">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">Sort</button>
+            <div class="dropdown-menu dropdown-menu-end">
+                <div class="p-3">
+                    <div class="mb-3">
+                        <label for="sortselect" class="dropdown-header">Sort by</label>
+                        <select id="sortselect" class="form-select" name="sort">
+                            {% for option in options %}
+                            <option value="{{ option.code }}" {% if query.sort == option.code %}selected{% endif %}>{{ option.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="directionselect" class="dropdown-header">Sort direction</label>
+                        <select id="directionselect" class="form-select" name="dir">
+                            <option value="asc" {% if query.filter == "asc" %}selected{% endif %}>{{ "Ascending" }}</option>
+                            <option value="desc" {% if query.filter == "desc" %}selected{% endif %}>{{ "Descending" }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{%- endmacro %}

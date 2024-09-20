@@ -32,7 +32,7 @@ use sqlx::{sqlite::SqliteQueryResult, Row};
 use std::sync::Arc;
 use tracing::{debug, trace, warn};
 
-use super::error_alert_response;
+use super::{error_alert_response, SortOption};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -190,12 +190,11 @@ async fn show_project(
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
 
-    let sort = params.sort.as_ref().cloned().map(|field| {
-        SortSpec::new(
-            field,
-            params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending),
-        )
-    });
+    let field = params.sort.as_ref().cloned().unwrap_or(SortField::Taxon);
+    let sort = SortSpec::new(
+        field.clone(),
+        params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending),
+    );
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
             CompoundFilter::builder(Op::Or)
@@ -207,8 +206,41 @@ async fn show_project(
         _ => None,
     };
     project
-        .load_samples(sample_filter, sort, &state.dbpool)
+        .load_samples(sample_filter, Some(sort), &state.dbpool)
         .await?;
+
+    let sort_options = vec![
+        SortOption {
+            code: SortField::Taxon,
+            name: "Taxonomic Order".into(),
+            selected: matches!(field, SortField::Taxon),
+        },
+        SortOption {
+            code: SortField::SampleId,
+            name: "Sample Id".into(),
+            selected: matches!(field, SortField::SampleId),
+        },
+        SortOption {
+            code: SortField::CollectionDate,
+            name: "Date Collected".into(),
+            selected: matches!(field, SortField::CollectionDate),
+        },
+        SortOption {
+            code: SortField::Source,
+            name: "Seed Source".into(),
+            selected: matches!(field, SortField::Source),
+        },
+        SortOption {
+            code: SortField::Quantity,
+            name: "Quantity".into(),
+            selected: matches!(field, SortField::Quantity),
+        },
+        SortOption {
+            code: SortField::Activity,
+            name: "Latest Activity".into(),
+            selected: matches!(field, SortField::Activity),
+        },
+    ];
 
     Ok(RenderHtml(
         key,
@@ -216,6 +248,7 @@ async fn show_project(
         context!(user => user,
                  project => project,
                  query => params,
+                 options => sort_options,
                  filteronly => headers.get("HX-Request").is_some()),
     )
     .into_response())

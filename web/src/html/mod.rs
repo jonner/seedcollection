@@ -9,6 +9,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use minijinja::context;
+use serde::Serialize;
 
 mod allocation;
 mod auth;
@@ -88,4 +89,12 @@ async fn root(
         state.tmpl.clone(),
         context!(user => auth.user),
     ))
+}
+
+/// A utility type for specifying an option for sorting
+#[derive(Serialize)]
+struct SortOption<T: Serialize> {
+    name: String,
+    code: T,
+    selected: bool,
 }

@@ -4,7 +4,7 @@
 {%- endmacro %}
 {% if not filteronly %}
 {% extends "root.html" %}
-{% from "_macros.html" import icon, breadcrumbs %}
+{% from "_macros.html" import icon, breadcrumbs, filter_sort_widget %}
 {% block title %}{{ project.name or "Project Details" }}{% endblock %}
 {% block content %}
 {{ breadcrumbs([
@@ -15,45 +15,7 @@
 <h2>{{ self.title() }} <a href="{{ ("/project/" ~ project.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ project.description | markdown }}</p>
 <h3>Samples in this project <a class="ms-2" href="{{ ("/project/" ~ project.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
-<form action="{{ ("/project/" ~ project.id) | app_url }}"
-      method="GET"
-      hx-boost
-      hx-push-url="true"
-      hx-target="#project-sample-list"
-      hx-get="{{ ("/project/" ~ project.id) | app_url }}"
-      hx-trigger="submit, input changed delay:500ms from:input, change changed delay:500ms from:select">
-    <div class="input-group mb-3">
-            <input type="text"
-                   class="form-control"
-                   autofocus
-                   placeholder="Filter list..."
-                   value="{{ query.filter or "" }}"
-                   name="filter">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">Sort</button>
-            <div class="dropdown-menu dropdown-menu-end">
-                <div class="p-3">
-                    <div class="mb-3">
-                        <label for="sortselect" class="dropdown-header">Sort by</label>
-                        <select id="sortselect" class="form-select" name="sort">
-                            {{ option("taxon",  "Taxonomic order", query.sort) }}
-                            {{ option("id",  "Sample Id", query.sort) }}
-                            {{ option("date",  "Date Collected", query.sort) }}
-                            {{ option("src",  "Seed Source", query.sort) }}
-                            {{ option("qty",  "Quantity", query.sort) }}
-                            {{ option("activity",  "Latest Activity", query.sort) }}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="directionselect" class="dropdown-header">Sort direction</label>
-                        <select id="directionselect" class="form-select" name="dir">
-                            {{ option("asc", "Ascending", query.dir) }}
-                            {{ option("desc", "Descending", query.dir) }}
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </form>
+{{ filter_sort_widget(("/project/" ~ project.id) | app_url, "#project-sample-list", options, query) }}
 <div id="project-sample-list">
     {{ project_sample_list(project) }}
 </div>
