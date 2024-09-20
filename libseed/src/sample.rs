@@ -135,6 +135,7 @@ pub enum SortField {
     SourceId,
     SourceName,
     CollectionDate,
+    Quantity,
 }
 
 impl ToSql for SortField {
@@ -146,6 +147,7 @@ impl ToSql for SortField {
             SortField::SourceId => "srcid",
             SortField::SourceName => "srcname",
             SortField::CollectionDate => "CONCAT(year, month)",
+            SortField::Quantity => "quantity",
         }
         .into()
     }
