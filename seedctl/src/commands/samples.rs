@@ -58,9 +58,7 @@ pub async fn handle_command(
                             SampleSortField::Taxon => &[sample::SortField::TaxonSequence],
                             SampleSortField::Name => &[sample::SortField::TaxonName],
                             SampleSortField::Source => &[sample::SortField::SourceName],
-                            SampleSortField::Date => {
-                                &[sample::SortField::Year, sample::SortField::Month]
-                            }
+                            SampleSortField::Date => &[sample::SortField::CollectionDate],
                         })
                         .fold(Vec::new(), |mut acc, val| {
                             acc.extend_from_slice(val);

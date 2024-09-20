@@ -124,7 +124,7 @@ impl FilterPart for Filter {
     }
 }
 
-#[derive(strum_macros::Display, Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SortField {
     Id,
@@ -134,8 +134,7 @@ pub enum SortField {
     TaxonSequence,
     SourceId,
     SourceName,
-    Year,
-    Month,
+    CollectionDate,
 }
 
 impl ToSql for SortField {
@@ -146,8 +145,7 @@ impl ToSql for SortField {
             SortField::TaxonSequence => "seq",
             SortField::SourceId => "srcid",
             SortField::SourceName => "srcname",
-            SortField::Year => "year",
-            SortField::Month => "month",
+            SortField::CollectionDate => "CONCAT(year, month)",
         }
         .into()
     }
