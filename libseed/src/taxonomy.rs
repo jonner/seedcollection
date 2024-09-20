@@ -1,14 +1,14 @@
 //! Objects related to querying the taxonomic database
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use sqlx::{
     error::Error::ColumnDecode,
     sqlite::{SqliteQueryResult, SqliteRow},
     FromRow, Pool, Row, Sqlite,
 };
 use std::{str::FromStr, sync::Arc};
-use strum_macros::{Display, EnumIter, EnumString, FromRepr};
+use strum_macros::{Display, EnumIter, FromRepr};
 use tracing::debug;
 
 use crate::{
@@ -20,10 +20,7 @@ use crate::{
 
 pub const KINGDOM_PLANTAE: i64 = 3;
 
-#[derive(
-    Debug, Clone, Display, EnumString, EnumIter, FromRepr, Deserialize, Serialize, PartialEq,
-)]
-#[strum(ascii_case_insensitive)]
+#[derive(Debug, Clone, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq)]
 pub enum Rank {
     Unknown = 0,
     Kingdom = 10,
@@ -56,14 +53,32 @@ pub enum Rank {
     Subform = 270,
 }
 
-#[derive(Debug, Display, EnumString, FromRepr, Serialize, Deserialize, PartialEq, Clone)]
+impl FromStr for Rank {
+    type Err = serde::de::value::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let deserializer = s.into_deserializer();
+        Deserialize::deserialize(deserializer)
+    }
+}
+
+#[derive(Debug, Display, FromRepr, Serialize, Deserialize, PartialEq, Clone)]
 pub enum NativeStatus {
-    #[strum(serialize = "Native", serialize = "N")]
+    #[serde(alias = "N")]
     Native,
-    #[strum(serialize = "Introduced", serialize = "I")]
+    #[serde(alias = "I")]
     Introduced,
-    #[strum(serialize = "Unknown", serialize = "U")]
+    #[serde(alias = "U")]
     Unknown,
+}
+
+impl FromStr for NativeStatus {
+    type Err = serde::de::value::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let deserializer = s.into_deserializer();
+        Deserialize::deserialize(deserializer)
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]

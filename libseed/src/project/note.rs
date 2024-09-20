@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Sqlite};
 use std::sync::Arc;
-use strum_macros::{EnumIter, EnumString, FromRepr};
+use strum_macros::EnumIter;
 use time::Date;
 use tracing::debug;
 
@@ -12,18 +12,7 @@ use crate::{
     loadable::Loadable,
 };
 
-#[derive(
-    sqlx::Type,
-    Debug,
-    Copy,
-    Clone,
-    Serialize,
-    Deserialize,
-    EnumString,
-    EnumIter,
-    FromRepr,
-    PartialEq,
-)]
+#[derive(sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumIter, PartialEq)]
 #[repr(i64)]
 pub enum NoteType {
     Preparation = 1,
