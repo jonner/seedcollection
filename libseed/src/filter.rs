@@ -135,8 +135,7 @@ impl FromStr for SortOrder {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let deserializer = s.into_deserializer();
-        let val: Self = Deserialize::deserialize(deserializer)?;
-        Ok(val)
+        Deserialize::deserialize(deserializer)
     }
 }
 
