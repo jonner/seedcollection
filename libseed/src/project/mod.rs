@@ -3,7 +3,7 @@
 //! particular restoration project, etc.
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpec},
+    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
     loadable::{ExternalRef, Loadable},
     sample::Sample,
 };
@@ -140,7 +140,7 @@ impl Project {
     pub async fn load_samples(
         &mut self,
         filter: Option<DynFilterPart>,
-        sort: Option<SortSpec<allocation::SortField>>,
+        sort: Option<SortSpecs<allocation::SortField>>,
         pool: &Pool<Sqlite>,
     ) -> Result<()> {
         let mut fbuilder =

@@ -206,7 +206,7 @@ async fn show_project(
         _ => None,
     };
     project
-        .load_samples(sample_filter, Some(sort), &state.dbpool)
+        .load_samples(sample_filter, Some(sort.into()), &state.dbpool)
         .await?;
 
     let sort_options = vec![

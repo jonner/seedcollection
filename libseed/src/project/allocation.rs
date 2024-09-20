@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     error::Result,
-    filter::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec, ToSql},
+    filter::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec, SortSpecs, ToSql},
     loadable::Loadable,
     sample::Sample,
 };
@@ -101,7 +101,7 @@ impl Loadable for Allocation {
     }
 }
 
-#[derive(strum_macros::Display, Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum SortField {
     Taxon,
@@ -118,16 +118,24 @@ pub enum SortField {
 
 impl ToSql for SortField {
     fn to_sql(&self) -> String {
-        self.to_string()
+        match self {
+            SortField::Taxon => "seq",
+            SortField::SampleId => "S.sampleid",
+            SortField::CollectionDate => "CONCAT(S.year, S.month)",
+            SortField::Activity => "N.notedate",
+            SortField::Quantity => "S.quantity",
+            SortField::Source => " S.srcname",
+        }
+        .into()
     }
 }
 
 impl Allocation {
     pub fn build_query(
         filter: Option<DynFilterPart>,
-        sort: Option<SortSpec<SortField>>,
+        sort: Option<SortSpecs<SortField>>,
     ) -> QueryBuilder<'static, Sqlite> {
-        let sort = sort.unwrap_or(SortSpec::new(SortField::Taxon, SortOrder::Ascending));
+        let sort = sort.unwrap_or(SortSpec::new(SortField::Taxon, SortOrder::Ascending).into());
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
             SELECT PS.psid,
@@ -149,27 +157,14 @@ impl Allocation {
             f.add_to_query(&mut builder);
         }
         builder.push(" ORDER BY ");
-
-        match sort.field {
-            SortField::SampleId => _ = builder.push(" S.sampleid"),
-            SortField::Taxon => _ = builder.push(" seq"),
-            SortField::Activity => _ = builder.push(" N.notedate"),
-            SortField::Quantity => _ = builder.push(" S.quantity"),
-            SortField::Source => _ = builder.push(" S.srcname"),
-            SortField::CollectionDate => _ = builder.push(" CONCAT(S.year, S.month)"),
-        }
-
-        match sort.order {
-            SortOrder::Ascending => _ = builder.push(" ASC"),
-            SortOrder::Descending => _ = builder.push(" DESC"),
-        }
+        builder.push(sort.to_sql());
 
         builder
     }
 
     pub async fn load_all(
         filter: Option<DynFilterPart>,
-        sort: Option<SortSpec<SortField>>,
+        sort: Option<SortSpecs<SortField>>,
         pool: &Pool<Sqlite>,
     ) -> Result<Vec<Self>, sqlx::Error> {
         Self::build_query(filter, sort)
