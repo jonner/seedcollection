@@ -16,58 +16,6 @@ use sqlx::{
 };
 use std::sync::Arc;
 
-#[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq, Clone)]
-pub struct Source {
-    #[sqlx(rename = "srcid")]
-    pub id: i64,
-    #[sqlx(rename = "srcname")]
-    pub name: String,
-    #[sqlx(rename = "srcdesc", default)]
-    pub description: Option<String>,
-    #[sqlx(default)]
-    pub latitude: Option<f64>,
-    #[sqlx(default)]
-    pub longitude: Option<f64>,
-    pub userid: i64,
-}
-
-impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
-    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
-        Source::from_row(row)
-            .map(ExternalRef::Object)
-            .or_else(|_| row.try_get("tsn").map(ExternalRef::Stub))
-    }
-}
-
-#[async_trait]
-impl Loadable for Source {
-    type Id = i64;
-
-    fn id(&self) -> Self::Id {
-        self.id
-    }
-
-    fn set_id(&mut self, id: Self::Id) {
-        self.id = id
-    }
-
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
-        Self::build_query(Some(Filter::Id(id).into()))
-            .build_query_as()
-            .fetch_one(pool)
-            .await
-            .map_err(|e| e.into())
-    }
-
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
-            .bind(id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
-    }
-}
-
 #[derive(Clone)]
 pub enum Filter {
     Id(i64),
@@ -108,6 +56,50 @@ impl FilterPart for Filter {
                 builder.push(" L.srcdesc ").push(cmp).push_bind(s);
             }
         }
+    }
+}
+
+#[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq, Clone)]
+pub struct Source {
+    #[sqlx(rename = "srcid")]
+    pub id: i64,
+    #[sqlx(rename = "srcname")]
+    pub name: String,
+    #[sqlx(rename = "srcdesc", default)]
+    pub description: Option<String>,
+    #[sqlx(default)]
+    pub latitude: Option<f64>,
+    #[sqlx(default)]
+    pub longitude: Option<f64>,
+    pub userid: i64,
+}
+
+#[async_trait]
+impl Loadable for Source {
+    type Id = i64;
+
+    fn id(&self) -> Self::Id {
+        self.id
+    }
+
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        Self::build_query(Some(Filter::Id(id).into()))
+            .build_query_as()
+            .fetch_one(pool)
+            .await
+            .map_err(|e| e.into())
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
@@ -231,6 +223,14 @@ impl Source {
             longitude,
             userid,
         }
+    }
+}
+
+impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        Source::from_row(row)
+            .map(ExternalRef::Object)
+            .or_else(|_| row.try_get("tsn").map(ExternalRef::Stub))
     }
 }
 
