@@ -23,19 +23,6 @@ pub enum Certainty {
     Uncertain = 2,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-pub struct Sample {
-    pub id: i64,
-    pub user: ExternalRef<User>,
-    pub taxon: ExternalRef<Taxon>,
-    pub source: ExternalRef<Source>,
-    pub quantity: Option<i64>,
-    pub month: Option<u32>,
-    pub year: Option<u32>,
-    pub notes: Option<String>,
-    pub certainty: Certainty,
-}
-
 impl From<Filter> for DynFilterPart {
     fn from(value: Filter) -> Self {
         Arc::new(value)
@@ -53,32 +40,6 @@ pub enum Filter {
     UserId(i64),
     Notes(Cmp, String),
     Quantity(Cmp, i64),
-}
-
-#[async_trait]
-impl Loadable for Sample {
-    type Id = i64;
-
-    fn id(&self) -> Self::Id {
-        self.id
-    }
-
-    fn set_id(&mut self, id: Self::Id) {
-        self.id = id
-    }
-
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut builder = Self::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
-        Ok(builder.build_query_as().fetch_one(pool).await?)
-    }
-
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        sqlx::query("DELETE FROM sc_samples WHERE sampleid=?")
-            .bind(id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
-    }
 }
 
 impl FilterPart for Filter {
@@ -159,6 +120,45 @@ impl ToSql for SortField {
             SortField::Quantity => "quantity",
         }
         .into()
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub struct Sample {
+    pub id: i64,
+    pub user: ExternalRef<User>,
+    pub taxon: ExternalRef<Taxon>,
+    pub source: ExternalRef<Source>,
+    pub quantity: Option<i64>,
+    pub month: Option<u32>,
+    pub year: Option<u32>,
+    pub notes: Option<String>,
+    pub certainty: Certainty,
+}
+
+#[async_trait]
+impl Loadable for Sample {
+    type Id = i64;
+
+    fn id(&self) -> Self::Id {
+        self.id
+    }
+
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        let mut builder = Self::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
+        Ok(builder.build_query_as().fetch_one(pool).await?)
+    }
+
+    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        sqlx::query("DELETE FROM sc_samples WHERE sampleid=?")
+            .bind(id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
