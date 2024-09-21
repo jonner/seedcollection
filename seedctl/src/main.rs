@@ -7,8 +7,9 @@ use crate::{
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use libseed::{
+    filter::{CompoundFilter, Op},
     loadable::Loadable,
-    taxonomy::{filter_by, Taxon},
+    taxonomy::{self, match_any_name, Taxon},
     Error::DatabaseError,
 };
 use std::path::PathBuf;
@@ -105,12 +106,27 @@ async fn main() -> Result<()> {
                     true => Some(true),
                     false => None,
                 };
-                let taxa: Vec<Taxon> = Taxon::load_all(
-                    filter_by(None, rank, genus, species, any, minnesota),
-                    None,
-                    &dbpool,
-                )
-                .await?;
+                let mut filter = CompoundFilter::builder(Op::And);
+                if let Some(id) = None {
+                    filter = filter.push(taxonomy::Filter::Id(id));
+                }
+                if let Some(rank) = rank {
+                    filter = filter.push(taxonomy::Filter::Rank(rank));
+                }
+                if let Some(genus) = genus {
+                    filter = filter.push(taxonomy::Filter::Genus(genus));
+                }
+                if let Some(species) = species {
+                    filter = filter.push(taxonomy::Filter::Species(species));
+                }
+                if let Some(s) = any {
+                    filter = filter.push(match_any_name(&s));
+                }
+                if let Some(val) = minnesota {
+                    filter = filter.push(taxonomy::Filter::Minnesota(val));
+                }
+
+                let taxa: Vec<Taxon> = Taxon::load_all(Some(filter.build()), None, &dbpool).await?;
                 if taxa.is_empty() {
                     return Err(anyhow!("No results found"));
                 }

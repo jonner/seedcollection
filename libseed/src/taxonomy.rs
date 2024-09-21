@@ -263,37 +263,6 @@ impl FilterPart for Filter {
     }
 }
 
-pub fn filter_by(
-    id: Option<i64>,
-    rank: Option<Rank>,
-    genus: Option<String>,
-    species: Option<String>,
-    any: Option<String>,
-    minnesota: Option<bool>,
-) -> Option<DynFilterPart> {
-    let mut f = CompoundFilter::builder(Op::And);
-    if let Some(id) = id {
-        f = f.push(Filter::Id(id));
-    }
-    if let Some(rank) = rank {
-        f = f.push(Filter::Rank(rank));
-    }
-    if let Some(genus) = genus {
-        f = f.push(Filter::Genus(genus));
-    }
-    if let Some(species) = species {
-        f = f.push(Filter::Species(species));
-    }
-    if let Some(s) = any {
-        f = f.push(match_any_name(&s));
-    }
-    if let Some(val) = minnesota {
-        f = f.push(Filter::Minnesota(val));
-    }
-
-    Some(f.build())
-}
-
 pub fn match_any_name(s: &str) -> DynFilterPart {
     CompoundFilter::builder(Op::Or)
         .push(Filter::Name1(s.to_string()))
