@@ -63,7 +63,7 @@ async fn list_taxa(
         None => Rank::Species,
     };
     let pg = params.page.unwrap_or(1);
-    let row = taxonomy::count_query(Some(taxonomy::Filter::Rank(rank.clone()).into()))
+    let row = Taxon::build_count(Some(taxonomy::Filter::Rank(rank.clone()).into()))
         .build()
         .fetch_one(&state.dbpool)
         .await?;

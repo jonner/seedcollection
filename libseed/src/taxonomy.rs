@@ -317,22 +317,6 @@ pub fn any_filter(s: &str) -> DynFilterPart {
         .build()
 }
 
-pub fn count_query(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
-    let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
-        r#"SELECT COUNT(tsn) as count
-            FROM taxonomic_units T
-      WHERE name_usage="accepted" AND kingdom_id="#,
-    );
-    builder.push_bind(KINGDOM_PLANTAE);
-
-    if let Some(filter) = filter {
-        builder.push(" AND ");
-        filter.add_to_query(&mut builder);
-    }
-
-    builder
-}
-
 impl Taxon {
     pub async fn fetch_hierarchy(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
         let mut hierarchy = Vec::new();
@@ -424,6 +408,22 @@ impl Taxon {
             .await?,
         );
         Ok(())
+    }
+
+    pub fn build_count(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
+        let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
+            r#"SELECT COUNT(tsn) as count
+            FROM taxonomic_units T
+      WHERE name_usage="accepted" AND kingdom_id="#,
+        );
+        builder.push_bind(KINGDOM_PLANTAE);
+
+        if let Some(filter) = filter {
+            builder.push(" AND ");
+            filter.add_to_query(&mut builder);
+        }
+
+        builder
     }
 }
 
