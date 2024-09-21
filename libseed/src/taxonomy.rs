@@ -81,44 +81,6 @@ impl FromStr for NativeStatus {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-/// An object representing a particular taxon from the database
-pub struct Taxon {
-    pub id: i64,
-    pub rank: Rank,
-    pub name1: Option<String>,
-    pub name2: Option<String>,
-    pub name3: Option<String>,
-    pub complete_name: String,
-    pub vernaculars: Vec<String>,
-    pub native_status: Option<NativeStatus>,
-    pub parentid: Option<i64>,
-    pub seq: Option<i64>,
-    pub germination: Option<Vec<Germination>>,
-}
-
-#[async_trait]
-impl Loadable for Taxon {
-    type Id = i64;
-
-    fn id(&self) -> Self::Id {
-        self.id
-    }
-
-    fn set_id(&mut self, id: Self::Id) {
-        self.id = id
-    }
-
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
-        let mut query = Taxon::build_query(Some(Filter::Id(id).into()), None);
-        Ok(query.build_query_as().fetch_one(pool).await?)
-    }
-
-    async fn delete_id(_id: &Self::Id, _pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        Err(Error::InvalidOperation("Cannot delete taxon".to_string()))
-    }
-}
-
 #[derive(FromRow, Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Germination {
     #[sqlx(rename = "germid")]
@@ -270,6 +232,44 @@ pub fn match_any_name(s: &str) -> DynFilterPart {
         .push(Filter::Name3(s.to_string()))
         .push(Filter::Vernacular(s.to_string()))
         .build()
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+/// An object representing a particular taxon from the database
+pub struct Taxon {
+    pub id: i64,
+    pub rank: Rank,
+    pub name1: Option<String>,
+    pub name2: Option<String>,
+    pub name3: Option<String>,
+    pub complete_name: String,
+    pub vernaculars: Vec<String>,
+    pub native_status: Option<NativeStatus>,
+    pub parentid: Option<i64>,
+    pub seq: Option<i64>,
+    pub germination: Option<Vec<Germination>>,
+}
+
+#[async_trait]
+impl Loadable for Taxon {
+    type Id = i64;
+
+    fn id(&self) -> Self::Id {
+        self.id
+    }
+
+    fn set_id(&mut self, id: Self::Id) {
+        self.id = id
+    }
+
+    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+        let mut query = Taxon::build_query(Some(Filter::Id(id).into()), None);
+        Ok(query.build_query_as().fetch_one(pool).await?)
+    }
+
+    async fn delete_id(_id: &Self::Id, _pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+        Err(Error::InvalidOperation("Cannot delete taxon".to_string()))
+    }
 }
 
 impl Taxon {
