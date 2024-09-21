@@ -24,6 +24,26 @@ pub enum UserStatus {
     Verified = 1,
 }
 
+impl From<Filter> for DynFilterPart {
+    fn from(value: Filter) -> Self {
+        Arc::new(value)
+    }
+}
+
+enum Filter {
+    Id(i64),
+    Username(String),
+}
+
+impl FilterPart for Filter {
+    fn add_to_query(&self, builder: &mut QueryBuilder<Sqlite>) {
+        match self {
+            Filter::Id(id) => builder.push(" userid=").push_bind(*id),
+            Filter::Username(name) => builder.push(" username=").push_bind(name.clone()),
+        };
+    }
+}
+
 /// A website user that is stored in the database. Each object in the database is associated with a
 /// particular user.
 #[derive(FromRow, Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -82,26 +102,6 @@ impl Loadable for User {
             .execute(pool)
             .await
             .map_err(|e| e.into())
-    }
-}
-
-impl From<Filter> for DynFilterPart {
-    fn from(value: Filter) -> Self {
-        Arc::new(value)
-    }
-}
-
-enum Filter {
-    Id(i64),
-    Username(String),
-}
-
-impl FilterPart for Filter {
-    fn add_to_query(&self, builder: &mut QueryBuilder<Sqlite>) {
-        match self {
-            Filter::Id(id) => builder.push(" userid=").push_bind(*id),
-            Filter::Username(name) => builder.push(" username=").push_bind(name.clone()),
-        };
     }
 }
 
