@@ -11,7 +11,7 @@ use libseed::{
     empty_string_as_none,
     filter::{Cmp, CompoundFilter, LimitSpec, Op},
     sample::{self, Sample},
-    taxonomy::{self, any_filter, Germination, Rank, Taxon},
+    taxonomy::{self, match_any_name, Germination, Rank, Taxon},
 };
 use minijinja::context;
 use serde::Deserialize;
@@ -241,7 +241,7 @@ async fn quickfind(
             let parts = taxon.split(' ');
             let mut filter = CompoundFilter::builder(Op::And);
             for part in parts {
-                filter = filter.push(any_filter(part));
+                filter = filter.push(match_any_name(part));
             }
             if let Some(rank) = rank {
                 filter = filter.push(taxonomy::Filter::Rank(rank));
