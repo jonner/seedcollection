@@ -2,9 +2,9 @@ use std::convert;
 
 use inquire::{autocompletion::Autocomplete, CustomUserError};
 use libseed::{
-    filter::{Cmp, CompoundFilter, Op},
+    filter::{Cmp, CompoundFilter, DynFilterPart, Op},
     source::{self, Source},
-    taxonomy::{quickfind, Taxon},
+    taxonomy::{match_any_name, Taxon},
 };
 use sqlx::{Pool, Sqlite};
 
@@ -53,6 +53,20 @@ impl<'a> TaxonIdPrompt<'a> {
 #[derive(Clone)]
 struct TaxonCompleter {
     dbpool: Pool<Sqlite>,
+}
+
+pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
+    match taxon.is_empty() {
+        true => None,
+        false => {
+            let parts = taxon.split(' ');
+            let mut filter = CompoundFilter::builder(Op::And);
+            for part in parts {
+                filter = filter.push(match_any_name(part));
+            }
+            Some(filter.build())
+        }
+    }
 }
 
 impl Autocomplete for TaxonCompleter {

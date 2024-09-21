@@ -263,20 +263,6 @@ impl FilterPart for Filter {
     }
 }
 
-pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
-    match taxon.is_empty() {
-        true => None,
-        false => {
-            let parts = taxon.split(' ');
-            let mut filter = CompoundFilter::builder(Op::And);
-            for part in parts {
-                filter = filter.push(match_any_name(part));
-            }
-            Some(filter.build())
-        }
-    }
-}
-
 pub fn filter_by(
     id: Option<i64>,
     rank: Option<Rank>,
