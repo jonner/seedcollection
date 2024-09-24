@@ -1,7 +1,7 @@
 //! Objects to keep track of the origin of seed samples
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, DynFilterPart, FilterPart},
+    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op},
     loadable::{ExternalRef, Loadable},
 };
 use async_trait::async_trait;
@@ -147,8 +147,16 @@ impl Source {
             .map_err(|e| e.into())
     }
 
-    pub async fn load_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Source>> {
-        Self::load_all(Some(Filter::UserId(userid).into()), pool).await
+    pub async fn load_all_user(
+        userid: i64,
+        filter: Option<DynFilterPart>,
+        pool: &Pool<Sqlite>,
+    ) -> Result<Vec<Source>> {
+        let mut fbuilder = CompoundFilter::builder(Op::And).push(Filter::UserId(userid));
+        if let Some(f) = filter {
+            fbuilder = fbuilder.push(f);
+        }
+        Self::load_all(Some(fbuilder.build()), pool).await
     }
 
     pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {

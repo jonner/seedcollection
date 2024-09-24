@@ -137,6 +137,8 @@ pub enum SourceCommands {
         filter: Option<String>,
         #[command(flatten)]
         output: OutputOptions,
+        #[arg(short, long, help = "Only show sources for the current user")]
+        user: bool,
     },
     #[command(about = "Show details about a single source")]
     Show {

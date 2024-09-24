@@ -22,14 +22,21 @@ pub async fn handle_command(
     dbpool: &Pool<Sqlite>,
 ) -> Result<()> {
     match command {
-        SourceCommands::List { filter, output } => {
+        SourceCommands::List {
+            filter,
+            output,
+            user: useronly,
+        } => {
             let filter = filter.map(|f| {
                 CompoundFilter::builder(Op::Or)
                     .push(source::Filter::Name(Cmp::Like, f.clone()))
                     .push(source::Filter::Description(Cmp::Like, f.clone()))
                     .build()
             });
-            let sources = Source::load_all(filter, dbpool).await?;
+            let sources = match useronly {
+                true => Source::load_all_user(user.id, filter, dbpool).await?,
+                false => Source::load_all(filter, dbpool).await?,
+            };
             let str = match output.full {
                 true => {
                     let rows = sources.iter().map(SourceRowFull::new).collect::<Vec<_>>();

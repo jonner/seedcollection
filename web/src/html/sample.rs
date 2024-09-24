@@ -136,7 +136,7 @@ async fn show_sample(
         .await?;
 
     // needed for edit form
-    let sources = Source::load_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
 
     let mut allocations = Allocation::load_all(
         Some(Arc::new(allocation::Filter::SampleId(id))),
@@ -164,7 +164,7 @@ async fn new_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let sources = Source::load_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -220,7 +220,7 @@ async fn insert_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let sources = Source::load_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
     match do_insert(&user, &params, &state).await {
         Err(e) => Ok(RenderHtml(
             key,
@@ -290,7 +290,7 @@ async fn update_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let sources = Source::load_all_user(user.id, &state.dbpool).await?;
+    let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
     let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(params),
@@ -340,7 +340,7 @@ async fn delete_sample(
     }
     match sample.delete(&state.dbpool).await {
         Err(e) => {
-            let sources = Source::load_all_user(user.id, &state.dbpool).await?;
+            let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
             let sample = Sample::load(id, &state.dbpool).await?;
             Ok(RenderHtml(
                 key,
