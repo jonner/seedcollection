@@ -31,6 +31,7 @@ pub async fn handle_command(
             reverse,
             all,
             output,
+            rank,
         } => {
             let mut builder = CompoundFilter::builder(Op::And);
             if let Some(s) = filter {
@@ -42,6 +43,9 @@ pub async fn handle_command(
             };
             if !all {
                 builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0))
+            }
+            if let Some(rank) = rank {
+                builder = builder.push(sample::Filter::TaxonRank(Cmp::GreatherThanEqual, rank))
             }
             let filter = builder.build();
             let sort = sort.map(|vec| {

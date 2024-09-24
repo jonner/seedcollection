@@ -211,6 +211,14 @@ pub enum SampleCommands {
         output: OutputOptions,
         #[arg(short, long, help = "Display all samples, even if quantity is 0")]
         all: bool,
+        #[arg(
+            value_enum,
+            long,
+            help = "Only include samples at least as specific as the given rank"
+        )]
+        // FIXME: Ideally, this should accept case-insensitive values, but right
+        // now it only accepts the name of the enum variants (e.g. 'Species')
+        rank: Option<taxonomy::Rank>,
     },
     #[command(about = "Show details for a single sample")]
     Show {

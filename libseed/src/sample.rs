@@ -4,7 +4,7 @@ use crate::{
     filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
     loadable::{ExternalRef, Loadable},
     source::Source,
-    taxonomy::Taxon,
+    taxonomy::{Rank, Taxon},
     user::User,
 };
 use async_trait::async_trait;
@@ -40,6 +40,7 @@ pub enum Filter {
     UserId(i64),
     Notes(Cmp, String),
     Quantity(Cmp, i64),
+    TaxonRank(Cmp, Rank),
 }
 
 impl FilterPart for Filter {
@@ -81,6 +82,12 @@ impl FilterPart for Filter {
                 }
             }
             Self::Quantity(cmp, n) => _ = builder.push("quantity").push(cmp).push_bind(*n),
+            Self::TaxonRank(cmp, rank) => {
+                _ = builder
+                    .push("rank")
+                    .push(cmp)
+                    .push_bind(rank.clone() as i64)
+            }
         };
     }
 }
