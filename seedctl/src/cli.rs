@@ -131,7 +131,7 @@ pub enum ProjectCommands {
 
 #[derive(Subcommand, Debug)]
 pub enum SourceCommands {
-    #[command(about = "List all sources")]
+    #[command(about = "List sources")]
     List {
         #[arg(long, help = "Filter the list of sources by the given string")]
         filter: Option<String>,
@@ -192,7 +192,7 @@ pub enum SampleSortField {
 
 #[derive(Subcommand, Debug)]
 pub enum SampleCommands {
-    #[command(about = "List all samples")]
+    #[command(about = "List samples")]
     List {
         #[arg(short, long, help = "Only show samples for the current user")]
         user: bool,
