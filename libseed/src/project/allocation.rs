@@ -4,8 +4,8 @@ use super::{
 };
 use crate::{
     error::Result,
-    filter::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec, SortSpecs, ToSql},
     loadable::Loadable,
+    query::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec, SortSpecs, ToSql},
     sample::Sample,
 };
 use async_trait::async_trait;

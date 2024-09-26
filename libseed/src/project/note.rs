@@ -8,8 +8,8 @@ use tracing::debug;
 
 use crate::{
     error::{Error, Result},
-    filter::{DynFilterPart, FilterPart},
     loadable::Loadable,
+    query::{DynFilterPart, FilterPart},
 };
 
 #[derive(sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumIter, PartialEq)]

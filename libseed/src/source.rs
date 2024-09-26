@@ -1,8 +1,8 @@
 //! Objects to keep track of the origin of seed samples
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, DynFilterPart, FilterPart},
     loadable::{ExternalRef, Loadable},
+    query::{Cmp, DynFilterPart, FilterPart},
 };
 use async_trait::async_trait;
 use serde::Deserialize;

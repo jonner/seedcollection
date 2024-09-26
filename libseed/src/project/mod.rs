@@ -3,8 +3,8 @@
 //! particular restoration project, etc.
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
     loadable::{ExternalRef, Loadable},
+    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
     sample::Sample,
 };
 pub use allocation::Allocation;

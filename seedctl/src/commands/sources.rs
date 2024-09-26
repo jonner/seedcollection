@@ -8,8 +8,8 @@ use crate::{
 use anyhow::{anyhow, Result};
 use inquire::validator::Validation;
 use libseed::{
-    filter::{Cmp, CompoundFilter, Op},
     loadable::Loadable,
+    query::{Cmp, CompoundFilter, Op},
     source::{self, Source},
     user::User,
     Error::{AuthUserNotFound, DatabaseError},

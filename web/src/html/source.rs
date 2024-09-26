@@ -10,8 +10,8 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, CompoundFilter, Op},
     loadable::Loadable,
+    query::{Cmp, CompoundFilter, Op},
     sample::{Filter, Sample},
     source,
     source::Source,

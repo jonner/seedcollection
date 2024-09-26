@@ -7,8 +7,8 @@ use crate::{
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use libseed::{
-    filter::{CompoundFilter, Op},
     loadable::Loadable,
+    query::{CompoundFilter, Op},
     taxonomy::{self, match_any_name, Taxon},
     Error::DatabaseError,
 };

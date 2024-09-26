@@ -17,9 +17,9 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
-    filter::{CompoundFilter, Op},
     loadable::Loadable,
     project::{self, allocation, Allocation, Note, NoteType, Project},
+    query::{CompoundFilter, Op},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};

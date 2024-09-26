@@ -13,8 +13,8 @@ use tracing::debug;
 
 use crate::{
     error::Result,
-    filter::{CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
     loadable::{ExternalRef, Loadable},
+    query::{CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
     Error,
 };
 

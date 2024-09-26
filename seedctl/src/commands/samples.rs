@@ -9,8 +9,8 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use libseed::{
-    filter::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     loadable::{ExternalRef, Loadable},
+    query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     sample::{self, Certainty, Sample},
     user::User,
     Error::{AuthUserNotFound, DatabaseError},
@@ -37,7 +37,7 @@ pub async fn handle_command(
                 let fbuilder = CompoundFilter::builder(Op::Or)
                     .push(sample::Filter::TaxonNameLike(s.clone()))
                     .push(sample::Filter::SourceNameLike(s.clone()))
-                    .push(sample::Filter::Notes(libseed::filter::Cmp::Like, s.clone()));
+                    .push(sample::Filter::Notes(libseed::query::Cmp::Like, s.clone()));
                 builder = builder.push(fbuilder.build());
             };
             if !all {

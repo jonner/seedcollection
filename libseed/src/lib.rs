@@ -5,9 +5,9 @@ use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 
 mod error;
-pub mod filter;
 pub mod loadable;
 pub mod project;
+pub mod query;
 pub mod sample;
 pub mod source;
 pub mod taxonomy;
