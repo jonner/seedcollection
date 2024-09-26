@@ -59,15 +59,19 @@ pub struct User {
     #[sqlx(rename = "useremail")]
     pub email: String,
 
+    /// The status of this user
     #[sqlx(rename = "userstatus")]
     pub status: UserStatus,
 
+    /// The date that the user registered their account
     #[sqlx(rename = "usersince")]
     pub register_date: Option<OffsetDateTime>,
 
+    /// A display name for the user
     #[sqlx(rename = "userdisplayname")]
     pub display_name: Option<String>,
 
+    /// Some text describing a bit about the user, written by the user themselves
     #[sqlx(rename = "userprofile", default)]
     pub profile: Option<String>,
 

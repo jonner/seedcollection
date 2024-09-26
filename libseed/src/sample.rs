@@ -123,16 +123,26 @@ impl ToSql for SortField {
     }
 }
 
+/// An object that represents information about a seed collection sample
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Sample {
+    /// A unique ID to represent this sample
     pub id: i64,
+    /// The user that is owns this sample
     pub user: ExternalRef<User>,
+    /// The taxon associated with this seed sample
     pub taxon: ExternalRef<Taxon>,
+    /// The source of this particular seed sample
     pub source: ExternalRef<Source>,
+    /// The quantity of seeds that exist in this sample
     pub quantity: Option<i64>,
+    /// The month that the sample was acquired or collected
     pub month: Option<u32>,
+    /// The year that the sample was acquired or collected
     pub year: Option<u32>,
+    /// Free-form notes describing this seed sample
     pub notes: Option<String>,
+    /// Indicates whether the taxon assigned to this sample is certain or not
     pub certainty: Certainty,
 }
 

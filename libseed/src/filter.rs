@@ -6,6 +6,7 @@ use serde::{
 };
 use std::{str::FromStr, sync::Arc};
 
+/// An operator for combining filter parts to form a more complex filter expression
 #[derive(Clone)]
 pub enum Op {
     Or,
@@ -13,7 +14,7 @@ pub enum Op {
 }
 
 #[derive(Clone)]
-/// An object that allows you easily build complound filters that can be applied to SQL queries
+/// An object that allows you easily build compound filters that can be applied to SQL queries
 pub struct CompoundFilterBuilder {
     top: CompoundFilter,
 }
@@ -51,6 +52,7 @@ pub struct CompoundFilter {
 }
 
 impl CompoundFilter {
+    /// Create a new compound filter object
     pub fn new(op: Op) -> Self {
         Self {
             conditions: Default::default(),
@@ -58,10 +60,13 @@ impl CompoundFilter {
         }
     }
 
+    /// Create an builder object that is used for building compound filters
     pub fn builder(op: Op) -> CompoundFilterBuilder {
         CompoundFilterBuilder::new(op)
     }
 
+    /// Add a new filter expression to the current filter. It will be combined
+    /// with the operator [Op] that was specified in [CompoundFilter::new()]
     pub fn add_filter(&mut self, filter: DynFilterPart) {
         self.conditions.push(filter);
     }
@@ -94,7 +99,7 @@ impl FilterPart for CompoundFilter {
 }
 
 #[derive(Clone)]
-/// An object representing the operation that is used to compare against a filter condition
+/// An object representing the comparison operator that is used in a filter expression
 pub enum Cmp {
     Equal,
     NotEqual,
@@ -122,6 +127,7 @@ impl std::fmt::Display for Cmp {
 /// An object that allows you to specify the limit and offset for an SQL query
 pub struct LimitSpec(pub i32, pub Option<i32>);
 
+/// A type that describes the sort order of an sql query
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum SortOrder {
     #[serde(rename = "asc")]
@@ -149,6 +155,7 @@ impl ToSql for SortOrder {
     }
 }
 
+/// a trait that generates an sql respresentation of the implementing type
 pub trait ToSql {
     fn to_sql(&self) -> String;
 }
