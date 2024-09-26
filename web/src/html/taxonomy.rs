@@ -63,11 +63,11 @@ async fn list_taxa(
         None => Rank::Species,
     };
     let pg = params.page.unwrap_or(1);
-    let row = Taxon::build_count(Some(taxonomy::Filter::Rank(rank.clone()).into()))
-        .build()
-        .fetch_one(&state.dbpool)
-        .await?;
-    let count = row.try_get::<i32, _>("count")?;
+    let count = Taxon::count(
+        Some(taxonomy::Filter::Rank(rank.clone()).into()),
+        &state.dbpool,
+    )
+    .await?;
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
     let taxa: Vec<Taxon> = Taxon::load_all(
         Some(taxonomy::Filter::Rank(rank).into()),

@@ -365,7 +365,12 @@ impl Taxon {
         Ok(())
     }
 
-    pub fn build_count(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
+    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i32> {
+        let row = Self::build_count(filter).build().fetch_one(pool).await?;
+        row.try_get::<i32, _>("count").map_err(Into::into)
+    }
+
+    fn build_count(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
         let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
             r#"SELECT COUNT(tsn) as count
             FROM taxonomic_units T
