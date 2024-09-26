@@ -131,7 +131,7 @@ impl ToSql for SortField {
 }
 
 impl Allocation {
-    pub fn build_query(
+    fn build_query(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
     ) -> QueryBuilder<'static, Sqlite> {
