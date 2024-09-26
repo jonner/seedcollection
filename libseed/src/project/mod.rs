@@ -1,6 +1,4 @@
-//! Objects relating to projects. A Project is a group of seed samples that are intended for a
-//! specific purpose. It could be something like a group of seeds that you intend to plant for a
-//! particular restoration project, etc.
+//! API for managing projects in the database
 use crate::{
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
@@ -18,17 +16,29 @@ use tracing::debug;
 pub mod allocation;
 pub mod note;
 
+/// A Project is a group of seed samples that are intended for a specific
+/// purpose. It could be something like a group of seeds that you intend to
+/// plant for a particular restoration project, etc.
 #[derive(sqlx::FromRow, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Project {
+    /// A unique ID that identifies this project in the database
     #[sqlx(rename = "projectid")]
     pub id: i64,
+
+    /// A short name for this project
     #[sqlx(rename = "projname")]
     pub name: String,
+
+    /// A textual description of this project
     #[sqlx(rename = "projdescription")]
     pub description: Option<String>,
+
+    /// The collection of samples associated with this project
     #[sqlx(skip)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub allocations: Vec<Allocation>,
+
+    /// The user that owns this project
     pub userid: i64,
 }
 
@@ -67,11 +77,19 @@ impl From<Filter> for DynFilterPart {
     }
 }
 
+/// A type for specifying fields for filtering a [Project]
 #[derive(Clone)]
 pub enum Filter {
+    /// Filter by project ID
     Id(i64),
+
+    /// Filter by the id of the user that owns the project
     User(i64),
+
+    /// Filter by a string that uses [Cmp] to compare to the project name
     Name(Cmp, String),
+
+    /// Filter by a string that uses [Cmp] to compare to the project description
     Description(Cmp, String),
 }
 
@@ -120,6 +138,7 @@ impl Project {
         builder
     }
 
+    /// Load all matched projects from the database
     pub async fn load_all(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
         Self::build_query(filter)
             .build_query_as()
@@ -128,6 +147,7 @@ impl Project {
             .map_err(|e| e.into())
     }
 
+    /// query the number of matching projects in the database
     pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
         Self::build_count(filter)
             .build()
@@ -137,6 +157,7 @@ impl Project {
             .map_err(|e| e.into())
     }
 
+    /// Load all of the samples that are allocated to this project
     pub async fn load_samples(
         &mut self,
         filter: Option<DynFilterPart>,
@@ -153,6 +174,7 @@ impl Project {
         Ok(())
     }
 
+    /// Allocate the given sample to this project
     pub async fn allocate_sample(
         &mut self,
         sample: ExternalRef<Sample>,
@@ -166,6 +188,9 @@ impl Project {
             .map_err(|e| e.into())
     }
 
+    /// Add this project to the database. If this call completes successfully,
+    /// the `id` of this object will be updated to the ID of the inserted row in the
+    /// database
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         debug!(?self, "Inserting project into database");
         sqlx::query("INSERT INTO sc_projects (projname, projdescription, userid) VALUES (?, ?, ?)")
@@ -178,6 +203,7 @@ impl Project {
             .map_err(|e| e.into())
     }
 
+    /// Update the project in the database such that it matches this object
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.name.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("name".to_string()));
@@ -198,6 +224,8 @@ impl Project {
         .map_err(|e| e.into())
     }
 
+    /// Create a new project with the given data. It will initially have an
+    /// invalid ID until it is inserted into the database.
     pub fn new(name: String, description: Option<String>, userid: i64) -> Self {
         Self {
             id: -1,

@@ -1,4 +1,4 @@
-//! utilities for filtering database queries for the various objects
+//! utilities related to database queries
 //!
 use serde::{
     de::{value, IntoDeserializer},
