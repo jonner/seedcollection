@@ -1,3 +1,4 @@
+//! Manage samples that are allocated to a [Project]
 use super::{
     note::{self, Note},
     Project,
@@ -23,14 +24,30 @@ impl From<Filter> for DynFilterPart {
     }
 }
 
+// FIXME: Can we combine SortField and Filter somehow???
+/// A type to specify a field that can be used to filter allocation objects when
+/// querying the database
 #[derive(Clone)]
 pub enum Filter {
+    /// Filter by the allocation ID (NOTE: this is different than the sample ID)
     Id(i64),
+
+    /// Filter based on the user ID of the sample
     UserId(i64),
+
+    /// Filter based on the ID of the project that the sample is allocated to
     ProjectId(i64),
+
+    /// Filter based on the ID of the sample
     SampleId(i64),
+
+    /// Filter for samples whose taxon matches the given string
     TaxonNameLike(String),
+
+    /// Filter based on the name of the source of the sample
     SourceName(Cmp, String),
+
+    /// Filter if the sample notes match the given string
     Notes(Cmp, String),
 }
 
@@ -68,11 +85,21 @@ impl FilterPart for Filter {
     }
 }
 
+/// An object representing a [Sample] that has been allocated to a particular [Project]
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Allocation {
+    /// A unique ID representing this allocation in the database
     pub id: i64,
+
+    /// The Sample associated with this allocation
     pub sample: Sample,
+
+    /// The project that the sample is allocated to
     pub project: Project,
+
+    /// Project-specific notes for this allocation. This can be used to track
+    /// status of this sample within the project, etc. For example, has the sample been
+    /// planted? Germinated?, etc.
     pub notes: Vec<Note>,
 }
 
@@ -101,17 +128,30 @@ impl Loadable for Allocation {
     }
 }
 
+// FIXME: Can we combine SortField and Filter somehow???
+/// A Type to specify a field that will be used to sort the query
 #[derive(Deserialize, Serialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum SortField {
+    /// Sort results according to taxonomic order
     Taxon,
+
+    /// Sort resutls according to sample ID
     #[serde(rename = "id")]
     SampleId,
+
+    /// Sort results according to the date that the sample was collected
     #[serde(rename = "date")]
     CollectionDate,
+
+    /// Sort results by the latest activity (i.e. notes) on this sample
     Activity,
+
+    /// Sort results by the quantity of the sample
     #[serde(rename = "qty")]
     Quantity,
+
+    /// Sort results by the source name of the sample
     #[serde(rename = "src")]
     Source,
 }
@@ -162,6 +202,7 @@ impl Allocation {
         builder
     }
 
+    /// Load all matching [Allocation]s from the database
     pub async fn load_all(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
@@ -173,6 +214,9 @@ impl Allocation {
             .await
     }
 
+    /// Load a single matching [Allocation] from the database. Note that this is
+    /// only useful when the `filter` that is specified will return a single result. For
+    /// example if you're filtering by [Filter::Id]
     pub async fn load_one(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
@@ -183,6 +227,7 @@ impl Allocation {
             .await
     }
 
+    /// Load all notes associated with this allocation
     pub async fn load_notes(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
         self.notes = Note::load_all(
             Some(Arc::new(note::NoteFilter::AllocationId(self.id))),
