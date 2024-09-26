@@ -1,4 +1,4 @@
-//! Objects to keep track of the origin of seed samples
+//! Objects to manage the origin of seed samples
 use crate::{
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
@@ -16,11 +16,20 @@ use sqlx::{
 };
 use std::sync::Arc;
 
+/// A type for specifying fields that can be used for filtering a database query
+/// for sources
 #[derive(Clone)]
 pub enum Filter {
+    /// Match the ID of the source to the given value
     Id(i64),
+
+    /// Match the id of the source's user to the given value
     UserId(i64),
+
+    /// Compare the name of the source to the given value
     Name(Cmp, String),
+
+    /// Compare the description of the source to the given value
     Description(Cmp, String),
 }
 
@@ -59,18 +68,31 @@ impl FilterPart for Filter {
     }
 }
 
+/// A data type that represents a source from which a seed sample was acquired.
+/// This could be a vendor or a location where seed was collected.
 #[derive(Debug, sqlx::FromRow, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Source {
+    /// A unique ID that identifies this source in the database
     #[sqlx(rename = "srcid")]
     pub id: i64,
+
+    /// The name of the source
     #[sqlx(rename = "srcname")]
     pub name: String,
+
+    /// An optional longer description for this source
     #[sqlx(rename = "srcdesc", default)]
     pub description: Option<String>,
+
+    /// An optional latitude specifying the location of the source
     #[sqlx(default)]
     pub latitude: Option<f64>,
+
+    /// An optional longitude specifying the location of the source
     #[sqlx(default)]
     pub longitude: Option<f64>,
+
+    /// The database user to whom this source belongs
     pub userid: i64,
 }
 
@@ -129,6 +151,8 @@ impl Source {
         qb
     }
 
+    /// Returns a URL that can be used to display the location of this source on a map
+    /// If the location is not specified, it will return `None`
     pub fn map_viewer_uri(&self, zoom: f32) -> Option<String> {
         match (self.latitude, self.longitude) {
             (Some(latitude), Some(longitude)) => Some(format!("https://api.maptiler.com/maps/topo-v2/?key={MAP_TILER_KEY}#{zoom}/{latitude}/{longitude}")),
@@ -136,6 +160,7 @@ impl Source {
         }
     }
 
+    /// Loads all matching sources from the database
     pub async fn load_all(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
@@ -147,6 +172,7 @@ impl Source {
             .map_err(|e| e.into())
     }
 
+    /// Loads all matching sources from the database for the given user
     pub async fn load_all_user(userid: i64, pool: &Pool<Sqlite>) -> Result<Vec<Source>> {
         Self::load_all(Some(Filter::UserId(userid).into()), pool).await
     }
@@ -160,6 +186,9 @@ impl Source {
             .map_err(|e| e.into())
     }
 
+    /// Add this source to the database. If this call completes successfully,
+    /// the id of this object will be updated to the ID of the inserted row in the
+    /// database
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
@@ -181,6 +210,7 @@ impl Source {
         .map_err(|e| e.into())
     }
 
+    /// Update the source in the database such that it matches this object
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
@@ -199,15 +229,19 @@ impl Source {
         .map_err(|e| e.into())
     }
 
+    /// Deletes the source from the database. After a successfull deletion, the
+    /// ID will be changed to an invalid value.
     pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
             .bind(self.id)
             .execute(pool)
             .await
             .map_err(|e| e.into())
-            .inspect(|_| self.id = -1)
+            .inspect(|_| self.id = Self::invalid_id())
     }
 
+    /// Creates a new source object with the given data. It will initially have
+    /// an invalid ID until it is inserted into the database
     pub fn new(
         name: String,
         description: Option<String>,
