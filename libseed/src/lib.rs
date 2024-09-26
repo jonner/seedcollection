@@ -4,7 +4,7 @@
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 
-pub mod error;
+mod error;
 pub mod filter;
 pub mod loadable;
 pub mod project;
