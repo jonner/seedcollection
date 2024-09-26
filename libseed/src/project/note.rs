@@ -89,7 +89,7 @@ impl Note {
         details: Option<String>,
     ) -> Self {
         Self {
-            id: -1,
+            id: Self::invalid_id(),
             psid,
             date,
             kind,

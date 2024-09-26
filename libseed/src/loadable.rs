@@ -45,6 +45,10 @@ pub trait Loadable {
 
     /// Delete the object with the id `id` from the database
     async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult>;
+
+    fn invalid_id() -> Self::Id {
+        Self::Id::invalid_value()
+    }
 }
 
 /// An object that represents a reference to a different database object of type T

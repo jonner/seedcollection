@@ -289,7 +289,7 @@ impl Sample {
         certainty: Certainty,
     ) -> Self {
         Self {
-            id: -1,
+            id: Self::invalid_id(),
             user: ExternalRef::Stub(userid),
             taxon: ExternalRef::Stub(taxonid),
             source: ExternalRef::Stub(sourceid),

@@ -216,7 +216,7 @@ impl User {
         profile: Option<String>,
     ) -> Self {
         Self {
-            id: -1,
+            id: Self::invalid_id(),
             username,
             email,
             pwhash,

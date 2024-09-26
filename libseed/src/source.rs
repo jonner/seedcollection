@@ -216,7 +216,7 @@ impl Source {
         userid: i64,
     ) -> Self {
         Self {
-            id: -1,
+            id: Self::invalid_id(),
             name,
             description,
             latitude,

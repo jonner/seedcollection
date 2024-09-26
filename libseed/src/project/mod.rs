@@ -228,7 +228,7 @@ impl Project {
     /// invalid ID until it is inserted into the database.
     pub fn new(name: String, description: Option<String>, userid: i64) -> Self {
         Self {
-            id: -1,
+            id: Self::invalid_id(),
             name,
             description,
             userid,
