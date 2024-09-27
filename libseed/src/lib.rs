@@ -16,6 +16,8 @@ pub mod user;
 pub use error::Error;
 pub use error::Result;
 
+/// A utility function to deserialize an Optional value as None when it is an
+/// empty string
 pub fn empty_string_as_none<'de, D, T>(de: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
