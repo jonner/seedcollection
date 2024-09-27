@@ -29,7 +29,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 use tracing::{debug, trace, warn};
 
 use super::{error_alert_response, SortOption};
@@ -419,7 +419,8 @@ async fn add_sample(
     Path(id): Path<i64>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let toadd: Vec<i64> = params
+    let mut messages = Vec::new();
+    let toadd: HashSet<i64> = params
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
             "sample" => value.parse::<i64>().ok(),
@@ -437,28 +438,54 @@ async fn add_sample(
     }
     let valid_samples = Sample::load_all_user(user.id, Some(fb.build()), None, &state.db).await?;
 
-    if valid_samples.len() != toadd.len() {
-        warn!("Some samples dropped, possibly because they were not owned by user {user:?}")
+    let valid_ids = valid_samples
+        .iter()
+        .map(|s| s.id())
+        .collect::<HashSet<i64>>();
+    let invalid = &toadd - &valid_ids;
+    if invalid.len() > 0 {
+        warn!("Some samples dropped, possibly because they were not owned by user {user:?}");
+        let strval = invalid
+            .iter()
+            .map(|id| format_id_number(*id, Some("S"), None))
+            .collect::<Vec<String>>()
+            .join(", ");
+        messages.push(Message {
+            r#type: MessageType::Warning,
+            msg: format!("Some samples could not be added to the project. The following samples may not exist or you may not have permissions to add them top this project: {strval}.",),
+        })
     }
 
     let mut project = Project::load(id, &state.db).await?;
     let mut n_inserted = 0;
-    let mut messages = Vec::new();
     for sample in valid_samples {
         let id = sample.id;
         match project
             .allocate_sample(ExternalRef::Object(sample), &state.db)
             .await
         {
-            Err(e) => messages.push(Message {
-                r#type: MessageType::Error,
-                msg: format!(
-                    "Failed to add sample {}: {}",
-                    format_id_number(id, Some("S"), None),
-                    e
-                ),
-            }),
             Ok(res) => n_inserted += res.rows_affected(),
+            Err(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
+                if e.is_unique_violation() =>
+            {
+                messages.push(Message {
+                    r#type: MessageType::Warning,
+                    msg: format!(
+                        "Sample {} is already a member of this project",
+                        format_id_number(id, Some("S"), None),
+                    ),
+                })
+            }
+            Err(e) => {
+                messages.push(Message {
+                    r#type: MessageType::Error,
+                    msg: format!(
+                        "Failed to add sample {}: Database error",
+                        format_id_number(id, Some("S"), None),
+                    ),
+                });
+                tracing::error!("Failed to add a sample to the project: {e}");
+            }
         }
     }
 
@@ -467,7 +494,7 @@ async fn add_sample(
             0,
             Message {
                 r#type: MessageType::Success,
-                msg: format!("Allocated {n_inserted} samples to this project"),
+                msg: format!("Added {n_inserted} samples to this project"),
             },
         );
     } else {
@@ -475,7 +502,7 @@ async fn add_sample(
             0,
             Message {
                 r#type: MessageType::Error,
-                msg: format!("No samples were allocated to this project"),
+                msg: format!("No samples were added to this project"),
             },
         );
     }
