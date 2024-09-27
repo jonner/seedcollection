@@ -8,7 +8,8 @@ use crate::{
 use anyhow::Result;
 use libseed::{
     loadable::{ExternalRef, Loadable},
-    project::Project,
+    project::{allocation, Allocation, Project},
+    query::{CompoundFilter, Op},
     user::User,
 };
 use sqlx::{Pool, Sqlite};
@@ -70,13 +71,11 @@ pub async fn handle_command(
             Ok(())
         }
         ProjectCommands::RemoveSample { project, sample } => {
-            sqlx::query!(
-                r#"DELETE FROM sc_project_samples WHERE projectid=? AND sampleid=?"#,
-                project,
-                sample,
-            )
-            .execute(dbpool)
-            .await?;
+            let fb = CompoundFilter::builder(Op::And)
+                .push(allocation::Filter::ProjectId(project))
+                .push(allocation::Filter::SampleId(sample));
+            let mut alloc = Allocation::load_one(Some(fb.build()), dbpool).await?;
+            alloc.delete(dbpool).await?;
             println!("Removed sample from project");
             Ok(())
         }
