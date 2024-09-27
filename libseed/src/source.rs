@@ -8,7 +8,6 @@ use crate::{
 use async_trait::async_trait;
 use serde::Deserialize;
 use serde::Serialize;
-use sqlx::Pool;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
 use sqlx::{
@@ -227,17 +226,6 @@ impl Source {
         .map_err(|e| e.into())
     }
 
-    /// Deletes the source from the database. After a successfull deletion, the
-    /// ID will be changed to an invalid value.
-    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
-            .bind(self.id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
-            .inspect(|_| self.id = Self::invalid_id())
-    }
-
     /// Creates a new source object with the given data. It will initially have
     /// an invalid ID until it is inserted into the database
     pub fn new(
@@ -269,6 +257,7 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Pool;
     use test_log::test;
 
     #[test(sqlx::test(

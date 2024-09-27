@@ -261,13 +261,10 @@ async fn delete_source(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let src = Source::load(id, &state.db).await?;
+    let mut src = Source::load(id, &state.db).await?;
     if src.userid != user.id {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
-    sqlx::query("DELETE FROM sc_sources WHERE srcid=?")
-        .bind(id)
-        .execute(state.db.pool())
-        .await?;
+    src.delete(&state.db).await?;
     Ok([("HX-redirect", app_url("/source/list"))])
 }
