@@ -5,13 +5,13 @@ use axum_login::{AuthUser, AuthnBackend, UserId};
 use libseed::{
     empty_string_as_none,
     user::{User, UserStatus},
+    Database,
 };
 use rand::{
     distributions::{Alphanumeric, DistString},
     rngs::OsRng,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite, SqlitePool};
 use std::ops::{Deref, DerefMut};
 use tracing::debug;
 
@@ -19,7 +19,7 @@ use tracing::debug;
 pub struct SqliteUser(User);
 
 impl SqliteUser {
-    pub async fn new_verification_code(&self, pool: &Pool<Sqlite>) -> Result<String, error::Error> {
+    pub async fn new_verification_code(&self, db: &Database) -> Result<String, error::Error> {
         let key = Alphanumeric.sample_string(&mut OsRng, 24);
         debug!(key, "Generated a new verification code");
         sqlx::query!(
@@ -30,7 +30,7 @@ impl SqliteUser {
             key,
             (4 * 60 * 60)
         )
-        .execute(pool)
+        .execute(db.pool())
         .await?;
         Ok(key)
     }
@@ -72,7 +72,7 @@ pub struct Credentials {
 
 #[derive(Clone)]
 pub struct SqliteAuthBackend {
-    db: SqlitePool,
+    db: Database,
 }
 
 #[async_trait]
@@ -126,7 +126,7 @@ impl SqliteAuthBackend {
         Ok(())
     }
 
-    pub fn new(db: SqlitePool) -> Self {
+    pub fn new(db: Database) -> Self {
         Self { db }
     }
 }

@@ -8,13 +8,14 @@ use crate::{
     loadable::Loadable,
     query::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec, SortSpecs, ToSql},
     sample::Sample,
+    Database,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{
     prelude::*,
     sqlite::{SqliteQueryResult, SqliteRow},
-    Pool, QueryBuilder, Sqlite,
+    QueryBuilder, Sqlite,
 };
 use std::sync::Arc;
 
@@ -115,14 +116,14 @@ impl Loadable for Allocation {
         self.id = id
     }
 
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+    async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         let mut builder = Self::build_query(Some(Filter::Id(id).into()), None);
-        Ok(builder.build_query_as().fetch_one(pool).await?)
+        Ok(builder.build_query_as().fetch_one(db.pool()).await?)
     }
 
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
         sqlx::query!("DELETE FROM sc_project_samples WHERE psid=?", id)
-            .execute(pool)
+            .execute(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -206,11 +207,11 @@ impl Allocation {
     pub async fn load_all(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<Vec<Self>, sqlx::Error> {
         Self::build_query(filter, sort)
             .build_query_as()
-            .fetch_all(pool)
+            .fetch_all(db.pool())
             .await
     }
 
@@ -219,21 +220,18 @@ impl Allocation {
     /// example if you're filtering by [Filter::Id]
     pub async fn load_one(
         filter: Option<DynFilterPart>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<Self, sqlx::Error> {
         Self::build_query(filter, None)
             .build_query_as()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await
     }
 
     /// Load all notes associated with this allocation
-    pub async fn load_notes(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
-        self.notes = Note::load_all(
-            Some(Arc::new(note::NoteFilter::AllocationId(self.id))),
-            pool,
-        )
-        .await?;
+    pub async fn load_notes(&mut self, db: &Database) -> Result<()> {
+        self.notes =
+            Note::load_all(Some(Arc::new(note::NoteFilter::AllocationId(self.id))), db).await?;
         Ok(())
     }
 }
@@ -256,8 +254,10 @@ impl FromRow<'_, SqliteRow> for Allocation {
 
 #[cfg(test)]
 mod tests {
+    use crate::Database;
+
     use super::*;
-    use sqlx::{Pool, Sqlite};
+    use sqlx::Pool;
     use test_log::test;
     use time::Month;
 
@@ -269,29 +269,30 @@ mod tests {
         )
     ))]
     async fn load_allocations(pool: Pool<Sqlite>) {
-        async fn check_sample(a: &Allocation, pool: &Pool<Sqlite>) {
+        let db = Database(pool);
+        async fn check_sample(a: &Allocation, db: &Database) {
             tracing::debug!("loading sample");
-            let s = Sample::load(a.sample.id, pool)
+            let s = Sample::load(a.sample.id(), db)
                 .await
                 .expect("Failed to load sample");
             assert_eq!(a.sample, s);
 
-            let c = Project::load(a.project.id, pool)
+            let c = Project::load(a.project.id(), db)
                 .await
                 .expect("Failed to load project");
             assert_eq!(a.project, c);
         }
 
         // check allocations for project 1
-        let assigned = Allocation::load_all(Some(Arc::new(Filter::ProjectId(1))), None, &pool)
+        let assigned = Allocation::load_all(Some(Arc::new(Filter::ProjectId(1))), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
         tracing::debug!("{:?}", assigned[0]);
-        assert_eq!(assigned[0].sample.id, 1);
-        assert_eq!(assigned[0].project.id, 1);
+        assert_eq!(assigned[0].sample.id(), 1);
+        assert_eq!(assigned[0].project.id(), 1);
         // querying allocations should also load the latest note
         assert_eq!(assigned[0].notes.len(), 1);
         assert_eq!(assigned[0].notes[0].id, 2);
@@ -303,41 +304,41 @@ mod tests {
             assigned[0].notes[0].details,
             Some("note details 2".to_string())
         );
-        check_sample(&assigned[0], &pool).await;
+        check_sample(&assigned[0], &db).await;
 
         tracing::debug!("{:?}", assigned[1]);
-        assert_eq!(assigned[1].sample.id, 2);
-        assert_eq!(assigned[1].project.id, 1);
-        check_sample(&assigned[1], &pool).await;
+        assert_eq!(assigned[1].sample.id(), 2);
+        assert_eq!(assigned[1].project.id(), 1);
+        check_sample(&assigned[1], &db).await;
 
         // check allocations for project 2
-        let assigned = Allocation::load_all(Some(Arc::new(Filter::ProjectId(2))), None, &pool)
+        let assigned = Allocation::load_all(Some(Arc::new(Filter::ProjectId(2))), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
-        assert_eq!(assigned[0].sample.id, 1);
-        assert_eq!(assigned[0].project.id, 2);
-        check_sample(&assigned[0], &pool).await;
+        assert_eq!(assigned[0].sample.id(), 1);
+        assert_eq!(assigned[0].project.id(), 2);
+        check_sample(&assigned[0], &db).await;
 
-        assert_eq!(assigned[1].sample.id, 3);
-        assert_eq!(assigned[1].project.id, 2);
-        check_sample(&assigned[1], &pool).await;
+        assert_eq!(assigned[1].sample.id(), 3);
+        assert_eq!(assigned[1].project.id(), 2);
+        check_sample(&assigned[1], &db).await;
 
         // check allocations for sample 1
-        let assigned = Allocation::load_all(Some(Arc::new(Filter::SampleId(1))), None, &pool)
+        let assigned = Allocation::load_all(Some(Arc::new(Filter::SampleId(1))), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
-        assert_eq!(assigned[0].sample.id, 1);
-        assert_eq!(assigned[0].project.id, 1);
-        check_sample(&assigned[0], &pool).await;
+        assert_eq!(assigned[0].sample.id(), 1);
+        assert_eq!(assigned[0].project.id(), 1);
+        check_sample(&assigned[0], &db).await;
 
-        assert_eq!(assigned[1].sample.id, 1);
-        assert_eq!(assigned[1].project.id, 2);
-        check_sample(&assigned[1], &pool).await;
+        assert_eq!(assigned[1].sample.id(), 1);
+        assert_eq!(assigned[1].project.id(), 2);
+        check_sample(&assigned[1], &db).await;
     }
 }

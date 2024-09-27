@@ -4,12 +4,16 @@ use crate::{
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
     sample::Sample,
+    Database,
 };
 pub use allocation::Allocation;
 use async_trait::async_trait;
 pub use note::{Note, NoteFilter, NoteType};
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Row, Sqlite};
+use sqlx::{
+    sqlite::{SqliteQueryResult, SqliteRow},
+    FromRow, QueryBuilder, Row, Sqlite,
+};
 use std::sync::Arc;
 use tracing::debug;
 
@@ -54,18 +58,18 @@ impl Loadable for Project {
         self.id = id
     }
 
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+    async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         Self::build_query(Some(Filter::Id(id).into()))
             .build_query_as()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await
             .map_err(|e| e.into())
     }
 
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
         sqlx::query("DELETE FROM sc_projects WHERE projectid=?")
             .bind(id)
-            .execute(pool)
+            .execute(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -139,19 +143,19 @@ impl Project {
     }
 
     /// Load all matched projects from the database
-    pub async fn load_all(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
+    pub async fn load_all(filter: Option<DynFilterPart>, db: &Database) -> Result<Vec<Self>> {
         Self::build_query(filter)
             .build_query_as()
-            .fetch_all(pool)
+            .fetch_all(db.pool())
             .await
             .map_err(|e| e.into())
     }
 
     /// query the number of matching projects in the database
-    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
+    pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
         Self::build_count(filter)
             .build()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await?
             .try_get("nprojects")
             .map_err(|e| e.into())
@@ -162,7 +166,7 @@ impl Project {
         &mut self,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<allocation::SortField>>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<()> {
         let mut fbuilder =
             CompoundFilter::builder(Op::And).push(allocation::Filter::ProjectId(self.id));
@@ -170,7 +174,7 @@ impl Project {
             fbuilder = fbuilder.push(filter);
         }
 
-        self.allocations = Allocation::load_all(Some(fbuilder.build()), sort, pool).await?;
+        self.allocations = Allocation::load_all(Some(fbuilder.build()), sort, db).await?;
         Ok(())
     }
 
@@ -178,12 +182,12 @@ impl Project {
     pub async fn allocate_sample(
         &mut self,
         sample: ExternalRef<Sample>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<SqliteQueryResult> {
         sqlx::query("INSERT INTO sc_project_samples (projectid, sampleid) VALUES (?, ?)")
             .bind(self.id)
             .bind(sample.id())
-            .execute(pool)
+            .execute(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -191,20 +195,20 @@ impl Project {
     /// Add this project to the database. If this call completes successfully,
     /// the `id` of this object will be updated to the ID of the inserted row in the
     /// database
-    pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, db: &Database) -> Result<SqliteQueryResult> {
         debug!(?self, "Inserting project into database");
         sqlx::query("INSERT INTO sc_projects (projname, projdescription, userid) VALUES (?, ?, ?)")
             .bind(self.name.clone())
             .bind(self.description.clone())
             .bind(self.userid)
-            .execute(pool)
+            .execute(db.pool())
             .await
             .inspect(|r| self.id = r.last_insert_rowid())
             .map_err(|e| e.into())
     }
 
     /// Update the project in the database such that it matches this object
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
         if self.name.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("name".to_string()));
         }
@@ -219,7 +223,7 @@ impl Project {
         .bind(self.description.as_ref().cloned())
         .bind(self.userid)
         .bind(self.id)
-        .execute(pool)
+        .execute(db.pool())
         .await
         .map_err(|e| e.into())
     }
@@ -237,10 +241,19 @@ impl Project {
     }
 }
 
+impl FromRow<'_, SqliteRow> for ExternalRef<Project> {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        Project::from_row(row)
+            .map(ExternalRef::Object)
+            .or_else(|_| row.try_get("projectid").map(ExternalRef::Stub))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::loadable::Loadable;
     use crate::project::Project;
+    use crate::Database;
     use sqlx::Pool;
     use sqlx::Sqlite;
     use test_log::test;
@@ -250,24 +263,25 @@ mod tests {
         fixtures(path = "../../../db/fixtures", scripts("users"))
     ))]
     async fn test_insert_projects(pool: Pool<Sqlite>) {
-        async fn check(pool: &Pool<Sqlite>, name: String, desc: Option<String>, userid: i64) {
+        let db = Database(pool);
+        async fn check(db: &Database, name: String, desc: Option<String>, userid: i64) {
             let mut c = Project::new(name, desc, userid);
-            let res = c.insert(&pool).await.expect("failed to insert");
+            let res = c.insert(&db).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
-            let cload = Project::load(res.last_insert_rowid(), &pool)
+            let cload = Project::load(res.last_insert_rowid(), &db)
                 .await
                 .expect("Failed to load project");
             assert_eq!(c, cload);
         }
 
         check(
-            &pool,
+            &db,
             "test name".to_string(),
             Some("Test description".to_string()),
             1,
         )
         .await;
 
-        check(&pool, "test name".to_string(), None, 1).await;
+        check(&db, "test name".to_string(), None, 1).await;
     }
 }

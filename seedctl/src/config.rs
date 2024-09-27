@@ -1,6 +1,5 @@
-use libseed::user::User;
+use libseed::{user::User, Database};
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite, SqlitePool};
 use std::{
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
@@ -26,8 +25,6 @@ pub enum Error {
     ConfigParseFailed(#[source] serde_json::Error),
     #[error("Incorrect username or password")]
     LoginFailure,
-    #[error("Unable to connect to database")]
-    DatabaseConnectionFailure(#[source] sqlx::Error),
     #[error("Unable to run database migrations")]
     DatabaseMigrationFailure(#[from] sqlx::migrate::MigrateError),
     #[error(transparent)]
@@ -83,17 +80,14 @@ impl Config {
         }
     }
 
-    pub async fn validate(&self) -> Result<(Pool<Sqlite>, User), Error> {
-        let dbpool = SqlitePool::connect(&format!("sqlite://{}", self.database.to_string_lossy()))
-            .await
-            .map_err(Error::DatabaseConnectionFailure)?;
-        sqlx::migrate!("../db/migrations").run(&dbpool).await?;
-        let user = User::load_by_username(&self.username, &dbpool)
+    pub async fn validate(&self) -> Result<(Database, User), Error> {
+        let db = libseed::Database::open(&self.database).await?;
+        let user = User::load_by_username(&self.username, &db)
             .await
             .map_err(Error::Database)?
             .ok_or_else(|| Error::LoginFailure)?;
         user.verify_password(&self.password)
             .map_err(|_| Error::LoginFailure)?;
-        Ok((dbpool, user))
+        Ok((db, user))
     }
 }

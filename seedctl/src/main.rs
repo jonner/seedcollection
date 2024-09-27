@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
 
     let cfg = config::Config::load_from_file(&config_file).await?;
     debug!(?cfg.username, ?cfg.database, "logging in");
-    let (dbpool, user) = cfg.validate().await?;
+    let (db, user) = cfg.validate().await?;
 
     match args.command {
         Commands::Login { .. } => {
@@ -86,13 +86,13 @@ async fn main() -> Result<()> {
             Ok(())
         }
         Commands::Projects { command } => {
-            commands::projects::handle_command(command, user, &dbpool).await
+            commands::projects::handle_command(command, user, &db).await
         }
         Commands::Sources { command } => {
-            commands::sources::handle_command(command, user, &dbpool).await
+            commands::sources::handle_command(command, user, &db).await
         }
         Commands::Samples { command } => {
-            commands::samples::handle_command(command, user, &dbpool).await
+            commands::samples::handle_command(command, user, &db).await
         }
         Commands::Taxonomy { command } => match command {
             TaxonomyCommands::Find {
@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
                     filter = filter.push(taxonomy::Filter::Minnesota(val));
                 }
 
-                let taxa: Vec<Taxon> = Taxon::load_all(Some(filter.build()), None, &dbpool).await?;
+                let taxa: Vec<Taxon> = Taxon::load_all(Some(filter.build()), None, &db).await?;
                 if taxa.is_empty() {
                     return Err(anyhow!("No results found"));
                 }
@@ -135,10 +135,10 @@ async fn main() -> Result<()> {
                 println!("{} records found", taxa.len());
                 Ok(())
             }
-            TaxonomyCommands::Show { id, output } => match Taxon::load(id, &dbpool).await {
+            TaxonomyCommands::Show { id, output } => match Taxon::load(id, &db).await {
                 Ok(mut taxon) => {
                     let str = output::format_one(
-                        TaxonRowDetails::new(&mut taxon, &dbpool).await?,
+                        TaxonRowDetails::new(&mut taxon, &db).await?,
                         output.format,
                     )?;
                     println!("{str}");
@@ -151,8 +151,6 @@ async fn main() -> Result<()> {
                 Err(e) => Err(e.into()),
             },
         },
-        Commands::Admin { command } => {
-            commands::admin::handle_command(command, user, &dbpool).await
-        }
+        Commands::Admin { command } => commands::admin::handle_command(command, user, &db).await,
     }
 }

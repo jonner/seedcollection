@@ -12,15 +12,11 @@ use libseed::{
     query::{Cmp, CompoundFilter, Op},
     source::{self, Source},
     user::User,
+    Database,
     Error::{AuthUserNotFound, DatabaseError},
 };
-use sqlx::{Pool, Sqlite};
 
-pub async fn handle_command(
-    command: SourceCommands,
-    user: User,
-    dbpool: &Pool<Sqlite>,
-) -> Result<()> {
+pub async fn handle_command(command: SourceCommands, user: User, db: &Database) -> Result<()> {
     match command {
         SourceCommands::List { filter, output } => {
             let filter = filter.map(|f| {
@@ -29,7 +25,7 @@ pub async fn handle_command(
                     .push(source::Filter::Description(Cmp::Like, f.clone()))
                     .build()
             });
-            let sources = Source::load_all(filter, dbpool).await?;
+            let sources = Source::load_all(filter, db).await?;
             let str = match output.full {
                 true => {
                     let rows = sources.iter().map(SourceRowFull::new).collect::<Vec<_>>();
@@ -43,7 +39,7 @@ pub async fn handle_command(
             println!("{str}");
             Ok(())
         }
-        SourceCommands::Show { id, output } => match Source::load(id, dbpool).await {
+        SourceCommands::Show { id, output } => match Source::load(id, db).await {
             Ok(src) => {
                 let str = output::format_one(SourceRowFull::new(&src), output.format)?;
                 println!("{str}");
@@ -65,9 +61,7 @@ pub async fn handle_command(
             let userid = match userid {
                 // check if the given userid is valid
                 Some(id) => {
-                    let _ = User::load(id, dbpool)
-                        .await
-                        .map_err(|_e| AuthUserNotFound)?;
+                    let _ = User::load(id, db).await.map_err(|_e| AuthUserNotFound)?;
                     id
                 }
                 None => user.id,
@@ -118,12 +112,12 @@ pub async fn handle_command(
                 )
             };
 
-            let newid = source.insert(dbpool).await?.last_insert_rowid();
+            let newid = source.insert(db).await?.last_insert_rowid();
             println!("Added source {newid} to database");
             Ok(())
         }
         SourceCommands::Remove { id } => {
-            Source::delete_id(&id, dbpool).await?;
+            Source::delete_id(&id, db).await?;
             println!("Removed source {id} from database");
             Ok(())
         }
@@ -138,7 +132,7 @@ pub async fn handle_command(
             {
                 return Err(anyhow!("Cannot modify source without new values"));
             }
-            let mut src = Source::load(id, dbpool).await?;
+            let mut src = Source::load(id, db).await?;
             if let Some(name) = name {
                 src.name = name;
             }
@@ -151,7 +145,7 @@ pub async fn handle_command(
             if let Some(longitude) = longitude {
                 src.longitude = Some(longitude);
             }
-            src.update(dbpool).await?;
+            src.update(db).await?;
             println!("Modified source...");
             Ok(())
         }

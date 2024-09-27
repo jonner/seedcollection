@@ -37,7 +37,6 @@ use tracing_subscriber::filter::EnvFilter;
 use uuid::Uuid;
 
 mod auth;
-mod db;
 mod error;
 mod html;
 mod state;
@@ -271,20 +270,15 @@ where
 }
 
 async fn app(shared_state: AppState) -> Result<Router> {
-    trace!("Running database migrations");
-    sqlx::migrate!("../db/migrations")
-        .run(&shared_state.dbpool)
-        .await?;
-
     trace!("Creating session layer");
-    let session_store = SqliteStore::new(shared_state.dbpool.clone());
+    let session_store = SqliteStore::new(shared_state.db.pool().clone());
     session_store.migrate().await?;
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(true)
         .with_expiry(Expiry::OnInactivity(Duration::days(7)));
 
     trace!("Creating auth backend");
-    let auth_backend = auth::SqliteAuthBackend::new(shared_state.dbpool.clone());
+    let auth_backend = auth::SqliteAuthBackend::new(shared_state.db.clone());
     let auth_layer = AuthManagerLayerBuilder::new(auth_backend, session_layer).build();
 
     trace!("Creating routers");

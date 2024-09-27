@@ -11,17 +11,13 @@ use libseed::{
     project::{allocation, Allocation, Project},
     query::{CompoundFilter, Op},
     user::User,
+    Database,
 };
-use sqlx::{Pool, Sqlite};
 
-pub async fn handle_command(
-    command: ProjectCommands,
-    user: User,
-    dbpool: &Pool<Sqlite>,
-) -> Result<()> {
+pub async fn handle_command(command: ProjectCommands, user: User, db: &Database) -> Result<()> {
     match command {
         ProjectCommands::List { output } => {
-            let projects = Project::load_all(None, dbpool).await?;
+            let projects = Project::load_all(None, db).await?;
             let str = output::format_seq(
                 projects.iter().map(ProjectRow::new).collect::<Vec<_>>(),
                 output.format,
@@ -35,8 +31,8 @@ pub async fn handle_command(
             userid,
         } => {
             let mut project = Project::new(name, description, userid.unwrap_or(user.id));
-            let id = project.insert(dbpool).await?.last_insert_rowid();
-            let project = Project::load(id, dbpool).await?;
+            let id = project.insert(db).await?.last_insert_rowid();
+            let project = Project::load(id, db).await?;
             println!("Added project to database:");
             println!("{}: {}", project.id, project.name);
             Ok(())
@@ -46,26 +42,26 @@ pub async fn handle_command(
             name,
             description,
         } => {
-            let mut project = Project::load(id, dbpool).await?;
+            let mut project = Project::load(id, db).await?;
             if let Some(name) = name {
                 project.name = name
             }
             if let Some(description) = description {
                 project.description = Some(description);
             }
-            project.update(dbpool).await?;
+            project.update(db).await?;
             println!("Modified project...");
             Ok(())
         }
         ProjectCommands::Remove { id } => {
-            Project::delete_id(&id, dbpool).await?;
+            Project::delete_id(&id, db).await?;
             println!("Removed project {id}");
             Ok(())
         }
         ProjectCommands::AddSample { project, sample } => {
-            let mut project = Project::load(project, dbpool).await?;
+            let mut project = Project::load(project, db).await?;
             project
-                .allocate_sample(ExternalRef::Stub(sample), dbpool)
+                .allocate_sample(ExternalRef::Stub(sample), db)
                 .await?;
             println!("Added sample to project");
             Ok(())
@@ -74,14 +70,14 @@ pub async fn handle_command(
             let fb = CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::ProjectId(project))
                 .push(allocation::Filter::SampleId(sample));
-            let mut alloc = Allocation::load_one(Some(fb.build()), dbpool).await?;
-            alloc.delete(dbpool).await?;
+            let mut alloc = Allocation::load_one(Some(fb.build()), db).await?;
+            alloc.delete(db).await?;
             println!("Removed sample from project");
             Ok(())
         }
-        ProjectCommands::Show { id, output } => match Project::load(id, dbpool).await {
+        ProjectCommands::Show { id, output } => match Project::load(id, db).await {
             Ok(mut projectinfo) => {
-                projectinfo.load_samples(None, None, dbpool).await?;
+                projectinfo.load_samples(None, None, db).await?;
                 let str = match output.full {
                     true => output::format_seq(
                         projectinfo

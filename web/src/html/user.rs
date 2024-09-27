@@ -47,11 +47,11 @@ async fn show_profile(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let stats = UserStats {
-        nsamples: Sample::count(Some(sample::Filter::UserId(user.id).into()), &state.dbpool)
+        nsamples: Sample::count(Some(sample::Filter::UserId(user.id).into()), &state.db)
             .await?,
-        nprojects: Project::count(Some(project::Filter::User(user.id).into()), &state.dbpool)
+        nprojects: Project::count(Some(project::Filter::User(user.id).into()), &state.db)
             .await?,
-        nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &state.dbpool)
+        nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &state.db)
             .await?,
     };
     Ok(RenderHtml(
@@ -99,7 +99,7 @@ async fn update_profile(
         "" => None,
         s => Some(s.to_string()),
     };
-    user.update(&state.dbpool).await?;
+    user.update(&state.db).await?;
 
     if need_reverify {
         send_verification(user, &state).await?;
@@ -109,7 +109,7 @@ async fn update_profile(
 }
 
 async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), error::Error> {
-    let uvkey = user.new_verification_code(&state.dbpool).await?;
+    let uvkey = user.new_verification_code(&state.db).await?;
     // FIXME: figure out how to do the host/port stuff properly. Right now this will send a link to
     // host 0.0.0.0 if that's what we configured the server to listen on...
     let mut verification_url = "https://".to_string();

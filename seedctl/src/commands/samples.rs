@@ -13,16 +13,12 @@ use libseed::{
     query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     sample::{self, Certainty, Sample},
     user::User,
+    Database,
     Error::{AuthUserNotFound, DatabaseError},
 };
-use sqlx::{Pool, Sqlite};
 use std::collections::HashSet;
 
-pub async fn handle_command(
-    command: SampleCommands,
-    user: User,
-    dbpool: &Pool<Sqlite>,
-) -> Result<()> {
+pub async fn handle_command(command: SampleCommands, user: User, db: &Database) -> Result<()> {
     match command {
         SampleCommands::List {
             user: useronly,
@@ -70,8 +66,8 @@ pub async fn handle_command(
                 )
             });
             let mut samples = match useronly {
-                true => Sample::load_all_user(user.id, Some(filter), sort, dbpool).await?,
-                false => Sample::load_all(Some(filter), sort, dbpool).await?,
+                true => Sample::load_all_user(user.id, Some(filter), sort, db).await?,
+                false => Sample::load_all(Some(filter), sort, db).await?,
             };
             let str = match output.full {
                 true => {
@@ -92,10 +88,10 @@ pub async fn handle_command(
             println!("{str}",);
             Ok(())
         }
-        SampleCommands::Show { id, output } => match Sample::load(id, dbpool).await {
+        SampleCommands::Show { id, output } => match Sample::load(id, db).await {
             Ok(mut sample) => {
                 let str = output::format_one(
-                    SampleRowDetails::new(&mut sample, dbpool).await?,
+                    SampleRowDetails::new(&mut sample, db).await?,
                     output.format,
                 )?;
                 println!("{str}");
@@ -119,7 +115,7 @@ pub async fn handle_command(
         } => {
             let userid = match userid {
                 Some(id) => {
-                    let _ = User::load(id, dbpool).await.map_err(|_| AuthUserNotFound)?;
+                    let _ = Sample::load(id, db).await.map_err(|_| AuthUserNotFound)?;
                     id
                 }
                 None => user.id,
@@ -132,8 +128,8 @@ pub async fn handle_command(
                 && notes.is_none()
                 && !uncertain
             {
-                let taxon = TaxonIdPrompt::new("Taxon:", dbpool).prompt()?;
-                let source = SourceIdPrompt::new("Source:", userid, dbpool).prompt()?;
+                let taxon = TaxonIdPrompt::new("Taxon:", db).prompt()?;
+                let source = SourceIdPrompt::new("Source:", userid, db).prompt()?;
                 let month = inquire::CustomType::<u32>::new("Month:").prompt_skippable()?;
                 let year = inquire::CustomType::<u32>::new("Year:").prompt_skippable()?;
                 let quantity = inquire::CustomType::<i64>::new("Quantity:").prompt_skippable()?;
@@ -172,12 +168,12 @@ pub async fn handle_command(
                     certainty,
                 )
             };
-            let newid = sample.insert(dbpool).await?.last_insert_rowid();
+            let newid = sample.insert(db).await?.last_insert_rowid();
             println!("Added sample {newid} to database");
             Ok(())
         }
         SampleCommands::Remove { id } => {
-            Sample::delete_id(&id, dbpool).await?;
+            Sample::delete_id(&id, db).await?;
             Ok(())
         }
         SampleCommands::Modify {
@@ -191,7 +187,7 @@ pub async fn handle_command(
             certain,
             uncertain,
         } => {
-            let oldsample = Sample::load(id, dbpool).await?;
+            let oldsample = Sample::load(id, db).await?;
             let mut sample = oldsample.clone();
             if taxon.is_none()
                 && source.is_none()
@@ -205,14 +201,13 @@ pub async fn handle_command(
                 println!("Interactively modifying sample {id}. Press <esc> to skip any field.");
                 let current = sample.taxon.object()?;
                 println!("Current taxon: {}. {}", current.id, current.complete_name);
-                if let Some(id) = TaxonIdPrompt::new("Taxon:", dbpool).prompt_skippable() {
+                if let Some(id) = TaxonIdPrompt::new("Taxon:", db).prompt_skippable() {
                     sample.taxon = ExternalRef::Stub(id);
                 }
 
                 let current = sample.source.object()?;
                 println!("Current source: {}. {}", current.id, current.name);
-                if let Some(id) = SourceIdPrompt::new("Source:", user.id, dbpool).prompt_skippable()
-                {
+                if let Some(id) = SourceIdPrompt::new("Source:", user.id, db).prompt_skippable() {
                     sample.source = ExternalRef::Stub(id);
                 }
 
@@ -317,7 +312,7 @@ pub async fn handle_command(
                 }
             }
             if oldsample != sample {
-                sample.update(dbpool).await?;
+                sample.update(db).await?;
                 println!("Modified sample...");
             } else {
                 println!("Sample unchanged.")
@@ -333,7 +328,7 @@ pub async fn handle_command(
                 }
                 _ => None,
             };
-            let samples = Sample::load_all(filter, None, dbpool).await?;
+            let samples = Sample::load_all(filter, None, db).await?;
             let nsamples = samples.len();
             let ntaxa = samples
                 .iter()

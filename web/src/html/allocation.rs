@@ -56,16 +56,16 @@ async fn show_allocation(
                 .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
-        &state.dbpool,
+        &state.db,
     )
     .await?;
 
-    allocation.load_notes(&state.dbpool).await?;
+    allocation.load_notes(&state.db).await?;
     allocation
         .sample
         .taxon
         .object_mut()?
-        .load_germination_info(&state.dbpool)
+        .load_germination_info(&state.db)
         .await?;
     Ok(RenderHtml(
         key,
@@ -108,7 +108,7 @@ async fn add_allocation_note(
                 .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
-        &state.dbpool,
+        &state.db,
     )
     .await
     {
@@ -152,7 +152,7 @@ async fn add_allocation_note(
         params.summary.clone(),
         params.details.as_ref().cloned(),
     );
-    match note.insert(&state.dbpool).await {
+    match note.insert(&state.db).await {
         Ok(_) => {
             let url = app_url(&format!("/project/{}/sample/{}", projectid, allocid));
             [("HX-Redirect", url)].into_response()
@@ -183,7 +183,7 @@ async fn show_add_allocation_note(
                 .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
-        &state.dbpool,
+        &state.db,
     )
     .await?;
     let note_types: Vec<NoteType> = NoteType::iter().collect();
@@ -203,7 +203,7 @@ async fn remove_allocation(
     Path((id, psid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     let mut projects =
-        Project::load_all(Some(Arc::new(project::Filter::Id(id))), &state.dbpool).await?;
+        Project::load_all(Some(Arc::new(project::Filter::Id(id))), &state.db).await?;
     let Some(c) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
@@ -213,7 +213,7 @@ async fn remove_allocation(
     sqlx::query!(
         "DELETE FROM sc_project_samples AS PS WHERE PS.psid=? AND PS.projectid IN (SELECT P.projectid FROM sc_projects AS P WHERE P.userid=?)",
         psid, user.id)
-        .execute(&state.dbpool)
+        .execute(state.db.pool())
         .await?;
     Ok(())
 }
@@ -225,8 +225,8 @@ async fn delete_note(
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can delete
-    let mut note = Note::load(noteid, &state.dbpool).await?;
-    let allocation = Allocation::load(note.psid, &state.dbpool).await?;
+    let mut note = Note::load(noteid, &state.db).await?;
+    let allocation = Allocation::load(note.psid, &state.db).await?;
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -236,7 +236,7 @@ async fn delete_note(
         ));
     }
 
-    note.delete(&state.dbpool).await?;
+    note.delete(&state.db).await?;
     Ok(())
 }
 
@@ -247,8 +247,8 @@ async fn show_edit_note(
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
-    let note = Note::load(noteid, &state.dbpool).await?;
-    let allocation = Allocation::load(note.psid, &state.dbpool).await?;
+    let note = Note::load(noteid, &state.db).await?;
+    let allocation = Allocation::load(note.psid, &state.db).await?;
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -278,8 +278,8 @@ async fn modify_note(
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
-    let mut note = Note::load(noteid, &state.dbpool).await?;
-    let allocation = Allocation::load(note.psid, &state.dbpool).await?;
+    let mut note = Note::load(noteid, &state.db).await?;
+    let allocation = Allocation::load(note.psid, &state.db).await?;
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -294,7 +294,7 @@ async fn modify_note(
     note.kind = params.notetype;
     note.details = params.details;
 
-    match note.update(&state.dbpool).await {
+    match note.update(&state.db).await {
         Err(e) => {
             let note_types: Vec<NoteType> = NoteType::iter().collect();
             Ok(RenderHtml(

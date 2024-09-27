@@ -3,6 +3,7 @@ use crate::{
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{DynFilterPart, FilterPart},
+    Database,
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
@@ -11,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{
     prelude::*,
     sqlite::{SqliteQueryResult, SqliteRow},
-    Pool, QueryBuilder, Sqlite,
+    QueryBuilder, Sqlite,
 };
 use std::sync::Arc;
 use time::OffsetDateTime;
@@ -92,18 +93,18 @@ impl Loadable for User {
         self.id = id
     }
 
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+    async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         Self::build_query(Some(Filter::Id(id).into()))
             .build_query_as()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await
             .map_err(|e| e.into())
     }
 
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
         sqlx::query("DELETE FROM sc_users WHERE userid=?")
             .bind(id)
-            .execute(pool)
+            .execute(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -133,25 +134,25 @@ impl User {
     }
 
     /// Fetch all users from the database
-    pub async fn load_all(pool: &Pool<Sqlite>) -> Result<Vec<User>> {
+    pub async fn load_all(db: &Database) -> Result<Vec<User>> {
         Self::build_query(None)
             .build_query_as()
-            .fetch_all(pool)
+            .fetch_all(db.pool())
             .await
             .map_err(|e| e.into())
     }
 
     /// Fetch the user with the given username from the database
-    pub async fn load_by_username(username: &str, pool: &Pool<Sqlite>) -> Result<Option<User>> {
+    pub async fn load_by_username(username: &str, db: &Database) -> Result<Option<User>> {
         Self::build_query(Some(Filter::Username(username.to_string()).into()))
             .build_query_as()
-            .fetch_optional(pool)
+            .fetch_optional(db.pool())
             .await
             .map_err(|e| e.into())
     }
 
     /// Update the database to match the values currently stored in the object
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
@@ -177,7 +178,7 @@ impl User {
         .bind(&self.profile)
         .bind(&self.pwhash)
         .bind(self.id)
-        .execute(pool)
+        .execute(db.pool())
         .await
         .map_err(|e| e.into())
     }
@@ -228,7 +229,7 @@ impl User {
     }
 
     /// Insert a new row into the database with the values stored in this object
-    pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, db: &Database) -> Result<SqliteQueryResult> {
         if self.username.trim().is_empty() {
             return Err(Error::InvalidStateMissingAttribute("username".to_string()));
         }
@@ -256,7 +257,7 @@ impl User {
         .bind(&self.status)
         .bind(&self.display_name)
         .bind(&self.profile)
-        .execute(pool)
+        .execute(db.pool())
         .await
         .inspect(|r| self.id = r.last_insert_rowid())
         .map_err(|e| e.into())
@@ -310,10 +311,12 @@ impl FromRow<'_, SqliteRow> for ExternalRef<User> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Pool;
     use test_log::test;
 
     #[test(sqlx::test(migrations = "../db/migrations/",))]
     async fn register_user(pool: Pool<Sqlite>) {
+        let db = Database(pool);
         const PASSWORD: &str = "my-super-secret-password";
         let hash = User::hash_password(PASSWORD).expect("Failed to hash password");
         let mut user = User::new(
@@ -325,10 +328,10 @@ mod tests {
             None,
             None,
         );
-        let res = user.insert(&pool).await.expect("Failed to insert user");
+        let res = user.insert(&db).await.expect("Failed to insert user");
         let userid = res.last_insert_rowid();
 
-        let loaded = User::load(userid, &pool)
+        let loaded = User::load(userid, &db)
             .await
             .expect("Unable to load new user");
         assert_eq!(user.id, loaded.id);
@@ -347,15 +350,16 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn modify_user(pool: Pool<Sqlite>) {
+        let db = Database(pool);
         const NEWNAME: &str = "TestUsername84902";
-        let mut user = User::load(1, &pool)
+        let mut user = User::load(1, &db)
             .await
             .expect("Failed to fetch user from database");
         user.username = NEWNAME.to_string();
-        user.update(&pool).await.expect("Unable to update user");
-        assert!(user.insert(&pool).await.is_err());
+        user.update(&db).await.expect("Unable to update user");
+        assert!(user.insert(&db).await.is_err());
 
-        let loaded = User::load(1, &pool)
+        let loaded = User::load(1, &db)
             .await
             .expect("Unable to load updated user");
         assert_eq!(user, loaded);
@@ -367,10 +371,11 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn delete_user(pool: Pool<Sqlite>) {
-        User::delete_id(&1, &pool)
+        let db = Database(pool);
+        User::delete_id(&1, &db)
             .await
             .expect("failed to delete user");
-        assert!(User::load(1, &pool).await.is_err());
+        assert!(User::load(1, &db).await.is_err());
     }
 
     #[test]

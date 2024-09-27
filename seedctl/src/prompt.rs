@@ -5,8 +5,8 @@ use libseed::{
     query::{Cmp, CompoundFilter, DynFilterPart, Op},
     source::{self, Source},
     taxonomy::{match_any_name, Taxon},
+    Database,
 };
-use sqlx::{Pool, Sqlite};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -23,11 +23,9 @@ pub struct TaxonIdPrompt<'a> {
 }
 
 impl<'a> TaxonIdPrompt<'a> {
-    pub fn new(message: &'a str, dbpool: &Pool<Sqlite>) -> Self {
+    pub fn new(message: &'a str, db: &Database) -> Self {
         Self {
-            text: inquire::Text::new(message).with_autocomplete(TaxonCompleter {
-                dbpool: dbpool.clone(),
-            }),
+            text: inquire::Text::new(message).with_autocomplete(TaxonCompleter { db: db.clone() }),
         }
     }
 
@@ -52,7 +50,7 @@ impl<'a> TaxonIdPrompt<'a> {
 
 #[derive(Clone)]
 struct TaxonCompleter {
-    dbpool: Pool<Sqlite>,
+    db: Database,
 }
 
 pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
@@ -76,7 +74,7 @@ impl Autocomplete for TaxonCompleter {
             taxa = futures::executor::block_on(Taxon::load_all(
                 quickfind(input.to_string()),
                 None,
-                &self.dbpool,
+                &self.db,
             ));
         }
         taxa.map(|taxa| {
@@ -109,10 +107,10 @@ pub struct SourceIdPrompt<'a> {
 }
 
 impl<'a> SourceIdPrompt<'a> {
-    pub fn new(message: &'a str, userid: i64, dbpool: &Pool<Sqlite>) -> Self {
+    pub fn new(message: &'a str, userid: i64, db: &Database) -> Self {
         Self {
             text: inquire::Text::new(message).with_autocomplete(SourceCompleter {
-                dbpool: dbpool.clone(),
+                db: db.clone(),
                 userid,
             }),
         }
@@ -139,7 +137,7 @@ impl<'a> SourceIdPrompt<'a> {
 
 #[derive(Clone)]
 struct SourceCompleter {
-    dbpool: Pool<Sqlite>,
+    db: Database,
     userid: i64,
 }
 
@@ -151,7 +149,7 @@ impl Autocomplete for SourceCompleter {
         let mut sources = Ok(vec![]);
         if input.len() > 2 {
             sources =
-                futures::executor::block_on(Source::load_all(Some(fbuilder.build()), &self.dbpool));
+                futures::executor::block_on(Source::load_all(Some(fbuilder.build()), &self.db));
         }
         sources
             .map(|taxa| {
