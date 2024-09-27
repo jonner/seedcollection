@@ -255,9 +255,7 @@ async fn editgerm(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let codes: Vec<Germination> = sqlx::query_as("SELECT * FROM sc_germination_codes")
-        .fetch_all(state.db.pool())
-        .await?;
+    let codes = Germination::load_all(&state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
