@@ -1,5 +1,7 @@
-//! Utilities that provide an abstraction that allow one ofject to store a reference to another
-//! object, which could be either a stub or a full object. This allows you to sometimes query with
+//! Utilities that provide an abstraction that allows one object to store a reference to another
+//! object
+//!
+//! This reference can be either a stub object or a full object. This allows you to sometimes query with
 //! joins to other tables and sometimes just query the single table while still making it easy to
 //! fetch the referenced object later.
 
