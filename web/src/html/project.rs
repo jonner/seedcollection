@@ -426,10 +426,8 @@ async fn add_sample(
             _ => None,
         })
         .collect();
-    let res = sqlx::query!("SELECT userid FROM sc_projects WHERE projectid=?", id)
-        .fetch_one(state.db.pool())
-        .await?;
-    if res.userid != user.id {
+    let project = Project::load(id, &state.db).await?;
+    if project.userid != user.id {
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
     let mut qb =
