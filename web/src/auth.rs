@@ -7,34 +7,11 @@ use libseed::{
     user::{User, UserStatus},
     Database,
 };
-use rand::{
-    distributions::{Alphanumeric, DistString},
-    rngs::OsRng,
-};
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
-use tracing::debug;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SqliteUser(User);
-
-impl SqliteUser {
-    pub async fn new_verification_code(&self, db: &Database) -> Result<String, error::Error> {
-        let key = Alphanumeric.sample_string(&mut OsRng, 24);
-        debug!(key, "Generated a new verification code");
-        sqlx::query!(
-            r#"UPDATE sc_user_verification SET uvexpiration=0 WHERE userid=?;
-            INSERT into sc_user_verification (userid, uvkey, uvexpiration) VALUES(?, ?, ?)"#,
-            self.id,
-            self.id,
-            key,
-            (4 * 60 * 60)
-        )
-        .execute(db.pool())
-        .await?;
-        Ok(key)
-    }
-}
 
 impl Deref for SqliteUser {
     type Target = User;

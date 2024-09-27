@@ -8,6 +8,7 @@ use crate::{
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
 use password_hash::{rand_core::OsRng, PasswordHash, SaltString};
+use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     prelude::*,
@@ -293,6 +294,29 @@ impl User {
             )));
         }
         Ok(())
+    }
+
+    /// Generate a new code that can be used to verify a user account.
+    ///
+    /// The generated verification code is also stored in the database and
+    /// associated with the user account. This verification code will be sent to
+    /// the user via some out-of-band communication channel like email, and then
+    /// when they click the link with the verification code, there account can
+    /// be marked as verified.
+    pub async fn new_verification_code(&self, db: &Database) -> Result<String> {
+        let key = Alphanumeric.sample_string(&mut OsRng, 24);
+        debug!(key, "Generated a new verification code");
+        sqlx::query!(
+            r#"UPDATE sc_user_verification SET uvexpiration=0 WHERE userid=?;
+            INSERT into sc_user_verification (userid, uvkey, uvexpiration) VALUES(?, ?, ?)"#,
+            self.id,
+            self.id,
+            key,
+            (4 * 60 * 60)
+        )
+        .execute(db.pool())
+        .await?;
+        Ok(key)
     }
 }
 
