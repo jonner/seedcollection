@@ -28,7 +28,7 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, Row};
+use sqlx::sqlite::SqliteQueryResult;
 use std::sync::Arc;
 use tracing::{debug, trace, warn};
 
@@ -428,44 +428,33 @@ async fn add_sample(
         .collect();
     let project = Project::load(id, &state.db).await?;
     if project.userid != user.id {
+        // FIXME: maybe display a proper error message?
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
-    let mut qb =
-        sqlx::QueryBuilder::new("SELECT sampleid, userid FROM sc_samples WHERE sampleid IN (");
-    let mut sep = qb.separated(", ");
-    for id in toadd {
-        sep.push_bind(id);
+    let mut fb = CompoundFilter::builder(Op::Or);
+    for id in &toadd {
+        fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
     }
-    qb.push(")");
-    let res = qb.build().fetch_all(state.db.pool()).await?;
-    let valid_samples = res.iter().filter_map(|row| {
-        let userid: Option<i64> = row.try_get("userid").ok()?;
-        let userid = userid?;
-        let id: i64 = row.try_get("sampleid").ok()?;
-        if userid == user.id {
-            Some(id)
-        } else {
-            warn!(
-                "dropping sample {} which is not owned by user {}",
-                id, user.id
-            );
-            None
-        }
-    });
+    let valid_samples = Sample::load_all_user(user.id, Some(fb.build()), None, &state.db).await?;
+
+    if valid_samples.len() != toadd.len() {
+        warn!("Some samples dropped, possibly because they were not owned by user {user:?}")
+    }
 
     let mut project = Project::load(id, &state.db).await?;
     let mut n_inserted = 0;
     let mut messages = Vec::new();
     for sample in valid_samples {
+        let id = sample.id;
         match project
-            .allocate_sample(ExternalRef::Stub(sample), &state.db)
+            .allocate_sample(ExternalRef::Object(sample), &state.db)
             .await
         {
             Err(e) => messages.push(Message {
                 r#type: MessageType::Error,
                 msg: format!(
                     "Failed to add sample {}: {}",
-                    format_id_number(sample, Some("S"), None),
+                    format_id_number(id, Some("S"), None),
                     e
                 ),
             }),
@@ -478,7 +467,15 @@ async fn add_sample(
             0,
             Message {
                 r#type: MessageType::Success,
-                msg: format!("Assigned {n_inserted} samples to this project"),
+                msg: format!("Allocated {n_inserted} samples to this project"),
+            },
+        );
+    } else {
+        messages.insert(
+            0,
+            Message {
+                r#type: MessageType::Error,
+                msg: format!("No samples were allocated to this project"),
             },
         );
     }
