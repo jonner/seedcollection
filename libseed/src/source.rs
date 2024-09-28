@@ -3,11 +3,11 @@ use crate::{
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op},
+    Database,
 };
 use async_trait::async_trait;
 use serde::Deserialize;
 use serde::Serialize;
-use sqlx::Pool;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
 use sqlx::{
@@ -108,18 +108,18 @@ impl Loadable for Source {
         self.id = id
     }
 
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+    async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         Self::build_query(Some(Filter::Id(id).into()))
             .build_query_as()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await
             .map_err(|e| e.into())
     }
 
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
         sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
             .bind(id)
-            .execute(pool)
+            .execute(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -161,13 +161,10 @@ impl Source {
     }
 
     /// Loads all matching sources from the database
-    pub async fn load_all(
-        filter: Option<DynFilterPart>,
-        pool: &Pool<Sqlite>,
-    ) -> Result<Vec<Source>> {
+    pub async fn load_all(filter: Option<DynFilterPart>, db: &Database) -> Result<Vec<Source>> {
         Self::build_query(filter)
             .build_query_as()
-            .fetch_all(pool)
+            .fetch_all(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -176,19 +173,19 @@ impl Source {
     pub async fn load_all_user(
         userid: i64,
         filter: Option<DynFilterPart>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<Vec<Source>> {
         let mut fbuilder = CompoundFilter::builder(Op::And).push(Filter::UserId(userid));
         if let Some(f) = filter {
             fbuilder = fbuilder.push(f);
         }
-        Self::load_all(Some(fbuilder.build()), pool).await
+        Self::load_all(Some(fbuilder.build()), db).await
     }
 
-    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
+    pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
         Self::build_count(filter)
             .build()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await?
             .try_get("nsources")
             .map_err(|e| e.into())
@@ -197,7 +194,7 @@ impl Source {
     /// Add this source to the database. If this call completes successfully,
     /// the id of this object will be updated to the ID of the inserted row in the
     /// database
-    pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, db: &Database) -> Result<SqliteQueryResult> {
         if self.id != -1 {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
@@ -212,14 +209,14 @@ impl Source {
         .bind(self.latitude)
         .bind(self.longitude)
         .bind(self.userid)
-        .execute(pool)
+        .execute(db.pool())
         .await
         .inspect(|r| self.id = r.last_insert_rowid())
         .map_err(|e| e.into())
     }
 
     /// Update the source in the database such that it matches this object
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
@@ -232,20 +229,9 @@ impl Source {
         .bind(self.latitude)
         .bind(self.longitude)
         .bind(self.id)
-        .execute(pool)
+        .execute(db.pool())
         .await
         .map_err(|e| e.into())
-    }
-
-    /// Deletes the source from the database. After a successfull deletion, the
-    /// ID will be changed to an invalid value.
-    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
-            .bind(self.id)
-            .execute(pool)
-            .await
-            .map_err(|e| e.into())
-            .inspect(|_| self.id = Self::invalid_id())
     }
 
     /// Creates a new source object with the given data. It will initially have
@@ -279,6 +265,7 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Pool;
     use test_log::test;
 
     #[test(sqlx::test(
@@ -286,8 +273,9 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn test_insert_sources(pool: Pool<Sqlite>) {
+        let db = Database(pool);
         async fn check(
-            pool: &Pool<Sqlite>,
+            db: &Database,
             name: String,
             desc: Option<String>,
             lat: Option<f64>,
@@ -296,16 +284,16 @@ mod tests {
         ) {
             let mut src = Source::new(name, desc, lat, lon, userid);
             // full data
-            let res = src.insert(&pool).await.expect("failed to insert");
+            let res = src.insert(&db).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
-            let srcloaded = Source::load(res.last_insert_rowid(), &pool)
+            let srcloaded = Source::load(res.last_insert_rowid(), db)
                 .await
                 .expect("Failed to load inserted object");
             assert_eq!(src, srcloaded);
         }
 
         check(
-            &pool,
+            &db,
             "test name".to_string(),
             Some("Test description".to_string()),
             Some(39.7870909115992),
@@ -314,7 +302,7 @@ mod tests {
         )
         .await;
         check(
-            &pool,
+            &db,
             "test name".to_string(),
             Some("Test description".to_string()),
             Some(39.7870909115992),
@@ -323,7 +311,7 @@ mod tests {
         )
         .await;
         check(
-            &pool,
+            &db,
             "test name".to_string(),
             Some("Test description".to_string()),
             None,
@@ -331,7 +319,7 @@ mod tests {
             1,
         )
         .await;
-        check(&pool, "test name".to_string(), None, None, None, 1).await;
-        check(&pool, "".to_string(), None, None, None, 1).await;
+        check(&db, "test name".to_string(), None, None, None, 1).await;
+        check(&db, "".to_string(), None, None, None, 1).await;
     }
 }

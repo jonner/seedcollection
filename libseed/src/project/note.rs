@@ -1,7 +1,7 @@
 //! Manage notes associated with project allocations
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Sqlite};
+use sqlx::{sqlite::SqliteQueryResult, QueryBuilder, Sqlite};
 use std::sync::Arc;
 use strum_macros::EnumIter;
 use time::Date;
@@ -11,6 +11,7 @@ use crate::{
     error::{Error, Result},
     loadable::Loadable,
     query::{DynFilterPart, FilterPart},
+    Database,
 };
 
 /// A category for a note
@@ -82,17 +83,17 @@ impl Loadable for Note {
         self.id = id
     }
 
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+    async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         Self::build_query(Some(Arc::new(NoteFilter::Id(id))))
             .build_query_as()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await
             .map_err(|e| e.into())
     }
 
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
         sqlx::query!("DELETE FROM sc_project_notes WHERE pnoteid=?", id)
-            .execute(pool)
+            .execute(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -142,17 +143,17 @@ impl Note {
     /// Load all matching notes from the database
     pub async fn load_all(
         filter: Option<DynFilterPart>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<Vec<Note>, sqlx::Error> {
         Self::build_query(filter)
             .build_query_as()
-            .fetch_all(pool)
+            .fetch_all(db.pool())
             .await
     }
 
     /// Insert this note into the database. If successful, the ID of the note
     /// object will be updated to match the ID of the newly-inserted row.
-    pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<Note> {
+    pub async fn insert(&self, db: &Database) -> Result<Note> {
         if self.summary.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
         }
@@ -167,13 +168,13 @@ impl Note {
         .bind(self.kind as i64)
         .bind(&self.summary)
         .bind(&self.details)
-        .fetch_one(pool)
+        .fetch_one(db.pool())
         .await
         .map_err(|e| e.into())
     }
 
     /// Update the note in the database such that it matches this object
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
+    pub async fn update(&self, db: &Database) -> Result<Note, sqlx::Error> {
         debug!(?self, "Updating note in database");
         sqlx::query_as(
             r#"UPDATE sc_project_notes
@@ -186,7 +187,7 @@ impl Note {
         .bind(&self.summary)
         .bind(&self.details)
         .bind(self.id)
-        .fetch_one(pool)
+        .fetch_one(db.pool())
         .await
     }
 }
@@ -194,6 +195,7 @@ impl Note {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Pool;
     use test_log::test;
     use time::Month;
 
@@ -205,7 +207,8 @@ mod tests {
         )
     ))]
     async fn test_query_notes(pool: Pool<Sqlite>) {
-        let mut note = Note::load(3, &pool).await.expect("Failed to load notes");
+        let db = Database(pool);
+        let mut note = Note::load(3, &db).await.expect("Failed to load notes");
         tracing::debug!("{note:?}");
         assert_eq!(note.id, 3);
         assert_eq!(note.psid, 2);
@@ -219,14 +222,14 @@ mod tests {
         note.summary = "I changed the summary".to_string();
         note.details = None;
         note.date = note.date.replace_year(2019).expect("Unable to update date");
-        note.update(&pool).await.expect("Couldn't update the note");
-        let loaded = Note::load(note.id, &pool)
+        note.update(&db).await.expect("Couldn't update the note");
+        let loaded = Note::load(note.id, &db)
             .await
             .expect("Failed to load new note");
         assert_eq!(note, loaded);
 
         // fetch all notes for a sample
-        let notes = Note::load_all(Some(Arc::new(NoteFilter::AllocationId(1))), &pool)
+        let notes = Note::load_all(Some(Arc::new(NoteFilter::AllocationId(1))), &db)
             .await
             .expect("Unable to load notes for sample");
         assert_eq!(notes.len(), 2);

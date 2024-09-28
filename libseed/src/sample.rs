@@ -6,12 +6,13 @@ use crate::{
     source::Source,
     taxonomy::{Rank, Taxon},
     user::User,
+    Database,
 };
 use async_trait::async_trait;
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use sqlx::{
     sqlite::{SqliteQueryResult, SqliteRow},
-    FromRow, Pool, QueryBuilder, Row, Sqlite,
+    FromRow, QueryBuilder, Row, Sqlite,
 };
 use std::{str::FromStr, sync::Arc};
 use strum_macros::Display;
@@ -203,15 +204,15 @@ impl Loadable for Sample {
         self.id = id
     }
 
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+    async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         let mut builder = Self::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
-        Ok(builder.build_query_as().fetch_one(pool).await?)
+        Ok(builder.build_query_as().fetch_one(db.pool()).await?)
     }
 
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
         sqlx::query("DELETE FROM sc_samples WHERE sampleid=?")
             .bind(id)
-            .execute(pool)
+            .execute(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -250,7 +251,7 @@ impl Sample {
         userid: i64,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<Vec<Sample>> {
         let mut fbuilder = CompoundFilter::builder(Op::And).push(Filter::UserId(userid));
         if let Some(f) = filter {
@@ -258,25 +259,25 @@ impl Sample {
         }
         let newfilter = fbuilder.build();
         let mut builder = Self::build_query(Some(newfilter), sort);
-        Ok(builder.build_query_as().fetch_all(pool).await?)
+        Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 
     /// Loads all matching samples from the database
     pub async fn load_all(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<Vec<Sample>> {
         let mut builder = Self::build_query(filter, sort);
-        Ok(builder.build_query_as().fetch_all(pool).await?)
+        Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 
     /// Queries the count of all matching samples from the database
-    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
+    pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
         let mut builder = Self::build_count(filter);
         builder
             .build()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await?
             .try_get("nsamples")
             .map_err(|e| e.into())
@@ -285,7 +286,7 @@ impl Sample {
     /// Add this sample to the database. If this call completes successfully,
     /// the id of this object will be updated to the ID of the inserted row in the
     /// database
-    pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, db: &Database) -> Result<SqliteQueryResult> {
         if self.id != -1 {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
@@ -298,14 +299,14 @@ impl Sample {
         .bind(self.quantity)
         .bind(&self.notes)
         .bind(&self.certainty)
-        .execute(pool)
+        .execute(db.pool())
         .await
         .inspect(|r| self.id = r.last_insert_rowid())
         .map_err(|e| e.into())
     }
 
     /// Update the sample in the database so that it matches this object
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
@@ -325,7 +326,7 @@ impl Sample {
             .bind(&self.notes)
             .bind(&self.certainty)
             .bind(self.id)
-            .execute(pool)
+            .execute(db.pool())
             .await.map_err(|e| e.into())
     }
 
@@ -372,9 +373,18 @@ impl FromRow<'_, SqliteRow> for Sample {
     }
 }
 
+impl FromRow<'_, SqliteRow> for ExternalRef<Sample> {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        Sample::from_row(row)
+            .map(ExternalRef::Object)
+            .or_else(|_| row.try_get("sampleid").map(ExternalRef::Stub))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Pool;
     use test_log::test;
 
     #[test(sqlx::test(
@@ -382,8 +392,10 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users", "sources", "taxa"))
     ))]
     async fn insert_samples(pool: Pool<Sqlite>) {
+        let db = Database(pool);
+
         async fn check(
-            pool: &Pool<Sqlite>,
+            db: &Database,
             taxon: i64,
             user: i64,
             source: i64,
@@ -395,9 +407,9 @@ mod tests {
         ) {
             let mut sample =
                 Sample::new(taxon, user, source, month, year, quantity, notes, certainty);
-            let res = sample.insert(pool).await;
+            let res = sample.insert(&db).await;
             let res = res.expect("Failed to insert sample");
-            let loaded = Sample::load(res.last_insert_rowid(), pool)
+            let loaded = Sample::load(res.last_insert_rowid(), db)
                 .await
                 .expect("Failed to load sample from database");
             assert_eq!(sample.id, loaded.id);
@@ -411,7 +423,7 @@ mod tests {
             assert_eq!(sample.certainty, loaded.certainty);
         }
         check(
-            &pool,
+            &db,
             40683,
             1,
             1,
@@ -423,7 +435,7 @@ mod tests {
         )
         .await;
         check(
-            &pool,
+            &db,
             40683,
             1,
             1,

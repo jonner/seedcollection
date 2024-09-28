@@ -5,36 +5,13 @@ use axum_login::{AuthUser, AuthnBackend, UserId};
 use libseed::{
     empty_string_as_none,
     user::{User, UserStatus},
-};
-use rand::{
-    distributions::{Alphanumeric, DistString},
-    rngs::OsRng,
+    Database,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite, SqlitePool};
 use std::ops::{Deref, DerefMut};
-use tracing::debug;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SqliteUser(User);
-
-impl SqliteUser {
-    pub async fn new_verification_code(&self, pool: &Pool<Sqlite>) -> Result<String, error::Error> {
-        let key = Alphanumeric.sample_string(&mut OsRng, 24);
-        debug!(key, "Generated a new verification code");
-        sqlx::query!(
-            r#"UPDATE sc_user_verification SET uvexpiration=0 WHERE userid=?;
-            INSERT into sc_user_verification (userid, uvkey, uvexpiration) VALUES(?, ?, ?)"#,
-            self.id,
-            self.id,
-            key,
-            (4 * 60 * 60)
-        )
-        .execute(pool)
-        .await?;
-        Ok(key)
-    }
-}
 
 impl Deref for SqliteUser {
     type Target = User;
@@ -72,7 +49,7 @@ pub struct Credentials {
 
 #[derive(Clone)]
 pub struct SqliteAuthBackend {
-    db: SqlitePool,
+    db: Database,
 }
 
 #[async_trait]
@@ -126,7 +103,7 @@ impl SqliteAuthBackend {
         Ok(())
     }
 
-    pub fn new(db: SqlitePool) -> Self {
+    pub fn new(db: Database) -> Self {
         Self { db }
     }
 }

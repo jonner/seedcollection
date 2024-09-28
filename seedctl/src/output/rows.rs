@@ -8,9 +8,9 @@ use libseed::{
     source::Source,
     taxonomy::{Germination, NativeStatus, Rank, Taxon},
     user::User,
+    Database,
 };
 use serde::{ser::SerializeSeq, Serialize, Serializer};
-use sqlx::{Pool, Sqlite};
 use tabled::Tabled;
 
 #[derive(Tabled, Serialize)]
@@ -163,14 +163,14 @@ pub struct SampleRowDetails {
 }
 
 impl SampleRowDetails {
-    pub async fn new(sample: &mut Sample, pool: &Pool<Sqlite>) -> Result<Self> {
-        let taxon = sample.taxon.load_mut(pool).await?;
-        taxon.load_germination_info(pool).await?;
+    pub async fn new(sample: &mut Sample, db: &Database) -> Result<Self> {
+        let taxon = sample.taxon.load_mut(db).await?;
+        taxon.load_germination_info(db).await?;
         let src = sample.source.object()?;
         let allocations = Allocation::load_all(
             Some(Arc::new(allocation::Filter::SampleId(sample.id))),
             None,
-            pool,
+            db,
         )
         .await?;
 
@@ -382,16 +382,16 @@ fn table_display_samples(samples: &[TaxonSample]) -> String {
 }
 
 impl TaxonRowDetails {
-    pub async fn new(taxon: &mut Taxon, pool: &Pool<Sqlite>) -> Result<Self> {
-        taxon.load_germination_info(pool).await?;
+    pub async fn new(taxon: &mut Taxon, db: &Database) -> Result<Self> {
+        taxon.load_germination_info(db).await?;
         let mut samples = Sample::load_all(
             Some(sample::Filter::TaxonId(Cmp::Equal, taxon.id).into()),
             None,
-            pool,
+            db,
         )
         .await?;
         for ref mut s in &mut samples {
-            s.source.load(pool).await?;
+            s.source.load(db).await?;
         }
 
         Ok(Self {

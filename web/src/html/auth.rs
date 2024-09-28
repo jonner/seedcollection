@@ -17,10 +17,10 @@ use axum_template::RenderHtml;
 use libseed::{
     loadable::Loadable,
     user::{User, UserStatus},
+    Database,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite};
 use time::{macros::format_description, Duration, OffsetDateTime, PrimitiveDateTime};
 use tracing::{debug, error};
 
@@ -157,16 +157,13 @@ fn parse_sqlite_datetime(timestamp: &str) -> anyhow::Result<OffsetDateTime> {
     .map_err(|e| e.into())
 }
 
-async fn check_verification_code(
-    key: &str,
-    pool: &Pool<Sqlite>,
-) -> Result<VerifyStatus, error::Error> {
+async fn check_verification_code(key: &str, db: &Database) -> Result<VerifyStatus, error::Error> {
     let row = sqlx::query_as!(
         VerificationRow,
         "SELECT * FROM sc_user_verification WHERE uvkey=?",
         key
     )
-    .fetch_optional(pool)
+    .fetch_optional(db.pool())
     .await?;
     let status = match row {
         Some(row) => {
@@ -180,7 +177,7 @@ async fn check_verification_code(
             if expiration < OffsetDateTime::now_utc() {
                 VerifyStatus::VerificationCodeExpired
             } else {
-                let user = User::load(row.userid, pool).await?;
+                let user = User::load(row.userid, db).await?;
                 if user.status == UserStatus::Verified {
                     VerifyStatus::AlreadyVerified
                 } else {
@@ -199,7 +196,7 @@ async fn show_verification(
     State(state): State<AppState>,
     Path(vkey): Path<String>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let status = check_verification_code(&vkey, &state.dbpool).await?;
+    let status = check_verification_code(&vkey, &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -207,8 +204,8 @@ async fn show_verification(
     ))
 }
 
-async fn do_verification(key: &str, pool: &Pool<Sqlite>) -> Result<VerifyStatus, error::Error> {
-    let mut status = check_verification_code(key, pool).await?;
+async fn do_verification(key: &str, db: &Database) -> Result<VerifyStatus, error::Error> {
+    let mut status = check_verification_code(key, db).await?;
     if status == VerifyStatus::VerificationCodeValid {
         sqlx::query!(
             r#"BEGIN TRANSACTION;
@@ -222,7 +219,7 @@ async fn do_verification(key: &str, pool: &Pool<Sqlite>) -> Result<VerifyStatus,
             UserStatus::Verified as i64,
             key,
         )
-        .execute(pool)
+        .execute(db.pool())
         .await?;
         status = VerifyStatus::VerificationSuccessful;
     }
@@ -233,7 +230,7 @@ async fn verify_user(
     State(state): State<AppState>,
     Path(vkey): Path<String>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let status = do_verification(&vkey, &state.dbpool).await?;
+    let status = do_verification(&vkey, &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -244,6 +241,7 @@ async fn verify_user(
 #[cfg(test)]
 mod test {
     use super::*;
+    use sqlx::{Pool, Sqlite};
     use test_log::test;
 
     fn format_sqlite_datetime(date: &OffsetDateTime) -> anyhow::Result<String> {
@@ -258,6 +256,7 @@ mod test {
         fixtures(path = "../../../db/fixtures", scripts("users", "sources", "taxa"))
     ))]
     async fn test_verification(pool: Pool<Sqlite>) {
+        let db = Database::new(pool);
         // expires yesterday
         const KEY1: &str = "aRbitrarykeyvalue21908fs0fqwaerilkiljanslaoi";
         // expires in an hour
@@ -284,31 +283,29 @@ mod test {
             KEY2,
             now,
         )
-        .execute(&pool)
+        .execute(db.pool())
         .await
         .expect("Failed to insert user verification rows");
 
         assert_eq!(
             VerifyStatus::VerificationCodeNotFound,
-            do_verification("NON-EXISTENT KEY", &pool)
+            do_verification("NON-EXISTENT KEY", &db)
                 .await
                 .expect("Failed to do verification"),
         );
         assert_eq!(
             VerifyStatus::VerificationCodeExpired,
-            do_verification(KEY1, &pool)
+            do_verification(KEY1, &db)
                 .await
                 .expect("Failed to do verification"),
         );
 
         // make sure that the user is unverified before this
-        let user = User::load(USERID1, &pool)
-            .await
-            .expect("Failed to load user");
+        let user = User::load(USERID1, &db).await.expect("Failed to load user");
         assert_eq!(UserStatus::Unverified, user.status);
         assert_eq!(
             VerifyStatus::VerificationSuccessful,
-            do_verification(KEY2, &pool)
+            do_verification(KEY2, &db)
                 .await
                 .expect("Failed to do verification"),
         );
@@ -318,15 +315,13 @@ mod test {
             "SELECT * FROM sc_user_verification WHERE uvid=?",
             2
         )
-        .fetch_one(&pool)
+        .fetch_one(db.pool())
         .await
         .expect("Failed to fetch verification row");
         assert_eq!(2, row.uvid);
         assert_eq!(KEY2, row.uvkey);
         assert_eq!(1, row.uvconfirmed);
-        let user = User::load(USERID1, &pool)
-            .await
-            .expect("Failed to load user");
+        let user = User::load(USERID1, &db).await.expect("Failed to load user");
         assert_eq!(UserStatus::Verified, user.status);
     }
 }

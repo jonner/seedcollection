@@ -2,6 +2,7 @@
 
 /// A list of error types that can occur within this library
 #[derive(thiserror::Error, Debug)]
+#[non_exhaustive]
 pub enum Error {
     // authentication-related errors
     #[error("authentication error: couldn't hash password")]
@@ -36,6 +37,9 @@ pub enum Error {
 
     #[error(transparent)]
     DatabaseError(#[from] sqlx::Error),
+
+    #[error(transparent)]
+    DatabaseMigrationError(#[from] sqlx::migrate::MigrateError),
 }
 
 /// A convenience type alias for a [Result] with [Error](self::Error) as its error type

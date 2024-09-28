@@ -28,8 +28,8 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, Row};
-use std::sync::Arc;
+use sqlx::sqlite::SqliteQueryResult;
+use std::{collections::HashSet, sync::Arc};
 use tracing::{debug, trace, warn};
 
 use super::{error_alert_response, SortOption};
@@ -75,7 +75,7 @@ async fn list_projects(
     if let Some(namefilter) = namefilter {
         fbuilder = fbuilder.push(namefilter);
     }
-    let projects = Project::load_all(Some(fbuilder.build()), &state.dbpool).await?;
+    let projects = Project::load_all(Some(fbuilder.build()), &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -111,7 +111,7 @@ async fn do_insert(
         params.description.as_ref().cloned(),
         user.id,
     );
-    project.insert(&state.dbpool).await.map_err(|e| e.into())
+    project.insert(&state.db).await.map_err(|e| e.into())
 }
 
 async fn insert_project(
@@ -185,7 +185,7 @@ async fn show_project(
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
 
-    let mut projects = Project::load_all(Some(fb.build()), &state.dbpool).await?;
+    let mut projects = Project::load_all(Some(fb.build()), &state.db).await?;
     let Some(mut project) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
@@ -206,7 +206,7 @@ async fn show_project(
         _ => None,
     };
     project
-        .load_samples(sample_filter, Some(sort.into()), &state.dbpool)
+        .load_samples(sample_filter, Some(sort.into()), &state.db)
         .await?;
 
     let sort_options = vec![
@@ -262,10 +262,10 @@ async fn do_update(
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
-    let mut project = Project::load(id, &state.dbpool).await?;
+    let mut project = Project::load(id, &state.db).await?;
     project.name.clone_from(&params.name);
     project.description.clone_from(&params.description);
-    project.update(&state.dbpool).await.map_err(|e| e.into())
+    project.update(&state.db).await.map_err(|e| e.into())
 }
 
 async fn modify_project(
@@ -278,7 +278,7 @@ async fn modify_project(
     let fb = CompoundFilter::builder(Op::And)
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
-    let projects = Project::load_all(Some(fb.build()), &state.dbpool).await?;
+    let projects = Project::load_all(Some(fb.build()), &state.db).await?;
     if projects.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());
     };
@@ -300,7 +300,7 @@ async fn modify_project(
             Some([("HX-Redirect", app_url(&format!("/project/{id}")))]),
         ),
     };
-    let project = Project::load(id, &state.dbpool).await?;
+    let project = Project::load(id, &state.db).await?;
     Ok((
         headers,
         RenderHtml(
@@ -321,7 +321,7 @@ async fn delete_project(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut project = Project::load(id, &state.dbpool)
+    let mut project = Project::load(id, &state.db)
         .await
         .map_err(|_| Error::NotFound("That project does not exist".to_string()))?;
     if project.userid != user.id {
@@ -335,7 +335,7 @@ async fn delete_project(
         ));
     }
 
-    let errmsg = match project.delete(&state.dbpool).await {
+    let errmsg = match project.delete(&state.db).await {
         Err(e) => {
             warn!(?e, "Failed to delete project");
             e.to_string()
@@ -369,13 +369,13 @@ async fn add_sample_prep(
     id: i64,
     state: &AppState,
 ) -> Result<(Project, Vec<Sample>), error::Error> {
-    let project = Project::load(id, &state.dbpool).await?;
+    let project = Project::load(id, &state.db).await?;
 
     let ids_in_project = sqlx::query!(
         "SELECT PS.sampleid from sc_project_samples PS WHERE PS.projectid=?",
         id
     )
-    .fetch_all(&state.dbpool)
+    .fetch_all(state.db.pool())
     .await?;
     let ids = ids_in_project.iter().map(|row| row.sampleid).collect();
 
@@ -389,7 +389,7 @@ async fn add_sample_prep(
         user.id,
         Some(Arc::new(sample::Filter::IdNotIn(ids))),
         None,
-        &state.dbpool,
+        &state.db,
     )
     .await?;
     Ok((project, samples))
@@ -419,59 +419,73 @@ async fn add_sample(
     Path(id): Path<i64>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let toadd: Vec<i64> = params
+    let mut messages = Vec::new();
+    let toadd: HashSet<i64> = params
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
             "sample" => value.parse::<i64>().ok(),
             _ => None,
         })
         .collect();
-    let res = sqlx::query!("SELECT userid FROM sc_projects WHERE projectid=?", id)
-        .fetch_one(&state.dbpool)
-        .await?;
-    if res.userid != user.id {
+    let project = Project::load(id, &state.db).await?;
+    if project.userid != user.id {
+        // FIXME: maybe display a proper error message?
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
-    let mut qb =
-        sqlx::QueryBuilder::new("SELECT sampleid, userid FROM sc_samples WHERE sampleid IN (");
-    let mut sep = qb.separated(", ");
-    for id in toadd {
-        sep.push_bind(id);
+    let mut fb = CompoundFilter::builder(Op::Or);
+    for id in &toadd {
+        fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
     }
-    qb.push(")");
-    let res = qb.build().fetch_all(&state.dbpool).await?;
-    let valid_samples = res.iter().filter_map(|row| {
-        let userid: Option<i64> = row.try_get("userid").ok()?;
-        let userid = userid?;
-        let id: i64 = row.try_get("sampleid").ok()?;
-        if userid == user.id {
-            Some(id)
-        } else {
-            warn!(
-                "dropping sample {} which is not owned by user {}",
-                id, user.id
-            );
-            None
-        }
-    });
+    let valid_samples = Sample::load_all_user(user.id, Some(fb.build()), None, &state.db).await?;
 
-    let mut project = Project::load(id, &state.dbpool).await?;
+    let valid_ids = valid_samples
+        .iter()
+        .map(|s| s.id())
+        .collect::<HashSet<i64>>();
+    let invalid = &toadd - &valid_ids;
+    if invalid.len() > 0 {
+        warn!("Some samples dropped, possibly because they were not owned by user {user:?}");
+        let strval = invalid
+            .iter()
+            .map(|id| format_id_number(*id, Some("S"), None))
+            .collect::<Vec<String>>()
+            .join(", ");
+        messages.push(Message {
+            r#type: MessageType::Warning,
+            msg: format!("Some samples could not be added to the project. The following samples may not exist or you may not have permissions to add them top this project: {strval}.",),
+        })
+    }
+
+    let mut project = Project::load(id, &state.db).await?;
     let mut n_inserted = 0;
-    let mut messages = Vec::new();
     for sample in valid_samples {
+        let id = sample.id;
         match project
-            .allocate_sample(ExternalRef::Stub(sample), &state.dbpool)
+            .allocate_sample(ExternalRef::Object(sample), &state.db)
             .await
         {
-            Err(e) => messages.push(Message {
-                r#type: MessageType::Error,
-                msg: format!(
-                    "Failed to add sample {}: {}",
-                    format_id_number(sample, Some("S"), None),
-                    e
-                ),
-            }),
             Ok(res) => n_inserted += res.rows_affected(),
+            Err(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
+                if e.is_unique_violation() =>
+            {
+                messages.push(Message {
+                    r#type: MessageType::Warning,
+                    msg: format!(
+                        "Sample {} is already a member of this project",
+                        format_id_number(id, Some("S"), None),
+                    ),
+                })
+            }
+            Err(e) => {
+                messages.push(Message {
+                    r#type: MessageType::Error,
+                    msg: format!(
+                        "Failed to add sample {}: Database error",
+                        format_id_number(id, Some("S"), None),
+                    ),
+                });
+                tracing::error!("Failed to add a sample to the project: {e}");
+            }
         }
     }
 
@@ -480,7 +494,15 @@ async fn add_sample(
             0,
             Message {
                 r#type: MessageType::Success,
-                msg: format!("Assigned {n_inserted} samples to this project"),
+                msg: format!("Added {n_inserted} samples to this project"),
+            },
+        );
+    } else {
+        messages.insert(
+            0,
+            Message {
+                r#type: MessageType::Error,
+                msg: format!("No samples were added to this project"),
             },
         );
     }

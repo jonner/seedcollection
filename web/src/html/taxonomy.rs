@@ -62,16 +62,12 @@ async fn list_taxa(
         None => Rank::Species,
     };
     let pg = params.page.unwrap_or(1);
-    let count = Taxon::count(
-        Some(taxonomy::Filter::Rank(rank.clone()).into()),
-        &state.dbpool,
-    )
-    .await?;
+    let count = Taxon::count(Some(taxonomy::Filter::Rank(rank.clone()).into()), &state.db).await?;
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
     let taxa: Vec<Taxon> = Taxon::load_all(
         Some(taxonomy::Filter::Rank(rank).into()),
         Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
-        &state.dbpool,
+        &state.db,
     )
     .await?;
     debug!("req={:?}", req);
@@ -154,7 +150,7 @@ async fn show_all_children(
     )
     .bind(id)
     .bind(user.id)
-    .fetch_all(&state.dbpool)
+    .fetch_all(state.db.pool())
     .await?;
     Ok(RenderHtml(
         key,
@@ -170,17 +166,17 @@ async fn show_taxon(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut taxon = Taxon::load(id, &state.dbpool).await?;
-    let hierarchy = taxon.fetch_hierarchy(&state.dbpool).await?;
-    let children = taxon.fetch_children(&state.dbpool).await?;
+    let mut taxon = Taxon::load(id, &state.db).await?;
+    let hierarchy = taxon.fetch_hierarchy(&state.db).await?;
+    let children = taxon.fetch_children(&state.db).await?;
     let samples = Sample::load_all_user(
         user.id,
         Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, id))),
         None,
-        &state.dbpool,
+        &state.db,
     )
     .await?;
-    taxon.load_germination_info(&state.dbpool).await?;
+    taxon.load_germination_info(&state.db).await?;
 
     Ok(RenderHtml(
         key,
@@ -249,12 +245,7 @@ async fn quickfind(
                 filter = filter.push(taxonomy::Filter::Minnesota(true));
             }
             /* FIXME: pagination for /search endpoing? */
-            Taxon::load_all(
-                Some(filter.build()),
-                Some(LimitSpec(200, None)),
-                &state.dbpool,
-            )
-            .await?
+            Taxon::load_all(Some(filter.build()), Some(LimitSpec(200, None)), &state.db).await?
         }
     };
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
@@ -264,9 +255,7 @@ async fn editgerm(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let codes: Vec<Germination> = sqlx::query_as("SELECT * FROM sc_germination_codes")
-        .fetch_all(&state.dbpool)
-        .await?;
+    let codes = Germination::load_all(&state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -289,7 +278,7 @@ async fn addgerm(
         params.taxon,
         params.germid
     )
-    .execute(&state.dbpool)
+    .execute(state.db.pool())
     .await?
     .last_insert_rowid();
     Ok(format!("<div>Inserted row {newid}</div>"))

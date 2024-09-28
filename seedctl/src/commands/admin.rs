@@ -15,8 +15,8 @@ use libseed::{
     loadable::Loadable,
     taxonomy::Germination,
     user::{User, UserStatus},
+    Database,
 };
-use sqlx::{Pool, Sqlite};
 use tokio::fs;
 use tracing::debug;
 
@@ -35,15 +35,11 @@ async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow:
     Ok(password.trim().to_string())
 }
 
-pub async fn handle_command(
-    command: AdminCommands,
-    _user: User,
-    dbpool: &Pool<Sqlite>,
-) -> Result<()> {
+pub async fn handle_command(command: AdminCommands, _user: User, db: &Database) -> Result<()> {
     match command {
         AdminCommands::Users { command } => match command {
             UserCommands::List { output } => {
-                let users = User::load_all(dbpool).await?;
+                let users = User::load_all(db).await?;
                 let str = output::format_seq(
                     users.iter().map(UserRow::new).collect::<Vec<_>>(),
                     output.format,
@@ -72,7 +68,7 @@ pub async fn handle_command(
                     None,
                     None,
                 );
-                let id = user.insert(dbpool).await?.last_insert_rowid();
+                let id = user.insert(db).await?.last_insert_rowid();
                 println!("Added user to database:");
                 println!("{}: {}", id, username);
                 Ok(())
@@ -82,7 +78,7 @@ pub async fn handle_command(
                     .with_default(false)
                     .prompt()?
                 {
-                    true => User::delete_id(&id, dbpool)
+                    true => User::delete_id(&id, db)
                         .await
                         .map(|_| ())
                         .with_context(|| "failed to remove user"),
@@ -95,7 +91,7 @@ pub async fn handle_command(
                 change_password,
                 passwordfile,
             } => {
-                let mut user = User::load(id, dbpool).await?;
+                let mut user = User::load(id, db).await?;
                 if let Some(username) = username {
                     user.username = username;
                 }
@@ -103,7 +99,7 @@ pub async fn handle_command(
                     let password = get_password(passwordfile, None).await?;
                     user.change_password(&password)?;
                 }
-                user.update(dbpool)
+                user.update(db)
                     .await
                     .map(|_| ())
                     .with_context(|| "Failed to modify user")
@@ -111,7 +107,7 @@ pub async fn handle_command(
         },
         AdminCommands::Germination { command } => match command {
             GerminationCommands::List { output } => {
-                let codes = Germination::load_all(dbpool).await?;
+                let codes = Germination::load_all(db).await?;
                 let str = output::format_seq(
                     codes.iter().map(GerminationRow::new).collect::<Vec<_>>(),
                     output.format,
@@ -125,7 +121,7 @@ pub async fn handle_command(
                 summary,
                 description,
             } => {
-                let oldval = Germination::load(id, dbpool).await?;
+                let oldval = Germination::load(id, db).await?;
                 let mut newval = oldval.clone();
                 if code.is_none() && summary.is_none() && description.is_none() {
                     println!("Modifying Germination code {id}. Pres <esc to skip any field.");
@@ -171,7 +167,7 @@ pub async fn handle_command(
                 }
                 if oldval != newval {
                     debug!("Submitting new value for germination code: {:?}", newval);
-                    newval.update(dbpool).await?;
+                    newval.update(db).await?;
                     println!("Modified germination code...");
                 }
                 Ok(())

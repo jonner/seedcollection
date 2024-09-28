@@ -5,10 +5,13 @@
 //! joins to other tables and sometimes just query the single table while still making it easy to
 //! fetch the referenced object later.
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    Database,
+};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite};
+use sqlx::sqlite::SqliteQueryResult;
 
 /// A trait that the [Loadable::Id] type must implement to be used with Loadable.
 pub trait Indexable {
@@ -33,20 +36,20 @@ pub trait Loadable {
     /// Set the ID of this particular object to `id`
     fn set_id(&mut self, id: Self::Id);
     /// Load the object with the given `id` from the database
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self>
+    async fn load(id: Self::Id, db: &Database) -> Result<Self>
     where
         Self: Sized;
 
     /// Convenience function to delete the object with the id `self.id()` from
     /// the database
-    async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
-        Self::delete_id(&self.id(), pool)
+    async fn delete(&mut self, db: &Database) -> Result<SqliteQueryResult> {
+        Self::delete_id(&self.id(), db)
             .await
             .inspect(|_| self.set_id(Self::Id::invalid_value()))
     }
 
     /// Delete the object with the id `id` from the database
-    async fn delete_id(id: &Self::Id, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult>;
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult>;
 
     fn invalid_id() -> Self::Id {
         Self::Id::invalid_value()
@@ -63,6 +66,12 @@ pub enum ExternalRef<T: Loadable + Sync + Send> {
     /// If the object has been loaded from the database, it is represented as an
     /// object of type T.
     Object(T),
+}
+
+impl<T: Loadable + Sync + Send> Default for ExternalRef<T> {
+    fn default() -> Self {
+        Self::Stub(T::invalid_id())
+    }
 }
 
 impl<T: Loadable + Sync + Send> ExternalRef<T> {
@@ -104,10 +113,10 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
 
     /// Load the object from the database and update the object to contain the
     /// newly-loaded referenced object
-    pub async fn load(&mut self, pool: &Pool<Sqlite>) -> Result<&T> {
+    pub async fn load(&mut self, db: &Database) -> Result<&T> {
         match self {
             Self::Stub(id) => {
-                let obj = T::load(id.clone(), pool).await?;
+                let obj = T::load(id.clone(), db).await?;
                 *self = Self::Object(obj);
                 self.object()
             }
@@ -116,10 +125,10 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
     }
 
     /// Same as [ExternalRef::load()], but returns a mutable object
-    pub async fn load_mut(&mut self, pool: &Pool<Sqlite>) -> Result<&mut T> {
+    pub async fn load_mut(&mut self, db: &Database) -> Result<&mut T> {
         match self {
             Self::Stub(id) => {
-                let obj = T::load(id.clone(), pool).await?;
+                let obj = T::load(id.clone(), db).await?;
                 *self = Self::Object(obj);
                 self.object_mut()
             }
@@ -128,10 +137,10 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
     }
 
     /// Delete the referenced object from the database
-    pub async fn delete(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn delete(&mut self, db: &Database) -> Result<SqliteQueryResult> {
         match self {
-            Self::Stub(id) => T::delete_id(id, pool).await,
-            Self::Object(obj) => obj.delete(pool).await,
+            Self::Stub(id) => T::delete_id(id, db).await,
+            Self::Object(obj) => obj.delete(db).await,
         }
     }
 }

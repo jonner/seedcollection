@@ -107,7 +107,7 @@ async fn list_samples(
             selected: matches!(field, SortField::Quantity),
         },
     ];
-    match Sample::load_all_user(user.id, filter, sort, &state.dbpool).await {
+    match Sample::load_all_user(user.id, filter, sort, &state.db).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),
@@ -128,24 +128,24 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut sample = Sample::load(id, &state.dbpool).await?;
+    let mut sample = Sample::load(id, &state.db).await?;
     sample
         .taxon
         .object_mut()?
-        .load_germination_info(&state.dbpool)
+        .load_germination_info(&state.db)
         .await?;
 
     // needed for edit form
-    let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
+    let sources = Source::load_all_user(user.id, None, &state.db).await?;
 
     let mut allocations = Allocation::load_all(
         Some(Arc::new(allocation::Filter::SampleId(id))),
         None,
-        &state.dbpool,
+        &state.db,
     )
     .await?;
     for alloc in allocations.iter_mut() {
-        alloc.load_notes(&state.dbpool).await?;
+        alloc.load_notes(&state.db).await?;
     }
 
     Ok(RenderHtml(
@@ -164,7 +164,7 @@ async fn new_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
+    let sources = Source::load_all_user(user.id, None, &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -211,7 +211,7 @@ async fn do_insert(
         params.notes.clone(),
         certainty,
     );
-    sample.insert(&state.dbpool).await.map_err(|e| e.into())
+    sample.insert(&state.db).await.map_err(|e| e.into())
 }
 
 async fn insert_sample(
@@ -220,7 +220,7 @@ async fn insert_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
+    let sources = Source::load_all_user(user.id, None, &state.db).await?;
     match do_insert(&user, &params, &state).await {
         Err(e) => Ok(RenderHtml(
             key,
@@ -235,7 +235,7 @@ async fn insert_sample(
         .into_response()),
         Ok(result) => {
             let id = result.last_insert_rowid();
-            let sample = Sample::load(id, &state.dbpool).await?;
+            let sample = Sample::load(id, &state.db).await?;
 
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
             Ok((
@@ -268,7 +268,7 @@ async fn do_update(
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
     };
-    let mut sample = Sample::load(id, &state.dbpool).await?;
+    let mut sample = Sample::load(id, &state.db).await?;
     sample.taxon = ExternalRef::Stub(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
     sample.source = ExternalRef::Stub(
         params
@@ -280,7 +280,7 @@ async fn do_update(
     sample.quantity = params.quantity;
     sample.notes = params.notes.as_ref().cloned();
     sample.certainty = certainty;
-    sample.update(&state.dbpool).await.map_err(|e| e.into())
+    sample.update(&state.db).await.map_err(|e| e.into())
 }
 
 async fn update_sample(
@@ -290,7 +290,7 @@ async fn update_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
+    let sources = Source::load_all_user(user.id, None, &state.db).await?;
     let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(params),
@@ -310,7 +310,7 @@ async fn update_sample(
         ),
     };
 
-    let sample = Sample::load(id, &state.dbpool).await?;
+    let sample = Sample::load(id, &state.db).await?;
 
     Ok((
         headers,
@@ -332,16 +332,16 @@ async fn delete_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut sample = Sample::load(id, &state.dbpool).await?;
+    let mut sample = Sample::load(id, &state.db).await?;
     if sample.user.id() != user.id {
         return Err(Error::Unauthorized(
             "No permission to delete sample".to_string(),
         ));
     }
-    match sample.delete(&state.dbpool).await {
+    match sample.delete(&state.db).await {
         Err(e) => {
-            let sources = Source::load_all_user(user.id, None, &state.dbpool).await?;
-            let sample = Sample::load(id, &state.dbpool).await?;
+            let sources = Source::load_all_user(user.id, None, &state.db).await?;
+            let sample = Sample::load(id, &state.db).await?;
             Ok(RenderHtml(
                 key,
                 state.tmpl.clone(),

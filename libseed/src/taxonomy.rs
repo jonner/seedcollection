@@ -5,7 +5,7 @@ use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use sqlx::{
     error::Error::ColumnDecode,
     sqlite::{SqliteQueryResult, SqliteRow},
-    FromRow, Pool, Row, Sqlite,
+    FromRow, Row,
 };
 use std::{str::FromStr, sync::Arc};
 use strum_macros::{Display, EnumIter, FromRepr};
@@ -15,7 +15,7 @@ use crate::{
     error::Result,
     loadable::{ExternalRef, Loadable},
     query::{CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
-    Error,
+    Database, Error,
 };
 
 const KINGDOM_PLANTAE: i64 = 3;
@@ -107,22 +107,22 @@ pub struct Germination {
 
 impl Germination {
     /// Loads all germination codes from the database
-    pub async fn load_all(pool: &Pool<Sqlite>) -> Result<Vec<Germination>, sqlx::Error> {
+    pub async fn load_all(db: &Database) -> Result<Vec<Germination>, sqlx::Error> {
         sqlx::query_as("SELECT * FROM sc_germination_codes")
-            .fetch_all(pool)
+            .fetch_all(db.pool())
             .await
     }
 
     /// Loads a particular germination code from the database
-    pub async fn load(id: i64, pool: &Pool<Sqlite>) -> Result<Germination, sqlx::Error> {
+    pub async fn load(id: i64, db: &Database) -> Result<Germination, sqlx::Error> {
         sqlx::query_as("SELECT * FROM sc_germination_codes WHERE germid=?")
             .bind(id)
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await
     }
 
     /// Update the germination code in the database so that it matches this object
-    pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
@@ -133,7 +133,7 @@ impl Germination {
         .bind(&self.summary)
         .bind(&self.description)
         .bind(self.id)
-        .execute(pool)
+        .execute(db.pool())
         .await
         .map_err(Into::into)
     }
@@ -324,27 +324,27 @@ impl Loadable for Taxon {
         self.id = id
     }
 
-    async fn load(id: Self::Id, pool: &Pool<Sqlite>) -> Result<Self> {
+    async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         let mut query = Taxon::build_query(Some(Filter::Id(id).into()), None);
-        Ok(query.build_query_as().fetch_one(pool).await?)
+        Ok(query.build_query_as().fetch_one(db.pool()).await?)
     }
 
-    async fn delete_id(_id: &Self::Id, _pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
+    async fn delete_id(_id: &Self::Id, _db: &Database) -> Result<SqliteQueryResult> {
         Err(Error::InvalidOperation("Cannot delete taxon".to_string()))
     }
 }
 
 impl Taxon {
     /// Fetch the heirarchy of parent taxa for this taxon
-    pub async fn fetch_hierarchy(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
+    pub async fn fetch_hierarchy(&self, db: &Database) -> Result<Vec<Self>> {
         let mut hierarchy = Vec::new();
-        let mut taxon = Taxon::load(self.id, pool).await?;
+        let mut taxon = Taxon::load(self.id, db).await?;
         loop {
             let parentid = taxon.parentid;
             hierarchy.push(taxon);
             match parentid {
                 Some(id) if id > 0 => {
-                    taxon = Taxon::load(id, pool).await?;
+                    taxon = Taxon::load(id, db).await?;
                 }
                 _ => break,
             }
@@ -354,9 +354,9 @@ impl Taxon {
     }
 
     /// Fetch the heirarchy of child taxa for this taxon
-    pub async fn fetch_children(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
+    pub async fn fetch_children(&self, db: &Database) -> Result<Vec<Self>> {
         let mut query = Taxon::build_query(Some(Filter::ParentId(self.id).into()), None);
-        Ok(query.build_query_as().fetch_all(pool).await?)
+        Ok(query.build_query_as().fetch_all(db.pool()).await?)
     }
 
     fn build_query(
@@ -408,18 +408,18 @@ impl Taxon {
     pub async fn load_all(
         filter: Option<DynFilterPart>,
         limit: Option<LimitSpec>,
-        pool: &Pool<Sqlite>,
+        db: &Database,
     ) -> Result<Vec<Taxon>, sqlx::Error> {
         Taxon::build_query(filter, limit)
             .build_query_as()
-            .fetch_all(pool)
+            .fetch_all(db.pool())
             .await
     }
 
     /// Loads germination information from the database for this taxon. After
     /// a successful query, the `self` object will be updated with the germination
     /// results.
-    pub async fn load_germination_info(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
+    pub async fn load_germination_info(&mut self, db: &Database) -> Result<()> {
         self.germination = Some(
             sqlx::query_as(
                 r#"SELECT G.* from sc_germination_codes G
@@ -427,7 +427,7 @@ impl Taxon {
             WHERE TG.tsn=?"#,
             )
             .bind(self.id)
-            .fetch_all(pool)
+            .fetch_all(db.pool())
             .await?,
         );
         Ok(())
@@ -450,10 +450,10 @@ impl Taxon {
     }
 
     /// Query how many taxa in the database match the given filter
-    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i32> {
+    pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i32> {
         Self::build_count(filter)
             .build()
-            .fetch_one(pool)
+            .fetch_one(db.pool())
             .await?
             .try_get("count")
             .map_err(Into::into)
@@ -463,6 +463,7 @@ impl Taxon {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::{Pool, Sqlite};
     use test_log::test;
 
     const CANADA_WILD_RYE: i64 = 40683;
@@ -472,7 +473,8 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("taxa"))
     ))]
     async fn fetch_taxon(pool: Pool<Sqlite>) {
-        let taxon = Taxon::load(CANADA_WILD_RYE, &pool)
+        let db = Database(pool);
+        let taxon = Taxon::load(CANADA_WILD_RYE, &db)
             .await
             .expect("Unable to load taxon");
         assert_eq!(taxon.name1, Some("Elymus".to_string()));
@@ -490,13 +492,10 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("taxa"))
     ))]
     async fn fetch_many(pool: Pool<Sqlite>) {
-        let taxa = Taxon::load_all(
-            Some(Filter::Genus("Elymus".to_string()).into()),
-            None,
-            &pool,
-        )
-        .await
-        .expect("Unable to load taxon");
+        let db = Database(pool);
+        let taxa = Taxon::load_all(Some(Filter::Genus("Elymus".to_string()).into()), None, &db)
+            .await
+            .expect("Unable to load taxon");
         assert_eq!(taxa.len(), 2);
         assert_eq!(taxa[0].name1, Some("Elymus".to_string()));
         assert_eq!(taxa[0].name2, None);

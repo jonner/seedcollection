@@ -1,8 +1,8 @@
-use crate::{db, template_engine, EnvConfig};
+use crate::{template_engine, EnvConfig};
 use anyhow::{Context, Result};
 use axum_template::engine::Engine;
 use lettre::{AsyncSmtpTransport, Tokio1Executor};
-use sqlx::SqlitePool;
+use libseed::Database;
 use std::{path::PathBuf, sync::Arc};
 use tracing::{debug, trace};
 
@@ -10,7 +10,7 @@ type TemplateEngine = Engine<minijinja::Environment<'static>>;
 
 #[derive(Debug)]
 pub struct SharedState {
-    pub dbpool: SqlitePool,
+    pub db: Database,
     pub tmpl: TemplateEngine,
     pub config: EnvConfig,
     pub datadir: PathBuf,
@@ -38,7 +38,7 @@ impl SharedState {
         }
         .with_context(|| "Sanity check of mail transport failed")?;
         Ok(Self {
-            dbpool: db::pool(env.database.clone())
+            db: Database::open(env.database.clone())
                 .await
                 .with_context(|| format!("Unable to open database {}", &env.database))?,
             tmpl: template,
@@ -52,7 +52,7 @@ impl SharedState {
         let template = template_engine("test", "./templates");
         debug!("Creating test shared app state");
         Self {
-            dbpool: pool,
+            db: Database::new(pool),
             tmpl: template,
             config: EnvConfig {
                 listen: crate::ListenConfig {

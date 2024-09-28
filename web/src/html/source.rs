@@ -57,7 +57,7 @@ async fn list_sources(
             .build();
         fbuilder = fbuilder.push(subfilter);
     }
-    let sources = Source::load_all(Some(fbuilder.build()), &state.dbpool).await?;
+    let sources = Source::load_all(Some(fbuilder.build()), &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -82,12 +82,12 @@ async fn show_source(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let src = Source::load(id, &state.dbpool).await?;
+    let src = Source::load(id, &state.db).await?;
     let samples = Sample::load_all_user(
         user.id,
         Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
         None,
-        &state.dbpool,
+        &state.db,
     )
     .await?;
     Ok(RenderHtml(
@@ -119,7 +119,7 @@ async fn do_update(
     params: &SourceParams,
     state: &AppState,
 ) -> Result<SqliteQueryResult, error::Error> {
-    let mut src = Source::load(id, &state.dbpool).await?;
+    let mut src = Source::load(id, &state.db).await?;
     src.name = params
         .name
         .as_ref()
@@ -129,7 +129,7 @@ async fn do_update(
     src.latitude = params.latitude;
     src.longitude = params.longitude;
 
-    src.update(&state.dbpool).await.map_err(|e| e.into())
+    src.update(&state.db).await.map_err(|e| e.into())
 }
 
 async fn update_source(
@@ -139,7 +139,7 @@ async fn update_source(
     Path(id): Path<i64>,
     Form(params): Form<SourceParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let src = Source::load(id, &state.dbpool).await?;
+    let src = Source::load(id, &state.db).await?;
     if src.userid != user.id {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
@@ -165,10 +165,10 @@ async fn update_source(
         user.id,
         Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
         None,
-        &state.dbpool,
+        &state.db,
     )
     .await?;
-    let src = Source::load(id, &state.dbpool).await?;
+    let src = Source::load(id, &state.db).await?;
 
     Ok((
         headers,
@@ -201,7 +201,7 @@ async fn do_insert(
         params.longitude,
         user.id,
     );
-    source.insert(&state.dbpool).await.map_err(|e| e.into())
+    source.insert(&state.db).await.map_err(|e| e.into())
 }
 
 async fn new_source(
@@ -261,13 +261,10 @@ async fn delete_source(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let src = Source::load(id, &state.dbpool).await?;
+    let mut src = Source::load(id, &state.db).await?;
     if src.userid != user.id {
         return Err(error::Error::Unauthorized("Not yours".to_string()));
     }
-    sqlx::query("DELETE FROM sc_sources WHERE srcid=?")
-        .bind(id)
-        .execute(&state.dbpool)
-        .await?;
+    src.delete(&state.db).await?;
     Ok([("HX-redirect", app_url("/source/list"))])
 }

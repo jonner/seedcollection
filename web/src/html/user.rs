@@ -47,12 +47,9 @@ async fn show_profile(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let stats = UserStats {
-        nsamples: Sample::count(Some(sample::Filter::UserId(user.id).into()), &state.dbpool)
-            .await?,
-        nprojects: Project::count(Some(project::Filter::User(user.id).into()), &state.dbpool)
-            .await?,
-        nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &state.dbpool)
-            .await?,
+        nsamples: Sample::count(Some(sample::Filter::UserId(user.id).into()), &state.db).await?,
+        nprojects: Project::count(Some(project::Filter::User(user.id).into()), &state.db).await?,
+        nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &state.db).await?,
     };
     Ok(RenderHtml(
         key,
@@ -99,7 +96,7 @@ async fn update_profile(
         "" => None,
         s => Some(s.to_string()),
     };
-    user.update(&state.dbpool).await?;
+    user.update(&state.db).await?;
 
     if need_reverify {
         send_verification(user, &state).await?;
@@ -108,16 +105,24 @@ async fn update_profile(
     Ok([("HX-Redirect", app_url("/user/me"))])
 }
 
-async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), error::Error> {
-    let uvkey = user.new_verification_code(&state.dbpool).await?;
+fn verification_url(state: &std::sync::Arc<crate::state::SharedState>, vcode: String) -> String {
     // FIXME: figure out how to do the host/port stuff properly. Right now this will send a link to
     // host 0.0.0.0 if that's what we configured the server to listen on...
-    let mut verification_url = "https://".to_string();
-    verification_url.push_str(&state.config.listen.host);
+    let mut url = "https://".to_string();
+    url.push_str(&state.config.listen.host);
     if state.config.listen.https_port != 443 {
-        verification_url.push_str(&format!(":{}", state.config.listen.https_port));
+        url.push_str(&format!(":{}", state.config.listen.https_port));
     }
-    verification_url.push_str(&app_url(&format!("/auth/verify/{uvkey}")));
+    url.push_str(&app_url(&format!("/auth/verify/{vcode}")));
+    url
+}
+
+fn verification_email(
+    state: &std::sync::Arc<crate::state::SharedState>,
+    vcode: String,
+    user: SqliteUser,
+) -> Result<lettre::Message, Error> {
+    let verification_url = verification_url(state, vcode);
     let emailbody = state
         .tmpl
         .render(
@@ -142,6 +147,12 @@ async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), err
         .header(ContentType::TEXT_PLAIN)
         .body(emailbody)
         .with_context(|| "Failed to create email message")?;
+    Ok(email)
+}
+
+async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), error::Error> {
+    let vcode = user.new_verification_code(&state.db).await?;
+    let email = verification_email(state, vcode, user)?;
     match state.config.mail_transport {
         crate::MailTransport::File(ref path) => AsyncFileTransport::<Tokio1Executor>::new(path)
             .send(email)
