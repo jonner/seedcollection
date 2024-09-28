@@ -1,8 +1,8 @@
 //! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
     error::{Error, Result},
-    filter::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
     loadable::{ExternalRef, Loadable},
+    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
     source::Source,
     taxonomy::{Rank, Taxon},
     user::User,
@@ -16,10 +16,14 @@ use sqlx::{
 use std::{str::FromStr, sync::Arc};
 use strum_macros::Display;
 
+/// A representation of the certainty of identification for a sample
 #[derive(Clone, Deserialize, Serialize, Debug, sqlx::Type, PartialEq, Display)]
 #[repr(i32)]
 pub enum Certainty {
+    /// ID is certain
     Certain = 1,
+
+    /// ID is uncertain
     Uncertain = 2,
 }
 
@@ -29,16 +33,35 @@ impl From<Filter> for DynFilterPart {
     }
 }
 
+// FIXME: can we combine this with `SortField`?
+/// A type that provides fields that can be used to filter a database query for [Sample]s
 #[derive(Clone)]
 pub enum Filter {
+    /// Compared the sample's ID with the given value
     Id(Cmp, i64),
+
+    /// Matches Samples whose IDs are *not* contained in the given list
     IdNotIn(Vec<i64>),
+
+    /// Compares the ID of a sample's [Source] with the given value
     SourceId(Cmp, i64),
+
+    /// Matches samples whose [Source] name contains the given string
     SourceNameLike(String),
+
+    /// Compares the ID of the sample's [Taxon] with the given value
     TaxonId(Cmp, i64),
+
+    /// Matches samples whose [Taxon] name contains the given string
     TaxonNameLike(String),
+
+    /// Matches samples whose user ID matches the given value
     UserId(i64),
+
+    /// Compares the sample's note field with the given string value
     Notes(Cmp, String),
+
+    /// Compares the quantity of the sample with the given value
     Quantity(Cmp, i64),
     TaxonRank(Cmp, Rank),
 }
@@ -92,17 +115,32 @@ impl FilterPart for Filter {
     }
 }
 
+// FIXME: can we combine this with `Filter`?
+/// A type that provides fields that can be used to sort results of a database query for Samples
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SortField {
+    /// Sort by the Sample's ID
     Id,
+
+    /// Sort by the name of the sample's taxon
     #[serde(rename = "name")]
     TaxonName,
+
+    /// Sort by the taxonomic sequence
     #[serde(rename = "seq")]
     TaxonSequence,
+
+    /// Sort by the ID of the sample's Source
     SourceId,
+
+    /// Sort by the name of the sample's Source
     SourceName,
+
+    /// Sort by the date that the sample was collected
     CollectionDate,
+
+    /// Sort by the quantity of the sample
     Quantity,
 }
 
@@ -130,16 +168,26 @@ impl ToSql for SortField {
     }
 }
 
+/// An object that represents information about a seed collection sample
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Sample {
+    /// A unique ID to represent this sample
     pub id: i64,
+    /// The user that is owns this sample
     pub user: ExternalRef<User>,
+    /// The taxon associated with this seed sample
     pub taxon: ExternalRef<Taxon>,
+    /// The source of this particular seed sample
     pub source: ExternalRef<Source>,
+    /// The quantity of seeds that exist in this sample
     pub quantity: Option<i64>,
+    /// The month that the sample was acquired or collected
     pub month: Option<u32>,
+    /// The year that the sample was acquired or collected
     pub year: Option<u32>,
+    /// Free-form notes describing this seed sample
     pub notes: Option<String>,
+    /// Indicates whether the taxon assigned to this sample is certain or not
     pub certainty: Certainty,
 }
 
@@ -197,6 +245,7 @@ impl Sample {
         builder
     }
 
+    /// Loads all matching samples from the database for the given user
     pub async fn load_all_user(
         userid: i64,
         filter: Option<DynFilterPart>,
@@ -212,6 +261,7 @@ impl Sample {
         Ok(builder.build_query_as().fetch_all(pool).await?)
     }
 
+    /// Loads all matching samples from the database
     pub async fn load_all(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
@@ -221,6 +271,7 @@ impl Sample {
         Ok(builder.build_query_as().fetch_all(pool).await?)
     }
 
+    /// Queries the count of all matching samples from the database
     pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i64> {
         let mut builder = Self::build_count(filter);
         builder
@@ -231,6 +282,9 @@ impl Sample {
             .map_err(|e| e.into())
     }
 
+    /// Add this sample to the database. If this call completes successfully,
+    /// the id of this object will be updated to the ID of the inserted row in the
+    /// database
     pub async fn insert(&mut self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id != -1 {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
@@ -250,6 +304,7 @@ impl Sample {
         .map_err(|e| e.into())
     }
 
+    /// Update the sample in the database so that it matches this object
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
@@ -274,6 +329,8 @@ impl Sample {
             .await.map_err(|e| e.into())
     }
 
+    /// Create a new sample with the given data. It iwll initially have an
+    /// invalid ID until it is inserted into the database.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         taxonid: i64,
@@ -286,7 +343,7 @@ impl Sample {
         certainty: Certainty,
     ) -> Self {
         Self {
-            id: -1,
+            id: Self::invalid_id(),
             user: ExternalRef::Stub(userid),
             taxon: ExternalRef::Stub(taxonid),
             source: ExternalRef::Stub(sourceid),

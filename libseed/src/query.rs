@@ -1,4 +1,4 @@
-//! utilities for filtering database queries for the various objects
+//! utilities related to database queries
 //!
 use serde::{
     de::{value, IntoDeserializer},
@@ -6,6 +6,7 @@ use serde::{
 };
 use std::{str::FromStr, sync::Arc};
 
+/// An operator for combining filter parts to form a more complex filter expression
 #[derive(Clone)]
 pub enum Op {
     Or,
@@ -13,23 +14,29 @@ pub enum Op {
 }
 
 #[derive(Clone)]
-/// An object that allows you easily build complound filters that can be applied to SQL queries
+/// An object that allows you easily build compound filters that can be applied to SQL queries
 pub struct CompoundFilterBuilder {
     top: CompoundFilter,
 }
 
 impl CompoundFilterBuilder {
+    /// Create a new [CompoundFilterBuilder] object that will combine all filter
+    /// expressions using the given operator
     pub fn new(op: Op) -> Self {
         Self {
             top: CompoundFilter::new(op),
         }
     }
 
+    /// Add a new filter expression to this compound filter. It will be combined
+    /// with all existing filter expressions using the operator that was specified in
+    /// the constructor.
     pub fn push<F: Into<DynFilterPart>>(mut self, filter: F) -> Self {
         self.top.add_filter(filter.into());
         self
     }
 
+    /// Generate a new [CompoundFilter] object from this builder object
     pub fn build(self) -> DynFilterPart {
         Arc::new(self.top)
     }
@@ -38,6 +45,7 @@ impl CompoundFilterBuilder {
 /// A Trait implemented by anything that can be a filter. It could be a single field or a
 /// multi-level compound filter condition.
 pub trait FilterPart: Send {
+    /// convert the given filter part to SQL syntax and add it to the given [sqlx::QueryBuilder] object
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>);
 }
 
@@ -51,6 +59,7 @@ pub struct CompoundFilter {
 }
 
 impl CompoundFilter {
+    /// Create a new compound filter object
     pub fn new(op: Op) -> Self {
         Self {
             conditions: Default::default(),
@@ -58,10 +67,13 @@ impl CompoundFilter {
         }
     }
 
+    /// Create an builder object that is used for building compound filters
     pub fn builder(op: Op) -> CompoundFilterBuilder {
         CompoundFilterBuilder::new(op)
     }
 
+    /// Add a new filter expression to the current filter. It will be combined
+    /// with the operator [Op] that was specified in [CompoundFilter::new()]
     pub fn add_filter(&mut self, filter: DynFilterPart) {
         self.conditions.push(filter);
     }
@@ -94,7 +106,7 @@ impl FilterPart for CompoundFilter {
 }
 
 #[derive(Clone)]
-/// An object representing the operation that is used to compare against a filter condition
+/// An object representing the comparison operator that is used in a filter expression
 pub enum Cmp {
     Equal,
     NotEqual,
@@ -119,9 +131,17 @@ impl std::fmt::Display for Cmp {
     }
 }
 
-/// An object that allows you to specify the limit and offset for an SQL query
-pub struct LimitSpec(pub i32, pub Option<i32>);
+/// A type for specifying the number of rows to return for an SQL query
+pub struct LimitSpec(
+    /// The number of items to return
+    pub i32,
+    /// An optional offset of rows to return. For example, if this value is
+    /// `Some(10)`, it means to start returning items starting with the 10th
+    /// row.
+    pub Option<i32>,
+);
 
+/// A type for specifying the sort order of an SQL query
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum SortOrder {
     #[serde(rename = "asc")]
@@ -149,14 +169,18 @@ impl ToSql for SortOrder {
     }
 }
 
+/// a trait that generates an sql respresentation of the implementing type
 pub trait ToSql {
     fn to_sql(&self) -> String;
 }
 
-/// An object that allows you to specify the sort for an SQL query
+/// A type for specifying how the results from an SQL query should be sorted
 #[derive(Clone, Debug)]
 pub struct SortSpec<T: ToSql> {
+    /// The field that the sql query should be sorted on. The type must be
+    /// convertible to an SQL representation via [ToSql]
     pub field: T,
+    /// The direction to sort results
     pub order: SortOrder,
 }
 
@@ -172,6 +196,7 @@ impl<T: ToSql> SortSpec<T> {
     }
 }
 
+/// A type representing an ordered list of multiple sort specifications.
 pub struct SortSpecs<T: ToSql>(pub Vec<SortSpec<T>>);
 
 impl<T: ToSql> From<SortSpec<T>> for SortSpecs<T> {

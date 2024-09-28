@@ -9,13 +9,12 @@ use axum_template::RenderHtml;
 use libseed::loadable::Loadable;
 use libseed::{
     empty_string_as_none,
-    filter::{Cmp, CompoundFilter, LimitSpec, Op},
+    query::{Cmp, CompoundFilter, LimitSpec, Op},
     sample::{self, Sample},
     taxonomy::{self, match_any_name, Germination, Rank, Taxon},
 };
 use minijinja::context;
 use serde::Deserialize;
-use sqlx::Row;
 use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::debug;

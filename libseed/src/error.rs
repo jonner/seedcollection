@@ -1,5 +1,6 @@
 //! Objects related to reporting errors from this library
 
+/// A list of error types that can occur within this library
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     // authentication-related errors
@@ -37,4 +38,5 @@ pub enum Error {
     DatabaseError(#[from] sqlx::Error),
 }
 
+/// A convenience type alias for a [Result] with [Error](self::Error) as its error type
 pub type Result<T, E = Error> = std::result::Result<T, E>;

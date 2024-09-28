@@ -1,3 +1,4 @@
+//! Manage notes associated with project allocations
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, Pool, QueryBuilder, Sqlite};
@@ -8,37 +9,63 @@ use tracing::debug;
 
 use crate::{
     error::{Error, Result},
-    filter::{DynFilterPart, FilterPart},
     loadable::Loadable,
+    query::{DynFilterPart, FilterPart},
 };
 
+/// A category for a note
 #[derive(sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumIter, PartialEq)]
 #[repr(i64)]
 pub enum NoteType {
+    /// This note is related to preparation of the seed sample
     Preparation = 1,
+
+    /// This note is related to the germination of the seed sample
     Germination = 2,
+
+    /// This note is related to the planting of the seed sample
     Planting = 3,
+
+    /// This note is related to the growth of the seed sample
     Growing = 4,
+
+    /// This note is related to something else
     Other = 5,
 }
 
+/// A type for specifying fields to filter when querying notes from the database
 #[derive(Clone)]
 pub enum NoteFilter {
+    /// Filter against the ID of the note
     Id(i64),
+
+    /// Filter against the ID of the associated [Allocation](super::Allocation) object
     AllocationId(i64),
 }
 
+/// An object that represents a project-specific note tied to a particular [Allocation](super::Allocation) object
 #[derive(sqlx::FromRow, Deserialize, Serialize, Debug, PartialEq)]
 pub struct Note {
+    /// A unique ID that identifies this note in the database
     #[sqlx(rename = "pnoteid")]
     pub id: i64,
+
+    /// the ID of the allocation that is associated with this note
     pub psid: i64,
+
+    /// The date that this note was added to the database
     #[sqlx(rename = "notedate")]
     pub date: Date,
+
+    /// The category of the note
     #[sqlx(rename = "notetype")]
     pub kind: NoteType,
+
+    /// A short summary (headline) of the note
     #[sqlx(rename = "notesummary")]
     pub summary: String,
+
+    /// The body of the note
     #[sqlx(rename = "notedetails")]
     pub details: Option<String>,
 }
@@ -81,6 +108,7 @@ impl FilterPart for NoteFilter {
 }
 
 impl Note {
+    /// Create a new Note. It will initially have an invalid ID until it is inserted into the database.
     pub fn new(
         psid: i64,
         date: Date,
@@ -89,7 +117,7 @@ impl Note {
         details: Option<String>,
     ) -> Self {
         Self {
-            id: -1,
+            id: Self::invalid_id(),
             psid,
             date,
             kind,
@@ -97,6 +125,7 @@ impl Note {
             details,
         }
     }
+
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT pnoteid, psid, notedate, notetype, notesummary, notedetails FROM sc_project_notes"#,
@@ -110,6 +139,7 @@ impl Note {
         builder
     }
 
+    /// Load all matching notes from the database
     pub async fn load_all(
         filter: Option<DynFilterPart>,
         pool: &Pool<Sqlite>,
@@ -120,6 +150,8 @@ impl Note {
             .await
     }
 
+    /// Insert this note into the database. If successful, the ID of the note
+    /// object will be updated to match the ID of the newly-inserted row.
     pub async fn insert(&self, pool: &Pool<Sqlite>) -> Result<Note> {
         if self.summary.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
@@ -140,6 +172,7 @@ impl Note {
         .map_err(|e| e.into())
     }
 
+    /// Update the note in the database such that it matches this object
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<Note, sqlx::Error> {
         debug!(?self, "Updating note in database");
         sqlx::query_as(

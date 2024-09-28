@@ -2,7 +2,7 @@ use std::convert;
 
 use inquire::{autocompletion::Autocomplete, CustomUserError};
 use libseed::{
-    filter::{Cmp, CompoundFilter, DynFilterPart, Op},
+    query::{Cmp, CompoundFilter, DynFilterPart, Op},
     source::{self, Source},
     taxonomy::{match_any_name, Taxon},
 };

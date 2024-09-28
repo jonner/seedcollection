@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use libseed::{
-    filter::Cmp,
     project::{allocation, Allocation, Project},
+    query::Cmp,
     sample::{self, Certainty, Sample},
     source::Source,
     taxonomy::{Germination, NativeStatus, Rank, Taxon},

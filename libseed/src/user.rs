@@ -1,8 +1,8 @@
 //! Objects representing a user of the application
 use crate::{
     error::{Error, Result},
-    filter::{DynFilterPart, FilterPart},
     loadable::{ExternalRef, Loadable},
+    query::{DynFilterPart, FilterPart},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
@@ -59,15 +59,19 @@ pub struct User {
     #[sqlx(rename = "useremail")]
     pub email: String,
 
+    /// The status of this user
     #[sqlx(rename = "userstatus")]
     pub status: UserStatus,
 
+    /// The date that the user registered their account
     #[sqlx(rename = "usersince")]
     pub register_date: Option<OffsetDateTime>,
 
+    /// A display name for the user
     #[sqlx(rename = "userdisplayname")]
     pub display_name: Option<String>,
 
+    /// Some text describing a bit about the user, written by the user themselves
     #[sqlx(rename = "userprofile", default)]
     pub profile: Option<String>,
 
@@ -212,7 +216,7 @@ impl User {
         profile: Option<String>,
     ) -> Self {
         Self {
-            id: -1,
+            id: Self::invalid_id(),
             username,
             email,
             pwhash,

@@ -13,13 +13,14 @@ use tracing::debug;
 
 use crate::{
     error::Result,
-    filter::{CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
     loadable::{ExternalRef, Loadable},
+    query::{CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
     Error,
 };
 
-pub const KINGDOM_PLANTAE: i64 = 3;
+const KINGDOM_PLANTAE: i64 = 3;
 
+/// The taxonomic rank of a taxon
 #[derive(Debug, Clone, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq)]
 pub enum Rank {
     Unknown = 0,
@@ -62,12 +63,18 @@ impl FromStr for Rank {
     }
 }
 
+/// The native status of a taxon
 #[derive(Debug, Display, FromRepr, Serialize, Deserialize, PartialEq, Clone)]
 pub enum NativeStatus {
+    /// The taxon is native to the area
     #[serde(alias = "N")]
     Native,
+
+    /// The taxon is non-native and introduced to the area
     #[serde(alias = "I")]
     Introduced,
+
+    /// It is not know whether the taxon is native to the area
     #[serde(alias = "U")]
     Unknown,
 }
@@ -81,22 +88,32 @@ impl FromStr for NativeStatus {
     }
 }
 
+/// Germination information for the seeds of a particular taxon
 #[derive(FromRow, Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Germination {
+    /// A unique ID that identifies this germination code in the database
     #[sqlx(rename = "germid")]
     pub id: i64,
+
+    /// A short code that is used to represent the germination requirements
     pub code: String,
+
+    /// A summary of the germination requirements
     pub summary: Option<String>,
+
+    /// Longer explanation of the germination requirements for the taxon
     pub description: Option<String>,
 }
 
 impl Germination {
+    /// Loads all germination codes from the database
     pub async fn load_all(pool: &Pool<Sqlite>) -> Result<Vec<Germination>, sqlx::Error> {
         sqlx::query_as("SELECT * FROM sc_germination_codes")
             .fetch_all(pool)
             .await
     }
 
+    /// Loads a particular germination code from the database
     pub async fn load(id: i64, pool: &Pool<Sqlite>) -> Result<Germination, sqlx::Error> {
         sqlx::query_as("SELECT * FROM sc_germination_codes WHERE germid=?")
             .bind(id)
@@ -104,6 +121,7 @@ impl Germination {
             .await
     }
 
+    /// Update the germination code in the database so that it matches this object
     pub async fn update(&self, pool: &Pool<Sqlite>) -> Result<SqliteQueryResult> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
@@ -183,17 +201,39 @@ impl From<Filter> for DynFilterPart {
     }
 }
 
+/// A type for specifying fields that can be used for filtering taxa from the database
 #[derive(Deserialize, Clone)]
 pub enum Filter {
+    /// Match taxa with the given ID
     Id(i64),
+
+    /// Match taxa with the given taxonomic rank
     Rank(Rank),
+
+    // FIXME: this will only work for some ranks...
+    /// Match taxa with the given genus
     Genus(String),
+
+    // FIXME: this will only work for some ranks...
+    /// Match taxa with the given species
     Species(String),
+
+    /// Match taxa whose first name component (e.g. genus) matches the given value
     Name1(String),
+
+    /// Match taxa whose second name component (e.g. species) matches the given value
     Name2(String),
+
+    /// Match taxa whose third name component (e.g. subspecies) matches the given value
     Name3(String),
+
+    /// Match taxa whose common name matches the given value
     Vernacular(String),
+
+    /// Match taxa that is native to minnesota
     Minnesota(bool),
+
+    /// Match taxa whose parent taxon has the given id
     ParentId(i64),
 }
 
@@ -225,6 +265,7 @@ impl FilterPart for Filter {
     }
 }
 
+/// Generate a filter that selects a taxon if any name component matches the string `s`
 pub fn match_any_name(s: &str) -> DynFilterPart {
     CompoundFilter::builder(Op::Or)
         .push(Filter::Name1(s.to_string()))
@@ -237,16 +278,37 @@ pub fn match_any_name(s: &str) -> DynFilterPart {
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 /// An object representing a particular taxon from the database
 pub struct Taxon {
+    /// A unique ID that identifies this taxon in the database
     pub id: i64,
+
+    /// The taxonomic rank for this taxon
     pub rank: Rank,
+
+    /// The first name component of the taxon (e.g. genus)
     pub name1: Option<String>,
+
+    /// The second name component of the taxon (e.g. species)
     pub name2: Option<String>,
+
+    /// The third name component of the taxon (e.g. subspecies)
     pub name3: Option<String>,
+
+    /// The complete name of the taxon (e.g. 'genus species')
     pub complete_name: String,
+
+    /// A list of common names used for this taxon
     pub vernaculars: Vec<String>,
+
+    /// Whether the taxon is native to the area
     pub native_status: Option<NativeStatus>,
+
+    /// The id of the parent taxon
     pub parentid: Option<i64>,
+
+    /// A sequence number that defines taxonomic order
     pub seq: Option<i64>,
+
+    /// An optional list of germination codes for this taxon
     pub germination: Option<Vec<Germination>>,
 }
 
@@ -273,6 +335,7 @@ impl Loadable for Taxon {
 }
 
 impl Taxon {
+    /// Fetch the heirarchy of parent taxa for this taxon
     pub async fn fetch_hierarchy(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
         let mut hierarchy = Vec::new();
         let mut taxon = Taxon::load(self.id, pool).await?;
@@ -290,6 +353,7 @@ impl Taxon {
         Ok(hierarchy)
     }
 
+    /// Fetch the heirarchy of child taxa for this taxon
     pub async fn fetch_children(&self, pool: &Pool<Sqlite>) -> Result<Vec<Self>> {
         let mut query = Taxon::build_query(Some(Filter::ParentId(self.id).into()), None);
         Ok(query.build_query_as().fetch_all(pool).await?)
@@ -340,6 +404,7 @@ impl Taxon {
         builder
     }
 
+    /// Load all matching taxa from the database
     pub async fn load_all(
         filter: Option<DynFilterPart>,
         limit: Option<LimitSpec>,
@@ -351,6 +416,9 @@ impl Taxon {
             .await
     }
 
+    /// Loads germination information from the database for this taxon. After
+    /// a successful query, the `self` object will be updated with the germination
+    /// results.
     pub async fn load_germination_info(&mut self, pool: &Pool<Sqlite>) -> Result<()> {
         self.germination = Some(
             sqlx::query_as(
@@ -363,11 +431,6 @@ impl Taxon {
             .await?,
         );
         Ok(())
-    }
-
-    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i32> {
-        let row = Self::build_count(filter).build().fetch_one(pool).await?;
-        row.try_get::<i32, _>("count").map_err(Into::into)
     }
 
     fn build_count(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
@@ -384,6 +447,16 @@ impl Taxon {
         }
 
         builder
+    }
+
+    /// Query how many taxa in the database match the given filter
+    pub async fn count(filter: Option<DynFilterPart>, pool: &Pool<Sqlite>) -> Result<i32> {
+        Self::build_count(filter)
+            .build()
+            .fetch_one(pool)
+            .await?
+            .try_get("count")
+            .map_err(Into::into)
     }
 }
 
