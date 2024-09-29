@@ -76,11 +76,12 @@
     </div>
         <div class="mb-3 col-4">
             <label for="SampleMonthInput" class="form-label">Month</label>
+            {% set monthnumber %}{% if request %}{{ request.month }}{% elif sample %}{{ sample.month}}{% else %}{{ now() | datetimeformat(format="[month padding:none]") }}{% endif %}{% endset %}
             <select id="SampleMonthInput"
                     class="form-control"
                     name="month"
                     >
-                    {{ month_options(request.month if request else sample.month if sample) }}
+                    {{ month_options(monthnumber|int) }}
             </select>
         </div>
         <div class="mb-3 col-4">
