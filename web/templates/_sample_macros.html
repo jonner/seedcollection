@@ -89,7 +89,7 @@
                    class="form-control"
                    type="number"
                    name="year"
-                   value="{% if request %}{{ request.year }}{% elif sample %}{{ sample.year }}{% endif %}"/>
+                   value="{% if request %}{{ request.year }}{% elif sample %}{{ sample.year }}{% else %}{{ now()|datetimeformat(format="[year]") }}{% endif %}"/>
         </div>
         <div class="mb-3 col-4">
             <label for="SampleQuantityInput" class="form-label">Quantity</label>
