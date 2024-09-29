@@ -443,7 +443,7 @@ async fn add_sample(
         .map(|s| s.id())
         .collect::<HashSet<i64>>();
     let invalid = &toadd - &valid_ids;
-    if invalid.len() > 0 {
+    if !invalid.is_empty() {
         warn!("Some samples dropped, possibly because they were not owned by user {user:?}");
         let strval = invalid
             .iter()
@@ -502,7 +502,7 @@ async fn add_sample(
             0,
             Message {
                 r#type: MessageType::Error,
-                msg: format!("No samples were added to this project"),
+                msg: "No samples were added to this project".to_string(),
             },
         );
     }
