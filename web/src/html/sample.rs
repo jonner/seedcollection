@@ -61,7 +61,7 @@ async fn list_samples(
 
     let filter = params.filter.as_ref().map(|f| {
         CompoundFilter::builder(Op::Or)
-            .push(sample::Filter::TaxonNameLike(f.clone()))
+            .push(sample::taxon_name_like(f.clone()))
             .push(sample::Filter::Notes(Cmp::Like, f.clone()))
             .push(sample::Filter::SourceNameLike(f.clone()))
             .build()

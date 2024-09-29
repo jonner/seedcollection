@@ -32,7 +32,7 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
             let mut builder = CompoundFilter::builder(Op::And);
             if let Some(s) = filter {
                 let fbuilder = CompoundFilter::builder(Op::Or)
-                    .push(sample::Filter::TaxonNameLike(s.clone()))
+                    .push(sample::taxon_name_like(s.clone()))
                     .push(sample::Filter::SourceNameLike(s.clone()))
                     .push(sample::Filter::Notes(libseed::query::Cmp::Like, s.clone()));
                 builder = builder.push(fbuilder.build());

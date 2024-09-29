@@ -6,7 +6,9 @@ use super::{
 use crate::{
     error::Result,
     loadable::Loadable,
-    query::{Cmp, DynFilterPart, FilterPart, SortOrder, SortSpec, SortSpecs, ToSql},
+    query::{
+        Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, SortSpecs, ToSql,
+    },
     sample::Sample,
     Database,
 };
@@ -42,14 +44,32 @@ pub enum Filter {
     /// Filter based on the ID of the sample
     SampleId(i64),
 
-    /// Filter for samples whose taxon matches the given string
-    TaxonNameLike(String),
+    /// Filter for samples whose first taxon name (often genus) matches the given string
+    TaxonName1(Cmp, String),
+
+    /// Filter for samples whose second taxon name (often species) matches the given string
+    TaxonName2(Cmp, String),
+
+    /// Filter for samples whose third taxon name (often subspecies) matches the given string
+    TaxonName3(Cmp, String),
+
+    /// Filter for samples whose taxon common name matches the given string
+    TaxonCommonName(Cmp, String),
 
     /// Filter based on the name of the source of the sample
     SourceName(Cmp, String),
 
     /// Filter if the sample notes match the given string
     Notes(Cmp, String),
+}
+
+pub fn taxon_name_like(substr: String) -> DynFilterPart {
+    CompoundFilter::builder(Op::Or)
+        .push(Filter::TaxonName1(Cmp::Like, substr.clone()))
+        .push(Filter::TaxonName2(Cmp::Like, substr.clone()))
+        .push(Filter::TaxonName3(Cmp::Like, substr.clone()))
+        .push(Filter::TaxonCommonName(Cmp::Like, substr.clone()))
+        .build()
 }
 
 impl FilterPart for Filter {
@@ -59,19 +79,52 @@ impl FilterPart for Filter {
             Self::UserId(id) => _ = builder.push(" S.userid = ").push_bind(*id),
             Self::ProjectId(id) => _ = builder.push(" PS.projectid = ").push_bind(*id),
             Self::SampleId(id) => _ = builder.push(" PS.sampleid = ").push_bind(*id),
-            Self::TaxonNameLike(s) => {
+            Self::TaxonName1(cmp, s) => {
                 if !s.is_empty() {
-                    let wildcard = format!("%{s}%");
-                    builder.push(" (");
-                    builder.push(" unit_name1 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR unit_name2 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR unit_name3 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR cnames LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(") ");
+                    builder.push(" unit_name1 ").push(cmp);
+                    match cmp {
+                        Cmp::Like => {
+                            let wildcard = format!("%{s}%");
+                            builder.push_bind(wildcard)
+                        }
+                        _ => builder.push_bind(s.clone()),
+                    };
+                }
+            }
+            Self::TaxonName2(cmp, s) => {
+                if !s.is_empty() {
+                    builder.push(" unit_name2 ").push(cmp);
+                    match cmp {
+                        Cmp::Like => {
+                            let wildcard = format!("%{s}%");
+                            builder.push_bind(wildcard)
+                        }
+                        _ => builder.push_bind(s.clone()),
+                    };
+                }
+            }
+            Self::TaxonName3(cmp, s) => {
+                if !s.is_empty() {
+                    builder.push(" unit_name3 ").push(cmp);
+                    match cmp {
+                        Cmp::Like => {
+                            let wildcard = format!("%{s}%");
+                            builder.push_bind(wildcard)
+                        }
+                        _ => builder.push_bind(s.clone()),
+                    };
+                }
+            }
+            Self::TaxonCommonName(cmp, s) => {
+                if !s.is_empty() {
+                    builder.push(" cnames ").push(cmp);
+                    match cmp {
+                        Cmp::Like => {
+                            let wildcard = format!("%{s}%");
+                            builder.push_bind(wildcard)
+                        }
+                        _ => builder.push_bind(s.clone()),
+                    };
                 }
             }
             Self::SourceName(cmp, s) => {

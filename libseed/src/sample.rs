@@ -53,8 +53,17 @@ pub enum Filter {
     /// Compares the ID of the sample's [Taxon] with the given value
     TaxonId(Cmp, i64),
 
-    /// Matches samples whose [Taxon] name contains the given string
-    TaxonNameLike(String),
+    /// Matches samples whose first [Taxon] name (typically genus) contains the given string
+    TaxonName1(Cmp, String),
+
+    /// Matches samples whose second [Taxon] name (typically species) contains the given string
+    TaxonName2(Cmp, String),
+
+    /// Matches samples whose third [Taxon] name (typically subspecies) contains the given string
+    TaxonName3(Cmp, String),
+
+    /// Matches samples whose [Taxon] common name contains the given string
+    TaxonCommonName(Cmp, String),
 
     /// Matches samples whose user ID matches the given value
     UserId(i64),
@@ -65,6 +74,15 @@ pub enum Filter {
     /// Compares the quantity of the sample with the given value
     Quantity(Cmp, i64),
     TaxonRank(Cmp, Rank),
+}
+
+pub fn taxon_name_like(substr: String) -> DynFilterPart {
+    CompoundFilter::builder(Op::Or)
+        .push(Filter::TaxonName1(Cmp::Like, substr.clone()))
+        .push(Filter::TaxonName2(Cmp::Like, substr.clone()))
+        .push(Filter::TaxonName3(Cmp::Like, substr.clone()))
+        .push(Filter::TaxonCommonName(Cmp::Like, substr.clone()))
+        .build()
 }
 
 impl FilterPart for Filter {
@@ -81,19 +99,52 @@ impl FilterPart for Filter {
             }
             Self::SourceId(cmp, id) => _ = builder.push("srcid").push(cmp).push_bind(*id),
             Self::TaxonId(cmp, id) => _ = builder.push("tsn").push(cmp).push_bind(*id),
-            Self::TaxonNameLike(s) => {
+            Self::TaxonName1(cmp, s) => {
                 if !s.is_empty() {
-                    let wildcard = format!("%{s}%");
-                    builder.push(" (");
-                    builder.push(" unit_name1 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR unit_name2 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR unit_name3 LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(" OR cnames LIKE ");
-                    builder.push_bind(wildcard.clone());
-                    builder.push(") ");
+                    builder.push(" unit_name1 ").push(cmp);
+                    match cmp {
+                        Cmp::Like => {
+                            let wildcard = format!("%{s}%");
+                            builder.push_bind(wildcard.clone());
+                        }
+                        _ => _ = builder.push_bind(s.clone()),
+                    }
+                }
+            }
+            Self::TaxonName2(cmp, s) => {
+                if !s.is_empty() {
+                    builder.push(" unit_name2 ").push(cmp);
+                    match cmp {
+                        Cmp::Like => {
+                            let wildcard = format!("%{s}%");
+                            builder.push_bind(wildcard.clone());
+                        }
+                        _ => _ = builder.push_bind(s.clone()),
+                    }
+                }
+            }
+            Self::TaxonName3(cmp, s) => {
+                if !s.is_empty() {
+                    builder.push(" unit_name3 ").push(cmp);
+                    match cmp {
+                        Cmp::Like => {
+                            let wildcard = format!("%{s}%");
+                            builder.push_bind(wildcard.clone());
+                        }
+                        _ => _ = builder.push_bind(s.clone()),
+                    }
+                }
+            }
+            Self::TaxonCommonName(cmp, s) => {
+                if !s.is_empty() {
+                    builder.push(" cnames ").push(cmp);
+                    match cmp {
+                        Cmp::Like => {
+                            let wildcard = format!("%{s}%");
+                            builder.push_bind(wildcard.clone());
+                        }
+                        _ => _ = builder.push_bind(s.clone()),
+                    }
                 }
             }
             Self::UserId(id) => _ = builder.push("userid=").push_bind(*id),
