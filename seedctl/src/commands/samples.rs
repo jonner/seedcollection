@@ -34,7 +34,7 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
                 let fbuilder = CompoundFilter::builder(Op::Or)
                     .push(sample::taxon_name_like(s.clone()))
                     .push(sample::Filter::SourceName(Cmp::Like, s.clone()))
-                    .push(sample::Filter::Notes(libseed::query::Cmp::Like, s.clone()));
+                    .push(sample::Filter::Notes(Cmp::Like, s.clone()));
                 builder = builder.push(fbuilder.build());
             };
             if !all {
