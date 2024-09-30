@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use state::{AppState, SharedState};
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
+use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{
     request_id::{MakeRequestId, RequestId},
@@ -395,12 +396,25 @@ async fn main() -> Result<()> {
 
     let app = app(Arc::new(SharedState::new(envarg, env, datadir).await?)).await?;
 
+    let handle = axum_server::Handle::new();
+    #[cfg(unix)]
+    tokio::spawn(shutdown_on_sigterm(handle.clone()));
     let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
     info!("Listening on https://{}", addr);
     axum_server::bind_rustls(addr, tlsconfig)
+        .handle(handle)
         .serve(app.into_make_service())
         .await?;
     Ok(())
+}
+
+#[cfg(unix)]
+async fn shutdown_on_sigterm(handle: axum_server::Handle) {
+    signal::unix::signal(signal::unix::SignalKind::terminate())
+        .expect("Failed to install signal handler")
+        .recv()
+        .await;
+    handle.graceful_shutdown(None);
 }
 
 async fn error_mapper(
