@@ -250,21 +250,31 @@ impl FilterPart for Filter {
                 _ => builder.push("T.tsn").push(cmp).push_bind(*n),
             },
             Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(*n),
-            Self::Genus(s) => builder.push("T.unit_name1 LIKE ").push_bind(s.clone()),
-            Self::Species(s) => builder.push("T.unit_name2 LIKE ").push_bind(s.clone()),
             Self::Rank(rank) => builder.push("T.rank_id=").push_bind(rank.clone() as i64),
-            Self::Name1(s) => builder
-                .push("T.unit_name1 LIKE ")
-                .push_bind(format!("%{s}%")),
-            Self::Name2(s) => builder
-                .push("T.unit_name2 LIKE ")
-                .push_bind(format!("%{s}%")),
+            Self::Genus(s) | Self::Name1(s) => builder
+                .push("T.unit_name1")
+                .push(Cmp::Like)
+                .push("CONCAT('%',")
+                .push_bind(s.clone())
+                .push(",'%')"),
+            Self::Species(s) | Self::Name2(s) => builder
+                .push("T.unit_name2")
+                .push(Cmp::Like)
+                .push("CONCAT('%',")
+                .push_bind(s.clone())
+                .push(",'%')"),
             Self::Name3(s) => builder
-                .push("T.unit_name3 LIKE ")
-                .push_bind(format!("%{s}%")),
+                .push("T.unit_name3")
+                .push(Cmp::Like)
+                .push("CONCAT('%',")
+                .push_bind(s.clone())
+                .push(",'%')"),
             Self::Vernacular(s) => builder
-                .push("V.vernacular_name LIKE ")
-                .push_bind(format!("%{s}%")),
+                .push("V.vernacular_name")
+                .push(Cmp::Like)
+                .push("CONCAT('%',")
+                .push_bind(s.clone())
+                .push(",'%')"),
             Self::Minnesota(val) => match val {
                 true => builder.push("M.tsn IS NOT NULL"),
                 false => builder.push("M.tsn IS NULL"),
