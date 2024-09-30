@@ -48,7 +48,7 @@ pub enum Filter {
     SourceId(Cmp, i64),
 
     /// Matches samples whose [Source] name contains the given string
-    SourceNameLike(String),
+    SourceName(Cmp, String),
 
     /// Compares the ID of the sample's [Taxon] with the given value
     TaxonId(Cmp, i64),
@@ -176,13 +176,16 @@ impl FilterPart for Filter {
                     _ => builder.push_bind(s.clone()),
                 };
             }
-            Self::SourceNameLike(s) => {
+            Self::SourceName(cmp, s) => {
                 if !s.is_empty() {
-                    builder.push(" srcname LIKE ");
-                    builder
-                        .push("CONCAT('%',")
-                        .push_bind(s.clone())
-                        .push(",'%')");
+                    builder.push("srcname").push(cmp);
+                    match cmp {
+                        Cmp::Like => builder
+                            .push("CONCAT('%',")
+                            .push_bind(s.clone())
+                            .push(",'%')"),
+                        _ => builder.push_bind(s.clone()),
+                    };
                 }
             }
             Self::Quantity(cmp, n) => _ = builder.push("quantity").push(cmp).push_bind(*n),

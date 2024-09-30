@@ -64,7 +64,7 @@ async fn list_samples(
         let mut builder = CompoundFilter::builder(Op::Or)
             .push(sample::taxon_name_like(f.clone()))
             .push(sample::Filter::Notes(Cmp::Like, f.clone()))
-            .push(sample::Filter::SourceNameLike(f.clone()));
+            .push(sample::Filter::SourceName(Cmp::Like, f.clone()));
         if let Ok(n) = idprefix {
             builder = builder.push(sample::Filter::Id(Cmp::NumericPrefix, n));
         }
