@@ -284,16 +284,28 @@ impl FilterPart for Filter {
 }
 
 /// Generate a filter that selects a taxon if any name component matches the string `s`
-pub fn match_any_name(s: &str) -> DynFilterPart {
-    let mut builder = CompoundFilter::builder(Op::Or)
-        .push(Filter::Name1(s.to_string()))
-        .push(Filter::Name2(s.to_string()))
-        .push(Filter::Name3(s.to_string()))
-        .push(Filter::Vernacular(s.to_string()));
-    if let Ok(n) = s.parse::<i64>() {
-        builder = builder.push(Filter::Id(Cmp::NumericPrefix, n));
+pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
+    match taxon.is_empty() {
+        true => None,
+        false => {
+            let parts = taxon.split(' ');
+            let mut filter = CompoundFilter::builder(Op::And);
+            for part in parts {
+                filter = filter.push({
+                    let mut builder = CompoundFilter::builder(Op::Or)
+                        .push(Filter::Name1(part.to_string()))
+                        .push(Filter::Name2(part.to_string()))
+                        .push(Filter::Name3(part.to_string()))
+                        .push(Filter::Vernacular(part.to_string()));
+                    if let Ok(n) = part.parse::<i64>() {
+                        builder = builder.push(Filter::Id(Cmp::NumericPrefix, n));
+                    }
+                    builder.build()
+                });
+            }
+            Some(filter.build())
+        }
     }
-    builder.build()
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]

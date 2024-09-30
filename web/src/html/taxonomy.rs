@@ -6,13 +6,13 @@ use axum::{
     Form, Router,
 };
 use axum_template::RenderHtml;
-use libseed::loadable::Loadable;
 use libseed::{
     empty_string_as_none,
     query::{Cmp, CompoundFilter, LimitSpec, Op},
     sample::{self, Sample},
-    taxonomy::{self, match_any_name, Germination, Rank, Taxon},
+    taxonomy::{self, Germination, Rank, Taxon},
 };
+use libseed::{loadable::Loadable, Database};
 use minijinja::context;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -200,7 +200,8 @@ async fn datalist(
     State(state): State<AppState>,
     Query(DatalistParams { taxon }): Query<DatalistParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    quickfind(key, &state, taxon, None, None).await
+    let taxa = filter_taxa(taxon, None, None, &state.db).await?;
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
 
 #[derive(Deserialize)]
@@ -220,23 +221,22 @@ async fn search(
         minnesota,
     }): Query<SearchParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    quickfind(key, &state, taxon, rank, minnesota).await
+    let taxa = filter_taxa(taxon, rank, minnesota, &state.db).await?;
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
 
-async fn quickfind(
-    key: String,
-    state: &AppState,
+async fn filter_taxa(
     taxon: String,
     rank: Option<Rank>,
     minnesota: Option<bool>,
-) -> Result<impl IntoResponse, error::Error> {
-    let taxa: Vec<Taxon> = match taxon.is_empty() {
-        true => Vec::new(),
+    db: &Database,
+) -> Result<Vec<Taxon>, error::Error> {
+    match taxon.is_empty() {
+        true => Ok(Vec::new()),
         false => {
-            let parts = taxon.split(' ');
             let mut filter = CompoundFilter::builder(Op::And);
-            for part in parts {
-                filter = filter.push(match_any_name(part));
+            if let Some(quickfilter) = libseed::taxonomy::quickfind(taxon) {
+                filter = filter.push(quickfilter);
             }
             if let Some(rank) = rank {
                 filter = filter.push(taxonomy::Filter::Rank(rank));
@@ -245,10 +245,11 @@ async fn quickfind(
                 filter = filter.push(taxonomy::Filter::Minnesota(true));
             }
             /* FIXME: pagination for /search endpoing? */
-            Taxon::load_all(Some(filter.build()), Some(LimitSpec(200, None)), &state.db).await?
+            Taxon::load_all(Some(filter.build()), Some(LimitSpec(200, None)), db)
+                .await
+                .map_err(Into::into)
         }
-    };
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
+    }
 }
 
 async fn editgerm(

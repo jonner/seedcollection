@@ -9,7 +9,7 @@ use clap::Parser;
 use libseed::{
     loadable::Loadable,
     query::{Cmp, CompoundFilter, Op},
-    taxonomy::{self, match_any_name, Taxon},
+    taxonomy::{self, quickfind, Taxon},
     Error::DatabaseError,
 };
 use std::path::PathBuf;
@@ -120,7 +120,9 @@ async fn main() -> Result<()> {
                     filter = filter.push(taxonomy::Filter::Species(species));
                 }
                 if let Some(s) = any {
-                    filter = filter.push(match_any_name(&s));
+                    if let Some(f) = quickfind(s) {
+                        filter = filter.push(f);
+                    }
                 }
                 if let Some(val) = minnesota {
                     filter = filter.push(taxonomy::Filter::Minnesota(val));
