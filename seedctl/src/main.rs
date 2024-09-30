@@ -8,7 +8,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use libseed::{
     loadable::Loadable,
-    query::{CompoundFilter, Op},
+    query::{Cmp, CompoundFilter, Op},
     taxonomy::{self, match_any_name, Taxon},
     Error::DatabaseError,
 };
@@ -108,7 +108,7 @@ async fn main() -> Result<()> {
                 };
                 let mut filter = CompoundFilter::builder(Op::And);
                 if let Some(id) = None {
-                    filter = filter.push(taxonomy::Filter::Id(id));
+                    filter = filter.push(taxonomy::Filter::Id(Cmp::Equal, id));
                 }
                 if let Some(rank) = rank {
                     filter = filter.push(taxonomy::Filter::Rank(rank));

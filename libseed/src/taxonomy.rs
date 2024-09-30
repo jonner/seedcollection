@@ -14,7 +14,7 @@ use tracing::debug;
 use crate::{
     error::Result,
     loadable::{ExternalRef, Loadable},
-    query::{CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
+    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
     Database, Error,
 };
 
@@ -205,7 +205,7 @@ impl From<Filter> for DynFilterPart {
 #[derive(Clone)]
 pub enum Filter {
     /// Match taxa with the given ID
-    Id(i64),
+    Id(Cmp, i64),
 
     /// Match taxa with the given taxonomic rank
     Rank(Rank),
@@ -240,7 +240,15 @@ pub enum Filter {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(n) => builder.push("T.tsn=").push_bind(*n),
+            Self::Id(cmp, n) => match cmp {
+                Cmp::NumericPrefix => builder
+                    .push("CAST(T.tsn AS TEXT)")
+                    .push(cmp)
+                    .push("CONCAT(")
+                    .push_bind(*n)
+                    .push(",'%')"),
+                _ => builder.push("T.tsn").push(cmp).push_bind(*n),
+            },
             Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(*n),
             Self::Genus(s) => builder.push("T.unit_name1 LIKE ").push_bind(s.clone()),
             Self::Species(s) => builder.push("T.unit_name2 LIKE ").push_bind(s.clone()),
@@ -267,12 +275,15 @@ impl FilterPart for Filter {
 
 /// Generate a filter that selects a taxon if any name component matches the string `s`
 pub fn match_any_name(s: &str) -> DynFilterPart {
-    CompoundFilter::builder(Op::Or)
+    let mut builder = CompoundFilter::builder(Op::Or)
         .push(Filter::Name1(s.to_string()))
         .push(Filter::Name2(s.to_string()))
         .push(Filter::Name3(s.to_string()))
-        .push(Filter::Vernacular(s.to_string()))
-        .build()
+        .push(Filter::Vernacular(s.to_string()));
+    if let Ok(n) = s.parse::<i64>() {
+        builder = builder.push(Filter::Id(Cmp::NumericPrefix, n));
+    }
+    builder.build()
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -325,7 +336,7 @@ impl Loadable for Taxon {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        let mut query = Taxon::build_query(Some(Filter::Id(id).into()), None);
+        let mut query = Taxon::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
         Ok(query.build_query_as().fetch_one(db.pool()).await?)
     }
 
