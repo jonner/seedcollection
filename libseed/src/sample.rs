@@ -114,8 +114,10 @@ impl FilterPart for Filter {
                     builder.push(" unit_name1 ").push(cmp);
                     match cmp {
                         Cmp::Like => {
-                            let wildcard = format!("%{s}%");
-                            builder.push_bind(wildcard.clone());
+                            builder
+                                .push("CONCAT('%',")
+                                .push_bind(s.clone())
+                                .push(",'%')");
                         }
                         _ => _ = builder.push_bind(s.clone()),
                     }
@@ -126,8 +128,10 @@ impl FilterPart for Filter {
                     builder.push(" unit_name2 ").push(cmp);
                     match cmp {
                         Cmp::Like => {
-                            let wildcard = format!("%{s}%");
-                            builder.push_bind(wildcard.clone());
+                            builder
+                                .push("CONCAT('%',")
+                                .push_bind(s.clone())
+                                .push(",'%')");
                         }
                         _ => _ = builder.push_bind(s.clone()),
                     }
@@ -138,8 +142,10 @@ impl FilterPart for Filter {
                     builder.push(" unit_name3 ").push(cmp);
                     match cmp {
                         Cmp::Like => {
-                            let wildcard = format!("%{s}%");
-                            builder.push_bind(wildcard.clone());
+                            builder
+                                .push("CONCAT('%',")
+                                .push_bind(s.clone())
+                                .push(",'%')");
                         }
                         _ => _ = builder.push_bind(s.clone()),
                     }
@@ -150,20 +156,31 @@ impl FilterPart for Filter {
                     builder.push(" cnames ").push(cmp);
                     match cmp {
                         Cmp::Like => {
-                            let wildcard = format!("%{s}%");
-                            builder.push_bind(wildcard.clone());
+                            builder
+                                .push("CONCAT('%',")
+                                .push_bind(s.clone())
+                                .push(",'%')");
                         }
                         _ => _ = builder.push_bind(s.clone()),
                     }
                 }
             }
             Self::UserId(id) => _ = builder.push("userid=").push_bind(*id),
-            Self::Notes(cmp, s) => _ = builder.push("notes").push(cmp).push_bind(format!("%{s}%")),
+            Self::Notes(cmp, s) => {
+                _ = builder
+                    .push("notes")
+                    .push(cmp)
+                    .push("CONCAT('%',")
+                    .push_bind(s.clone())
+                    .push(", '%')")
+            }
             Self::SourceNameLike(s) => {
                 if !s.is_empty() {
-                    let wildcard = format!("%{s}%");
                     builder.push(" srcname LIKE ");
-                    builder.push_bind(wildcard);
+                    builder
+                        .push("CONCAT('%',")
+                        .push_bind(s.clone())
+                        .push(",'%')");
                 }
             }
             Self::Quantity(cmp, n) => _ = builder.push("quantity").push(cmp).push_bind(*n),
