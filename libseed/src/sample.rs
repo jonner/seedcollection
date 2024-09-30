@@ -167,12 +167,14 @@ impl FilterPart for Filter {
             }
             Self::UserId(id) => _ = builder.push("userid=").push_bind(*id),
             Self::Notes(cmp, s) => {
-                _ = builder
-                    .push("notes")
-                    .push(cmp)
-                    .push("CONCAT('%',")
-                    .push_bind(s.clone())
-                    .push(", '%')")
+                _ = builder.push("notes").push(cmp);
+                match cmp {
+                    Cmp::Like => builder
+                        .push("CONCAT('%',")
+                        .push_bind(s.clone())
+                        .push(", '%')"),
+                    _ => builder.push_bind(s.clone()),
+                };
             }
             Self::SourceNameLike(s) => {
                 if !s.is_empty() {
