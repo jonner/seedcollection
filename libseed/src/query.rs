@@ -115,6 +115,7 @@ pub enum Cmp {
     GreaterThan,
     LessThanEqual,
     GreatherThanEqual,
+    NumericPrefix,
 }
 
 impl std::fmt::Display for Cmp {
@@ -122,7 +123,7 @@ impl std::fmt::Display for Cmp {
         match self {
             Cmp::Equal => write!(f, " IS "),
             Cmp::NotEqual => write!(f, " IS NOT "),
-            Cmp::Like => write!(f, " LIKE "),
+            Cmp::NumericPrefix | Cmp::Like => write!(f, " LIKE "),
             Cmp::LessThan => write!(f, " < "),
             Cmp::GreaterThan => write!(f, " != "),
             Cmp::LessThanEqual => write!(f, " <= "),

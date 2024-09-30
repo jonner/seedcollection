@@ -88,7 +88,17 @@ pub fn taxon_name_like(substr: String) -> DynFilterPart {
 impl FilterPart for Filter {
     fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
         match self {
-            Self::Id(cmp, id) => _ = builder.push("sampleid").push(cmp).push_bind(*id),
+            Self::Id(cmp, id) => {
+                match cmp {
+                    Cmp::NumericPrefix => builder
+                        .push(format!("CAST(sampleid as TEXT)"))
+                        .push(cmp)
+                        .push(" CONCAT(")
+                        .push_bind(*id)
+                        .push(",'%')"),
+                    _ => builder.push("sampleid").push(cmp).push_bind(*id),
+                };
+            }
             Self::IdNotIn(list) => {
                 _ = builder.push("sampleid NOT IN (");
                 let mut sep = builder.separated(", ");
