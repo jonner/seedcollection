@@ -60,11 +60,15 @@ async fn list_samples(
     debug!("query params: {:?}", params);
 
     let filter = params.filter.as_ref().map(|f| {
-        CompoundFilter::builder(Op::Or)
+        let idprefix: Result<i64, _> = f.parse();
+        let mut builder = CompoundFilter::builder(Op::Or)
             .push(sample::taxon_name_like(f.clone()))
             .push(sample::Filter::Notes(Cmp::Like, f.clone()))
-            .push(sample::Filter::SourceNameLike(f.clone()))
-            .build()
+            .push(sample::Filter::SourceNameLike(f.clone()));
+        if let Ok(n) = idprefix {
+            builder = builder.push(sample::Filter::Id(Cmp::NumericPrefix, n));
+        }
+        builder.build()
     });
 
     let dir = params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending);
