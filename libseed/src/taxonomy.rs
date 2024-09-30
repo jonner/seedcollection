@@ -202,7 +202,7 @@ impl From<Filter> for DynFilterPart {
 }
 
 /// A type for specifying fields that can be used for filtering taxa from the database
-#[derive(Deserialize, Clone)]
+#[derive(Clone)]
 pub enum Filter {
     /// Match taxa with the given ID
     Id(i64),
