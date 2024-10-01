@@ -391,7 +391,7 @@ impl TaxonRowDetails {
         )
         .await?;
         for ref mut s in &mut samples {
-            s.source.load(db).await?;
+            s.source.load(db, false).await?;
         }
 
         Ok(Self {

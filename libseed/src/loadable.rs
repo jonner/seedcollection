@@ -113,14 +113,20 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
 
     /// Load the object from the database and update the object to contain the
     /// newly-loaded referenced object
-    pub async fn load(&mut self, db: &Database) -> Result<&T> {
+    pub async fn load(&mut self, db: &Database, force: bool) -> Result<&T> {
         match self {
             Self::Stub(id) => {
                 let obj = T::load(id.clone(), db).await?;
                 *self = Self::Object(obj);
                 self.object()
             }
-            Self::Object(ref obj) => Ok(obj),
+            Self::Object(ref mut obj) => {
+                let id = obj.id();
+                if force {
+                    *obj = T::load(id, db).await?;
+                }
+                Ok(obj)
+            }
         }
     }
 
