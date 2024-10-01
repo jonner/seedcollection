@@ -30,11 +30,25 @@
     {% endif %}
 </div>
 <h5>Collection Date</h5>
-<div class="mb-3 px-2">{% if sample.month %}{{ sample.month }}/{% endif %}{{ sample.year }}</div>
+<div class="mb-3 px-2">
+    {% if sample.year %}
+    {% if sample.month %}{{ sample.month }}/{% endif %}{{ sample.year }}
+    {% else %}
+    <div class="text-secondary">Unknown</div>
+    {% endif %}
+</div>
+<h5>Notes</h5>
+<div class="mb-3 px-2">
+{% if sample.notes %}
+{{ sample.notes | markdown }}
+{% else %}
+<div class="text-secondary">None</div>
+{% endif %}
+</div>
 <h5>Quantity</h5>
 <div class="mb-3 px-2">
     {% if sample.quantity is none %}
-    Unknown
+    <div class="text-secondary">Unknown</div>
     {% elif sample.quantity == 0 %}
     <div class="text-danger">0</div>
     {% else %}
@@ -53,18 +67,16 @@
     {% if sample.taxon.germination %}
     {{ show_germination_list(sample.taxon.germination) }}
     {% else %}
-    <div>No Data</div>
+    <div class="text-secondary">No Data</div>
     {% endif %}
 </div>
-<h5>Notes</h5>
-<div class="mb-3 px-2">{{ sample.notes | markdown }}</div>
-<h5>Allocations</h5>
+<h5>Project Allocations</h5>
 <ul>
     {% for a in allocations %}
     <li><a href="{{ ("/project/" ~ a.project.id ~ "/sample/" ~ a.id) | app_url }}">{{ a.project.name }}</a>
     </li>
     {% else %}
-    <li>None</li>
+    <li class="text-secondary">None</li>
     {% endfor %}
 </ul>
 <h5>Source</h5>
