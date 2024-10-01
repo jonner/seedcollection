@@ -16,7 +16,6 @@ use libseed::{
     Database,
     Error::{AuthUserNotFound, DatabaseError},
 };
-use std::collections::HashSet;
 
 pub async fn handle_command(command: SampleCommands, user: User, db: &Database) -> Result<()> {
     match command {
@@ -332,28 +331,13 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
                 }
                 _ => None,
             };
-            let samples = Sample::load_all(filter, None, db).await?;
-            let nsamples = samples.len();
-            let ntaxa = samples
-                .iter()
-                .fold(HashSet::new(), |mut set, sample| {
-                    set.insert(sample.taxon.id());
-                    set
-                })
-                .len();
-            let nsources = samples
-                .iter()
-                .fold(HashSet::new(), |mut set, sample| {
-                    set.insert(sample.source.id());
-                    set
-                })
-                .len();
+            let stats = Sample::stats(filter, db).await?;
             println!("Collection stats");
             let mut builder = tabled::builder::Builder::new();
             builder.push_record(["Object", "No."]);
-            builder.push_record(["Samples", &nsamples.to_string()]);
-            builder.push_record(["Taxa", &ntaxa.to_string()]);
-            builder.push_record(["Sources", &nsources.to_string()]);
+            builder.push_record(["Samples", &stats.nsamples.to_string()]);
+            builder.push_record(["Taxa", &stats.ntaxa.to_string()]);
+            builder.push_record(["Sources", &stats.nsources.to_string()]);
             println!("{}\n", builder.build().styled());
             Ok(())
         }

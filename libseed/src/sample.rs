@@ -252,6 +252,13 @@ impl ToSql for SortField {
     }
 }
 
+#[derive(FromRow)]
+pub struct SampleStats {
+    pub nsamples: i64,
+    pub ntaxa: i64,
+    pub nsources: i64,
+}
+
 /// An object that represents information about a seed collection sample
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Sample {
@@ -319,9 +326,9 @@ impl Sample {
         builder
     }
 
-    fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn build_stats_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> =
-            QueryBuilder::new("SELECT COUNT(*) as nsamples FROM vsamples");
+            QueryBuilder::new("SELECT COUNT(*) as nsamples, COUNT(DISTINCT tsn) as ntaxa, COUNT(DISTINCT srcid) as nsources FROM vsamples");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
@@ -357,13 +364,23 @@ impl Sample {
 
     /// Queries the count of all matching samples from the database
     pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
-        let mut builder = Self::build_count(filter);
+        let mut builder = Self::build_stats_query(filter);
         builder
             .build()
             .fetch_one(db.pool())
             .await?
             .try_get("nsamples")
             .map_err(|e| e.into())
+    }
+
+    /// Queries the count of all matching samples from the database
+    pub async fn stats(filter: Option<DynFilterPart>, db: &Database) -> Result<SampleStats> {
+        let mut builder = Self::build_stats_query(filter);
+        builder
+            .build_query_as()
+            .fetch_one(db.pool())
+            .await
+            .map_err(Into::into)
     }
 
     /// Add this sample to the database. If this call completes successfully,
