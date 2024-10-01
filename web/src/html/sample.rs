@@ -139,6 +139,8 @@ async fn show_sample(
         .object_mut()?
         .load_germination_info(&state.db)
         .await?;
+    // make sure the source is fully loaded
+    sample.source.load(&state.db, true).await?;
 
     // needed for edit form
     let sources = Source::load_all_user(user.id, None, &state.db).await?;

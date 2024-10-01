@@ -1,6 +1,16 @@
 {% extends "root.html" %}
-{% from "_macros.html" import show_germination_list, show_vernacular_list, icon, breadcrumbs %}
+{% from "_macros.html" import show_germination_list, show_vernacular_list, icon, breadcrumbs, show_map %}
 {% block title %}Sample S{{ sample.id | idfmt }}{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+     <!-- Make sure you put this AFTER Leaflet's CSS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
@@ -19,8 +29,6 @@
     None
     {% endif %}
 </div>
-<h5>Source</h5>
-<div class="mb-3 px-2"><a href="{{ ( "/source/" ~ sample.source.id) | app_url }}">{{ sample.source.name }}</a></div>
 <h5>Collection Date</h5>
 <div class="mb-3 px-2">{% if sample.month %}{{ sample.month }}/{% endif %}{{ sample.year }}</div>
 <h5>Quantity</h5>
@@ -59,4 +67,10 @@
     <li>None</li>
     {% endfor %}
 </ul>
+<h5>Source</h5>
+<div class="mb-3 px-2"><a href="{{ ( "/source/" ~ sample.source.id) | app_url }}">{{ sample.source.name }}</a></div>
+{% if sample.source.latitude and sample.source.longitude %}
+<div id="sample-location-map" style="height: 320px" class="mb-3 px-2"></div>
+{{ show_map(sample.source.latitude, sample.source.longitude, 13, "sample-location-map") }}
+{% endif %}
 {% endblock %}
