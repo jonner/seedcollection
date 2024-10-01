@@ -133,7 +133,12 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut sample = Sample::load(id, &state.db).await?;
+    let mut sample = Sample::load(id, &state.db).await.map_err(|e| match e {
+        libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
+            Error::NotFound(format!("Sample {id} could not be found"))
+        }
+        _ => e.into(),
+    })?;
     sample
         .taxon
         .object_mut()?
