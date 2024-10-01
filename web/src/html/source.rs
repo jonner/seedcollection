@@ -90,12 +90,12 @@ async fn show_source(
         &state.db,
     )
     .await?;
+
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
                  source => src,
-                 map_viewer => src.map_viewer_uri(12.0),
                  samples => samples),
     )
     .into_response())
