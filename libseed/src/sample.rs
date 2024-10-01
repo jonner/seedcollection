@@ -91,7 +91,7 @@ impl FilterPart for Filter {
             Self::Id(cmp, id) => {
                 match cmp {
                     Cmp::NumericPrefix => builder
-                        .push(format!("CAST(sampleid as TEXT)"))
+                        .push("CAST(sampleid as TEXT)".to_string())
                         .push(cmp)
                         .push(" CONCAT(")
                         .push_bind(*id)
