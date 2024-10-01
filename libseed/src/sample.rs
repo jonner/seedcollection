@@ -252,7 +252,7 @@ impl ToSql for SortField {
     }
 }
 
-#[derive(FromRow)]
+#[derive(FromRow, Serialize)]
 pub struct SampleStats {
     pub nsamples: i64,
     pub ntaxa: i64,
