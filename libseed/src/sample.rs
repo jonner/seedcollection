@@ -273,7 +273,7 @@ pub struct Sample {
     /// The quantity of seeds that exist in this sample
     pub quantity: Option<f64>,
     /// The month that the sample was acquired or collected
-    pub month: Option<u32>,
+    pub month: Option<u8>,
     /// The year that the sample was acquired or collected
     pub year: Option<u32>,
     /// Free-form notes describing this seed sample
@@ -437,7 +437,7 @@ impl Sample {
         taxonid: i64,
         userid: i64,
         sourceid: i64,
-        month: Option<u32>,
+        month: Option<u8>,
         year: Option<u32>,
         quantity: Option<f64>,
         notes: Option<String>,
@@ -500,7 +500,7 @@ mod tests {
             user: i64,
             source: i64,
             quantity: Option<f64>,
-            month: Option<u32>,
+            month: Option<u8>,
             year: Option<u32>,
             notes: Option<String>,
             certainty: Certainty,

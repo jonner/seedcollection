@@ -230,7 +230,7 @@ impl AllocationRow {
     }
 }
 
-fn datestring(m: Option<u32>, y: Option<u32>) -> String {
+fn datestring(m: Option<u8>, y: Option<u32>) -> String {
     match (m, y) {
         (Some(m), Some(y)) => format!("{m}/{y}"),
         (None, Some(y)) => y.to_string(),

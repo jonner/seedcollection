@@ -193,7 +193,7 @@ struct SampleParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     source: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none")]
-    month: Option<u32>,
+    month: Option<u8>,
     #[serde(deserialize_with = "empty_string_as_none")]
     year: Option<u32>,
     #[serde(deserialize_with = "empty_string_as_none")]
