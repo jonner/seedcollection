@@ -1,0 +1,28 @@
+{% from "_macros.html" import icon %}
+{% extends "root.html" %}
+{% block title %}Collection Statistics{% endblock %}
+{% block content %}
+<h2><span class="me-2">{{ icon("graph-up") }}</span>{{ self.title() }}</h2>
+<table class="table">
+  <thead class="thead-light">
+    <tr>
+      <th scope="col">Item</th>
+      <th scope="col">Count</th>
+    </tr>
+  </thead>
+  <tbody class="table-group-divider">
+    <tr>
+      <th scope="row">Samples</td>
+      <td>{{ stats.nsamples }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Unique Taxa</td>
+      <td>{{ stats.ntaxa }}</td>
+    </tr>
+    <tr>
+      <th scope="row">Unique Sources</td>
+      <td>{{ stats.nsources }}</td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}
