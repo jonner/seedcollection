@@ -125,8 +125,6 @@ impl Loadable for Source {
     }
 }
 
-const MAP_TILER_KEY: &str = "OfKZsQq0kXBWp83M3Wjx";
-
 impl Source {
     fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut qb = QueryBuilder::new(
@@ -149,15 +147,6 @@ impl Source {
             f.add_to_query(&mut qb);
         }
         qb
-    }
-
-    /// Returns a URL that can be used to display the location of this source on a map
-    /// If the location is not specified, it will return `None`
-    pub fn map_viewer_uri(&self, zoom: f32) -> Option<String> {
-        match (self.latitude, self.longitude) {
-            (Some(latitude), Some(longitude)) => Some(format!("https://api.maptiler.com/maps/topo-v2/?key={MAP_TILER_KEY}#{zoom}/{latitude}/{longitude}")),
-            _ => None,
-        }
     }
 
     /// Loads all matching sources from the database

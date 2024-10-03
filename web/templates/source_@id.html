@@ -1,7 +1,17 @@
 {% extends "root.html" %}
-{% from "_macros.html" import icon, breadcrumbs %}
+{% from "_macros.html" import icon, breadcrumbs, show_map %}
 {% from "_sample_macros.html" import sample_list %}
 {% block title %}{{ source.name or "Source Details" }} Details{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+     <!-- Make sure you put this AFTER Leaflet's CSS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
@@ -10,8 +20,9 @@
 ]) }}
 <h2>{{ self.title() }} <a href="{{ ("/source/" ~ source.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
 <p>{{ source.description | markdown }}</p>
-{%if map_viewer %}
-<iframe class="mb-3" width="500", height="300" src="{{ map_viewer }}"></iframe>
+{%if source.latitude and source.longitude %}
+<div id="source-location-map" style="height: 320px;"></div>
+{{ show_map(source.latitude, source.longitude, 13, "source-location-map") }}
 {% endif %}
 <h3>{{ samples | count }} Samples from this source</h3>
 {{ sample_list(samples, "sample-list") }}
