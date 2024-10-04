@@ -144,9 +144,10 @@
     </div>
     <div class="flex-grow-1 flex-row flex-wrap{% if sample.quantity == 0%} opacity-50{% endif %}">
         <span class="fw-bold">{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}</span>
-        <span class="text-body-tertiary ms-2">{{ icon("geo-alt") }} {{ sample.source.name | truncate(30) }}</span>
-        {% if sample.year %}<span class="text-body-tertiary ms-2">{{ icon("calendar3") }} {{ sample.year }}</span>{% endif %}
-        {% if sample.notes %}<span class="text-body-tertiary fst-italic ms-2">{{ icon("journal-text") }} {{ sample.notes | truncate(30) }}</span>{% endif %}
+        {% if sample.quantity %}<span class="text-body-tertiary ms-3">{{ sample.quantity }}g</span>{% endif %}
+        <span class="text-body-tertiary ms-3">{{ icon("geo-alt") }} {{ sample.source.name | truncate(30) }}</span>
+        {% if sample.year %}<span class="text-body-tertiary ms-3">{{ icon("calendar3") }} {{ sample.year }}</span>{% endif %}
+        {% if sample.notes %}<span class="text-body-tertiary fst-italic ms-3">{{ icon("journal-text") }} {{ sample.notes | truncate(30) }}</span>{% endif %}
     </div>
     {{ caller() if caller }}
 </div>
