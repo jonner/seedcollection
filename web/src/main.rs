@@ -307,6 +307,10 @@ async fn app(shared_state: AppState) -> Result<Router> {
 
     trace!("Creating routers");
     let static_path = shared_state.datadir.join("static");
+    if !static_path.join("js").exists() {
+        return Err(Error::Environment(format!("The `js` directory does not exist in `{static_path:?}`. You may need to install javascript packages (with e.g. `yarn install`) and copy them to the correct location.")).into());
+    }
+
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
