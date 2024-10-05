@@ -12,10 +12,10 @@ bootstrap@^5.3.3:
   resolved "https://registry.yarnpkg.com/bootstrap/-/bootstrap-5.3.3.tgz#de35e1a765c897ac940021900fcbb831602bac38"
   integrity sha512-8HLCdWgyoMguSO9o+aH+iuZ+aht+mzW0u3HIMzVu7Srrpv7EBBxTnrFlSCskwdY1+EOFQSm7uMJhNQHkdPcmjg==
 
-htmx.org@1.9.9:
-  version "1.9.9"
-  resolved "https://registry.yarnpkg.com/htmx.org/-/htmx.org-1.9.9.tgz#e9f94cb3e39ab249430244dc9ae168b47d610920"
-  integrity sha512-PDEZU1me7UGLzQk98LyfLvwFgdtn9mrCVMmAxv1/UjshUnxsc+rouu+Ot2QfFZxsY4mBCoOed5nK7m9Nj2Tu7g==
+htmx.org@^2.0.3:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/htmx.org/-/htmx.org-2.0.3.tgz#83f76a53d3fc562fe839f0f57ee7cd5f75fe7b59"
+  integrity sha512-AeoJUAjkCVVajbfKX+3sVQBTCt8Ct4lif1T+z/tptTXo8+8yyq3QIMQQe/IT+R8ssfrO1I0DeX4CAronzCL6oA==
 
 leaflet@^1.9.4:
   version "1.9.4"
