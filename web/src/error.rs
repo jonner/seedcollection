@@ -20,6 +20,8 @@ pub enum Error {
     NotFound(String),
     #[error("The provided query string was rejected: {0}")]
     UnprocessableEntityQueryRejection(#[source] QueryRejection),
+    #[error("The environment is not set up correctly: {0}")]
+    Environment(String),
 }
 
 impl Error {
@@ -41,6 +43,7 @@ impl Error {
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "The query string was not in the expected format. The request could not be processed.".to_string(),
             ),
+            Error::Environment(_message) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string())
         }
     }
 }
