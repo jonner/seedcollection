@@ -158,6 +158,28 @@ pub fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> 
     format!("{}{:0>width$}", prefix, id, width = width)
 }
 
+pub fn format_quantity(qty: f64) -> String {
+    let mut metric_qty = qty;
+    let mut metric_label = "grams";
+    let imperial_qty = metric_qty * 0.03527396195;
+
+    if metric_qty > 1000.0 {
+        metric_label = "kilograms";
+        metric_qty /= 1000.0;
+    }
+    let metric = format!("{metric_qty:.2} {metric_label}");
+
+    let imperial = if imperial_qty > 16.0 {
+        let lbs = (imperial_qty / 16.0).floor() as i64;
+        let oz = imperial_qty % 16.0;
+        format!("{lbs} lbs {oz:.2} ounces")
+    } else {
+        format!("{imperial_qty:.2} ounces")
+    };
+
+    format!("{metric} ({imperial})")
+}
+
 #[derive(Debug, Clone, Copy)]
 struct Ports {
     http: u16,
@@ -264,6 +286,7 @@ where
     jinja.add_filter("truncate", truncate_text);
     jinja.add_filter("idfmt", format_id_number);
     jinja.add_filter("markdown", markdown);
+    jinja.add_filter("qtyfmt", format_quantity);
     jinja.add_global("environment", envname);
     minijinja_contrib::add_to_environment(&mut jinja);
 

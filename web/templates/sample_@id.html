@@ -52,7 +52,7 @@
     {% elif sample.quantity == 0 %}
     <div class="text-danger">0</div>
     {% else %}
-    {{sample.quantity }} grams
+    {{ sample.quantity | qtyfmt }}
     {% endif %}
 </div>
 <h5>Certainty</h5>
