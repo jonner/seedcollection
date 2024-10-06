@@ -97,6 +97,7 @@
             <input id="SampleQuantityInput"
                    class="form-control"
                    type="number"
+                   step="0.01"
                    name="quantity"
                    value="{% if request %}{{request.quantity }}{% elif sample %}{{ sample.quantity }}{% endif %}"/>
         </div>
