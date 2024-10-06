@@ -37,7 +37,7 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
                 builder = builder.push(fbuilder.build());
             };
             if !all {
-                builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0))
+                builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
             }
             if let Some(rank) = rank {
                 builder = builder.push(sample::Filter::TaxonRank(Cmp::GreatherThanEqual, rank))
@@ -135,7 +135,8 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
                 let source = SourceIdPrompt::new("Source:", userid, db).prompt()?;
                 let month = inquire::CustomType::<u32>::new("Month:").prompt_skippable()?;
                 let year = inquire::CustomType::<u32>::new("Year:").prompt_skippable()?;
-                let quantity = inquire::CustomType::<i64>::new("Quantity:").prompt_skippable()?;
+                let quantity =
+                    inquire::CustomType::<f64>::new("Quantity (grams):").prompt_skippable()?;
                 let notes = inquire::Text::new("Notes:").prompt_skippable()?;
                 let certainty = match inquire::Confirm::new("Uncertain ID?")
                     .with_default(false)
@@ -244,7 +245,7 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
                         .unwrap_or_else(|| "<missing>".into())
                 );
                 if let Some(quantity) =
-                    inquire::CustomType::<i64>::new("Quantity:").prompt_skippable()?
+                    inquire::CustomType::<f64>::new("Quantity (grams):").prompt_skippable()?
                 {
                     sample.quantity = Some(quantity);
                 }
@@ -326,7 +327,7 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
             let filter = match all {
                 false => {
                     let mut builder = CompoundFilter::builder(Op::And);
-                    builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0));
+                    builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0));
                     Some(builder.build())
                 }
                 _ => None,

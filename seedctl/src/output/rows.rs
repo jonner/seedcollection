@@ -47,7 +47,7 @@ pub struct SampleRowFull {
     source: String,
     date: String,
     #[tabled(display_with = "table_display_option")]
-    quantity: Option<i64>,
+    quantity: Option<f64>,
 }
 
 impl TryFrom<Sample> for SampleRowFull {
@@ -147,7 +147,7 @@ pub struct SampleRowDetails {
     #[tabled(rename = "Collection Date")]
     date: String,
     #[tabled(display_with = "table_display_option")]
-    quantity: Option<i64>,
+    quantity: Option<f64>,
     certainty: Certainty,
     #[tabled(
         display_with = "table_display_germination",
@@ -248,7 +248,7 @@ pub struct AllocationRowFull {
     source: String,
     date: String,
     #[tabled(display_with = "table_display_option")]
-    quantity: Option<i64>,
+    quantity: Option<f64>,
     #[tabled(display_with = "table_display_option")]
     notes: Option<String>,
 }
