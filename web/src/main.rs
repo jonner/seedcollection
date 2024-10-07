@@ -41,6 +41,7 @@ mod auth;
 mod error;
 mod html;
 mod state;
+mod util;
 
 const APP_PREFIX: &str = "/app/";
 
@@ -107,14 +108,6 @@ pub struct Cli {
 
 pub fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")
-}
-
-pub fn markdown(value: Option<&str>) -> minijinja::Value {
-    let value = value.unwrap_or("");
-    let parser = pulldown_cmark::Parser::new(value);
-    let mut output = String::new();
-    pulldown_cmark::html::push_html(&mut output, parser);
-    minijinja::Value::from_safe_string(output)
 }
 
 pub fn append_query_param(
@@ -285,7 +278,7 @@ where
     jinja.add_filter("append_query_param", append_query_param);
     jinja.add_filter("truncate", truncate_text);
     jinja.add_filter("idfmt", format_id_number);
-    jinja.add_filter("markdown", markdown);
+    jinja.add_filter("markdown", util::markdown);
     jinja.add_filter("qtyfmt", format_quantity);
     jinja.add_global("environment", envname);
     minijinja_contrib::add_to_environment(&mut jinja);
