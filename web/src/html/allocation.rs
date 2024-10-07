@@ -58,7 +58,13 @@ async fn show_allocation(
         ),
         &state.db,
     )
-    .await?;
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => error::Error::NotFound(format!(
+            "Project allocation '{allocid}' was not found in the database"
+        )),
+        _ => e.into(),
+    })?;
 
     allocation.load_notes(&state.db).await?;
     allocation
@@ -247,7 +253,12 @@ async fn show_edit_note(
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
     // make sure this is a note the user can edit
-    let note = Note::load(noteid, &state.db).await?;
+    let note = Note::load(noteid, &state.db).await.map_err(|e| match e {
+        libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
+            Error::NotFound(format!("Note {noteid} could not be found"))
+        }
+        _ => e.into(),
+    })?;
     let allocation = Allocation::load(note.psid, &state.db).await?;
     if note.psid != allocid || allocation.project.id != projectid {
         return Err(Into::into(anyhow!("Bad request")));

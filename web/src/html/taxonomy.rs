@@ -166,7 +166,12 @@ async fn show_taxon(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut taxon = Taxon::load(id, &state.db).await?;
+    let mut taxon = Taxon::load(id, &state.db).await.map_err(|e| match e {
+        libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
+            error::Error::NotFound(format!("Taxon '{id}' was not found in the database"))
+        }
+        _ => e.into(),
+    })?;
     let hierarchy = taxon.fetch_hierarchy(&state.db).await?;
     let children = taxon.fetch_children(&state.db).await?;
     let samples = Sample::load_all_user(
