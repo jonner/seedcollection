@@ -37,8 +37,8 @@ impl Error {
             ),
             // FIXME: make this more specific
             Error::Libseed(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Library error".to_string()),
-            Error::Unauthorized(_) => (StatusCode::UNAUTHORIZED, "Not authorized".to_string()),
-            Error::NotFound(_) => (StatusCode::NOT_FOUND, "Page not found".to_string()),
+            Error::Unauthorized(message) => (StatusCode::UNAUTHORIZED, message.clone()),
+            Error::NotFound(message) => (StatusCode::NOT_FOUND, message.clone()),
             Error::UnprocessableEntityQueryRejection(_) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "The query string was not in the expected format. The request could not be processed.".to_string(),

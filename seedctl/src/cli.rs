@@ -235,7 +235,7 @@ pub enum SampleCommands {
         #[arg(short, long)]
         source: Option<i64>,
         #[arg(short, long)]
-        month: Option<u32>,
+        month: Option<u8>,
         #[arg(short, long)]
         year: Option<u32>,
         #[arg(short, long)]
@@ -258,7 +258,7 @@ pub enum SampleCommands {
         #[arg(long)]
         source: Option<i64>,
         #[arg(short, long)]
-        month: Option<u16>,
+        month: Option<u8>,
         #[arg(short, long)]
         year: Option<u16>,
         #[arg(short, long)]

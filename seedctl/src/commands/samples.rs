@@ -133,7 +133,7 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
             {
                 let taxon = TaxonIdPrompt::new("Taxon:", db).prompt()?;
                 let source = SourceIdPrompt::new("Source:", userid, db).prompt()?;
-                let month = inquire::CustomType::<u32>::new("Month:").prompt_skippable()?;
+                let month = inquire::CustomType::<u8>::new("Month:").prompt_skippable()?;
                 let year = inquire::CustomType::<u32>::new("Year:").prompt_skippable()?;
                 let quantity =
                     inquire::CustomType::<f64>::new("Quantity (grams):").prompt_skippable()?;
@@ -222,7 +222,7 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
                         .map(|v| v.to_string())
                         .unwrap_or_else(|| "<missing>".into())
                 );
-                if let Some(month) = inquire::CustomType::<u32>::new("Month:").prompt_skippable()? {
+                if let Some(month) = inquire::CustomType::<u8>::new("Month:").prompt_skippable()? {
                     sample.month = Some(month);
                 }
 
@@ -294,7 +294,7 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
                     sample.source = ExternalRef::Stub(source);
                 }
                 if let Some(month) = month {
-                    sample.month = Some(month.into());
+                    sample.month = Some(month);
                 }
                 if let Some(year) = year {
                     sample.year = Some(year.into());
