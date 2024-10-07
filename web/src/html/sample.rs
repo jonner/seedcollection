@@ -192,7 +192,7 @@ struct SampleParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     year: Option<u32>,
     #[serde(deserialize_with = "empty_string_as_none")]
-    quantity: Option<i64>,
+    quantity: Option<f64>,
     #[serde(deserialize_with = "empty_string_as_none")]
     notes: Option<String>,
     uncertain: Option<bool>,
@@ -394,7 +394,7 @@ async fn sample_stats(
         _ => false,
     };
     if !all {
-        builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0));
+        builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0));
     }
     // limit stats to this user
     let filter = builder.push(sample::Filter::UserId(user.id)).build();

@@ -72,7 +72,7 @@ pub enum Filter {
     Notes(Cmp, String),
 
     /// Compares the quantity of the sample with the given value
-    Quantity(Cmp, i64),
+    Quantity(Cmp, f64),
     TaxonRank(Cmp, Rank),
 }
 
@@ -271,7 +271,7 @@ pub struct Sample {
     /// The source of this particular seed sample
     pub source: ExternalRef<Source>,
     /// The quantity of seeds that exist in this sample
-    pub quantity: Option<i64>,
+    pub quantity: Option<f64>,
     /// The month that the sample was acquired or collected
     pub month: Option<u32>,
     /// The year that the sample was acquired or collected
@@ -439,7 +439,7 @@ impl Sample {
         sourceid: i64,
         month: Option<u32>,
         year: Option<u32>,
-        quantity: Option<i64>,
+        quantity: Option<f64>,
         notes: Option<String>,
         certainty: Certainty,
     ) -> Self {
@@ -499,7 +499,7 @@ mod tests {
             taxon: i64,
             user: i64,
             source: i64,
-            quantity: Option<i64>,
+            quantity: Option<f64>,
             month: Option<u32>,
             year: Option<u32>,
             notes: Option<String>,
@@ -539,7 +539,7 @@ mod tests {
             40683,
             1,
             1,
-            Some(100),
+            Some(100.0),
             Some(12),
             Some(2023),
             Some("these are notes".to_string()),

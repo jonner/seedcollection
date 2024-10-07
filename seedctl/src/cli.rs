@@ -239,7 +239,7 @@ pub enum SampleCommands {
         #[arg(short, long)]
         year: Option<u32>,
         #[arg(short, long)]
-        quantity: Option<i64>,
+        quantity: Option<f64>,
         #[arg(short, long)]
         notes: Option<String>,
         #[arg(short = '?', long)]
