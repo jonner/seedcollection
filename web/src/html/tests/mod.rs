@@ -1,4 +1,4 @@
-use crate::{app_url, auth::Credentials, test_app, Result};
+use crate::{auth::Credentials, test_app, util::app_url, Result};
 use axum::{
     body::{Body, Bytes, HttpBody},
     http::{header::CONTENT_TYPE, Request, StatusCode},

@@ -1,9 +1,9 @@
 use super::error_alert_response;
 use crate::{
-    app_url,
     auth::SqliteUser,
     error::{self, Error},
     state::AppState,
+    util::app_url,
     Message, MessageType, TemplateKey,
 };
 use anyhow::anyhow;

@@ -1,9 +1,9 @@
 use super::error_alert_response;
 use crate::{
-    app_url,
     auth::{AuthSession, Credentials},
     error,
     state::AppState,
+    util::app_url,
     TemplateKey,
 };
 use axum::{
