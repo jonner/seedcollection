@@ -23,7 +23,7 @@ FROM runtime-base
 COPY ./config.yaml.docker /etc/seedweb/config.yaml
 COPY ./certs /etc/seedweb/certs
 COPY ./web/static /usr/share/seedweb/static/
-COPY ./node_modules /usr/share/seedweb/static/js
+COPY ./vendor-js/node_modules /usr/share/seedweb/static/js
 COPY ./web/templates /usr/share/seedweb/templates/
 VOLUME /usr/share/seedweb/db
 COPY --from=builder /usr/local/bin/seedweb /usr/local/bin
