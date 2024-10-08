@@ -37,7 +37,7 @@ where
     }
 }
 
-pub fn format_seq<T>(mut items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
+pub fn format_seq<T>(items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
 where
     T: Tabled + Serialize + 'static,
 {
@@ -53,7 +53,7 @@ where
         OutputFormat::Csv => {
             let mut writer = csv::Writer::from_writer(vec![]);
             items
-                .drain(..)
+                .into_iter()
                 .map(|item| writer.serialize(item))
                 .collect::<Result<Vec<_>, _>>()?;
             writer.flush()?;

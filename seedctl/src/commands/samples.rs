@@ -68,21 +68,21 @@ pub async fn handle_command(command: SampleCommands, user: User, db: &Database) 
                         .collect(),
                 )
             });
-            let mut samples = match useronly {
+            let samples = match useronly {
                 true => Sample::load_all_user(user.id, Some(filter), sort, db).await?,
                 false => Sample::load_all(Some(filter), sort, db).await?,
             };
             let str = match output.full {
                 true => {
                     let records = samples
-                        .drain(..)
+                        .into_iter()
                         .map(SampleRowFull::new)
                         .collect::<Result<Vec<_>, _>>()?;
                     output::format_seq(records, output.format)?
                 }
                 false => {
                     let records = samples
-                        .drain(..)
+                        .into_iter()
                         .map(SampleRow::new)
                         .collect::<Result<Vec<_>, _>>()?;
                     output::format_seq(records, output.format)?

@@ -226,10 +226,10 @@ impl<T: ToSql> From<T> for SortSpecs<T> {
 }
 
 impl<T: ToSql> From<Vec<T>> for SortSpecs<T> {
-    fn from(mut value: Vec<T>) -> Self {
+    fn from(value: Vec<T>) -> Self {
         Self(
             value
-                .drain(..)
+                .into_iter()
                 .map(|field| SortSpec::new(field, SortOrder::Ascending))
                 .collect(),
         )
