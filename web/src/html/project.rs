@@ -1,9 +1,9 @@
 use crate::{
-    app_url,
     auth::SqliteUser,
     error::{self, Error},
-    format_id_number,
     state::AppState,
+    util::app_url,
+    util::format_id_number,
     Message, MessageType, TemplateKey,
 };
 use anyhow::anyhow;

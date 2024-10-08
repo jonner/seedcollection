@@ -1,4 +1,4 @@
-use crate::{app_url, auth::SqliteUser, Message, MessageType, TemplateKey};
+use crate::{auth::SqliteUser, util::app_url, Message, MessageType, TemplateKey};
 use anyhow::{anyhow, Context};
 use axum::{
     extract::{Path, Query, State},

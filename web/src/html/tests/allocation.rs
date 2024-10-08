@@ -1,8 +1,6 @@
 use super::*;
-use crate::app_url;
-use crate::test_app;
-use axum::http::StatusCode;
-use axum::http::{header::CONTENT_TYPE, Request};
+use crate::{test_app, util::app_url};
+use axum::http::{header::CONTENT_TYPE, Request, StatusCode};
 use sqlx::{Pool, Sqlite};
 use test_log::test;
 use tower::Service;

@@ -19,7 +19,7 @@ use axum_server::tls_rustls::RustlsConfig;
 use axum_template::{engine::Engine, RenderHtml};
 use clap::Parser;
 use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
-use minijinja::{context, Environment, ErrorKind};
+use minijinja::{context, Environment};
 use serde::{Deserialize, Serialize};
 use state::{AppState, SharedState};
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
@@ -104,73 +104,6 @@ pub struct Cli {
         help = "shows all valid values for the --env option"
     )]
     pub list_envs: bool,
-}
-
-pub fn app_url(value: &str) -> String {
-    [APP_PREFIX, value.trim_start_matches('/')].join("")
-}
-
-pub fn append_query_param(
-    uristr: String,
-    key: String,
-    value: String,
-) -> Result<String, minijinja::Error> {
-    let uri = uristr.parse::<Uri>().map_err(|e| {
-        minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to parse uri string")
-            .with_source(e)
-    })?;
-    let mut query: HashMap<_, _> = match uri.query() {
-        Some(q) => serde_urlencoded::from_str(q).map_err(|e| {
-            minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to decode query params")
-                .with_source(e)
-        })?,
-        None => HashMap::new(),
-    };
-    query.insert(key.as_str(), value.as_str());
-    let querystring = serde_urlencoded::to_string(query).map_err(|e| {
-        minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to encode query params")
-            .with_source(e)
-    })?;
-
-    Ok(format!("?{querystring}"))
-}
-
-pub fn truncate_text(mut s: String, chars: Option<usize>) -> String {
-    let chars = chars.unwrap_or(100);
-    if s.len() > chars {
-        s.truncate(chars);
-        s + "..."
-    } else {
-        s
-    }
-}
-
-pub fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> String {
-    let width = width.unwrap_or(4);
-    let prefix = prefix.unwrap_or("");
-    format!("{}{:0>width$}", prefix, id, width = width)
-}
-
-pub fn format_quantity(qty: f64) -> String {
-    let mut metric_qty = qty;
-    let mut metric_label = "grams";
-    let imperial_qty = metric_qty * 0.03527396195;
-
-    if metric_qty > 1000.0 {
-        metric_label = "kilograms";
-        metric_qty /= 1000.0;
-    }
-    let metric = format!("{metric_qty:.2} {metric_label}");
-
-    let imperial = if imperial_qty > 16.0 {
-        let lbs = (imperial_qty / 16.0).floor() as i64;
-        let oz = imperial_qty % 16.0;
-        format!("{lbs} lbs {oz:.2} ounces")
-    } else {
-        format!("{imperial_qty:.2} ounces")
-    };
-
-    format!("{metric} ({imperial})")
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -274,12 +207,12 @@ where
 {
     let mut jinja = Environment::new();
     jinja.set_loader(minijinja::path_loader(template_dir));
-    jinja.add_filter("app_url", app_url);
-    jinja.add_filter("append_query_param", append_query_param);
-    jinja.add_filter("truncate", truncate_text);
-    jinja.add_filter("idfmt", format_id_number);
+    jinja.add_filter("app_url", util::app_url);
+    jinja.add_filter("append_query_param", util::append_query_param);
+    jinja.add_filter("truncate", util::truncate_text);
+    jinja.add_filter("idfmt", util::format_id_number);
     jinja.add_filter("markdown", util::markdown);
-    jinja.add_filter("qtyfmt", format_quantity);
+    jinja.add_filter("qtyfmt", util::format_quantity);
     jinja.add_global("environment", envname);
     minijinja_contrib::add_to_environment(&mut jinja);
 
