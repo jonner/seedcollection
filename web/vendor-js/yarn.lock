@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+"@googlemaps/js-api-loader@^1.16.6":
+  version "1.16.8"
+  resolved "https://registry.yarnpkg.com/@googlemaps/js-api-loader/-/js-api-loader-1.16.8.tgz#1595a2af80ca07e551fc961d921a2437d1cb3643"
+  integrity sha512-CROqqwfKotdO6EBjZO/gQGVTbeDps5V7Mt9+8+5Q+jTg5CRMi3Ii/L9PmV3USROrt2uWxtGzJHORmByxyo9pSQ==
+
 bootstrap-icons@^1.11.3:
   version "1.11.3"
   resolved "https://registry.yarnpkg.com/bootstrap-icons/-/bootstrap-icons-1.11.3.tgz#03f9cb754ec005c52f9ee616e2e84a82cab3084b"
@@ -24,6 +29,11 @@ leaflet-geosearch@^4.0.0:
   optionalDependencies:
     "@googlemaps/js-api-loader" "^1.16.6"
     leaflet "^1.6.0"
+
+leaflet.locatecontrol@^0.81.1:
+  version "0.81.1"
+  resolved "https://registry.yarnpkg.com/leaflet.locatecontrol/-/leaflet.locatecontrol-0.81.1.tgz#8aec3124ef5cdda3476fd9013315789b4e301a45"
+  integrity sha512-ZtsdScGufPw330X3UIaGGjnfQ1NrhLySnlruWufIMnfzsHgQPz0+mSxsCQMVh7QgOBoefCGb/lioSejiaNx1EQ==
 
 leaflet@^1.6.0, leaflet@^1.9.4:
   version "1.9.4"
