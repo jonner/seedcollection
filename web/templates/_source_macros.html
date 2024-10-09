@@ -47,10 +47,7 @@
 
     {% else %}
 
-    var map = L.map("location-chooser").fitWorld().locate();
-    map.on("locationfound", function(event) {
-        map.fitBounds(event.bounds, { maxZoom: 13 })
-    });
+    var map = L.map("location-chooser").fitWorld();
     var marker = null;
     {% endif %}
 
@@ -95,6 +92,7 @@
         showPopup: false,
     });
     map.addControl(search);
+    L.control.locate().addTo(map);
     map.on('click', function(e) {
         setMarker(e.latlng);
         var loc = e.latlng.wrap()
