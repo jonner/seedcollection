@@ -109,7 +109,7 @@ def find_possibilities(cursor, name1, name2, name3, rank):
             logging.debug("   - {}: {}".format(row['tsn'], row['complete_name']))
         return True
     else:
-        return false
+        return False
 
 
 def get_germ_code_id(cursor, germcode):

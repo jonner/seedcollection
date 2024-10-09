@@ -107,7 +107,7 @@ def find_possibilities(cursor, name1, name2, name3, rank):
             logging.debug("   - {}: {}".format(row['tsn'], row['complete_name']))
         return True
     else:
-        return false
+        return False
 
 
 def get_taxon(cursor, name1, name2, name3, rank):
@@ -153,7 +153,7 @@ def add_taxa(taxa, tsn, status):
     try:
         oldstatus = taxa[tsn]
         newstatus = combine_status(oldstatus, status)
-    except:
+    except Exception:
         pass
     taxa[tsn] = newstatus
 
@@ -168,13 +168,13 @@ def handle_taxa_list(cursor, reader):
         ind3 = row[CSV_FIELDS[4]].strip()
         name3 = row[CSV_FIELDS[5]].strip()
         native_status = row[CSV_FIELDS[6]].strip()
-        rarity_status = row[CSV_FIELDS[7]].strip()
-        invasive_status = row[CSV_FIELDS[8]].strip()
+        # rarity_status = row[CSV_FIELDS[7]].strip()
+        # invasive_status = row[CSV_FIELDS[8]].strip()
 
         # skip hybrids for now
         if ind1 == "X" or ind2 == "X":
             logging.info("skipping hybrid for now")
-            continue;
+            continue
 
         rank = RANK_SPECIES
         if ind3 == "var.":
@@ -195,7 +195,7 @@ def handle_taxa_list(cursor, reader):
                 continue
 
         if not find_possibilities(cursor, name1, name2, name3, rank):
-            logging.warning("unable to find species {} {}".format(genus, sp))
+            logging.warning("unable to find species {} {} {}".format(name1, name2, name3))
     return taxa
 
 
