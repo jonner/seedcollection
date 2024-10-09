@@ -5,8 +5,10 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="/static/js/vendor/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="/static/js/vendor/leaflet-geosearch/dist/geosearch.css"/>
      <!-- Make sure you put this AFTER Leaflet's CSS -->
 <script src="/static/js/vendor/leaflet/dist/leaflet.js"></script>
+<script src="/static/js/vendor/leaflet-geosearch/dist/bundle.min.js"></script>
 {% endblock %}
 {% block content %}
 {{ breadcrumbs([
