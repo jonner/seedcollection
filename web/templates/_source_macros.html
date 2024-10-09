@@ -89,6 +89,12 @@
         maxZoom: 19,
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
+    const search = new GeoSearch.GeoSearchControl({
+        provider: new GeoSearch.OpenStreetMapProvider(),
+        showMarker: false,
+        showPopup: false,
+    });
+    map.addControl(search);
     map.on('click', function(e) {
         setMarker(e.latlng);
         var loc = e.latlng.wrap()
