@@ -38,6 +38,65 @@
                    value="{{ request.longitude or source.longitude or "" }}">
         </div>
     </div>
+    <div id="location-chooser" class="row g-6 mb-3" style="height: 320px"></div>
+    <script>
+    {% if source and (source.latitude and source.longitude) %}
+    var loc = [{{ source.latitude }}, {{ source.longitude }}];
+    var map = L.map("location-chooser").setView(loc, 13);
+    var marker = L.marker(loc).addTo(map);
+
+    {% else %}
+
+    var map = L.map("location-chooser").fitWorld().locate();
+    map.on("locationfound", function(event) {
+        map.fitBounds(event.bounds, { maxZoom: 13 })
+    });
+    var marker = null;
+    {% endif %}
+
+    var latInput = document.getElementById('SourceLatitudeInput');
+    var lngInput = document.getElementById('SourceLongitudeInput');
+
+    function setMarker(latlng) {
+        if (!marker) {
+            marker = L.marker(latlng);
+        }
+        marker.addTo(map);
+        marker.setLatLng(latlng);
+    }
+
+    function removeMarker() {
+        if (marker) {
+            marker.remove();
+        }
+    }
+    function updateMapFromForm() {
+        var lat = parseFloat(latInput.value);
+        var lng = parseFloat(lngInput.value);
+
+        if (isNaN(lat) || isNaN(lng)) {
+            removeMarker();
+        } else {
+            var latlng = [latInput.value, lngInput.value];
+            map.panTo(latlng);
+            setMarker(latlng)
+        }
+    }
+    latInput.addEventListener("change", function(event) { updateMapFromForm() });
+    lngInput.addEventListener("change", function(event) { updateMapFromForm() });
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+    map.on('click', function(e) {
+        setMarker(e.latlng);
+        var loc = e.latlng.wrap()
+        const digits = 100000;
+        latInput.value = Math.round(loc.lat * digits) / digits;
+        lngInput.value = Math.round(loc.lng * digits) / digits;
+    })
+    </script>
     <div class="row g-6 mb-3">
         <div class="col-12">
             <label class="form-label" for="SourceDescInput">Description</label>

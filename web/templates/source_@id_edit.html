@@ -2,6 +2,12 @@
 {% from "_macros.html" import breadcrumbs %}
 {% from "_source_macros.html" import source_form %}
 {% block title %}{{ source.name }} Details{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="/static/js/vendor/leaflet/dist/leaflet.css"/>
+     <!-- Make sure you put this AFTER Leaflet's CSS -->
+<script src="/static/js/vendor/leaflet/dist/leaflet.js"></script>
+{% endblock %}
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
