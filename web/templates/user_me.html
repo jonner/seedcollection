@@ -76,6 +76,26 @@
               </tbody>
             </table>
         </div>
+        <div class="mb-4">
+        <h3>Map of Seed Sources</h3>
+        <div id="locations-map" style="height: 400px"></div>
+        <script>
+        var points = [];
+        var map = L.map("locations-map");
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+        {% for source in sources %}
+        points.push(L.latLng({{ source.latitude }}, {{ source.longitude }}));
+        L.marker(L.latLng({{ source.latitude }}, {{ source.longitude }}), {title: "{{ source.name }}"}).addTo(map);
+        {% endfor %}
+        console.log(points);
+        var bounds = L.latLngBounds(points);
+        console.log(bounds);
+        map.fitBounds(bounds);
+        </script>
+        </div>
     </div>
 </div>
 {% endblock %}

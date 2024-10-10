@@ -51,10 +51,15 @@ async fn show_profile(
         nprojects: Project::count(Some(project::Filter::User(user.id).into()), &state.db).await?,
         nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &state.db).await?,
     };
+    let sources: Vec<Source> = Source::load_all_user(user.id, None, &state.db)
+        .await?
+        .into_iter()
+        .filter(|src| src.latitude.is_some() && src.longitude.is_some())
+        .collect();
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
-        context!(user => user, userstats => stats),
+        context!(user => user, userstats => stats, sources => sources),
     ))
 }
 
