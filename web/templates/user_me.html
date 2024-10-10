@@ -41,21 +41,40 @@
         </div>
     </div>
     <div class="col">
-        <div class="mb-2">
-            <h4>About me</h4>
+        <div class="mb-4">
+            <h3>About me</h3>
             <div class="ms-2">
                 {{ (user.profile | markdown) or "No profile information provided" }}
             </div>
         </div>
-        <div class="mb-2">
-            <h4>Statistics</h4>
-            <div class="ms-2">
-                <ul>
-                    <li>Samples: {{ userstats.nsamples or 0 }}</li>
-                    <li>Sources: {{ userstats.nsources or 0 }}</li>
-                    <li>Projects: {{ userstats.nprojects or 0 }}</li>
-                </ul>
-            </div>
+        <div class="mb-4">
+            <h3>Collection Statistics</h3>
+            <table class="table">
+              <thead class="thead-light">
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Count</th>
+                </tr>
+              </thead>
+              <tbody class="table-group-divider">
+                <tr>
+                  <th scope="row">Samples</td>
+                  <td>{{ userstats.samples.nsamples }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Unique Taxa</td>
+                  <td>{{ userstats.samples.ntaxa }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Sources</td>
+                  <td>{{ userstats.nsources }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Projects</td>
+                  <td>{{ userstats.nprojects }}</td>
+                </tr>
+              </tbody>
+            </table>
         </div>
     </div>
 </div>

@@ -32,7 +32,6 @@ use tracing::debug;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/list", get(list_samples))
-        .route("/stats", get(sample_stats))
         .route("/new", get(new_sample).post(insert_sample))
         .route(
             "/:id",
@@ -380,36 +379,4 @@ async fn delete_sample(
         )
             .into_response()),
     }
-}
-
-#[derive(Deserialize)]
-struct SampleStatsParams {
-    all: bool,
-}
-
-async fn sample_stats(
-    user: SqliteUser,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-    params: Option<Query<SampleStatsParams>>,
-) -> Result<impl IntoResponse, error::Error> {
-    let mut builder = CompoundFilter::builder(Op::And);
-    let all = match params {
-        Some(Query(params)) => params.all,
-        _ => false,
-    };
-    if !all {
-        builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0));
-    }
-    // limit stats to this user
-    let filter = builder.push(sample::Filter::UserId(user.id)).build();
-    let stats = Sample::stats(Some(filter), &state.db).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => user,
-            stats => stats,
-        ),
-    )
-    .into_response())
 }
