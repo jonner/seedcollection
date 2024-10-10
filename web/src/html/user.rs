@@ -19,7 +19,7 @@ use lettre::{
 };
 use libseed::{
     project::{self, Project},
-    sample::{self, Sample},
+    sample::{self, Sample, SampleStats},
     source::{self, Source},
     user::UserStatus,
 };
@@ -36,7 +36,7 @@ pub fn router() -> Router<AppState> {
 
 #[derive(Serialize)]
 struct UserStats {
-    nsamples: i64,
+    samples: SampleStats,
     nsources: i64,
     nprojects: i64,
 }
@@ -47,7 +47,7 @@ async fn show_profile(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let stats = UserStats {
-        nsamples: Sample::count(Some(sample::Filter::UserId(user.id).into()), &state.db).await?,
+        samples: Sample::stats(Some(sample::Filter::UserId(user.id).into()), &state.db).await?,
         nprojects: Project::count(Some(project::Filter::User(user.id).into()), &state.db).await?,
         nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &state.db).await?,
     };
