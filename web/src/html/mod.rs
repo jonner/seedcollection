@@ -22,7 +22,7 @@ mod taxonomy;
 mod tests;
 mod user;
 
-pub fn error_alert_response(
+pub(crate) fn error_alert_response(
     state: &AppState,
     status: StatusCode,
     message: String,
@@ -64,7 +64,7 @@ async fn login_required(
     }
 }
 
-pub fn router(state: AppState) -> Router<AppState> {
+pub(crate) fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .nest("/info/", info::router())
         .nest("/project/", project::router())

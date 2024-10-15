@@ -10,14 +10,14 @@ use tracing::debug;
 use {std::os::unix::fs::PermissionsExt, tokio::fs::set_permissions};
 
 #[derive(Deserialize, Serialize)]
-pub struct Config {
-    pub username: String,
-    pub password: String,
-    pub database: PathBuf,
+pub(crate) struct Config {
+    pub(crate) username: String,
+    pub(crate) password: String,
+    pub(crate) database: PathBuf,
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub(crate) enum Error {
     #[error("Not Logged in")]
     NotLoggedIn,
     #[error("Failed to parse config file")]
@@ -43,14 +43,14 @@ impl Config {
         serde_json::to_string_pretty(self).map_err(Error::CannotFormatConfig)
     }
 
-    pub async fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+    pub(crate) async fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let p = path.as_ref();
         debug!(?p, "Trying to load login config");
         let contents = read_to_string(path).await.map_err(|_| Error::NotLoggedIn)?;
         Self::parse(contents).map_err(Error::ConfigParseFailed)
     }
 
-    pub async fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+    pub(crate) async fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
         let path = path.as_ref();
         debug!(?path, "Saving login config");
         let mut file = File::create(path)
@@ -74,7 +74,7 @@ impl Config {
             .map_err(|e| Error::FilePermissions(path.to_owned(), "Writing file", e))
     }
 
-    pub fn new(username: String, password: String, database: PathBuf) -> Self {
+    pub(crate) fn new(username: String, password: String, database: PathBuf) -> Self {
         Config {
             username,
             password,
@@ -82,7 +82,7 @@ impl Config {
         }
     }
 
-    pub async fn validate(&self) -> Result<(Database, User), Error> {
+    pub(crate) async fn validate(&self) -> Result<(Database, User), Error> {
         let db = libseed::Database::open(&self.database).await?;
         let user = User::load_by_username(&self.username, &db)
             .await

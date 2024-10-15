@@ -17,7 +17,11 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
 };
 
-pub async fn handle_command(command: SampleCommands, user: User, db: &Database) -> Result<()> {
+pub(crate) async fn handle_command(
+    command: SampleCommands,
+    user: User,
+    db: &Database,
+) -> Result<()> {
     match command {
         SampleCommands::List {
             user: useronly,

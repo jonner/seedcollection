@@ -7,7 +7,7 @@ use axum::{
 };
 use tracing::warn;
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub(crate) enum Error {
     #[error(transparent)]
     Database(#[from] sqlx::Error),
     #[error(transparent)]
@@ -25,7 +25,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn to_client_status(&self) -> (StatusCode, String) {
+    pub(crate) fn to_client_status(&self) -> (StatusCode, String) {
         match self {
             Error::Database(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,

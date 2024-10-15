@@ -5,21 +5,21 @@ use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
-pub struct Cli {
+pub(crate) struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    pub(crate) command: Commands,
 }
 
 #[derive(Args, Debug)]
-pub struct OutputOptions {
+pub(crate) struct OutputOptions {
     #[arg(value_enum, long, default_value_t = OutputFormat::Table, help="generate output in the given format")]
-    pub format: OutputFormat,
+    pub(crate) format: OutputFormat,
     #[arg(short, long, help = "Output additional details")]
-    pub full: bool,
+    pub(crate) full: bool,
 }
 
 #[derive(Subcommand, Debug)]
-pub enum Commands {
+pub(crate) enum Commands {
     #[command(about = "Login to the database")]
     Login {
         #[arg(short, long)]
@@ -74,7 +74,7 @@ pub enum Commands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum ProjectCommands {
+pub(crate) enum ProjectCommands {
     #[command(about = "List all projects")]
     List {
         #[command(flatten)]
@@ -130,7 +130,7 @@ pub enum ProjectCommands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum SourceCommands {
+pub(crate) enum SourceCommands {
     #[command(about = "List sources")]
     List {
         #[arg(long, help = "Filter the list of sources by the given string")]
@@ -184,7 +184,7 @@ pub enum SourceCommands {
 }
 
 #[derive(ValueEnum, Clone, Debug)]
-pub enum SampleSortField {
+pub(crate) enum SampleSortField {
     Id,
     Taxon,
     Name,
@@ -193,7 +193,7 @@ pub enum SampleSortField {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum SampleCommands {
+pub(crate) enum SampleCommands {
     #[command(about = "List samples")]
     List {
         #[arg(short, long, help = "Only show samples for the current user")]
@@ -277,7 +277,7 @@ pub enum SampleCommands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum TaxonomyCommands {
+pub(crate) enum TaxonomyCommands {
     #[command(about = "Find a taxon in the database")]
     Find {
         #[arg(long, help = "Only show taxa with the given rank (e.g. 'family')")]
@@ -300,7 +300,7 @@ pub enum TaxonomyCommands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum AdminCommands {
+pub(crate) enum AdminCommands {
     #[command(
         about = "Manage users",
         after_help = "The database can track the collections of multiple users. This command can be used to manage the users defined for this database."
@@ -321,7 +321,7 @@ pub enum AdminCommands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum UserCommands {
+pub(crate) enum UserCommands {
     #[command(about = "List all users")]
     List {
         #[command(flatten)]
@@ -371,7 +371,7 @@ pub enum UserCommands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum GerminationCommands {
+pub(crate) enum GerminationCommands {
     #[command(about = "List all germination codes")]
     List {
         #[command(flatten)]

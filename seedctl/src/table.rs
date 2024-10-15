@@ -1,6 +1,6 @@
 use tabled::Table;
 
-pub trait SeedctlTable {
+pub(crate) trait SeedctlTable {
     fn styled(&mut self) -> &mut Self;
 }
 

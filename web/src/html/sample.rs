@@ -29,7 +29,7 @@ use sqlx::sqlite::SqliteQueryResult;
 use std::sync::Arc;
 use tracing::debug;
 
-pub fn router() -> Router<AppState> {
+pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/list", get(list_samples))
         .route("/new", get(new_sample).post(insert_sample))

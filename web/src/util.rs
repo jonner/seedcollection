@@ -6,11 +6,11 @@ use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
 
 use crate::APP_PREFIX;
 
-pub fn app_url(value: &str) -> String {
+pub(crate) fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")
 }
 
-pub fn append_query_param(
+pub(crate) fn append_query_param(
     uristr: String,
     key: String,
     value: String,
@@ -35,7 +35,7 @@ pub fn append_query_param(
     Ok(format!("?{querystring}"))
 }
 
-pub fn truncate_text(mut s: String, chars: Option<usize>) -> String {
+pub(crate) fn truncate_text(mut s: String, chars: Option<usize>) -> String {
     let chars = chars.unwrap_or(100);
     if s.len() > chars {
         s.truncate(chars);
@@ -45,13 +45,13 @@ pub fn truncate_text(mut s: String, chars: Option<usize>) -> String {
     }
 }
 
-pub fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> String {
+pub(crate) fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> String {
     let width = width.unwrap_or(4);
     let prefix = prefix.unwrap_or("");
     format!("{}{:0>width$}", prefix, id, width = width)
 }
 
-pub fn format_quantity(qty: f64) -> String {
+pub(crate) fn format_quantity(qty: f64) -> String {
     let mut metric_qty = qty;
     let mut metric_label = "grams";
     let imperial_qty = metric_qty * 0.03527396195;
@@ -106,7 +106,7 @@ impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver {
     }
 }
 
-pub fn markdown(value: Option<&str>) -> minijinja::Value {
+pub(crate) fn markdown(value: Option<&str>) -> minijinja::Value {
     let value = value.unwrap_or("");
     let parser = pulldown_cmark::Parser::new_with_broken_link_callback(
         value,

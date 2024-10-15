@@ -23,7 +23,7 @@ use std::sync::Arc;
 
 use crate::{error, state::AppState};
 
-pub fn router() -> Router<AppState> {
+pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(add_source).post(new_source))
         .route("/new/modal", get(add_source))

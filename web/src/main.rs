@@ -46,14 +46,14 @@ mod util;
 const APP_PREFIX: &str = "/app/";
 
 #[derive(Serialize)]
-pub enum MessageType {
+pub(crate) enum MessageType {
     Success,
     Warning,
     Error,
 }
 
 #[derive(Serialize)]
-pub struct Message {
+pub(crate) struct Message {
     r#type: MessageType,
     msg: String,
 }
@@ -61,7 +61,7 @@ pub struct Message {
 // Because minijinja loads an entire folder, we need to remove the `/` prefix
 // and add a `.html` suffix. We can implement our own custom key extractor that
 // transform the key
-pub struct TemplateKey(pub String);
+pub(crate) struct TemplateKey(pub(crate) String);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for TemplateKey
@@ -93,17 +93,17 @@ where
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
-pub struct Cli {
+pub(crate) struct Cli {
     #[arg(long)]
-    pub configdir: Option<PathBuf>,
+    pub(crate) configdir: Option<PathBuf>,
     #[arg(long, required_unless_present("list_envs"))]
-    pub env: Option<String>,
+    pub(crate) env: Option<String>,
     #[arg(
         long,
         exclusive(true),
         help = "shows all valid values for the --env option"
     )]
-    pub list_envs: bool,
+    pub(crate) list_envs: bool,
 }
 
 #[derive(Debug, Clone, Copy)]

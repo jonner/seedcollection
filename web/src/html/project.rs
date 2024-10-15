@@ -34,7 +34,7 @@ use tracing::{debug, trace, warn};
 
 use super::{error_alert_response, SortOption};
 
-pub fn router() -> Router<AppState> {
+pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(show_new_project).post(insert_project))
         .route("/list", get(list_projects))

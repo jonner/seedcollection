@@ -19,7 +19,7 @@ use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::debug;
 
-pub fn router() -> Router<AppState> {
+pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(root))
         .route("/list", get(list_taxa))

@@ -9,15 +9,15 @@ use tracing::{debug, trace};
 type TemplateEngine = Engine<minijinja::Environment<'static>>;
 
 #[derive(Debug)]
-pub struct SharedState {
-    pub db: Database,
-    pub tmpl: TemplateEngine,
-    pub config: EnvConfig,
-    pub datadir: PathBuf,
+pub(crate) struct SharedState {
+    pub(crate) db: Database,
+    pub(crate) tmpl: TemplateEngine,
+    pub(crate) config: EnvConfig,
+    pub(crate) datadir: PathBuf,
 }
 
 impl SharedState {
-    pub async fn new(envname: &str, env: EnvConfig, datadir: PathBuf) -> Result<Self> {
+    pub(crate) async fn new(envname: &str, env: EnvConfig, datadir: PathBuf) -> Result<Self> {
         let tmpl_path = datadir.join("templates");
         let template = template_engine(envname, &tmpl_path);
         trace!("Creating shared app state");
@@ -48,7 +48,7 @@ impl SharedState {
     }
 
     #[cfg(test)]
-    pub fn test(pool: sqlx::Pool<sqlx::Sqlite>) -> Self {
+    pub(crate) fn test(pool: sqlx::Pool<sqlx::Sqlite>) -> Self {
         let template = template_engine("test", "./templates");
         debug!("Creating test shared app state");
         Self {
@@ -68,4 +68,4 @@ impl SharedState {
     }
 }
 
-pub type AppState = Arc<SharedState>;
+pub(crate) type AppState = Arc<SharedState>;

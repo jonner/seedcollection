@@ -35,7 +35,11 @@ async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow:
     Ok(password.trim().to_string())
 }
 
-pub async fn handle_command(command: AdminCommands, _user: User, db: &Database) -> Result<()> {
+pub(crate) async fn handle_command(
+    command: AdminCommands,
+    _user: User,
+    db: &Database,
+) -> Result<()> {
     match command {
         AdminCommands::Users { command } => match command {
             UserCommands::List { output } => {

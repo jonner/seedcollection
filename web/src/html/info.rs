@@ -5,7 +5,7 @@ use minijinja::context;
 
 use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
 
-pub fn router() -> Router<AppState> {
+pub(crate) fn router() -> Router<AppState> {
     Router::new().route("/germination", get(germination))
 }
 

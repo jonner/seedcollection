@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Serialize)]
-pub struct SqliteUser(User);
+pub(crate) struct SqliteUser(User);
 
 impl Deref for SqliteUser {
     type Target = User;
@@ -40,15 +40,15 @@ impl AuthUser for SqliteUser {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-pub struct Credentials {
-    pub username: String,
-    pub password: String,
+pub(crate) struct Credentials {
+    pub(crate) username: String,
+    pub(crate) password: String,
     #[serde(deserialize_with = "empty_string_as_none")]
-    pub next: Option<String>,
+    pub(crate) next: Option<String>,
 }
 
 #[derive(Clone)]
-pub struct SqliteAuthBackend {
+pub(crate) struct SqliteAuthBackend {
     db: Database,
 }
 
@@ -83,7 +83,7 @@ impl AuthnBackend for SqliteAuthBackend {
 }
 
 impl SqliteAuthBackend {
-    pub async fn register(
+    pub(crate) async fn register(
         &self,
         username: String,
         email: String,
@@ -103,12 +103,12 @@ impl SqliteAuthBackend {
         Ok(())
     }
 
-    pub fn new(db: Database) -> Self {
+    pub(crate) fn new(db: Database) -> Self {
         Self { db }
     }
 }
 
-pub type AuthSession = axum_login::AuthSession<SqliteAuthBackend>;
+pub(crate) type AuthSession = axum_login::AuthSession<SqliteAuthBackend>;
 
 #[async_trait]
 impl<S> FromRequestParts<S> for SqliteUser

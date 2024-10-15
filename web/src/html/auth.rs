@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use time::{macros::format_description, Duration, OffsetDateTime, PrimitiveDateTime};
 use tracing::{debug, error};
 
-pub fn router() -> Router<AppState> {
+pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(show_login).post(do_login))
         .route("/logout", post(logout))
@@ -32,10 +32,10 @@ pub fn router() -> Router<AppState> {
 }
 
 #[derive(Clone, Deserialize)]
-pub struct RegisterParams {
-    pub username: String,
-    pub email: String,
-    pub password: String,
+pub(crate) struct RegisterParams {
+    pub(crate) username: String,
+    pub(crate) email: String,
+    pub(crate) password: String,
 }
 
 #[allow(dead_code)]
@@ -57,7 +57,7 @@ async fn show_register(
 }
 
 #[derive(Debug, Deserialize)]
-pub struct NextUrl {
+pub(crate) struct NextUrl {
     next: Option<String>,
 }
 

@@ -16,7 +16,11 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
 };
 
-pub async fn handle_command(command: SourceCommands, user: User, db: &Database) -> Result<()> {
+pub(crate) async fn handle_command(
+    command: SourceCommands,
+    user: User,
+    db: &Database,
+) -> Result<()> {
     match command {
         SourceCommands::List {
             filter,

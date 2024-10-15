@@ -6,10 +6,10 @@ use thiserror::Error;
 
 use crate::table::SeedctlTable;
 
-pub mod rows;
+pub(crate) mod rows;
 
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
-pub enum OutputFormat {
+pub(crate) enum OutputFormat {
     Table,
     Csv,
     Json,
@@ -17,12 +17,12 @@ pub enum OutputFormat {
 }
 
 #[derive(Error, Debug)]
-pub enum Error {
+pub(crate) enum Error {
     #[error("Unable to create row")]
     UnableToCreateRow(#[from] libseed::Error),
 }
 
-pub fn format_one<T>(item: T, fmt: OutputFormat) -> anyhow::Result<String>
+pub(crate) fn format_one<T>(item: T, fmt: OutputFormat) -> anyhow::Result<String>
 where
     T: Tabled + Serialize + 'static,
 {
@@ -37,7 +37,7 @@ where
     }
 }
 
-pub fn format_seq<T>(items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
+pub(crate) fn format_seq<T>(items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
 where
     T: Tabled + Serialize + 'static,
 {

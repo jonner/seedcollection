@@ -9,7 +9,7 @@ use libseed::{
 };
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub(crate) enum Error {
     #[error("Internal Error: completion format was incorrect for '{0}'")]
     CompletionIdFormatMissingDot(String),
     #[error("Internal Error: unable to parse an integer from '{0}'")]
@@ -18,18 +18,18 @@ pub enum Error {
     Prompt(#[from] inquire::InquireError),
 }
 
-pub struct TaxonIdPrompt<'a> {
+pub(crate) struct TaxonIdPrompt<'a> {
     text: inquire::Text<'a>,
 }
 
 impl<'a> TaxonIdPrompt<'a> {
-    pub fn new(message: &'a str, db: &Database) -> Self {
+    pub(crate) fn new(message: &'a str, db: &Database) -> Self {
         Self {
             text: inquire::Text::new(message).with_autocomplete(TaxonCompleter { db: db.clone() }),
         }
     }
 
-    pub fn prompt(self) -> Result<i64, Error> {
+    pub(crate) fn prompt(self) -> Result<i64, Error> {
         let res = self.text.prompt()?;
         // HACK -- the completer generates a string with the following format:
         // $DBID. Genus Species
@@ -38,7 +38,7 @@ impl<'a> TaxonIdPrompt<'a> {
         extract_dbid(&res)
     }
 
-    pub fn prompt_skippable(self) -> Option<i64> {
+    pub(crate) fn prompt_skippable(self) -> Option<i64> {
         let res = self.text.prompt_skippable().ok()?;
         // HACK -- the completer generates a string with the following format:
         // $DBID. Genus Species
@@ -88,12 +88,12 @@ impl Autocomplete for TaxonCompleter {
     }
 }
 
-pub struct SourceIdPrompt<'a> {
+pub(crate) struct SourceIdPrompt<'a> {
     text: inquire::Text<'a>,
 }
 
 impl<'a> SourceIdPrompt<'a> {
-    pub fn new(message: &'a str, userid: i64, db: &Database) -> Self {
+    pub(crate) fn new(message: &'a str, userid: i64, db: &Database) -> Self {
         Self {
             text: inquire::Text::new(message).with_autocomplete(SourceCompleter {
                 db: db.clone(),
@@ -102,7 +102,7 @@ impl<'a> SourceIdPrompt<'a> {
         }
     }
 
-    pub fn prompt(self) -> Result<i64, Error> {
+    pub(crate) fn prompt(self) -> Result<i64, Error> {
         let res = self.text.prompt()?;
         // HACK -- the completer generates a string with the following format:
         // $DBID. Source name
@@ -111,7 +111,7 @@ impl<'a> SourceIdPrompt<'a> {
         extract_dbid(&res)
     }
 
-    pub fn prompt_skippable(self) -> Option<i64> {
+    pub(crate) fn prompt_skippable(self) -> Option<i64> {
         let res = self.text.prompt_skippable().ok()?;
         // HACK -- the completer generates a string with the following format:
         // $DBID. Source name

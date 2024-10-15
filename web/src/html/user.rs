@@ -27,7 +27,7 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-pub fn router() -> Router<AppState> {
+pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/me", get(show_profile).put(update_profile))
         .route("/me/edit", get(show_edit_profile))

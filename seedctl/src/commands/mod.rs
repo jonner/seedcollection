@@ -1,4 +1,4 @@
-pub mod admin;
-pub mod projects;
-pub mod samples;
-pub mod sources;
+pub(crate) mod admin;
+pub(crate) mod projects;
+pub(crate) mod samples;
+pub(crate) mod sources;

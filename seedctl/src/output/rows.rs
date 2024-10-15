@@ -15,14 +15,14 @@ use tabled::Tabled;
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct SampleRow {
+pub(crate) struct SampleRow {
     id: i64,
     taxon: String,
     source: String,
 }
 
 impl SampleRow {
-    pub fn new(sample: Sample) -> Result<Self, libseed::Error> {
+    pub(crate) fn new(sample: Sample) -> Result<Self, libseed::Error> {
         Ok(Self {
             id: sample.id,
             taxon: sample.taxon.object()?.complete_name.clone(),
@@ -41,7 +41,7 @@ impl TryFrom<Sample> for SampleRow {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct SampleRowFull {
+pub(crate) struct SampleRowFull {
     id: i64,
     taxon: String,
     source: String,
@@ -66,7 +66,7 @@ fn table_display_option<T: ToString>(o: &Option<T>) -> String {
 }
 
 impl SampleRowFull {
-    pub fn new(sample: Sample) -> Result<Self, libseed::Error> {
+    pub(crate) fn new(sample: Sample) -> Result<Self, libseed::Error> {
         Ok(Self {
             id: sample.id,
             taxon: sample.taxon_display_name()?,
@@ -138,7 +138,7 @@ where
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct SampleRowDetails {
+pub(crate) struct SampleRowDetails {
     id: i64,
     taxon: String,
     #[tabled(display_with = "format_string_vec", rename = "Common Names")]
@@ -163,7 +163,7 @@ pub struct SampleRowDetails {
 }
 
 impl SampleRowDetails {
-    pub async fn new(sample: &mut Sample, db: &Database) -> Result<Self> {
+    pub(crate) async fn new(sample: &mut Sample, db: &Database) -> Result<Self> {
         let taxon = sample.taxon.load_mut(db).await?;
         taxon.load_germination_info(db).await?;
         let src = sample.source.object()?;
@@ -191,7 +191,7 @@ impl SampleRowDetails {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct ProjectRow {
+pub(crate) struct ProjectRow {
     id: i64,
     name: String,
     #[tabled(display_with = "table_display_option")]
@@ -199,7 +199,7 @@ pub struct ProjectRow {
 }
 
 impl ProjectRow {
-    pub fn new(project: &Project) -> Self {
+    pub(crate) fn new(project: &Project) -> Self {
         ProjectRow {
             id: project.id,
             name: project.name.clone(),
@@ -210,7 +210,7 @@ impl ProjectRow {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct AllocationRow {
+pub(crate) struct AllocationRow {
     id: i64,
     #[tabled(rename = "Sample ID")]
     sample_id: i64,
@@ -219,7 +219,7 @@ pub struct AllocationRow {
 }
 
 impl AllocationRow {
-    pub fn new(allocation: &Allocation) -> Result<Self> {
+    pub(crate) fn new(allocation: &Allocation) -> Result<Self> {
         let sample = &allocation.sample;
         Ok(Self {
             id: allocation.id,
@@ -240,7 +240,7 @@ fn datestring(m: Option<u8>, y: Option<u32>) -> String {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct AllocationRowFull {
+pub(crate) struct AllocationRowFull {
     id: i64,
     #[tabled(rename = "Sample ID")]
     sample_id: i64,
@@ -254,7 +254,7 @@ pub struct AllocationRowFull {
 }
 
 impl AllocationRowFull {
-    pub fn new(allocation: &Allocation) -> Result<Self> {
+    pub(crate) fn new(allocation: &Allocation) -> Result<Self> {
         let sample = &allocation.sample;
         Ok(Self {
             id: allocation.id,
@@ -270,7 +270,7 @@ impl AllocationRowFull {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct SourceRowFull {
+pub(crate) struct SourceRowFull {
     id: i64,
     name: String,
     #[tabled(display_with = "table_display_option")]
@@ -282,7 +282,7 @@ pub struct SourceRowFull {
 }
 
 impl SourceRowFull {
-    pub fn new(source: &Source) -> Self {
+    pub(crate) fn new(source: &Source) -> Self {
         Self {
             id: source.id,
             name: source.name.clone(),
@@ -295,13 +295,13 @@ impl SourceRowFull {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct SourceRow {
+pub(crate) struct SourceRow {
     id: i64,
     name: String,
 }
 
 impl SourceRow {
-    pub fn new(source: &Source) -> Self {
+    pub(crate) fn new(source: &Source) -> Self {
         Self {
             id: source.id,
             name: source.name.clone(),
@@ -315,7 +315,7 @@ fn format_string_vec(names: &[String]) -> String {
 
 #[derive(Tabled)]
 #[tabled(rename_all = "PascalCase")]
-pub struct TaxonRow {
+pub(crate) struct TaxonRow {
     id: i64,
     rank: Rank,
     name: String,
@@ -326,7 +326,7 @@ pub struct TaxonRow {
 }
 
 impl TaxonRow {
-    pub fn new(taxon: &Taxon) -> Self {
+    pub(crate) fn new(taxon: &Taxon) -> Self {
         Self {
             id: taxon.id,
             rank: taxon.rank.clone(),
@@ -339,7 +339,7 @@ impl TaxonRow {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct TaxonRowDetails {
+pub(crate) struct TaxonRowDetails {
     id: i64,
     name: String,
     #[tabled(display_with = "format_string_vec", rename = "Common Names")]
@@ -382,7 +382,7 @@ fn table_display_samples(samples: &[TaxonSample]) -> String {
 }
 
 impl TaxonRowDetails {
-    pub async fn new(taxon: &mut Taxon, db: &Database) -> Result<Self> {
+    pub(crate) async fn new(taxon: &mut Taxon, db: &Database) -> Result<Self> {
         taxon.load_germination_info(db).await?;
         let mut samples = Sample::load_all(
             Some(sample::Filter::TaxonId(Cmp::Equal, taxon.id).into()),
@@ -417,14 +417,14 @@ impl TaxonRowDetails {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct UserRow {
+pub(crate) struct UserRow {
     id: i64,
     username: String,
     email: String,
 }
 
 impl UserRow {
-    pub fn new(user: &User) -> Self {
+    pub(crate) fn new(user: &User) -> Self {
         Self {
             id: user.id,
             username: user.username.clone(),
@@ -435,7 +435,7 @@ impl UserRow {
 
 #[derive(Tabled, Serialize)]
 #[tabled(rename_all = "PascalCase")]
-pub struct GerminationRow {
+pub(crate) struct GerminationRow {
     id: i64,
     code: String,
     #[tabled(display_with = "table_display_option")]
@@ -445,7 +445,7 @@ pub struct GerminationRow {
 }
 
 impl GerminationRow {
-    pub fn new(g: &Germination) -> Self {
+    pub(crate) fn new(g: &Germination) -> Self {
         Self {
             id: g.id,
             code: g.code.clone(),

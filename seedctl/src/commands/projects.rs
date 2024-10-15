@@ -14,7 +14,11 @@ use libseed::{
     Database,
 };
 
-pub async fn handle_command(command: ProjectCommands, user: User, db: &Database) -> Result<()> {
+pub(crate) async fn handle_command(
+    command: ProjectCommands,
+    user: User,
+    db: &Database,
+) -> Result<()> {
     match command {
         ProjectCommands::List { output } => {
             let projects = Project::load_all(None, db).await?;

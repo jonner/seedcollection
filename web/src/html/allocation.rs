@@ -27,7 +27,7 @@ use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::error;
 
-pub fn router() -> Router<AppState> {
+pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/:alloc", get(show_allocation).delete(remove_allocation))
         .route("/:alloc/note/:noteid", delete(delete_note))
