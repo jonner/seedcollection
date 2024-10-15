@@ -69,7 +69,7 @@ impl SampleRowFull {
     pub fn new(sample: Sample) -> Result<Self, libseed::Error> {
         Ok(Self {
             id: sample.id,
-            taxon: sample.taxon.object()?.complete_name.clone(),
+            taxon: sample.taxon_display_name()?,
             source: sample.source.object()?.name.clone(),
             date: match (sample.month, sample.year) {
                 (Some(m), Some(y)) => format!("{m}/{y}"),
