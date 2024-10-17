@@ -24,12 +24,26 @@ mod output;
 mod prompt;
 mod table;
 
+async fn config_dir() -> Result<PathBuf> {
+    #[cfg(unix)]
+    {
+        let xdgdirs = xdg::BaseDirectories::new()?;
+        xdgdirs
+            .place_config_file("seedctl/config")
+            .map_err(Into::into)
+    }
+    #[cfg(windows)]
+    {
+        let config_dir = PathBuf::from("%LOCALAPPDATA%").join("seedctl");
+        fs::create_dir_all(&config_dir).await?;
+        Ok(config_dir.join("config"))
+    }
+}
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let args = Cli::parse();
-    let xdgdirs = xdg::BaseDirectories::new()?;
-    let config_file = xdgdirs.place_config_file("seedctl/config")?;
+    let config_file = config_dir().await?;
     match &args.command {
         Commands::Login { username, database } => {
             let username = username
