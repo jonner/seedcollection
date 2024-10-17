@@ -1,14 +1,13 @@
 use libseed::{user::User, Database};
 use serde::{Deserialize, Serialize};
-use std::{
-    os::unix::fs::PermissionsExt,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use tokio::{
-    fs::{read_to_string, set_permissions, File},
+    fs::{read_to_string, File},
     io::AsyncWriteExt,
 };
 use tracing::debug;
+#[cfg(unix)]
+use {std::os::unix::fs::PermissionsExt, tokio::fs::set_permissions};
 
 #[derive(Deserialize, Serialize)]
 pub struct Config {
@@ -58,15 +57,18 @@ impl Config {
             .await
             .map_err(|e| Error::FilePermissions(path.to_owned(), "Creating file", e))?;
         let serialized = self.format()?;
-        let mut perms = file
-            .metadata()
-            .await
-            .map_err(|e| Error::FilePermissions(path.to_owned(), "Querying metadata", e))?
-            .permissions();
-        perms.set_mode(0o600);
-        set_permissions(path, perms)
-            .await
-            .map_err(|e| Error::FilePermissions(path.to_owned(), "Setting permissions", e))?;
+        #[cfg(unix)]
+        {
+            let mut perms = file
+                .metadata()
+                .await
+                .map_err(|e| Error::FilePermissions(path.to_owned(), "Querying metadata", e))?
+                .permissions();
+            perms.set_mode(0o600);
+            set_permissions(path, perms)
+                .await
+                .map_err(|e| Error::FilePermissions(path.to_owned(), "Setting permissions", e))?;
+        }
         file.write_all(serialized.as_bytes())
             .await
             .map_err(|e| Error::FilePermissions(path.to_owned(), "Writing file", e))
