@@ -88,7 +88,9 @@
         }).addTo(map);
         {% for source in sources %}
         points.push(L.latLng({{ source.latitude }}, {{ source.longitude }}));
-        L.marker(L.latLng({{ source.latitude }}, {{ source.longitude }}), {title: "{{ source.name }}"}).addTo(map);
+        L.marker(L.latLng({{ source.latitude }}, {{ source.longitude }}))
+            .addTo(map)
+            .bindPopup("<a href=\"{{ ("/source/" ~ source.id) | app_url }}\">L{{ source.id | idfmt }}</a>: {{ source.name }}");
         {% endfor %}
         console.log(points);
         var bounds = L.latLngBounds(points);

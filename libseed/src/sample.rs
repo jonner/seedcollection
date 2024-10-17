@@ -455,6 +455,14 @@ impl Sample {
             certainty,
         }
     }
+
+    pub fn taxon_display_name(&self) -> Result<String> {
+        let mut name = self.taxon.object()?.complete_name.clone();
+        if self.certainty == Certainty::Uncertain {
+            name += "(?)";
+        }
+        Ok(name)
+    }
 }
 
 impl FromRow<'_, SqliteRow> for Sample {
