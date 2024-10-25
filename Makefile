@@ -5,6 +5,9 @@ else
     CONTAINERCMD=podman
 endif
 
+SEEDWEB_HTTP_PORT ?= 8080
+SEEDWEB_HTTPS_PORT ?= 8443
+
 container: Dockerfile config.yaml.docker
 	$(CONTAINERCMD) build -t seedweb:latest .
 
@@ -14,7 +17,7 @@ run-container: container
 	--replace \
 	--tty \
 	--secret seedweb-smtp-password \
-	-p 8080:80 -p 8443:443 \
+	-p ${SEEDWEB_HTTP_PORT}:80 -p ${SEEDWEB_HTTPS_PORT}:443 \
 	-v ~/.local/share/seedcollection/:/usr/share/seedweb/db:Z \
 	seedweb:latest
 
