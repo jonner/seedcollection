@@ -37,7 +37,6 @@ tower-sessions = "0.13.0"
 tower-sessions-sqlx-store = { version = "0.14.0", features = ["sqlite"]}
 uuid = { version = "1.7.0", features = ["v4"] }
 signal-hook = "0.3.17"
-regex = "1.11.0"
 
 [dev-dependencies]
 http-body-util = "0.1.0"
