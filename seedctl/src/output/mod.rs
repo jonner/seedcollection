@@ -4,7 +4,6 @@ use anyhow::anyhow;
 use clap::ValueEnum;
 use serde::Serialize;
 use tabled::{Table, Tabled};
-use thiserror::Error;
 
 pub(crate) mod rows;
 
@@ -19,12 +18,6 @@ pub(crate) enum OutputFormat {
     Json,
     /// YAML-formatted objects
     Yaml,
-}
-
-#[derive(Error, Debug)]
-pub(crate) enum Error {
-    #[error("Unable to create row")]
-    UnableToCreateRow(#[from] libseed::Error),
 }
 
 /// Serialize a single object into the given data format
