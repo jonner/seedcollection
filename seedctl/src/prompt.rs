@@ -1,3 +1,4 @@
+//! Functions related to prompting the user for input data
 use inquire::{autocompletion::Autocomplete, CustomUserError};
 use libseed::{
     query::{Cmp, CompoundFilter, Op},
@@ -7,6 +8,7 @@ use libseed::{
 };
 use std::convert;
 
+/// Errors that may occur when prompting a user for input
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum Error {
     #[error("Internal Error: completion format was incorrect for '{0}'")]
@@ -17,17 +19,20 @@ pub(crate) enum Error {
     Prompt(#[from] inquire::InquireError),
 }
 
+/// An object representing a prompt for a [Taxon] id
 pub(crate) struct TaxonIdPrompt<'a> {
     text: inquire::Text<'a>,
 }
 
 impl<'a> TaxonIdPrompt<'a> {
+    /// Create a new [TaxonIdPrompt] object
     pub(crate) fn new(message: &'a str, db: &Database) -> Self {
         Self {
             text: inquire::Text::new(message).with_autocomplete(TaxonCompleter { db: db.clone() }),
         }
     }
 
+    /// Prompt the user for input and return a result
     pub(crate) fn prompt(self) -> Result<i64, Error> {
         let res = self.text.prompt()?;
         // HACK -- the completer generates a string with the following format:
@@ -37,6 +42,8 @@ impl<'a> TaxonIdPrompt<'a> {
         extract_dbid(&res)
     }
 
+    /// Prompt the user for input and return a result, but allow the user to
+    /// press `<esc>` to skip giving input
     pub(crate) fn prompt_skippable(self) -> Option<i64> {
         let res = self.text.prompt_skippable().ok()?;
         // HACK -- the completer generates a string with the following format:
@@ -47,6 +54,8 @@ impl<'a> TaxonIdPrompt<'a> {
     }
 }
 
+/// An object that assists in providing completion options when the user starts
+/// typing part of a [Taxon] name.
 #[derive(Clone)]
 struct TaxonCompleter {
     db: Database,
@@ -87,11 +96,13 @@ impl Autocomplete for TaxonCompleter {
     }
 }
 
+/// An object representing a prompt for a [Source] id
 pub(crate) struct SourceIdPrompt<'a> {
     text: inquire::Text<'a>,
 }
 
 impl<'a> SourceIdPrompt<'a> {
+    /// Create a new [SourceIdPrompt] object
     pub(crate) fn new(message: &'a str, userid: i64, db: &Database) -> Self {
         Self {
             text: inquire::Text::new(message).with_autocomplete(SourceCompleter {
@@ -101,6 +112,7 @@ impl<'a> SourceIdPrompt<'a> {
         }
     }
 
+    /// Prompt the user for input and return the result
     pub(crate) fn prompt(self) -> Result<i64, Error> {
         let res = self.text.prompt()?;
         // HACK -- the completer generates a string with the following format:
@@ -110,6 +122,8 @@ impl<'a> SourceIdPrompt<'a> {
         extract_dbid(&res)
     }
 
+    /// Prompt the user for input and return the result, but allow the user to
+    /// press `<esc>` to skip giving a response
     pub(crate) fn prompt_skippable(self) -> Option<i64> {
         let res = self.text.prompt_skippable().ok()?;
         // HACK -- the completer generates a string with the following format:
@@ -120,6 +134,8 @@ impl<'a> SourceIdPrompt<'a> {
     }
 }
 
+/// An object that assists in providing completion options when the user starts
+/// typing part of a [Source] name.
 #[derive(Clone)]
 struct SourceCompleter {
     db: Database,
@@ -156,6 +172,7 @@ impl Autocomplete for SourceCompleter {
     }
 }
 
+#[doc(hidden)]
 // This is a hack that relies on the conventions above for autocompleting items from the database.
 // The autocompletion suggestions have the form "$DBID. $DESCRIPTION"
 // This code simply splits the string at the first '.' character and returns the ID before that.
