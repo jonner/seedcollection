@@ -1,3 +1,4 @@
+//! Commands related to seed [Sample]s
 use crate::{
     cli::{SampleCommands, SampleSortField},
     output::{
@@ -17,6 +18,7 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
 };
 
+/// Handle the `seedctl samples` command and its subcommands
 pub(crate) async fn handle_command(
     command: SampleCommands,
     user: User,

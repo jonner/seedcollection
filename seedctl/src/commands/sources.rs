@@ -1,3 +1,4 @@
+//! Commands related to seed [Source]s
 use crate::{
     cli::SourceCommands,
     output::{
@@ -16,6 +17,7 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
 };
 
+/// Handle the `seedctl sources` command and its subcommands
 pub(crate) async fn handle_command(
     command: SourceCommands,
     user: User,
