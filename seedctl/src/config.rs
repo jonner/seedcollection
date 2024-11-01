@@ -1,3 +1,4 @@
+//! functions related to `seedctl` configuration
 use libseed::{user::User, Database};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -9,6 +10,7 @@ use tracing::debug;
 #[cfg(unix)]
 use {std::os::unix::fs::PermissionsExt, tokio::fs::set_permissions};
 
+/// A struct containing configuration required to successfully run `seedctl`
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Config {
     pub(crate) username: String,
@@ -16,6 +18,7 @@ pub(crate) struct Config {
     pub(crate) database: PathBuf,
 }
 
+/// Errors related to configuration
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum Error {
     #[error("Not Logged in")]
@@ -35,14 +38,17 @@ pub(crate) enum Error {
 }
 
 impl Config {
+    /// Parse the contents of a JSON file specifying Configuration data
     fn parse(contents: String) -> Result<Self, serde_json::Error> {
         serde_json::from_str(&contents)
     }
 
+    /// Format a [Config] object for storage in a file
     fn format(&self) -> Result<String, Error> {
         serde_json::to_string_pretty(self).map_err(Error::CannotFormatConfig)
     }
 
+    /// Load configuration data from the specified file
     pub(crate) async fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let p = path.as_ref();
         debug!(?p, "Trying to load login config");
@@ -50,6 +56,7 @@ impl Config {
         Self::parse(contents).map_err(Error::ConfigParseFailed)
     }
 
+    /// Save the current [Config] object to the given file path
     pub(crate) async fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
         let path = path.as_ref();
         debug!(?path, "Saving login config");
@@ -74,6 +81,7 @@ impl Config {
             .map_err(|e| Error::FilePermissions(path.to_owned(), "Writing file", e))
     }
 
+    /// Create a new [Config] object
     pub(crate) fn new(username: String, password: String, database: PathBuf) -> Self {
         Config {
             username,
@@ -82,6 +90,7 @@ impl Config {
         }
     }
 
+    /// Check whether the current [Config] object represents a valid configuration
     pub(crate) async fn validate(&self) -> Result<(Database, User), Error> {
         let db = libseed::Database::open(&self.database).await?;
         let user = User::load_by_username(&self.username, &db)
