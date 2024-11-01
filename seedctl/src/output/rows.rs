@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use anyhow::Result;
 use libseed::{
     project::{allocation, Allocation, Project},
@@ -11,6 +9,7 @@ use libseed::{
     Database,
 };
 use serde::{ser::SerializeSeq, Serialize, Serializer};
+use std::sync::Arc;
 use tabled::Tabled;
 
 #[derive(Tabled, Serialize)]

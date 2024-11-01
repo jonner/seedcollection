@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
+use crate::APP_PREFIX;
 use axum::http::Uri;
 use minijinja::ErrorKind;
 use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
-
-use crate::APP_PREFIX;
+use std::collections::HashMap;
 
 pub(crate) fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")

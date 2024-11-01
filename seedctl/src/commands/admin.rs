@@ -1,8 +1,3 @@
-use std::{
-    io::{stdin, stdout, Write},
-    path::PathBuf,
-};
-
 use crate::{
     cli::{AdminCommands, GerminationCommands, UserCommands},
     output::{
@@ -16,6 +11,10 @@ use libseed::{
     taxonomy::Germination,
     user::{User, UserStatus},
     Database,
+};
+use std::{
+    io::{stdin, stdout, Write},
+    path::PathBuf,
 };
 use tokio::fs;
 use tracing::debug;

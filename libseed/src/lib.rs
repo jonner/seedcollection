@@ -1,10 +1,8 @@
 //! This is a library that provides objects and functionality to help you manage a native seed
 //! collection and keep track of everything inside of a database.
-
 use serde::{Deserialize, Deserializer};
 use sqlx::{Pool, Sqlite, SqlitePool};
-use std::path::Path;
-use std::str::FromStr;
+use std::{path::Path, str::FromStr};
 use tracing::trace;
 
 mod error;

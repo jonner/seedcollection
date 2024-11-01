@@ -1,10 +1,9 @@
+use crate::table::SeedctlTable;
 use anyhow::anyhow;
 use clap::ValueEnum;
 use serde::Serialize;
 use tabled::{Table, Tabled};
 use thiserror::Error;
-
-use crate::table::SeedctlTable;
 
 pub(crate) mod rows;
 

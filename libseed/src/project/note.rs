@@ -1,4 +1,10 @@
 //! Manage notes associated with project allocations
+use crate::{
+    error::{Error, Result},
+    loadable::Loadable,
+    query::{DynFilterPart, FilterPart},
+    Database,
+};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqliteQueryResult, QueryBuilder, Sqlite};
@@ -6,13 +12,6 @@ use std::sync::Arc;
 use strum_macros::EnumIter;
 use time::Date;
 use tracing::debug;
-
-use crate::{
-    error::{Error, Result},
-    loadable::Loadable,
-    query::{DynFilterPart, FilterPart},
-    Database,
-};
 
 /// A category for a note
 #[derive(sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumIter, PartialEq)]
