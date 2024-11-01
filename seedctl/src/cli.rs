@@ -1,8 +1,10 @@
+//! Command line interface definitions
 use crate::output::OutputFormat;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use libseed::taxonomy;
 use std::path::PathBuf;
 
+/// The overall command line interface for `seedctl`
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub(crate) struct Cli {
@@ -10,6 +12,7 @@ pub(crate) struct Cli {
     pub(crate) command: Commands,
 }
 
+/// specification for the file format to use when outputting data
 #[derive(Args, Debug)]
 pub(crate) struct OutputOptions {
     #[arg(value_enum, long, default_value_t = OutputFormat::Table, help="generate output in the given format")]

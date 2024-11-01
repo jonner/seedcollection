@@ -1,3 +1,4 @@
+//! This is a command-line tool to manage a seed collection via [libseed]
 use crate::{
     cli::*,
     config::*,

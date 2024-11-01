@@ -1,3 +1,4 @@
+//! Utilities for exporting data from the database
 use crate::table::SeedctlTable;
 use anyhow::anyhow;
 use clap::ValueEnum;
@@ -7,11 +8,16 @@ use thiserror::Error;
 
 pub(crate) mod rows;
 
+/// Data format for exporting data from the collection
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
 pub(crate) enum OutputFormat {
+    /// Human readable table of data
     Table,
+    /// Comma-separated values for importing into a spreadsheet
     Csv,
+    /// JSON-formatted objects
     Json,
+    /// YAML-formatted objects
     Yaml,
 }
 
@@ -21,6 +27,7 @@ pub(crate) enum Error {
     UnableToCreateRow(#[from] libseed::Error),
 }
 
+/// Serialize a single object into the given data format
 pub(crate) fn format_one<T>(item: T, fmt: OutputFormat) -> anyhow::Result<String>
 where
     T: Tabled + Serialize + 'static,
@@ -36,6 +43,7 @@ where
     }
 }
 
+/// Serialize a sequence of objects into the given data format
 pub(crate) fn format_seq<T>(items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
 where
     T: Tabled + Serialize + 'static,
