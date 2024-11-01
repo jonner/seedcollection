@@ -1,3 +1,4 @@
+//! Commands for administration of seedctl or the database itself
 use crate::{
     cli::{AdminCommands, GerminationCommands, UserCommands},
     output::{
@@ -19,6 +20,8 @@ use std::{
 use tokio::fs;
 use tracing::debug;
 
+/// Get a password from the user, either from the file at the provided path, or
+/// by reading input from stdin.
 async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow::Result<String> {
     let password = match path {
         None => {
@@ -34,6 +37,7 @@ async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow:
     Ok(password.trim().to_string())
 }
 
+/// Handle the `seedctl admin` command and its subcommands
 pub(crate) async fn handle_command(
     command: AdminCommands,
     _user: User,

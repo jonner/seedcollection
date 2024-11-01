@@ -1,3 +1,4 @@
+//! Comamnds related to [Project]s
 use crate::{
     cli::ProjectCommands,
     output::{
@@ -14,6 +15,7 @@ use libseed::{
     Database,
 };
 
+/// Handle the `seedctl projects` command and its subcommands
 pub(crate) async fn handle_command(
     command: ProjectCommands,
     user: User,
