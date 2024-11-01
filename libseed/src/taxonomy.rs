@@ -1,5 +1,10 @@
 //! Objects related to querying the taxonomic database
-
+use crate::{
+    error::Result,
+    loadable::{ExternalRef, Loadable},
+    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
+    Database, Error,
+};
 use async_trait::async_trait;
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use sqlx::{
@@ -10,13 +15,6 @@ use sqlx::{
 use std::{str::FromStr, sync::Arc};
 use strum_macros::{Display, EnumIter, FromRepr};
 use tracing::debug;
-
-use crate::{
-    error::Result,
-    loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
-    Database, Error,
-};
 
 const KINGDOM_PLANTAE: i64 = 3;
 

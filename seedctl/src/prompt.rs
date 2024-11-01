@@ -1,5 +1,3 @@
-use std::convert;
-
 use inquire::{autocompletion::Autocomplete, CustomUserError};
 use libseed::{
     query::{Cmp, CompoundFilter, Op},
@@ -7,6 +5,7 @@ use libseed::{
     taxonomy::{quickfind, Taxon},
     Database,
 };
+use std::convert;
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum Error {

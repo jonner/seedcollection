@@ -1,9 +1,8 @@
+use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
 use axum::{extract::State, response::IntoResponse, routing::get, Router};
 use axum_template::RenderHtml;
 use libseed::taxonomy::Germination;
 use minijinja::context;
-
-use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new().route("/germination", get(germination))

@@ -1,11 +1,11 @@
-use std::sync::Arc;
-
 use axum::{
     extract::rejection::QueryRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use std::sync::Arc;
 use tracing::warn;
+
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum Error {
     #[error(transparent)]
