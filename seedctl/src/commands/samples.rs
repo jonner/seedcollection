@@ -4,9 +4,9 @@ use crate::{
     output::{
         self,
         rows::{SampleRow, SampleRowDetails, SampleRowFull},
+        table::SeedctlTable,
     },
     prompt::{SourceIdPrompt, TaxonIdPrompt},
-    table::SeedctlTable,
 };
 use anyhow::{anyhow, Result};
 use libseed::{

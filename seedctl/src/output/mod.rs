@@ -1,11 +1,12 @@
 //! Utilities for exporting data from the database
-use crate::table::SeedctlTable;
 use anyhow::anyhow;
 use clap::ValueEnum;
 use serde::Serialize;
+use table::SeedctlTable;
 use tabled::{Table, Tabled};
 
 pub(crate) mod rows;
+pub(crate) mod table;
 
 /// Data format for exporting data from the collection
 #[derive(ValueEnum, Clone, Debug, PartialEq)]
