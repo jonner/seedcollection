@@ -2,8 +2,10 @@
 use crate::{
     cli::*,
     config::*,
-    output::rows::{TaxonRow, TaxonRowDetails},
-    table::SeedctlTable,
+    output::{
+        rows::{TaxonRow, TaxonRowDetails},
+        table::SeedctlTable,
+    },
 };
 use anyhow::{anyhow, Result};
 use clap::Parser;
@@ -23,7 +25,6 @@ mod commands;
 mod config;
 mod output;
 mod prompt;
-mod table;
 
 async fn config_dir() -> Result<PathBuf> {
     #[cfg(unix)]
