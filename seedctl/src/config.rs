@@ -33,7 +33,7 @@ pub(crate) enum Error {
     Database(#[from] libseed::Error),
     #[error("Failed to format config in JSON")]
     CannotFormatConfig(#[source] serde_json::Error),
-    #[error("File permissions error for '{}': {1}", .0.to_string_lossy())]
+    #[error("File permissions error for '{path}': {1}", path = .0.to_string_lossy())]
     FilePermissions(PathBuf, &'static str, #[source] std::io::Error),
 }
 
