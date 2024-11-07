@@ -254,10 +254,14 @@ impl ToSql for SortField {
     }
 }
 
+/// A type for holding statistics about the samples in the seed collection
 #[derive(FromRow, Serialize)]
 pub struct SampleStats {
+    /// The number of total samples in teh collection
     pub nsamples: i64,
+    /// The number of unique taxa represented by the samples in the collection
     pub ntaxa: i64,
+    /// The number of unique sources associated with the samples in the collectiohn
     pub nsources: i64,
 }
 
