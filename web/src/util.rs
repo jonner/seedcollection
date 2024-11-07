@@ -8,6 +8,8 @@ pub(crate) fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")
 }
 
+/// A minijinja template filter for appending (or replacing) a given query param
+/// to a url.
 pub(crate) fn append_query_param(
     uristr: &str,
     key: &str,
@@ -67,6 +69,8 @@ fn test_append_query_param() {
     );
 }
 
+/// A minijinja template filter for truncating text to a given length and
+/// appending ellipsis.
 pub(crate) fn truncate_text(mut s: String, chars: Option<usize>) -> String {
     let chars = chars.unwrap_or(100);
     if s.len() > chars {
@@ -77,12 +81,16 @@ pub(crate) fn truncate_text(mut s: String, chars: Option<usize>) -> String {
     }
 }
 
+/// A minijinja template filter for formatting an object's id number in a
+/// consistent manner and with a specific amount of zero-padding. e.g. `S0001`
 pub(crate) fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> String {
     let width = width.unwrap_or(4);
     let prefix = prefix.unwrap_or("");
     format!("{}{:0>width$}", prefix, id, width = width)
 }
 
+/// A minijinja template filter for formatting a seed quantity in grams into a
+/// standard format and calculating the imperial equivalent.
 pub(crate) fn format_quantity(qty: f64) -> String {
     let mut metric_qty = qty;
     let mut metric_label = "grams";
@@ -105,6 +113,12 @@ pub(crate) fn format_quantity(qty: f64) -> String {
     format!("{metric} ({imperial})")
 }
 
+/// An object for resolving links to various objects in the collection database
+/// from within a markdown comment. For example, the text `[S0024]` should be
+/// transformed into a link to the details page for the sample object with id of 24.
+/// - `[Sxxxx]` -> Samples
+/// - `[Lxxxx]` -> Sources
+/// - `[Pxxxx]` -> Projects
 struct ObjectLinkResolver;
 
 impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver {
@@ -138,6 +152,8 @@ impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver {
     }
 }
 
+/// A minijinja template filter to parse and format markdown so that templates
+/// can process user-generated markdown for comments, etc.
 pub(crate) fn markdown(value: Option<&str>) -> minijinja::Value {
     let value = value.unwrap_or("");
     let parser = pulldown_cmark::Parser::new_with_broken_link_callback(
