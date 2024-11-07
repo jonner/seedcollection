@@ -37,7 +37,7 @@ pub(crate) async fn handle_command(
             let mut builder = CompoundFilter::builder(Op::And);
             if let Some(s) = filter {
                 let fbuilder = CompoundFilter::builder(Op::Or)
-                    .push(sample::taxon_name_like(s.clone()))
+                    .push(sample::taxon_name_like(&s))
                     .push(sample::Filter::SourceName(Cmp::Like, s.clone()))
                     .push(sample::Filter::Notes(Cmp::Like, s.clone()));
                 builder = builder.push(fbuilder.build());

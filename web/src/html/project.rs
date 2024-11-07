@@ -197,7 +197,7 @@ async fn show_project(
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
             CompoundFilter::builder(Op::Or)
-                .push(taxon_name_like(fragment.clone()))
+                .push(taxon_name_like(fragment))
                 .push(allocation::Filter::SourceName(Cmp::Like, fragment.clone()))
                 .push(allocation::Filter::Notes(Cmp::Like, fragment.clone()))
                 .build(),

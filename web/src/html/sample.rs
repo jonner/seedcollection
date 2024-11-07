@@ -62,7 +62,7 @@ async fn list_samples(
     let filter = params.filter.as_ref().map(|f| {
         let idprefix: Result<i64, _> = f.parse();
         let mut builder = CompoundFilter::builder(Op::Or)
-            .push(sample::taxon_name_like(f.clone()))
+            .push(sample::taxon_name_like(f))
             .push(sample::Filter::Notes(Cmp::Like, f.clone()))
             .push(sample::Filter::SourceName(Cmp::Like, f.clone()));
         if let Ok(n) = idprefix {

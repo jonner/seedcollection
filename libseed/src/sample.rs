@@ -76,12 +76,14 @@ pub enum Filter {
     TaxonRank(Cmp, Rank),
 }
 
-pub fn taxon_name_like(substr: String) -> DynFilterPart {
+/// Creates a query filter to match any [Sample] object when any of the
+/// components of the taxon name matches the given `substr`
+pub fn taxon_name_like(substr: &str) -> DynFilterPart {
     CompoundFilter::builder(Op::Or)
-        .push(Filter::TaxonName1(Cmp::Like, substr.clone()))
-        .push(Filter::TaxonName2(Cmp::Like, substr.clone()))
-        .push(Filter::TaxonName3(Cmp::Like, substr.clone()))
-        .push(Filter::TaxonCommonName(Cmp::Like, substr.clone()))
+        .push(Filter::TaxonName1(Cmp::Like, substr.into()))
+        .push(Filter::TaxonName2(Cmp::Like, substr.into()))
+        .push(Filter::TaxonName3(Cmp::Like, substr.into()))
+        .push(Filter::TaxonCommonName(Cmp::Like, substr.into()))
         .build()
 }
 
