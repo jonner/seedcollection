@@ -2,35 +2,69 @@ use crate::APP_PREFIX;
 use axum::http::Uri;
 use minijinja::ErrorKind;
 use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 pub(crate) fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")
 }
 
 pub(crate) fn append_query_param(
-    uristr: String,
-    key: String,
-    value: String,
+    uristr: &str,
+    key: &str,
+    value: &str,
 ) -> Result<String, minijinja::Error> {
     let uri = uristr.parse::<Uri>().map_err(|e| {
         minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to parse uri string")
             .with_source(e)
     })?;
-    let mut query: HashMap<_, _> = match uri.query() {
+    let mut query: BTreeMap<_, _> = match uri.query() {
         Some(q) => serde_urlencoded::from_str(q).map_err(|e| {
             minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to decode query params")
                 .with_source(e)
         })?,
-        None => HashMap::new(),
+        None => BTreeMap::new(),
     };
-    query.insert(key.as_str(), value.as_str());
+    query.insert(key, value);
     let querystring = serde_urlencoded::to_string(query).map_err(|e| {
         minijinja::Error::new(ErrorKind::InvalidOperation, "Unable to encode query params")
             .with_source(e)
     })?;
 
-    Ok(format!("?{querystring}"))
+    Ok(format!("{path}?{querystring}", path = uri.path()))
+}
+
+#[test]
+fn test_append_query_param() {
+    let uri = "http://foo.bar/path/file";
+    let expected = "/path/file?key=value";
+    assert_eq!(
+        append_query_param(uri, "key", "value").expect("Failed to append"),
+        expected
+    );
+    let uri = "http://foo.bar/path/file?key=value1";
+    let expected = "/path/file?key=value2";
+    assert_eq!(
+        append_query_param(uri, "key", "value2").expect("Failed to append"),
+        expected
+    );
+    let uri = "http://foo.bar/path/file?key1=value1";
+    let expected = "/path/file?key1=value1&key2=value2";
+    assert_eq!(
+        append_query_param(uri, "key2", "value2").expect("Failed to append"),
+        expected
+    );
+    let uri = "http://foo.bar/path/file?key1=value1&key2=value2";
+    let expected = "/path/file?key1=value1&key2=newvalue";
+    assert_eq!(
+        append_query_param(uri, "key2", "newvalue").expect("Failed to append"),
+        expected
+    );
+    let uri = "http://foo.bar/path/file?key1=value1&key2=value2";
+    let expected = "/path/file?key1=newvalue&key2=value2";
+    assert_eq!(
+        append_query_param(uri, "key1", "newvalue").expect("Failed to append"),
+        expected
+    );
 }
 
 pub(crate) fn truncate_text(mut s: String, chars: Option<usize>) -> String {
