@@ -39,7 +39,7 @@ pub(crate) enum Error {
 
 impl Config {
     /// Parse the contents of a JSON file specifying Configuration data
-    fn parse(contents: String) -> Result<Self, serde_json::Error> {
+    fn parse(contents: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(&contents)
     }
 
@@ -53,7 +53,7 @@ impl Config {
         let p = path.as_ref();
         debug!(?p, "Trying to load login config");
         let contents = read_to_string(path).await.map_err(|_| Error::NotLoggedIn)?;
-        Self::parse(contents).map_err(Error::ConfigParseFailed)
+        Self::parse(&contents).map_err(Error::ConfigParseFailed)
     }
 
     /// Save the current [Config] object to the given file path

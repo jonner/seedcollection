@@ -424,6 +424,7 @@ impl Taxon {
 
         builder.push(" GROUP BY T.tsn ORDER BY phylo_sort_seq");
         if let Some(LimitSpec(count, offset)) = limit {
+            debug!("Limiting query to n={count}, offset={offset:?}");
             builder.push(" LIMIT ");
             builder.push_bind(count);
             if let Some(offset) = offset {
