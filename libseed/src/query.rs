@@ -197,7 +197,9 @@ impl<T: ToSql> SortSpec<T> {
     }
 }
 
-/// A type representing an ordered list of multiple sort specifications.
+/// A type representing an ordered list of multiple sort specifications. The
+/// purpose of this type is merely to facilitate various convienience conversion
+/// functions by implementing [From]
 pub struct SortSpecs<T: ToSql>(pub Vec<SortSpec<T>>);
 
 impl<T: ToSql> From<SortSpec<T>> for SortSpecs<T> {
