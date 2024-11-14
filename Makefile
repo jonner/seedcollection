@@ -16,7 +16,7 @@ run-container: container
 	--name seedweb \
 	--replace \
 	--tty \
-	--secret seedweb-smtp-password \
+	--secret seedweb-smtp-password,type=env,target=SEEDWEB_SMTP_PASSWORD \
 	-p ${SEEDWEB_HTTP_PORT}:80 -p ${SEEDWEB_HTTPS_PORT}:443 \
 	-v ~/.local/share/seedcollection/:/usr/share/seedweb/db:Z \
 	seedweb:latest
