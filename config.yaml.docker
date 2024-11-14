@@ -14,6 +14,5 @@ prod:
     port: 465
     credentials:
       username: "jonathon@quotidian.org"
-      passwordfile: "/run/secrets/seedweb-smtp-password"
   listen: *DEFAULT_LISTEN
 

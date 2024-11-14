@@ -115,6 +115,7 @@ struct Ports {
 #[derive(Deserialize, PartialEq)]
 struct RemoteSmtpCredentials {
     username: String,
+    #[serde(default)]
     passwordfile: String,
     #[serde(skip)]
     password: String,
@@ -182,8 +183,26 @@ impl EnvConfig {
     fn init(&mut self) -> Result<()> {
         if let MailTransport::Smtp(ref mut cfg) = self.mail_transport {
             if let Some(ref mut creds) = cfg.credentials {
-                creds.password = std::fs::read_to_string(&creds.passwordfile)
-                    .with_context(|| "Failed to read smtp password to file")?;
+                // 'passwordfile' entry in environment config takes priority
+                if !creds.passwordfile.is_empty() {
+                    debug!(
+                        "Looking up SMTP password from file '{}'",
+                        creds.passwordfile
+                    );
+                    creds.password =
+                        std::fs::read_to_string(&creds.passwordfile).with_context(|| {
+                            format!(
+                                "Failed to read smtp password from file '{}'",
+                                creds.passwordfile
+                            )
+                        })?;
+                } else {
+                    debug!("Looking up SMTP password from environment variable");
+                    // If not found, look it up from environment variable
+                    creds.password = std::env::var("SEEDWEB_SMTP_PASSWORD").with_context(|| {
+                        "Failed to get SMTP password from env variable SEEDWEB_SMTP_PASSWORD"
+                    })?;
+                }
             }
         }
         Ok(())
