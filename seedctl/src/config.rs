@@ -40,7 +40,7 @@ pub(crate) enum Error {
 impl Config {
     /// Parse the contents of a JSON file specifying Configuration data
     fn parse(contents: &str) -> Result<Self, serde_json::Error> {
-        serde_json::from_str(&contents)
+        serde_json::from_str(contents)
     }
 
     /// Format a [Config] object for storage in a file
