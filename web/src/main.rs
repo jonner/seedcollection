@@ -71,24 +71,35 @@ where
     type Rejection = MatchedPathRejection;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        let mut key = parts
-            .extract::<MatchedPath>()
-            .await?
-            // Cargo doesn't allow `:` as a file name
-            .as_str()
-            .trim_start_matches(APP_PREFIX)
-            .replace(':', "@")
-            .replace('/', "_");
-
-        if key.is_empty() {
-            key = "_INDEX".to_string();
-        }
-        if parts.method != Method::GET {
-            key.push_str(&format!("-{}", parts.method));
-        }
-        key.push_str(".html");
-        Ok(TemplateKey(key))
+        let mp = parts.extract::<MatchedPath>().await?;
+        Ok(TemplateKey(path_to_template_key(
+            mp.as_str(),
+            &parts.method,
+        )))
     }
+}
+
+fn path_to_template_key(path: &str, method: &Method) -> String {
+    // Cargo doesn't allow `:` as a file name
+    let mut key: String = path
+        .trim_start_matches(APP_PREFIX)
+        .trim_start_matches('/')
+        .chars()
+        .map(|c| match c {
+            ':' => '@',
+            '/' => '_',
+            _ => c,
+        })
+        .collect();
+
+    if key.is_empty() {
+        key = "_INDEX".to_string();
+    }
+    if method != Method::GET {
+        key.push_str(&format!("-{}", method));
+    }
+    key.push_str(".html");
+    key
 }
 
 #[derive(Parser, Debug)]
@@ -527,5 +538,67 @@ prod:
                 }
             }
         );
+    }
+
+    #[test]
+    fn test_template_key() {
+        struct Case {
+            path: String,
+            method: Method,
+            expected: &'static str,
+        }
+        let cases = [
+            Case {
+                path: "".to_owned(),
+                method: Method::GET,
+                expected: "_INDEX.html",
+            },
+            Case {
+                path: "/".to_owned(),
+                method: Method::GET,
+                expected: "_INDEX.html",
+            },
+            Case {
+                path: APP_PREFIX.to_owned(),
+                method: Method::GET,
+                expected: "_INDEX.html",
+            },
+            Case {
+                path: APP_PREFIX.to_owned() + "/foo",
+                method: Method::GET,
+                expected: "foo.html",
+            },
+            Case {
+                path: APP_PREFIX.to_owned() + "foo",
+                method: Method::GET,
+                expected: "foo.html",
+            },
+            Case {
+                path: APP_PREFIX.to_owned() + "foo/bar",
+                method: Method::GET,
+                expected: "foo_bar.html",
+            },
+            Case {
+                path: APP_PREFIX.to_owned() + "foo/bar",
+                method: Method::PUT,
+                expected: "foo_bar-PUT.html",
+            },
+            Case {
+                path: APP_PREFIX.to_owned() + "foo/:bar",
+                method: Method::GET,
+                expected: "foo_@bar.html",
+            },
+            Case {
+                path: APP_PREFIX.to_owned() + "foo/:bar",
+                method: Method::PUT,
+                expected: "foo_@bar-PUT.html",
+            },
+        ];
+        for case in cases {
+            assert_eq!(
+                path_to_template_key(&case.path, &case.method),
+                case.expected
+            );
+        }
     }
 }
