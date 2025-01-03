@@ -21,22 +21,25 @@ tracing = { workspace = true }
 xdg = { workspace = true }
 
 # local dependencies
-axum-login = "0.16.0"
+# switch from git branch to 0.17 when it is released
+axum-login = "0.17.0"
 axum-server = { version = "0.7.0", features = ["tls-rustls"] }
-axum-template = { version = "2.3.0", features = ["minijinja"] }
-axum = { version = "0.7.2", features = ["macros"] }
+axum-template = { version = "3.0", features = ["minijinja"] }
+axum = { version = "0.8", features = ["macros"] }
 lettre = { version = "0.11.3", features = ["serde", "tracing", "sendmail-transport", "file-transport", "tokio1", "tokio1-native-tls"] }
 minijinja-contrib = { version = "2.0.3", features = ["datetime"] }
 minijinja = { version = "2.0.3", features = ["loader"] }
 pulldown-cmark = "0.12.0"
 serde_urlencoded = "0.7.1"
 serde_yaml = "0.9.30"
-tower = "0.4.13"
-tower-http = { version = "0.5.2", features = ["fs", "trace", "request-id", "util"] }
-tower-sessions = "0.13.0"
-tower-sessions-sqlx-store = { version = "0.14.0", features = ["sqlite"]}
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "trace", "request-id", "util"] }
+tower-sessions = "0.14.0"
+tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"]}
 uuid = { version = "1.7.0", features = ["v4"] }
 signal-hook = "0.3.17"
+axum-extra = { version= "0.10.0", features=["query"]}
+async-trait = "0.1.84"
 
 [dev-dependencies]
 http-body-util = "0.1.0"

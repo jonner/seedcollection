@@ -2,8 +2,7 @@ use crate::error::Error;
 use anyhow::{anyhow, Context, Result};
 use auth::AuthSession;
 use axum::{
-    async_trait,
-    extract::{rejection::MatchedPathRejection, FromRequestParts, Host, MatchedPath, State},
+    extract::{rejection::MatchedPathRejection, FromRequestParts, MatchedPath, State},
     handler::HandlerWithoutStateExt,
     http::{request::Parts, HeaderMap, HeaderValue, Method, Request, StatusCode, Uri},
     middleware::{self, Next},
@@ -11,6 +10,7 @@ use axum::{
     routing::get,
     BoxError, RequestPartsExt, Router,
 };
+use axum_extra::extract::Host;
 use axum_login::{
     tower_sessions::{Expiry, SessionManagerLayer},
     AuthManagerLayerBuilder,
@@ -63,7 +63,6 @@ pub(crate) struct Message {
 // transform the key
 pub(crate) struct TemplateKey(pub(crate) String);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for TemplateKey
 where
     S: Send + Sync,
@@ -584,14 +583,14 @@ prod:
                 expected: "foo_bar-PUT.html",
             },
             Case {
-                path: APP_PREFIX.to_owned() + "foo/:bar",
+                path: APP_PREFIX.to_owned() + "foo/{bar}",
                 method: Method::GET,
-                expected: "foo_@bar.html",
+                expected: "foo_{bar}.html",
             },
             Case {
-                path: APP_PREFIX.to_owned() + "foo/:bar",
+                path: APP_PREFIX.to_owned() + "foo/{bar}",
                 method: Method::PUT,
-                expected: "foo_@bar-PUT.html",
+                expected: "foo_{bar}-PUT.html",
             },
         ];
         for case in cases {

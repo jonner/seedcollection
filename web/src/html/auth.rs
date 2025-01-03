@@ -28,7 +28,7 @@ pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/login", get(show_login).post(do_login))
         .route("/logout", post(logout))
-        .route("/verify/:key", get(show_verification).post(verify_user))
+        .route("/verify/{key}", get(show_verification).post(verify_user))
 }
 
 #[derive(Clone, Deserialize)]

@@ -1,6 +1,7 @@
 use crate::error::{self, Error};
 use anyhow::anyhow;
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
+use async_trait::async_trait;
+use axum::{extract::FromRequestParts, http::request::Parts};
 use axum_login::{AuthUser, AuthnBackend, UserId};
 use libseed::{
     empty_string_as_none,
@@ -110,7 +111,6 @@ impl SqliteAuthBackend {
 
 pub(crate) type AuthSession = axum_login::AuthSession<SqliteAuthBackend>;
 
-#[async_trait]
 impl<S> FromRequestParts<S> for SqliteUser
 where
     S: Send + Sync,
