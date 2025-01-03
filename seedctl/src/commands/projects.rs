@@ -24,10 +24,7 @@ pub(crate) async fn handle_command(
     match command {
         ProjectCommands::List { output } => {
             let projects = Project::load_all(None, db).await?;
-            let str = output::format_seq(
-                projects.iter().map(ProjectRow::new).collect::<Vec<_>>(),
-                output.format,
-            )?;
+            let str = output::format_seq(projects.iter().map(ProjectRow::new), output.format)?;
             println!("{str}");
             Ok(())
         }
@@ -89,16 +86,14 @@ pub(crate) async fn handle_command(
                         projectinfo
                             .allocations
                             .iter()
-                            .map(AllocationRowFull::new)
-                            .collect::<Result<Vec<_>, _>>()?,
+                            .filter_map(|a| AllocationRowFull::new(a).ok()),
                         output.format,
                     )?,
                     false => output::format_seq(
                         projectinfo
                             .allocations
                             .iter()
-                            .map(AllocationRow::new)
-                            .collect::<Result<Vec<_>, _>>()?,
+                            .filter_map(|a| AllocationRow::new(a).ok()),
                         output.format,
                     )?,
                 };

@@ -38,29 +38,30 @@ where
 }
 
 /// Serialize a sequence of objects into the given data format
-pub(crate) fn format_seq<T>(items: Vec<T>, fmt: OutputFormat) -> anyhow::Result<String>
+pub(crate) fn format_seq<I>(items: I, fmt: OutputFormat) -> anyhow::Result<String>
 where
-    T: Tabled + Serialize + 'static,
+    I: IntoIterator,
+    <I as IntoIterator>::Item: Tabled + Serialize + 'static,
 {
+    let iter = items.into_iter();
     match fmt {
         OutputFormat::Table => {
-            let n = items.len();
-            Ok(format!(
-                "{}\n{} records found",
-                Table::new(items).styled(),
-                n
-            ))
+            let mut table = Table::new(iter);
+            let n = table.count_rows() - 1;
+            Ok(format!("{}\n{} records found", table.styled(), n,))
         }
         OutputFormat::Csv => {
             let mut writer = csv::Writer::from_writer(vec![]);
-            items
-                .into_iter()
-                .map(|item| writer.serialize(item))
+            iter.map(|item| writer.serialize(item))
                 .collect::<Result<Vec<_>, _>>()?;
             writer.flush()?;
             String::from_utf8(writer.into_inner()?).map_err(|e| e.into())
         }
-        OutputFormat::Json => serde_json::to_string(&items).map_err(|e| e.into()),
-        OutputFormat::Yaml => serde_yaml::to_string(&items).map_err(|e| e.into()),
+        OutputFormat::Json => {
+            serde_json::to_string(&iter.collect::<Vec<_>>()).map_err(|e| e.into())
+        }
+        OutputFormat::Yaml => {
+            serde_yaml::to_string(&iter.collect::<Vec<_>>()).map_err(|e| e.into())
+        }
     }
 }

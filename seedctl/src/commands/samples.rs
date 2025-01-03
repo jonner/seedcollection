@@ -82,15 +82,11 @@ pub(crate) async fn handle_command(
                 true => {
                     let records = samples
                         .into_iter()
-                        .map(SampleRowFull::new)
-                        .collect::<Result<Vec<_>, _>>()?;
+                        .filter_map(|s| SampleRowFull::new(s).ok());
                     output::format_seq(records, output.format)?
                 }
                 false => {
-                    let records = samples
-                        .into_iter()
-                        .map(SampleRow::new)
-                        .collect::<Result<Vec<_>, _>>()?;
+                    let records = samples.into_iter().filter_map(|s| SampleRow::new(s).ok());
                     output::format_seq(records, output.format)?
                 }
             };

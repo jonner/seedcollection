@@ -47,10 +47,7 @@ pub(crate) async fn handle_command(
         AdminCommands::Users { command } => match command {
             UserCommands::List { output } => {
                 let users = User::load_all(db).await?;
-                let str = output::format_seq(
-                    users.iter().map(UserRow::new).collect::<Vec<_>>(),
-                    output.format,
-                )?;
+                let str = output::format_seq(users.iter().map(UserRow::new), output.format)?;
                 println!("{str}");
                 Ok(())
             }
@@ -115,10 +112,7 @@ pub(crate) async fn handle_command(
         AdminCommands::Germination { command } => match command {
             GerminationCommands::List { output } => {
                 let codes = Germination::load_all(db).await?;
-                let str = output::format_seq(
-                    codes.iter().map(GerminationRow::new).collect::<Vec<_>>(),
-                    output.format,
-                )?;
+                let str = output::format_seq(codes.iter().map(GerminationRow::new), output.format)?;
                 println!("{str}");
                 Ok(())
             }

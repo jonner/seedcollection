@@ -41,11 +41,11 @@ pub(crate) async fn handle_command(
             };
             let str = match output.full {
                 true => {
-                    let rows = sources.iter().map(SourceRowFull::new).collect::<Vec<_>>();
+                    let rows = sources.iter().map(SourceRowFull::new);
                     output::format_seq(rows, output.format)?
                 }
                 false => {
-                    let rows = sources.iter().map(SourceRow::new).collect::<Vec<_>>();
+                    let rows = sources.iter().map(SourceRow::new);
                     output::format_seq(rows, output.format)?
                 }
             };
