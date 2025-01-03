@@ -34,10 +34,10 @@ pub(crate) fn router() -> Router<AppState> {
         .route("/list", get(list_samples))
         .route("/new", get(new_sample).post(insert_sample))
         .route(
-            "/:id",
+            "/{id}",
             get(show_sample).put(update_sample).delete(delete_sample),
         )
-        .route("/:id/edit", get(show_sample))
+        .route("/{id}/edit", get(show_sample))
 }
 
 #[derive(Debug, Deserialize, Serialize)]

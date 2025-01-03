@@ -13,6 +13,7 @@ use axum::{
     routing::get,
     Form, Router,
 };
+use axum_extra::extract::OptionalQuery;
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
@@ -38,12 +39,12 @@ pub(crate) fn router() -> Router<AppState> {
         .route("/new", get(show_new_project).post(insert_project))
         .route("/list", get(list_projects))
         .route(
-            "/:id",
+            "/{id}",
             get(show_project).put(modify_project).delete(delete_project),
         )
-        .route("/:id/edit", get(show_project))
-        .route("/:id/add", get(show_add_sample).post(add_sample))
-        .nest("/:id/sample/", super::allocation::router())
+        .route("/{id}/edit", get(show_project))
+        .route("/{id}/add", get(show_add_sample).post(add_sample))
+        .nest("/{id}/sample/", super::allocation::router())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -56,20 +57,22 @@ async fn list_projects(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    params: Option<Query<ProjectListParams>>,
+    OptionalQuery(params): OptionalQuery<ProjectListParams>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, error::Error> {
     trace!(?params, "Listing projects");
     let mut fbuilder = CompoundFilter::builder(Op::And).push(project::Filter::User(user.id));
-    let namefilter = params.and_then(|Query(p)| p.filter).map(|filterstring| {
-        debug!(?filterstring, "Got project filter");
-        CompoundFilter::builder(Op::Or)
-            .push(project::Filter::Name(Cmp::Like, filterstring.clone()))
-            .push(project::Filter::Description(
-                Cmp::Like,
-                filterstring.clone(),
-            ))
-            .build()
+    let namefilter = params.and_then(|p| {
+        p.filter.map(|filterstring| {
+            debug!(?filterstring, "Got project filter");
+            CompoundFilter::builder(Op::Or)
+                .push(project::Filter::Name(Cmp::Like, filterstring.clone()))
+                .push(project::Filter::Description(
+                    Cmp::Like,
+                    filterstring.clone(),
+                ))
+                .build()
+        })
     });
     if let Some(namefilter) = namefilter {
         fbuilder = fbuilder.push(namefilter);

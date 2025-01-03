@@ -29,14 +29,14 @@ use tracing::error;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
-        .route("/:alloc", get(show_allocation).delete(remove_allocation))
-        .route("/:alloc/note/:noteid", delete(delete_note))
+        .route("/{alloc}", get(show_allocation).delete(remove_allocation))
+        .route("/{alloc}/note/{noteid}", delete(delete_note))
         .route(
-            "/:alloc/note/:noteid/edit",
+            "/{alloc}/note/{noteid}/edit",
             get(show_edit_note).put(modify_note),
         )
         .route(
-            "/:alloc/note/new",
+            "/{alloc}/note/new",
             get(show_add_allocation_note).post(add_allocation_note),
         )
 }

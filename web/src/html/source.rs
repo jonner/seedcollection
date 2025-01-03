@@ -28,10 +28,10 @@ pub(crate) fn router() -> Router<AppState> {
         .route("/new", get(add_source).post(new_source))
         .route("/new/modal", get(add_source))
         .route(
-            "/:id",
+            "/{id}",
             get(show_source).put(update_source).delete(delete_source),
         )
-        .route("/:id/edit", get(show_source))
+        .route("/{id}/edit", get(show_source))
         .route("/list", get(list_sources))
         .route("/list/options", get(list_sources))
 }
