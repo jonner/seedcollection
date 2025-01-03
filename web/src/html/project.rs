@@ -147,7 +147,7 @@ async fn insert_project(
             Ok((
                 [("HX-Redirect", projecturl)],
                 RenderHtml(
-                    "_ALERT.html",
+                    "_ALERT.html.j2",
                     state.tmpl.clone(),
                     context!( message =>
                     Message {

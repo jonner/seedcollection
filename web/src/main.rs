@@ -59,7 +59,7 @@ pub(crate) struct Message {
 }
 
 // Because minijinja loads an entire folder, we need to remove the `/` prefix
-// and add a `.html` suffix. We can implement our own custom key extractor that
+// and add a `.html.j2` suffix. We can implement our own custom key extractor that
 // transform the key
 pub(crate) struct TemplateKey(pub(crate) String);
 
@@ -97,7 +97,7 @@ fn path_to_template_key(path: &str, method: &Method) -> String {
     if method != Method::GET {
         key.push_str(&format!("-{}", method));
     }
-    key.push_str(".html");
+    key.push_str(".html.j2");
     key
 }
 
@@ -421,7 +421,7 @@ async fn error_mapper(
         (
             *status_code,
             RenderHtml(
-                "_ERROR.html",
+                "_ERROR.html.j2",
                 state.tmpl.clone(),
                 context!(status_code => status_code.as_u16(),
                 status_reason => status_code.canonical_reason(),
@@ -550,47 +550,47 @@ prod:
             Case {
                 path: "".to_owned(),
                 method: Method::GET,
-                expected: "_INDEX.html",
+                expected: "_INDEX.html.j2",
             },
             Case {
                 path: "/".to_owned(),
                 method: Method::GET,
-                expected: "_INDEX.html",
+                expected: "_INDEX.html.j2",
             },
             Case {
                 path: APP_PREFIX.to_owned(),
                 method: Method::GET,
-                expected: "_INDEX.html",
+                expected: "_INDEX.html.j2",
             },
             Case {
                 path: APP_PREFIX.to_owned() + "/foo",
                 method: Method::GET,
-                expected: "foo.html",
+                expected: "foo.html.j2",
             },
             Case {
                 path: APP_PREFIX.to_owned() + "foo",
                 method: Method::GET,
-                expected: "foo.html",
+                expected: "foo.html.j2",
             },
             Case {
                 path: APP_PREFIX.to_owned() + "foo/bar",
                 method: Method::GET,
-                expected: "foo_bar.html",
+                expected: "foo_bar.html.j2",
             },
             Case {
                 path: APP_PREFIX.to_owned() + "foo/bar",
                 method: Method::PUT,
-                expected: "foo_bar-PUT.html",
+                expected: "foo_bar-PUT.html.j2",
             },
             Case {
                 path: APP_PREFIX.to_owned() + "foo/{bar}",
                 method: Method::GET,
-                expected: "foo_{bar}.html",
+                expected: "foo_{bar}.html.j2",
             },
             Case {
                 path: APP_PREFIX.to_owned() + "foo/{bar}",
                 method: Method::PUT,
-                expected: "foo_{bar}-PUT.html",
+                expected: "foo_{bar}-PUT.html.j2",
             },
         ];
         for case in cases {
