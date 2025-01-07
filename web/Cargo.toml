@@ -8,6 +8,7 @@ edition = { workspace = true }
 [dependencies]
 # shared workspace deps
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 clap = { workspace = true }
 libseed = { workspace = true }
 serde = { workspace = true }
@@ -39,7 +40,6 @@ tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"]}
 uuid = { version = "1.7.0", features = ["v4"] }
 signal-hook = "0.3.17"
 axum-extra = { version= "0.10.0", features=["query"]}
-async-trait = "0.1.84"
 
 [dev-dependencies]
 http-body-util = "0.1.0"

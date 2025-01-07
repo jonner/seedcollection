@@ -8,6 +8,7 @@ edition = { workspace = true }
 [dependencies]
 # shared workspace dependencies
 anyhow = { workspace = true }
+async-trait = { workspace = true }
 serde = { workspace = true }
 sqlx = { workspace = true, features = [ "sqlite", "runtime-tokio", "time" ] }
 strum_macros = { workspace = true }
@@ -19,7 +20,6 @@ tracing = { workspace = true }
 
 # local dependencies
 argon2 = "0.5.2"
-async-trait = "0.1.77"
 password-hash = { version = "0.5.0", features = ["std", "getrandom"] }
 rand = "0.8.5"
 
