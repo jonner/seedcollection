@@ -1,0 +1,13 @@
+{% from "_macros.html.j2" import native_status_badge %}
+{% if taxa %}
+<ul class="list-group list-group-flush">
+    {% for taxon in taxa %}
+    <li class="list-group-item
+               {{ loop.cycle("bg-body-tertiary", "") }}">
+        <span class="scientific"><a href="{{ ("/taxonomy/" ~ taxon.id) | app_url}}">{{ taxon.complete_name }}</a></span>
+        {% if taxon.vernaculars %}- <span class="vernacular">{{ taxon.vernaculars|join(", ") }}</span>{% endif %}
+        <span class='rank'>({{ taxon.rank }})</span>{% if taxon.native_status %} {{ native_status_badge(taxon.native_status) }}{% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endif %}

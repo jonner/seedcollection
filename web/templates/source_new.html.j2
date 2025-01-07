@@ -1,0 +1,13 @@
+{% extends "root.html.j2" %}
+{% from "_macros.html.j2" import breadcrumbs %}
+{% from "_source_macros.html.j2" import source_form %}
+{% block title %}New Source{% endblock %}
+{% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Sources", "link": ("/source/list" | app_url) },
+{"name": "New Source", "active": true },
+]) }}
+<h2>{{ self.title() }}</h2>
+{{ source_form("new-source-form", none, message, request) }}
+{% endblock %}

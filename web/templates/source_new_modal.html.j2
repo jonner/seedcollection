@@ -1,0 +1,17 @@
+{% from "_source_macros.html.j2" import source_form %}
+<div class="modal-dialog modal-dialog-centered">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title">New Source</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+        {{ source_form("new-source-modal-form", modal=true) }}
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      <input id="AddSourceSubmit" type="submit" class="btn btn-primary" data-bs-dismiss="modal"
+          form="new-source-modal-form" value="Add">
+    </div>
+  </div>
+</div>

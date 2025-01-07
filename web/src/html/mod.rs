@@ -30,7 +30,7 @@ pub(crate) fn error_alert_response(
     (
         status,
         RenderHtml(
-            "_ALERT.html",
+            "_ALERT.html.j2",
             state.tmpl.clone(),
             context!(message => Message {
                 r#type: MessageType::Error,
@@ -53,7 +53,7 @@ async fn login_required(
         (
             StatusCode::UNAUTHORIZED,
             RenderHtml(
-                "auth_login.html",
+                "auth_login.html.j2",
                 state.tmpl.clone(),
                 context!(
                 next => uri.to_string(),

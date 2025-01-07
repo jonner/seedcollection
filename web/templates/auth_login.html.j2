@@ -1,0 +1,15 @@
+{% from "_auth_macros.html.j2" import login_form %}
+{% extends "root.html.j2" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div style="max-width: 500px">
+        <h2 class="text-center">{{ self.title() }}</h2>
+{% if user %}
+<div class="alert alert-warning">Already logged in as {{ user.username }}</div>
+{% else %}
+        {{ login_form() }}
+{% endif %}
+    </div>
+</div>
+{% endblock %}

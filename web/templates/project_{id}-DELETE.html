@@ -1,7 +1,0 @@
-{% from "_project_macros.html" import project_form %}
-{% if deleted %}
-<div class="alert alert-success">Deleted project {{ id }}</div>
-{% else %}
-{{ project_form("project-form", project, message, request) }}
-{% endif %}
-

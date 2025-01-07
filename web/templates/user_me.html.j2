@@ -1,0 +1,103 @@
+{% extends "root.html.j2" %}
+{% from "_macros.html.j2" import icon %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<h2 class="mb-3 border-bottom">{{ self.title() }}
+    <a href="{{ ("/user/me/edit") | app_url }}">{{ icon("pencil") }}</a>
+</h2>
+<div id="message-box"></div>
+<div class="container row column-gap-4">
+    <div class="col-md-3">
+        <div class="row mb-2">
+            <h4>Username</h4>
+            <div class="ms-2">
+                {{ user.username }}
+            </div>
+        </div>
+        <div class="row mb-2">
+            <h4>Display Name</h4>
+            <div class="ms-2">
+                {{ user.display_name or user.username }}
+            </div>
+        </div>
+        <div class="row mb-2">
+            <h4>Member since</h4>
+            <div class="ms-2">
+            {{ user.register_date | dateformat(format="short") }}
+            </div>
+        </div>
+        <div class="row mb-2">
+            <h4>E-mail Address</h4>
+            <div class="vstack row-gap-2 ms-2">
+            <div>{{ user.email }}</div>
+            {% if user.status == "Unverified" %}
+            <div class="alert alert-warning p-2">
+                This address is unverified. <a href="#"
+                    hx-post="{{ "/user/me/reverify" | app_url }}"
+                    hx-target="#message-box">Resend verification email</a>
+            </div>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="mb-4">
+            <h3>About me</h3>
+            <div class="ms-2">
+                {{ (user.profile | markdown) or "No profile information provided" }}
+            </div>
+        </div>
+        <div class="mb-4">
+            <h3>Collection Statistics</h3>
+            <table class="table">
+              <thead class="thead-light">
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Count</th>
+                </tr>
+              </thead>
+              <tbody class="table-group-divider">
+                <tr>
+                  <th scope="row">Samples</td>
+                  <td>{{ userstats.samples.nsamples }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Unique Taxa</td>
+                  <td>{{ userstats.samples.ntaxa }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Sources</td>
+                  <td>{{ userstats.nsources }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Projects</td>
+                  <td>{{ userstats.nprojects }}</td>
+                </tr>
+              </tbody>
+            </table>
+        </div>
+        <div class="mb-4">
+        <h3>Map of Seed Sources</h3>
+        <div id="locations-map" style="height: 400px"></div>
+        <script>
+        var points = [];
+        var map = L.map("locations-map");
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+        {% for source in sources %}
+        points.push(L.latLng({{ source.latitude }}, {{ source.longitude }}));
+        L.marker(L.latLng({{ source.latitude }}, {{ source.longitude }}))
+            .addTo(map)
+            .bindPopup("<a href=\"{{ ("/source/" ~ source.id) | app_url }}\">L{{ source.id | idfmt }}</a>: {{ source.name }}");
+        {% endfor %}
+        console.log(points);
+        var bounds = L.latLngBounds(points);
+        console.log(bounds);
+        map.fitBounds(bounds);
+        </script>
+        </div>
+    </div>
+</div>
+{% endblock %}

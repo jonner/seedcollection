@@ -1,0 +1,72 @@
+{% extends "root.html.j2" %}
+{% from "_macros.html.j2" import show_germination_list, show_vernacular_list, native_status_badge %}
+{% from "_sample_macros.html.j2" import sample_list %}
+
+{% macro show_taxon(t) -%}
+<a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a>
+{% if t.vernaculars %}
+- <span class="vernacular">{{ t.vernaculars[0] }}</span>
+{% endif %}
+<span class="rank">({{ t.rank }})</span> {{ native_status_badge(t.native_status) }}
+{%- endmacro %}
+
+{% block title %}{{ taxon.complete_name }} ({{ taxon.rank }}){% endblock %}
+{% block content %}
+<h2 class="border-bottom mb-3">{{ self.title() }}</h2>
+<h5>Common Names</h5>
+<div class="mb-3 px-2">
+    {% if taxon.vernaculars %}
+    {{ show_vernacular_list(taxon.vernaculars) }}
+    {% else %}
+    None
+    {% endif %}
+</div>
+<h5>Minnesota Status</h5>
+<div class="mb-3 px-2">
+    {% if taxon.native_status %}
+    {{ native_status_badge(taxon.native_status) }}
+    {% else %}
+    Not present
+    {% endif %}
+</div>
+<h5>Germination Info</h5>
+<div class="mb-3 px-2">
+    {% if taxon.germination %}
+    {{ show_germination_list(taxon.germination) }}
+    {% else %}
+    <div>No Data</div>
+    {% endif %}
+</div>
+<h5>Type Hierarchy</h5>
+<div id="taxa-hierarchy" class="mb-3 px-2">
+<ul>
+    {% for t in parents|reverse %}
+    <li>
+        {{ show_taxon(t) }}
+    <ul>
+    {% endfor %}
+    {% for c in children %}
+    <li>
+        {{ show_taxon(c) }}
+    </li>
+    {% endfor %}
+    {% for t in parents|reverse %}
+        </ul></li>
+    {% endfor %}
+</ul>
+</div>
+<h5>Samples</h5>
+    <div class="mb-3 px-2">
+    {{ sample_list(samples, "taxon-samples") }}
+    <button type="button"
+            class="btn btn-primary"
+            hx-get="{{ ("/taxonomy/" ~ taxon.id ~ "/samples") | app_url }}"
+            hx-target="#taxon-samples"
+            hx-swap="OuterHTML">
+            <div class="htmx-indicator spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            Query samples from child taxa
+    </button>
+</div>
+{% endblock %}

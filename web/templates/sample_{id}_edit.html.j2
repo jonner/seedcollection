@@ -1,0 +1,14 @@
+{% extends "root.html.j2" %}
+{% from "_sample_macros.html.j2" import sample_form %}
+{% from "_macros.html.j2" import breadcrumbs %}
+{% block title %}Edit Sample {{ sample.id | idfmt("S") }}{% endblock %}
+{% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Samples", "link": ("/sample/list" | app_url) },
+{"name": sample.id | idfmt("S"), "link": ("/sample/" ~ sample.id) | app_url },
+{"name": "Edit", "active": true }
+]) }}
+<h2>{{ self.title() }}</h2>
+{{ sample_form(sources, sample) }}
+{% endblock %}

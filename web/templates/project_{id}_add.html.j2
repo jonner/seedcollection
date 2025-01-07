@@ -1,0 +1,14 @@
+{% extends "root.html.j2" %}
+{% from "_macros.html.j2" import icon, breadcrumbs %}
+{% from "_project_macros.html.j2" import project_add_sample %}
+{% block title %}Add Samples to Project{% endblock %}
+{% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Projects", "link": ("/project/list" | app_url) },
+{"name": project.id | idfmt("P"), "link": ("/project/" ~ project.id) | app_url },
+{"name": "Add Samples", "active": true }]) }}
+<h2>{{ self.title() }}</h2>
+<p>Choose samples to add to the project <i>{{ project.name }}</p>
+{{ project_add_sample(project, samples) }}
+{% endblock %}

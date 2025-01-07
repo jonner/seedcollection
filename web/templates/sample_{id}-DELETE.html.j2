@@ -1,0 +1,7 @@
+{% from "_macros.html.j2" import show_message %}
+{% from "_sample_macros.html.j2" import sample_form %}
+{% if deleted %}
+{{ show_message(message) }}
+{% else %}
+{{ sample_form(sources, sample, none, message) }}
+{% endif %}

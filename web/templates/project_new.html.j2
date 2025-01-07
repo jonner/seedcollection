@@ -1,0 +1,13 @@
+{% from "_project_macros.html.j2" import project_form %}
+{% from "_macros.html.j2" import breadcrumbs %}
+{% extends "root.html.j2" %}
+{% block title %}New Project{% endblock %}
+{% block content %}
+{{ breadcrumbs([
+{"name": "Home", "link": ("/" | app_url) },
+{"name": "Projects", "link": ("/project/list" | app_url) },
+{"name": "New Project", "active": true },
+]) }}
+<h2>{{ self.title() }}</h2>
+{{ project_form("new-project-form") }}
+{% endblock %}
