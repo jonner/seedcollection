@@ -238,7 +238,6 @@ where
     jinja.set_loader(minijinja::path_loader(template_dir));
     jinja.add_filter("app_url", util::app_url);
     jinja.add_filter("append_query_param", util::append_query_param);
-    jinja.add_filter("truncate", util::truncate_text);
     jinja.add_filter("idfmt", util::format_id_number);
     jinja.add_filter("markdown", util::markdown);
     jinja.add_filter("qtyfmt", util::format_quantity);

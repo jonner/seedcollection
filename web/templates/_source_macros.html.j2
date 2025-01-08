@@ -141,11 +141,11 @@
                href="{{ ("/source/" ~ src.id) | app_url}}">{{ src.id | idfmt("L") }}</a>
         </div>
         <div class="d-flex flex-column p-1">
-            <div>{{ src.name |truncate }}
+            <div>{{ src.name |truncate(length=100) }}
             </div>
             <div class="text-secondary">
                 <div class="d-flex flex-row flex-wrap column-gap-3">
-                    {% if src.description %}<div class="fst-italic">{{ src.description | truncate }}</div>{% endif %}
+                    {% if src.description %}<div class="fst-italic">{{ src.description | truncate(length=100) }}</div>{% endif %}
                 </div>
             </div>
         </div>

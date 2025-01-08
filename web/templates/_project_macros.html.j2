@@ -58,7 +58,7 @@ hx-target-error="#message-box"
                 </div>
                 <div class="text-secondary">
                     <div class="d-flex flex-row flex-wrap column-gap-3">
-                        {% if project.description %}<div class="fst-italic">{{ project.description | truncate }}</div>{% endif %}
+                        {% if project.description %}<div class="fst-italic">{{ project.description | truncate(length=100) }}</div>{% endif %}
                     </div>
                 </div>
             </div>

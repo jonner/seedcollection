@@ -69,18 +69,6 @@ fn test_append_query_param() {
     );
 }
 
-/// A minijinja template filter for truncating text to a given length and
-/// appending ellipsis.
-pub(crate) fn truncate_text(mut s: String, chars: Option<usize>) -> String {
-    let chars = chars.unwrap_or(100);
-    if s.len() > chars {
-        s.truncate(chars);
-        s + "..."
-    } else {
-        s
-    }
-}
-
 /// A minijinja template filter for formatting an object's id number in a
 /// consistent manner and with a specific amount of zero-padding. e.g. `S0001`
 pub(crate) fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> String {

@@ -29,8 +29,8 @@ axum-server = { version = "0.7.0", features = ["tls-rustls"] }
 axum-template = { version = "3.0", features = ["minijinja"] }
 axum = { version = "0.8", features = ["macros"] }
 lettre = { version = "0.11.3", features = ["serde", "tracing", "sendmail-transport", "file-transport", "tokio1", "tokio1-native-tls"] }
-minijinja-contrib = { version = "2.0.3", features = ["datetime"] }
-minijinja = { version = "2.0.3", features = ["loader"] }
+minijinja-contrib = { version = "2.6.0", features = ["datetime"] }
+minijinja = { version = "2.6.0", features = ["loader"] }
 pulldown-cmark = "0.12.0"
 serde_urlencoded = "0.7.1"
 serde_yaml = "0.9.30"
