@@ -230,7 +230,10 @@ impl MakeRequestId for MakeRequestUuid {
     }
 }
 
-fn template_engine<T>(envname: &str, template_dir: T) -> Engine<minijinja::Environment<'static>>
+fn template_engine<'source, T>(
+    envname: &str,
+    template_dir: T,
+) -> Engine<minijinja::Environment<'source>>
 where
     T: AsRef<std::path::Path>,
 {
