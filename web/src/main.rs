@@ -24,7 +24,6 @@ use serde::{Deserialize, Serialize};
 use state::{AppState, SharedState};
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
-use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{
     request_id::{MakeRequestId, RequestId},
@@ -394,7 +393,8 @@ async fn main() -> Result<()> {
 
 #[cfg(unix)]
 async fn shutdown_on_sigterm(handle: axum_server::Handle) {
-    signal::unix::signal(signal::unix::SignalKind::terminate())
+    use tokio::signal::unix::*;
+    signal(SignalKind::terminate())
         .expect("Failed to install signal handler")
         .recv()
         .await;
