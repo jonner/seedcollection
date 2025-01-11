@@ -19,7 +19,6 @@ time = { workspace = true }
 tokio = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing = { workspace = true }
-xdg = { workspace = true }
 
 # local dependencies
 # switch from git branch to 0.17 when it is released
@@ -40,6 +39,7 @@ tower-http = { version = "0.6", features = ["fs", "trace", "request-id", "util"]
 tower-sessions = "0.14.0"
 tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"]}
 uuid = { version = "1.7.0", features = ["v4"] }
+directories = "5.0.1"
 
 [dev-dependencies]
 http-body-util = "0.1.0"
