@@ -26,26 +26,25 @@ mod config;
 mod output;
 mod prompt;
 
-async fn config_dir() -> Result<PathBuf> {
-    #[cfg(unix)]
-    {
-        let xdgdirs = xdg::BaseDirectories::new()?;
-        xdgdirs
-            .place_config_file("seedctl/config")
-            .map_err(Into::into)
-    }
-    #[cfg(windows)]
-    {
-        let config_dir = PathBuf::from("%LOCALAPPDATA%").join("seedctl");
-        fs::create_dir_all(&config_dir).await?;
-        Ok(config_dir.join("config"))
-    }
+async fn ensure_config_dir() -> Result<PathBuf> {
+    let dirs = directories::ProjectDirs::from("org", "quotidian", "seedctl")
+        .ok_or_else(|| anyhow!("Failed to get directory for config files"))?;
+    let config_dir = dirs.config_dir();
+    fs::create_dir_all(config_dir).await?;
+    Ok(config_dir.to_path_buf())
 }
+
+async fn config_file() -> Result<PathBuf> {
+    let mut dir = ensure_config_dir().await?;
+    dir.push("config");
+    Ok(dir)
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let args = Cli::parse();
-    let config_file = config_dir().await?;
+    let config_file = config_file().await?;
     match &args.command {
         Commands::Login { username, database } => {
             let username = username

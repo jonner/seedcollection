@@ -24,7 +24,6 @@ use serde::{Deserialize, Serialize};
 use state::{AppState, SharedState};
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
-use tokio::signal;
 use tower::ServiceBuilder;
 use tower_http::{
     request_id::{MakeRequestId, RequestId},
@@ -293,36 +292,46 @@ async fn app(shared_state: AppState) -> Result<Router> {
     Ok(app)
 }
 
-fn config_dir() -> PathBuf {
-    let mut dir = PathBuf::from("/etc");
-    if let Ok(xdgdirs) = xdg::BaseDirectories::new() {
-        let tocheck = vec![xdgdirs.get_config_home(), dir.clone()];
-        for d in tocheck {
-            let testdir = d.join("seedweb");
-            debug!(?testdir, "checking config dir");
-            if testdir.exists() {
-                dir = d;
-                break;
-            }
-        }
+fn config_dir() -> Result<PathBuf> {
+    let dirs = directories::ProjectDirs::from("org", "quotidian", "seedweb").ok_or_else(|| {
+        Error::Environment("Failed to determine base directories for configuration".to_string())
+    })?;
+
+    let testdir = dirs.config_dir();
+    debug!(?testdir, "checking config dir");
+    if testdir.exists() {
+        return Ok(testdir.to_path_buf());
     }
-    dir.join("seedweb")
+
+    // on unix, fall back to  systemwide config dir
+    #[cfg(unix)]
+    {
+        Ok(PathBuf::from("/etc/seedcollection"))
+    }
+    #[cfg(not(unix))]
+    {
+        Err(anyhow!("Couldn't determine config directory"))
+    }
 }
 
-fn data_dir() -> PathBuf {
-    let mut dir = PathBuf::from("/usr/share");
-    if let Ok(xdgdirs) = xdg::BaseDirectories::new() {
-        let tocheck = vec![xdgdirs.get_data_home(), dir.clone()];
-        for d in tocheck {
-            let testdir = d.join("seedweb");
-            debug!(?testdir, "checking data dir");
-            if testdir.exists() {
-                dir = d;
-                break;
-            }
-        }
+fn data_dir() -> Result<PathBuf> {
+    let dirs = directories::ProjectDirs::from("org", "quotidian", "seedweb").ok_or_else(|| {
+        Error::Environment("Failed to determine base directories for configuration".to_string())
+    })?;
+    let testdir = dirs.data_dir();
+    debug!(?testdir, "checking data dir");
+    if testdir.exists() {
+        return Ok(testdir.to_path_buf());
     }
-    dir.join("seedweb")
+    // on unix, fall back to system data dir
+    #[cfg(unix)]
+    {
+        Ok(PathBuf::from("/usr/share/seedweb"))
+    }
+    #[cfg(not(unix))]
+    {
+        Err(anyhow!("Couldn't determine data directory"))
+    }
 }
 
 #[tokio::main]
@@ -332,9 +341,12 @@ async fn main() -> Result<()> {
         .init();
 
     let args = Cli::parse();
-    let configdir = args.configdir.unwrap_or_else(config_dir);
+    let configdir = match args.configdir {
+        Some(dir) => dir,
+        None => config_dir()?,
+    };
     debug!(?configdir, "Configuration directory");
-    let datadir = data_dir();
+    let datadir = data_dir()?;
     debug!(?datadir, "Data directory");
 
     let configfile = configdir.join("config.yaml");
@@ -394,7 +406,8 @@ async fn main() -> Result<()> {
 
 #[cfg(unix)]
 async fn shutdown_on_sigterm(handle: axum_server::Handle) {
-    signal::unix::signal(signal::unix::SignalKind::terminate())
+    use tokio::signal::unix::*;
+    signal(SignalKind::terminate())
         .expect("Failed to install signal handler")
         .recv()
         .await;
