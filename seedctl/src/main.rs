@@ -76,6 +76,14 @@ async fn main() -> Result<()> {
                 .with_display_mode(inquire::PasswordDisplayMode::Masked)
                 .without_confirmation()
                 .prompt()?;
+            let password2 = inquire::Password::new("Repeat Password:")
+                .with_display_toggle_enabled()
+                .with_display_mode(inquire::PasswordDisplayMode::Masked)
+                .without_confirmation()
+                .prompt()?;
+            if password != password2 {
+                return Err(anyhow!("Passwords don't match!"));
+            }
             let password_hash = User::hash_password(&password)?;
             let mut user = User::new(
                 username.clone(),
