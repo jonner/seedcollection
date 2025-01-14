@@ -116,7 +116,7 @@ pub(crate) struct Cli {
     pub(crate) env: Option<String>,
     #[arg(
         long,
-        exclusive(true),
+        conflicts_with("env"),
         help = "shows all valid values for the --env option"
     )]
     pub(crate) list_envs: bool,
