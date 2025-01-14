@@ -31,4 +31,26 @@ ifndef DATABASE_URL
 	$(error Set DATABASE_URL to the location of the database before running)
 endif
 
-.PHONY: check-sqlx-env
+db/itis/itisSqlite.zip:
+	curl https://www.itis.gov/downloads/itisSqlite.zip --output $@
+CLEANDBFILES+=db/itis/itisSqlite.zip
+
+db/itis/ITIS.sqlite: db/itis/itisSqlite.zip
+	unzip -j $< -d db/itis/ "*/$(@F)"
+	touch $@
+CLEANDBFILES+=db/itis/ITIS.sqlite
+
+download-db: db/itis/ITIS.sqlite
+
+db/itis/ITIS.sqlite.stamp: db/itis/ITIS.sqlite db/itis/minnesota-itis-input-modified.csv
+	python ./db/itis/match-species.py --updatedb -d $^
+	cargo run -p seedctl -- init -d $<
+	touch db/itis/ITIS.sqlite.stamp
+CLEANDBFILES+=db/itis/ITIS.sqlite.stamp
+
+prepare-db: db/itis/ITIS.sqlite.stamp
+
+clean-db:
+	@rm -f $(CLEANDBFILES)
+
+.PHONY: check-sqlx-env download-db prepare-db clean-db

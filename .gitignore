@@ -7,3 +7,6 @@
 /target
 /TODO
 /seedcollection.sqlite*
+/db/itis/ITIS.sqlite
+/db/itis/itisSqlite.zip
+/db/itis/ReadmeSqlite.txt

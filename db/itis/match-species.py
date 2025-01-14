@@ -300,7 +300,7 @@ if __name__ == "__main__":
     taxa = handle_taxa_list(cursor, reader)
     if taxa and args.updatedb:
         logging.info("Adding {} items to the database".format(len(taxa)))
-        cursor.execute('DROP TABLE "mntaxa"')
+        cursor.execute('DROP TABLE IF EXISTS "mntaxa"')
         cursor.execute(
             ' CREATE TABLE "mntaxa" ( "id" INTEGER, "tsn" INTEGER, \
             "native_status" INTEGER, PRIMARY KEY("id" AUTOINCREMENT), \
