@@ -5,6 +5,8 @@ else
     CONTAINERCMD=podman
 endif
 
+SEEDWEB_DATABASE_DIR ?= ./db/itis
+
 SEEDWEB_HTTP_PORT ?= 8080
 SEEDWEB_HTTPS_PORT ?= 8443
 
@@ -12,14 +14,19 @@ container: Dockerfile config.yaml.docker
 	$(CONTAINERCMD) build -t seedweb:latest .
 
 run-container: container
-	$(CONTAINERCMD) run --detach \
-	--name seedweb \
-	--replace \
-	--tty \
-	--secret seedweb-smtp-password,type=env,target=SEEDWEB_SMTP_PASSWORD \
-	-p ${SEEDWEB_HTTP_PORT}:80 -p ${SEEDWEB_HTTPS_PORT}:443 \
-	-v ~/.local/share/seedcollection/:/usr/share/seedweb/db:Z \
-	seedweb:latest
+	@if [ -e ${SEEDWEB_DATABASE_DIR}/seedcollection.sqlite ]; then \
+		$(CONTAINERCMD) run --detach \
+		--name seedweb \
+		--replace \
+		--tty \
+		--secret seedweb-smtp-password,type=env,target=SEEDWEB_SMTP_PASSWORD \
+		-p ${SEEDWEB_HTTP_PORT}:80 -p ${SEEDWEB_HTTPS_PORT}:443 \
+		-v ${SEEDWEB_DATABASE_DIR}:/usr/share/seedweb/db:Z \
+		seedweb:latest; \
+	else \
+		echo "Database not found. You can run 'make prepare-db' to generate a database for use with this software"; \
+		exit 1; \
+	fi
 
 # run this to update the cached sql queries for offline building. DATABASE_URL
 # must be set to the url of a valid database with the correct schema
@@ -31,26 +38,33 @@ ifndef DATABASE_URL
 	$(error Set DATABASE_URL to the location of the database before running)
 endif
 
-db/itis/itisSqlite.zip:
+
+##################
+# DATABASE SETUP #
+##################
+./db/itis/itisSqlite.zip:
 	curl https://www.itis.gov/downloads/itisSqlite.zip --output $@
-CLEANDBFILES+=db/itis/itisSqlite.zip
+CLEANDBFILES+=./db/itis/itisSqlite.zip
 
-db/itis/ITIS.sqlite: db/itis/itisSqlite.zip
-	unzip -j $< -d db/itis/ "*/$(@F)"
+./db/itis/seedcollection.sqlite.orig: ./db/itis/itisSqlite.zip
+	unzip -j $< -d ./db/itis/ "*/ITIS.sqlite"
+	mv ./db/itis/ITIS.sqlite $@
 	touch $@
-CLEANDBFILES+=db/itis/ITIS.sqlite
+CLEANDBFILES+=./db/itis/seedcollection.sqlite.orig
 
-download-db: db/itis/ITIS.sqlite
-
-db/itis/ITIS.sqlite.stamp: db/itis/ITIS.sqlite db/itis/minnesota-itis-input-modified.csv
+./db/itis/seedcollection.sqlite.stamp: ./db/itis/seedcollection.sqlite.orig ./db/itis/minnesota-itis-input-modified.csv
 	python ./db/itis/match-species.py --updatedb -d $^
 	cargo run -p seedctl -- init -d $<
-	touch db/itis/ITIS.sqlite.stamp
-CLEANDBFILES+=db/itis/ITIS.sqlite.stamp
+	touch $@
+CLEANDBFILES+=./db/itis/ITIS.sqlite.stamp
 
-prepare-db: db/itis/ITIS.sqlite.stamp
+./db/itis/seedcollection.sqlite: ./db/itis/seedcollection.sqlite.stamp
+	cp ./db/itis/seedcollection.sqlite.orig $@
+CLEANDBFILES+=./db/itis/seedcollection.sqlite
+
+prepare-db: ./db/itis/seedcollection.sqlite
 
 clean-db:
 	@rm -f $(CLEANDBFILES)
 
-.PHONY: check-sqlx-env download-db prepare-db clean-db
+.PHONY: check-sqlx-env prepare-db clean-db container run-container

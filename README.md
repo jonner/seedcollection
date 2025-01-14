@@ -7,5 +7,12 @@ This software is provided under the terms of either the [Apache 2.0 license](LIC
 ## Building the application
 To build the rust code, simply run `cargo build`
 
+## Preparing the database
+To prepare the database, run `make prepare-db`. This will download the latest
+ITIS database from the internet, customize it slightly, and then prompt you
+for a username/email/password to create your first user account. The prepared
+database will be located in `./db/itis/seedcollection.sqlite`. This database can
+then be used with `seedctl` or `seedweb`.
+
 ## Running the application
 In order to run the web application in a docker or podman container, simply run `make run-container`
