@@ -23,6 +23,15 @@ pub(crate) struct OutputOptions {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum Commands {
+    #[command(about = "Initialize the database", hide = true)]
+    Init {
+        #[arg(short, long)]
+        database: Option<PathBuf>,
+        #[arg(short, long)]
+        username: Option<String>,
+        #[arg(short, long)]
+        email: Option<String>,
+    },
     #[command(about = "Login to the database")]
     Login {
         #[arg(short, long)]
