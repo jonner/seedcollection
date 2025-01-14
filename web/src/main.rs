@@ -487,7 +487,9 @@ async fn redirect_http_to_https(addr: String, ports: Ports) {
     };
 
     let addr: SocketAddr = format!("{}:{}", addr, ports.http).parse().unwrap();
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .unwrap_or_else(|_| panic!("Failed to listen on address {addr:?}"));
     info!(
         "Redirector listening on http://{}",
         listener.local_addr().unwrap()
