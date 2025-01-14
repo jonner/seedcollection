@@ -273,7 +273,7 @@ mod tests {
         ) {
             let mut src = Source::new(name, desc, lat, lon, userid);
             // full data
-            let res = src.insert(&db).await.expect("failed to insert");
+            let res = src.insert(db).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
             let srcloaded = Source::load(res.last_insert_rowid(), db)
                 .await

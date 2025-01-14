@@ -521,7 +521,7 @@ mod tests {
         ) {
             let mut sample =
                 Sample::new(taxon, user, source, month, year, quantity, notes, certainty);
-            let res = sample.insert(&db).await;
+            let res = sample.insert(db).await;
             let res = res.expect("Failed to insert sample");
             let loaded = Sample::load(res.last_insert_rowid(), db)
                 .await

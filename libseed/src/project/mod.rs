@@ -266,9 +266,9 @@ mod tests {
         let db = Database(pool);
         async fn check(db: &Database, name: String, desc: Option<String>, userid: i64) {
             let mut c = Project::new(name, desc, userid);
-            let res = c.insert(&db).await.expect("failed to insert");
+            let res = c.insert(db).await.expect("failed to insert");
             assert_eq!(res.rows_affected(), 1);
-            let cload = Project::load(res.last_insert_rowid(), &db)
+            let cload = Project::load(res.last_insert_rowid(), db)
                 .await
                 .expect("Failed to load project");
             assert_eq!(c, cload);
