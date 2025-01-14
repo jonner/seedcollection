@@ -103,13 +103,20 @@ fn path_to_template_key(path: &str, method: &Method) -> String {
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 pub(crate) struct Cli {
-    #[arg(long)]
+    #[arg(
+        long,
+        help = "The path to a configuration directory. This directory should contain at minimum a 'config.yaml' file which defines a set of runtime environments."
+    )]
     pub(crate) configdir: Option<PathBuf>,
-    #[arg(long, required_unless_present("list_envs"))]
+    #[arg(
+        long,
+        required_unless_present("list_envs"),
+        help = "The name of the runtime environment to execute. This should be the name of an environment defined in 'config.yaml'"
+    )]
     pub(crate) env: Option<String>,
     #[arg(
         long,
-        exclusive(true),
+        conflicts_with("env"),
         help = "shows all valid values for the --env option"
     )]
     pub(crate) list_envs: bool,
