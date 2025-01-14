@@ -313,7 +313,7 @@ fn config_dir() -> Result<PathBuf> {
     // on unix, fall back to  systemwide config dir
     #[cfg(unix)]
     {
-        Ok(PathBuf::from("/etc/seedcollection"))
+        Ok(PathBuf::from("/etc/seedweb"))
     }
     #[cfg(not(unix))]
     {
