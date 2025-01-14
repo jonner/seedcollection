@@ -15,7 +15,7 @@ use tower::Service;
 async fn test_new_note(pool: Pool<Sqlite>) {
     let mut app = test_app(pool).await.expect("failed to create test app");
 
-    let params = serde_urlencoded::to_string(&[
+    let params = serde_urlencoded::to_string([
         ("notetype", "Planting"),
         ("date", "2023-01-01"),
         ("summary", "This is a summary"),
@@ -102,7 +102,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
 
     // validate form fields
     // missing summary
-    let missing_summary = serde_urlencoded::to_string(&[
+    let missing_summary = serde_urlencoded::to_string([
         ("notetype", "Planting"),
         ("date", "2023-01-01"),
         ("summary", ""),
@@ -124,7 +124,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     // validate note type
-    let missing_type = serde_urlencoded::to_string(&[
+    let missing_type = serde_urlencoded::to_string([
         ("notetype", ""),
         ("date", "2023-01-01"),
         ("summary", "summary"),
@@ -146,7 +146,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     // missing date
-    let missing_date = serde_urlencoded::to_string(&[
+    let missing_date = serde_urlencoded::to_string([
         ("notetype", "Planting"),
         ("date", ""),
         ("summary", "summary"),

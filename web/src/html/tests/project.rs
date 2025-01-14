@@ -85,7 +85,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
 
     // well-formed form data, but not expected format
     let missing_name =
-        serde_urlencoded::to_string(&[("foo", "bar")]).expect("failed to serialize form");
+        serde_urlencoded::to_string([("foo", "bar")]).expect("failed to serialize form");
     let req = Request::builder()
         .uri(app_url("/project/new"))
         .method("POST")
@@ -101,7 +101,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     // only name
-    let form = serde_urlencoded::to_string(&[("name", "project name #1")])
+    let form = serde_urlencoded::to_string([("name", "project name #1")])
         .expect("failed to serialize form");
     let req = Request::builder()
         .uri(app_url("/project/new"))
@@ -118,7 +118,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     assert_eq!(response.status(), StatusCode::OK);
 
     // empty name
-    let form = serde_urlencoded::to_string(&[("name", "")]).expect("failed to serialize form");
+    let form = serde_urlencoded::to_string([("name", "")]).expect("failed to serialize form");
     let req = Request::builder()
         .uri(app_url("/project/new"))
         .method("POST")
@@ -134,7 +134,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     // name + empty description
-    let form = serde_urlencoded::to_string(&[("name", "project name #2"), ("description", "")])
+    let form = serde_urlencoded::to_string([("name", "project name #2"), ("description", "")])
         .expect("failed to serialize form");
     let req = Request::builder()
         .uri(app_url("/project/new"))
@@ -152,7 +152,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     assert!(response.headers().get("HX-Redirect").is_some());
 
     // name + description
-    let form = serde_urlencoded::to_string(&[
+    let form = serde_urlencoded::to_string([
         ("name", "project name #3"),
         ("description", "This is a description of the project"),
     ])

@@ -512,11 +512,7 @@ mod tests {
         assert_eq!(taxon.name1, Some("Elymus".to_string()));
         assert_eq!(taxon.name2, Some("canadensis".to_string()));
         assert_eq!(taxon.rank, Rank::Species);
-        assert!(taxon
-            .vernaculars
-            .iter()
-            .find(|v| v == &"Canada wildrye")
-            .is_some());
+        assert!(taxon.vernaculars.iter().any(|v| v == "Canada wildrye"));
     }
 
     #[test(sqlx::test(
@@ -532,18 +528,10 @@ mod tests {
         assert_eq!(taxa[0].name1, Some("Elymus".to_string()));
         assert_eq!(taxa[0].name2, None);
         assert_eq!(taxa[0].rank, Rank::Genus);
-        assert!(taxa[0]
-            .vernaculars
-            .iter()
-            .find(|v| v == &"wildrye")
-            .is_some());
+        assert!(taxa[0].vernaculars.iter().any(|v| v == "wildrye"));
         assert_eq!(taxa[1].name1, Some("Elymus".to_string()));
         assert_eq!(taxa[1].name2, Some("canadensis".to_string()));
         assert_eq!(taxa[1].rank, Rank::Species);
-        assert!(taxa[1]
-            .vernaculars
-            .iter()
-            .find(|v| v == &"Canada wildrye")
-            .is_some());
+        assert!(taxa[1].vernaculars.iter().any(|v| v == "Canada wildrye"));
     }
 }
