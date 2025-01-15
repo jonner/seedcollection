@@ -54,7 +54,14 @@ CLEANDBFILES+=./db/itis/seedcollection.sqlite.orig
 
 ./db/itis/seedcollection.sqlite.stamp: ./db/itis/seedcollection.sqlite.orig ./db/itis/minnesota-itis-input-modified.csv
 	python ./db/itis/match-species.py --updatedb -d $^
-	cargo run -p seedctl -- init -d $<
+	@USER_COUNT=$(shell cargo run -p seedctl -- admin -d $< users list --format json | jq length) ; \
+	if [ -z "$$USER_COUNT" ] || [ $$USER_COUNT -eq 0 ]; then \
+		echo "No users found. Adding a new user..."; \
+		cargo run -p seedctl -- admin -d $< users add; \
+	else \
+		echo "Users already exist. Skipping user creation."; \
+		exit 1; \
+	fi
 	touch $@
 CLEANDBFILES+=./db/itis/ITIS.sqlite.stamp
 

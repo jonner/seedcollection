@@ -6,31 +6,26 @@ use crate::{
         rows::{GerminationRow, UserRow},
     },
 };
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use libseed::{
     loadable::Loadable,
     taxonomy::Germination,
     user::{User, UserStatus},
     Database,
 };
-use std::{
-    io::{stdin, stdout, Write},
-    path::PathBuf,
-};
+use std::path::PathBuf;
 use tokio::fs;
 use tracing::debug;
 
 /// Get a password from the user, either from the file at the provided path, or
 /// by reading input from stdin.
-async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow::Result<String> {
+async fn get_password(path: Option<PathBuf>) -> anyhow::Result<String> {
     let password = match path {
         None => {
-            /* read from stdin*/
-            let mut s = String::new();
-            print!("{}", message.unwrap_or("New password: ".to_string()));
-            stdout().flush()?;
-            stdin().read_line(&mut s)?;
-            s
+            let query = inquire::Password::new("New Password:")
+                .with_display_toggle_enabled()
+                .with_display_mode(inquire::PasswordDisplayMode::Masked);
+            query.prompt()?
         }
         Some(f) => fs::read_to_string(f).await?,
     };
@@ -38,11 +33,7 @@ async fn get_password(path: Option<PathBuf>, message: Option<String>) -> anyhow:
 }
 
 /// Handle the `seedctl admin` command and its subcommands
-pub(crate) async fn handle_command(
-    command: AdminCommands,
-    _user: User,
-    db: &Database,
-) -> Result<()> {
+pub(crate) async fn handle_command(db: &Database, command: AdminCommands) -> Result<()> {
     match command {
         AdminCommands::Users { command } => match command {
             UserCommands::List { output } => {
@@ -56,13 +47,16 @@ pub(crate) async fn handle_command(
                 email,
                 passwordfile,
             } => {
-                let password = get_password(
-                    passwordfile,
-                    Some(format!("New password for '{username}': ")),
-                )
-                .await?;
+                let username = username
+                    .or_else(|| inquire::Text::new("Username:").prompt().ok())
+                    .ok_or_else(|| anyhow!("No username specified"))?;
+                let email = email
+                    .or_else(|| inquire::Text::new("Email Address:").prompt().ok())
+                    .ok_or_else(|| anyhow!("No email address specified"))?;
+                let password = get_password(passwordfile).await?;
                 // hash the password
                 let pwhash = User::hash_password(&password)?;
+
                 let mut user = User::new(
                     username.clone(),
                     email.clone(),
@@ -100,7 +94,7 @@ pub(crate) async fn handle_command(
                     user.username = username;
                 }
                 if change_password {
-                    let password = get_password(passwordfile, None).await?;
+                    let password = get_password(passwordfile).await?;
                     user.change_password(&password)?;
                 }
                 user.update(db)

@@ -23,15 +23,6 @@ pub(crate) struct OutputOptions {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum Commands {
-    #[command(about = "Initialize the database", hide = true)]
-    Init {
-        #[arg(short, long)]
-        database: Option<PathBuf>,
-        #[arg(short, long)]
-        username: Option<String>,
-        #[arg(short, long)]
-        email: Option<String>,
-    },
     #[command(about = "Login to the database")]
     Login {
         #[arg(short, long)]
@@ -82,6 +73,12 @@ pub(crate) enum Commands {
     Admin {
         #[command(subcommand)]
         command: AdminCommands,
+        #[arg(
+            short,
+            long,
+            help = "Specify the database to administer, if not already logged in"
+        )]
+        database: Option<PathBuf>,
     },
 }
 
@@ -342,9 +339,9 @@ pub(crate) enum UserCommands {
     #[command(about = "Add a new user to the database")]
     Add {
         #[arg(long, help = "A unique username for the user")]
-        username: String,
+        username: Option<String>,
         #[arg(long, help = "Email address for the user")]
-        email: String,
+        email: Option<String>,
         #[arg(
             long,
             help = "Optional path to a file containing the user's password. If not given, you will be prompted for your password"

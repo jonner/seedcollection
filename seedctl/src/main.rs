@@ -13,7 +13,7 @@ use libseed::{
     loadable::Loadable,
     query::{Cmp, CompoundFilter, Op},
     taxonomy::{self, quickfind, Taxon},
-    user::{User, UserStatus},
+    Database,
     Error::DatabaseError,
 };
 use std::path::PathBuf;
@@ -46,57 +46,18 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let args = Cli::parse();
     let config_file = config_file().await?;
+    let config_db = config::Config::load_from_file(&config_file)
+        .await
+        .map(|cfg| cfg.database)
+        .ok();
+
     match args.command {
-        Commands::Init {
-            database,
-            username,
-            email,
-        } => {
-            let database = database
-                .or_else(|| {
-                    inquire::Text::new("Database path:")
-                        .prompt()
-                        .map(PathBuf::from)
-                        .ok()
-                })
-                .ok_or_else(|| anyhow!("No database provided"))?;
-            let db = libseed::Database::open(&database).await?;
-            let users = User::load_all(&db).await?;
-            if !users.is_empty() {
-                return Err(anyhow!("Database already has a user"));
-            }
-            let username = username
-                .or_else(|| inquire::Text::new("Username:").prompt().ok())
-                .ok_or_else(|| anyhow!("No username specified"))?;
-            let email = email
-                .or_else(|| inquire::Text::new("Email Address:").prompt().ok())
-                .ok_or_else(|| anyhow!("No email address specified"))?;
-            let password = inquire::Password::new("Password:")
-                .with_display_toggle_enabled()
-                .with_display_mode(inquire::PasswordDisplayMode::Masked)
-                .without_confirmation()
-                .prompt()?;
-            let password2 = inquire::Password::new("Repeat Password:")
-                .with_display_toggle_enabled()
-                .with_display_mode(inquire::PasswordDisplayMode::Masked)
-                .without_confirmation()
-                .prompt()?;
-            if password != password2 {
-                return Err(anyhow!("Passwords don't match!"));
-            }
-            let password_hash = User::hash_password(&password)?;
-            let mut user = User::new(
-                username.clone(),
-                email,
-                password_hash,
-                UserStatus::Unverified,
-                None,
-                None,
-                None,
-            );
-            user.insert(&db).await?;
-            println!("Added new user '{username}' to database {database:?}");
-            return Ok(());
+        Commands::Admin { database, command } => {
+            let dbpath = database
+                .or(config_db)
+                .ok_or_else(|| anyhow!("No database specified"))?;
+            let db = Database::open(dbpath).await?;
+            return commands::admin::handle_command(&db, command).await;
         }
         Commands::Login { username, database } => {
             let username = username
@@ -139,9 +100,8 @@ async fn main() -> Result<()> {
     let (db, user) = cfg.validate().await?;
 
     match args.command {
-        Commands::Init { .. } | Commands::Login { .. } | Commands::Logout => {
-            Ok(()) // already handled above
-        }
+        // already handled above
+        Commands::Login { .. } | Commands::Logout {} | Commands::Admin { .. } => Ok(()),
         Commands::Status => {
             println!("Using database '{}'", cfg.database.to_string_lossy());
             println!("Logged in as user '{}'", cfg.username);
@@ -215,6 +175,5 @@ async fn main() -> Result<()> {
                 Err(e) => Err(e.into()),
             },
         },
-        Commands::Admin { command } => commands::admin::handle_command(command, user, &db).await,
     }
 }
