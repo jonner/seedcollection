@@ -9,4 +9,7 @@
 /seedcollection.sqlite*
 /db/itis/ITIS.sqlite
 /db/itis/itisSqlite.zip
+/db/itis/seedcollection.sqlite
+/db/itis/seedcollection.sqlite.orig
+/db/itis/seedcollection.sqlite.stamp
 /db/itis/ReadmeSqlite.txt
