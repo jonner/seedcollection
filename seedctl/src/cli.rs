@@ -327,6 +327,14 @@ pub(crate) enum AdminCommands {
         #[command(subcommand)]
         command: GerminationCommands,
     },
+    #[command(
+        about = "Manage the database",
+        after_help = "Commands for managing the database as a whole."
+    )]
+    Database {
+        #[command(subcommand)]
+        command: DatabaseCommands,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -379,6 +387,32 @@ pub(crate) enum UserCommands {
     },
 }
 
+#[derive(Subcommand, Debug)]
+pub(crate) enum DatabaseCommands {
+    #[command(about = "Upgrade the database to use a newer taxonomy from ITIS",
+        group(
+            clap::ArgGroup::new("upgrade")
+                .required(true)
+                .multiple(false)
+                .args(&["new_database", "zip", "download"]),
+        ))]
+    Upgrade {
+        #[arg(
+            short,
+            long,
+            help = "path to the 'ITIS.sqlite' database containing the new taxonomy."
+        )]
+        new_database: Option<PathBuf>,
+        #[arg(
+            short,
+            long,
+            help = "path to the compressed zip file downloaded from ITIS that contains the new sqlite database (Usually named 'itisSqlite.zip')."
+        )]
+        zip: Option<PathBuf>,
+        #[arg(long, help = "Download a new database from the ITIS website")]
+        download: bool,
+    },
+}
 #[derive(Subcommand, Debug)]
 pub(crate) enum GerminationCommands {
     #[command(about = "List all germination codes")]

@@ -40,6 +40,9 @@ pub enum Error {
 
     #[error(transparent)]
     DatabaseMigrationError(#[from] sqlx::migrate::MigrateError),
+
+    #[error("Database upgrade failed: {0}")]
+    DatabaseUpgrade(String),
 }
 
 /// A convenience type alias for a [Result] with [Error](self::Error) as its error type
