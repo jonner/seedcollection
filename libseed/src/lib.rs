@@ -13,6 +13,7 @@ pub mod source;
 pub mod taxonomy;
 pub mod user;
 
+pub use database::Database;
 pub use error::Error;
 pub use error::Result;
 

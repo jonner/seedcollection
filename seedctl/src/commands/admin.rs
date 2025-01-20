@@ -7,12 +7,15 @@ use crate::{
     },
 };
 use anyhow::{Context, Result, anyhow};
+use futures::StreamExt;
 use libseed::{
-    database::Database,
+    database::{Database, UpgradeAction},
     loadable::Loadable,
     taxonomy::Germination,
     user::{User, UserStatus},
 };
+use std::io::BufReader;
+use std::io::Write;
 use std::path::PathBuf;
 use tokio::fs;
 use tracing::debug;
@@ -168,5 +171,96 @@ pub(crate) async fn handle_command(db: &Database, command: AdminCommands) -> Res
                 Ok(())
             }
         },
+        AdminCommands::Database { command } => match command {
+            crate::DatabaseCommands::Upgrade {
+                new_database,
+                zip,
+                download,
+            } => {
+                let newdbfile = match new_database {
+                    Some(path) => {
+                        println!("Using new database at {path:?}");
+                        path
+                    }
+                    None => {
+                        let zipfile = match zip {
+                            Some(zipfile) => {
+                                println!("Using zipfile {zipfile:?}");
+                                std::fs::File::open(zipfile)?
+                            }
+                            None => {
+                                if !download {
+                                    return Err(anyhow!("No new database specified"));
+                                }
+                                download_latest_itis().await?
+                            }
+                        };
+                        itis_extract_database(zipfile)?
+                    }
+                };
+                db.upgrade(newdbfile, |summary| {
+                    for taxon_change in summary.changes.iter() {
+                        println!("Taxon '{}' changed:", taxon_change.taxon.complete_name);
+                        for mismatch in taxon_change.changes.iter() {
+                            println!(
+                                " - Field '{}' changed from '{}' to '{}'",
+                                mismatch.property_name, mismatch.old_value, mismatch.new_value
+                            )
+                        }
+                    }
+                    for replacement in summary.replacements.iter() {
+                        println!(
+                            "Taxon '{}' ({}) will be changed to '{}' ({})",
+                            replacement.old.complete_name,
+                            replacement.old.id,
+                            replacement.new.complete_name,
+                            replacement.new.id
+                        )
+                    }
+                    match inquire::Confirm::new("Proceed with database upgrade?")
+                        .with_default(false)
+                        .prompt()
+                    {
+                        Ok(true) => UpgradeAction::Proceed,
+                        _ => UpgradeAction::Abort,
+                    }
+                })
+                .await?;
+                Ok(())
+            }
+        },
     }
+}
+
+fn itis_extract_database(archivefile: std::fs::File) -> Result<PathBuf> {
+    let mut archive = zip::ZipArchive::new(archivefile)?;
+    for i in 0..archive.len() {
+        let file = archive.by_index(i)?;
+        if file.name().ends_with("ITIS.sqlite") {
+            debug!("Found sqlite database '{}'", file.name());
+            let path = PathBuf::from("ITIS.sqlite");
+            let mut dbfile = std::fs::File::create(&path)?;
+            let mut stream = BufReader::new(file);
+            std::io::copy(&mut stream, &mut dbfile)?;
+            debug!("extracted database from zip file");
+            return Ok(path);
+        }
+    }
+    Err(anyhow!("Unable to find sqlite database within zip file"))
+}
+
+async fn download_latest_itis() -> Result<std::fs::File> {
+    let mut latest_file = tempfile::tempfile()?;
+    let itis_url = "https://www.itis.gov/downloads/itisSqlite.zip";
+    println!("Downloading latest database from '{itis_url}'");
+    let mut stream = reqwest::get(itis_url).await?.bytes_stream();
+    // FIXME: provide some progress monitoring
+    while let Some(chunk_result) = stream.next().await {
+        let chunk = chunk_result?;
+        debug!(".");
+        latest_file.write_all(&chunk)?;
+    }
+    latest_file.flush()?;
+    println!("Downloaded file");
+    Ok(latest_file)
 }

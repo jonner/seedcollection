@@ -187,7 +187,9 @@ impl FromRow<'_, SqliteRow> for Taxon {
             name2: row.try_get("unit_name2")?,
             name3: row.try_get("unit_name3")?,
             native_status: status,
-            parentid: row.try_get("parentid")?,
+            parentid: row
+                .try_get("parentid")
+                .or_else(|_| row.try_get("parent_tsn"))?,
             seq: row.try_get("seq").unwrap_or(None),
             germination: None,
         })
