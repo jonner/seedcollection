@@ -119,7 +119,7 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
                 *self = Self::Object(obj);
                 self.object()
             }
-            Self::Object(ref mut obj) => {
+            Self::Object(obj) => {
                 let id = obj.id();
                 if force {
                     *obj = T::load(id, db).await?;
@@ -137,7 +137,7 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
                 *self = Self::Object(obj);
                 self.object_mut()
             }
-            Self::Object(ref mut obj) => Ok(obj),
+            Self::Object(obj) => Ok(obj),
         }
     }
 
