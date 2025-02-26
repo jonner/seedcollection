@@ -31,7 +31,7 @@ axum = { version = "0.8", features = ["macros"] }
 lettre = { version = "0.11.3", features = ["serde", "tracing", "sendmail-transport", "file-transport", "tokio1", "tokio1-native-tls"] }
 minijinja-contrib = { version = "2.6.0", features = ["datetime"] }
 minijinja = { version = "2.6.0", features = ["loader"] }
-pulldown-cmark = "0.12.0"
+pulldown-cmark = "0.13.0"
 serde_urlencoded = "0.7.1"
 serde_yaml = "0.9.30"
 signal-hook = "0.3.17"
