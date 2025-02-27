@@ -1,10 +1,10 @@
 //! Functions related to prompting the user for input data
-use inquire::{autocompletion::Autocomplete, CustomUserError};
+use inquire::{CustomUserError, autocompletion::Autocomplete};
 use libseed::{
+    Database,
     query::{Cmp, CompoundFilter, Op},
     source::{self, Source},
-    taxonomy::{quickfind, Taxon},
-    Database,
+    taxonomy::{Taxon, quickfind},
 };
 use std::convert;
 
@@ -90,9 +90,7 @@ impl Autocomplete for TaxonCompleter {
         _input: &str,
         highlighted_suggestion: Option<String>,
     ) -> Result<inquire::autocompletion::Replacement, CustomUserError> {
-        {
-            Ok(highlighted_suggestion)
-        }
+        Ok(highlighted_suggestion)
     }
 }
 
@@ -166,9 +164,7 @@ impl Autocomplete for SourceCompleter {
         _input: &str,
         highlighted_suggestion: Option<String>,
     ) -> Result<inquire::autocompletion::Replacement, CustomUserError> {
-        {
-            Ok(highlighted_suggestion)
-        }
+        Ok(highlighted_suggestion)
     }
 }
 

@@ -1,8 +1,8 @@
-use crate::{auth::Credentials, test_app, util::app_url, Result};
+use crate::{Result, auth::Credentials, test_app, util::app_url};
 use axum::{
-    body::{Body, Bytes, HttpBody},
-    http::{header::CONTENT_TYPE, Request, StatusCode},
     Router,
+    body::{Body, Bytes, HttpBody},
+    http::{Request, StatusCode, header::CONTENT_TYPE},
 };
 use http_body_util::BodyExt;
 use sqlx::{Pool, Sqlite};

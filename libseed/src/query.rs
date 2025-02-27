@@ -1,8 +1,8 @@
 //! utilities related to database queries
 //!
 use serde::{
-    de::{value, IntoDeserializer},
     Deserialize, Serialize,
+    de::{IntoDeserializer, value},
 };
 use std::{str::FromStr, sync::Arc};
 

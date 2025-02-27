@@ -1,24 +1,24 @@
 use super::error_alert_response;
 use crate::{
+    Message, MessageType, TemplateKey,
     auth::SqliteUser,
     error::{self, Error},
     state::AppState,
     util::app_url,
-    Message, MessageType, TemplateKey,
 };
 use anyhow::anyhow;
 use axum::{
-    extract::{rejection::FormRejection, Path, State},
+    Form, Router,
+    extract::{Path, State, rejection::FormRejection},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get},
-    Form, Router,
 };
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     loadable::Loadable,
-    project::{self, allocation, Allocation, Note, NoteType, Project},
+    project::{self, Allocation, Note, NoteType, Project, allocation},
     query::{CompoundFilter, Op},
 };
 use minijinja::context;
@@ -101,7 +101,7 @@ async fn add_allocation_note(
         Ok(Form(params)) => params,
         Err(e) => {
             return error_alert_response(&state, StatusCode::UNPROCESSABLE_ENTITY, e.to_string())
-                .into_response()
+                .into_response();
         }
     };
 
@@ -128,7 +128,7 @@ async fn add_allocation_note(
                         StatusCode::NOT_FOUND,
                         format!("Allocation {allocid} not found for project {projectid}"),
                     )
-                    .into_response()
+                    .into_response();
                 }
                 _ => {
                     return error_alert_response(
@@ -136,7 +136,7 @@ async fn add_allocation_note(
                         StatusCode::INTERNAL_SERVER_ERROR,
                         "Failed to fetch allocation".to_string(),
                     )
-                    .into_response()
+                    .into_response();
                 }
             };
         }

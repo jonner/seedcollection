@@ -1,18 +1,18 @@
 //! API for managing projects in the database
 use crate::{
+    Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
     sample::Sample,
-    Database,
 };
 pub use allocation::Allocation;
 use async_trait::async_trait;
 pub use note::{Note, NoteFilter, NoteType};
 use serde::{Deserialize, Serialize};
 use sqlx::{
-    sqlite::{SqliteQueryResult, SqliteRow},
     FromRow, QueryBuilder, Row, Sqlite,
+    sqlite::{SqliteQueryResult, SqliteRow},
 };
 use std::sync::Arc;
 use tracing::debug;
@@ -251,9 +251,9 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Project> {
 
 #[cfg(test)]
 mod tests {
+    use crate::Database;
     use crate::loadable::Loadable;
     use crate::project::Project;
-    use crate::Database;
     use sqlx::Pool;
     use sqlx::Sqlite;
     use test_log::test;

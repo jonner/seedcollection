@@ -1,17 +1,17 @@
 use crate::{
+    Message, MessageType, TemplateKey,
     auth::SqliteUser,
     error::{self, Error},
     state::AppState,
     util::{app_url, format_id_number},
-    Message, MessageType, TemplateKey,
 };
 use anyhow::anyhow;
 use axum::{
-    extract::{rejection::QueryRejection, Path, Query, State},
+    Form, Router,
+    extract::{Path, Query, State, rejection::QueryRejection},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
-    Form, Router,
 };
 use axum_extra::extract::OptionalQuery;
 use axum_template::RenderHtml;
@@ -19,9 +19,8 @@ use libseed::{
     empty_string_as_none,
     loadable::{ExternalRef, Loadable},
     project::{
-        self,
-        allocation::{self, taxon_name_like, SortField},
-        Project,
+        self, Project,
+        allocation::{self, SortField, taxon_name_like},
     },
     query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec},
     sample::{self, Sample},
@@ -32,7 +31,7 @@ use sqlx::sqlite::SqliteQueryResult;
 use std::{collections::HashSet, sync::Arc};
 use tracing::{debug, trace, warn};
 
-use super::{error_alert_response, SortOption};
+use super::{SortOption, error_alert_response};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()

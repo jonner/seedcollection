@@ -1,11 +1,11 @@
-use crate::{auth::AuthSession, error, state::AppState, Message, MessageType, TemplateKey};
+use crate::{Message, MessageType, TemplateKey, auth::AuthSession, error, state::AppState};
 use axum::{
+    Router,
     extract::{OriginalUri, Request, State},
     http::StatusCode,
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::get,
-    Router,
 };
 use axum_template::RenderHtml;
 use minijinja::context;

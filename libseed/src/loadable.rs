@@ -5,8 +5,8 @@
 //! joins to other tables and sometimes just query the single table while still making it easy to
 //! fetch the referenced object later.
 use crate::{
-    error::{Error, Result},
     Database,
+    error::{Error, Result},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

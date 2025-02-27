@@ -1,18 +1,18 @@
 //! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
+    Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
     source::Source,
     taxonomy::{Rank, Taxon},
     user::User,
-    Database,
 };
 use async_trait::async_trait;
-use serde::{de::IntoDeserializer, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::IntoDeserializer};
 use sqlx::{
-    sqlite::{SqliteQueryResult, SqliteRow},
     FromRow, QueryBuilder, Row, Sqlite,
+    sqlite::{SqliteQueryResult, SqliteRow},
 };
 use std::{str::FromStr, sync::Arc};
 use strum_macros::Display;
@@ -331,8 +331,9 @@ impl Sample {
     }
 
     fn build_stats_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
-        let mut builder: QueryBuilder<Sqlite> =
-            QueryBuilder::new("SELECT COUNT(*) as nsamples, COUNT(DISTINCT tsn) as ntaxa, COUNT(DISTINCT srcid) as nsources FROM vsamples");
+        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
+            "SELECT COUNT(*) as nsamples, COUNT(DISTINCT tsn) as ntaxa, COUNT(DISTINCT srcid) as nsources FROM vsamples",
+        );
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);

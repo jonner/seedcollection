@@ -1,27 +1,27 @@
 use super::error_alert_response;
 use crate::{
+    TemplateKey,
     auth::{AuthSession, Credentials},
     error,
     state::AppState,
     util::app_url,
-    TemplateKey,
 };
 use axum::{
+    Form, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
     routing::{get, post},
-    Form, Router,
 };
 use axum_template::RenderHtml;
 use libseed::{
+    Database,
     loadable::Loadable,
     user::{User, UserStatus},
-    Database,
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use time::{macros::format_description, Duration, OffsetDateTime, PrimitiveDateTime};
+use time::{Duration, OffsetDateTime, PrimitiveDateTime, macros::format_description};
 use tracing::{debug, error};
 
 pub(crate) fn router() -> Router<AppState> {

@@ -1,18 +1,18 @@
-use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
+use crate::{TemplateKey, auth::SqliteUser, error, state::AppState};
 use axum::{
+    Form, Router,
     extract::{Path, Query, Request, State},
     response::IntoResponse,
     routing::get,
-    Form, Router,
 };
 use axum_template::RenderHtml;
+use libseed::{Database, loadable::Loadable};
 use libseed::{
     empty_string_as_none,
     query::{Cmp, CompoundFilter, LimitSpec, Op},
     sample::{self, Sample},
     taxonomy::{self, Germination, Rank, Taxon},
 };
-use libseed::{loadable::Loadable, Database};
 use minijinja::context;
 use serde::Deserialize;
 use std::sync::Arc;

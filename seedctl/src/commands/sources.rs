@@ -6,15 +6,15 @@ use crate::{
         rows::{SourceRow, SourceRowFull},
     },
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use inquire::validator::Validation;
 use libseed::{
+    Database,
+    Error::{AuthUserNotFound, DatabaseError},
     loadable::Loadable,
     query::{Cmp, CompoundFilter, Op},
     source::{self, Source},
     user::User,
-    Database,
-    Error::{AuthUserNotFound, DatabaseError},
 };
 
 /// Handle the `seedctl sources` command and its subcommands

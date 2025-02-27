@@ -1,13 +1,13 @@
 //! Manage notes associated with project allocations
 use crate::{
+    Database,
     error::{Error, Result},
     loadable::Loadable,
     query::{DynFilterPart, FilterPart},
-    Database,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqliteQueryResult, QueryBuilder, Sqlite};
+use sqlx::{QueryBuilder, Sqlite, sqlite::SqliteQueryResult};
 use std::sync::Arc;
 use strum_macros::EnumIter;
 use time::Date;

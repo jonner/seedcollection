@@ -1,5 +1,5 @@
-use crate::{auth::SqliteUser, error, state::AppState, TemplateKey};
-use axum::{extract::State, response::IntoResponse, routing::get, Router};
+use crate::{TemplateKey, auth::SqliteUser, error, state::AppState};
+use axum::{Router, extract::State, response::IntoResponse, routing::get};
 use axum_template::RenderHtml;
 use libseed::taxonomy::Germination;
 use minijinja::context;

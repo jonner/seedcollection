@@ -1,9 +1,9 @@
 //! functions related to `seedctl` configuration
-use libseed::{user::User, Database};
+use libseed::{Database, user::User};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::{
-    fs::{read_to_string, File},
+    fs::{File, read_to_string},
     io::AsyncWriteExt,
 };
 use tracing::debug;
