@@ -45,7 +45,7 @@ pub(crate) struct SampleRowFull {
     taxon: String,
     source: String,
     date: String,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     quantity: Option<f64>,
 }
 
@@ -54,13 +54,6 @@ impl TryFrom<Sample> for SampleRowFull {
 
     fn try_from(sample: Sample) -> Result<Self, Self::Error> {
         Self::new(sample)
-    }
-}
-
-fn table_display_option<T: ToString>(o: &Option<T>) -> String {
-    match o {
-        Some(v) => v.to_string(),
-        None => "".to_string(),
     }
 }
 
@@ -140,23 +133,20 @@ where
 pub(crate) struct SampleRowDetails {
     id: i64,
     taxon: String,
-    #[tabled(display_with = "format_string_vec", rename = "Common Names")]
+    #[tabled(display = "format_string_vec", rename = "Common Names")]
     common_names: Vec<String>,
     source: String,
     #[tabled(rename = "Collection Date")]
     date: String,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     quantity: Option<f64>,
     certainty: Certainty,
-    #[tabled(
-        display_with = "table_display_germination",
-        rename = "Germination Codes"
-    )]
+    #[tabled(display("table_display_germination"), rename = "Germination Codes")]
     #[serde(serialize_with = "serialize_germination")]
     germination: Option<Vec<Germination>>,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     notes: Option<String>,
-    #[tabled(display_with = "table_display_allocations")]
+    #[tabled(display("table_display_allocations"))]
     #[serde(serialize_with = "serialize_allocations")]
     allocations: Vec<Allocation>,
 }
@@ -193,7 +183,7 @@ impl SampleRowDetails {
 pub(crate) struct ProjectRow {
     id: i64,
     name: String,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     description: Option<String>,
 }
 
@@ -246,9 +236,9 @@ pub(crate) struct AllocationRowFull {
     taxon: String,
     source: String,
     date: String,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     quantity: Option<f64>,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     notes: Option<String>,
 }
 
@@ -272,11 +262,11 @@ impl AllocationRowFull {
 pub(crate) struct SourceRowFull {
     id: i64,
     name: String,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     latitude: Option<f64>,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     longitude: Option<f64>,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     description: Option<String>,
 }
 
@@ -318,9 +308,9 @@ pub(crate) struct TaxonRow {
     id: i64,
     rank: Rank,
     name: String,
-    #[tabled(display_with = "format_string_vec", rename = "Common Names")]
+    #[tabled(display("format_string_vec"), rename = "Common Names")]
     common_names: Vec<String>,
-    #[tabled(display_with = "table_display_option", rename = "MN Status")]
+    #[tabled(display("tabled::derive::display::option", ""), rename = "MN Status")]
     mn_status: Option<NativeStatus>,
 }
 
@@ -341,18 +331,15 @@ impl TaxonRow {
 pub(crate) struct TaxonRowDetails {
     id: i64,
     name: String,
-    #[tabled(display_with = "format_string_vec", rename = "Common Names")]
+    #[tabled(display("format_string_vec"), rename = "Common Names")]
     common_names: Vec<String>,
     rank: Rank,
-    #[tabled(display_with = "table_display_option", rename = "MN Status")]
+    #[tabled(display("tabled::derive::display::option", ""), rename = "MN Status")]
     mn_status: Option<NativeStatus>,
-    #[tabled(
-        display_with = "table_display_germination",
-        rename = "Germination Codes"
-    )]
+    #[tabled(display("table_display_germination"), rename = "Germination Codes")]
     #[serde(serialize_with = "serialize_germination")]
     germination: Option<Vec<Germination>>,
-    #[tabled(display_with = "table_display_samples")]
+    #[tabled(display("table_display_samples"))]
     samples: Vec<TaxonSample>,
 }
 
@@ -437,9 +424,9 @@ impl UserRow {
 pub(crate) struct GerminationRow {
     id: i64,
     code: String,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     summary: Option<String>,
-    #[tabled(display_with = "table_display_option")]
+    #[tabled(display("tabled::derive::display::option", ""))]
     description: Option<String>,
 }
 
