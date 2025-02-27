@@ -1,4 +1,4 @@
-use crate::{template_engine, EnvConfig};
+use crate::{EnvConfig, template_engine};
 use anyhow::{Context, Result};
 use axum_template::engine::Engine;
 use lettre::{AsyncSmtpTransport, Tokio1Executor};

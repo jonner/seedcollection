@@ -8,14 +8,14 @@ use crate::{
     },
     prompt::{SourceIdPrompt, TaxonIdPrompt},
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use libseed::{
+    Database,
+    Error::{AuthUserNotFound, DatabaseError},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     sample::{self, Certainty, Sample},
     user::User,
-    Database,
-    Error::{AuthUserNotFound, DatabaseError},
 };
 
 /// Handle the `seedctl samples` command and its subcommands
@@ -312,7 +312,7 @@ pub(crate) async fn handle_command(
                     (false, true) => sample.certainty = Certainty::Uncertain,
                     // should never happen due to cli arg conflict definitions
                     (true, true) => {
-                        return Err(anyhow!("Sample cannot be both certain and uncertain"))
+                        return Err(anyhow!("Sample cannot be both certain and uncertain"));
                     }
                     _ => (),
                 }

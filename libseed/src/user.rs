@@ -1,19 +1,19 @@
 //! Objects representing a user of the application
 use crate::{
+    Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{DynFilterPart, FilterPart},
-    Database,
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
-use password_hash::{rand_core::OsRng, PasswordHash, SaltString};
+use password_hash::{PasswordHash, SaltString, rand_core::OsRng};
 use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use sqlx::{
+    QueryBuilder, Sqlite,
     prelude::*,
     sqlite::{SqliteQueryResult, SqliteRow},
-    QueryBuilder, Sqlite,
 };
 use std::sync::Arc;
 use time::OffsetDateTime;

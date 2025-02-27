@@ -1,21 +1,21 @@
 use crate::{
+    Message, MessageType, TemplateKey,
     auth::SqliteUser,
     error::{self, Error},
     state::AppState,
     util::app_url,
-    Message, MessageType, TemplateKey,
 };
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use axum::{
+    Form, Router,
     extract::State,
     response::IntoResponse,
     routing::{get, post},
-    Form, Router,
 };
 use axum_template::{RenderHtml, TemplateEngine};
 use lettre::{
-    message::{header::ContentType, Mailbox},
     AsyncFileTransport, AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
+    message::{Mailbox, header::ContentType},
 };
 use libseed::{
     project::{self, Project},

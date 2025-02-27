@@ -1,35 +1,35 @@
 use crate::error::Error;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use auth::AuthSession;
 use axum::{
-    extract::{rejection::MatchedPathRejection, FromRequestParts, MatchedPath, State},
+    BoxError, RequestPartsExt, Router,
+    extract::{FromRequestParts, MatchedPath, State, rejection::MatchedPathRejection},
     handler::HandlerWithoutStateExt,
-    http::{request::Parts, HeaderMap, HeaderValue, Method, Request, StatusCode, Uri},
+    http::{HeaderMap, HeaderValue, Method, Request, StatusCode, Uri, request::Parts},
     middleware::{self, Next},
     response::{IntoResponse, Redirect, Response},
     routing::get,
-    BoxError, RequestPartsExt, Router,
 };
 use axum_extra::extract::Host;
 use axum_login::{
-    tower_sessions::{Expiry, SessionManagerLayer},
     AuthManagerLayerBuilder,
+    tower_sessions::{Expiry, SessionManagerLayer},
 };
 use axum_server::tls_rustls::RustlsConfig;
-use axum_template::{engine::Engine, RenderHtml};
+use axum_template::{RenderHtml, engine::Engine};
 use clap::Parser;
-use lettre::{transport::smtp::authentication::Credentials, AsyncSmtpTransport, Tokio1Executor};
-use minijinja::{context, Environment};
+use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
+use minijinja::{Environment, context};
 use serde::{Deserialize, Serialize};
 use state::{AppState, SharedState};
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
 use tower::ServiceBuilder;
 use tower_http::{
+    ServiceBuilderExt,
     request_id::{MakeRequestId, RequestId},
     services::ServeDir,
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
-    ServiceBuilderExt,
 };
 use tower_sessions_sqlx_store::SqliteStore;
 use tracing::{debug, info, trace};
@@ -215,9 +215,9 @@ impl EnvConfig {
                 } else {
                     debug!("Looking up SMTP password from environment variable");
                     // If not found, look it up from environment variable
-                    creds.password = std::env::var("SEEDWEB_SMTP_PASSWORD").with_context(|| {
-                        "Failed to get SMTP password from env variable SEEDWEB_SMTP_PASSWORD"
-                    })?;
+                    creds.password = std::env::var("SEEDWEB_SMTP_PASSWORD").with_context(
+                        || "Failed to get SMTP password from env variable SEEDWEB_SMTP_PASSWORD",
+                    )?;
                 }
             }
         }
@@ -393,9 +393,9 @@ async fn main() -> Result<()> {
     let tlsconfig =
         RustlsConfig::from_pem_file(certdir.join("server.crt"), certdir.join("server.key"))
             .await
-            .with_context(|| {
-                "Unable to load TLS key and certificate. See certs/README for more info"
-            })?;
+            .with_context(
+                || "Unable to load TLS key and certificate. See certs/README for more info",
+            )?;
 
     let app = app(Arc::new(SharedState::new(envarg, env, datadir).await?)).await?;
 

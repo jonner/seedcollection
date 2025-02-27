@@ -1,16 +1,16 @@
 //! Objects related to querying the taxonomic database
 use crate::{
+    Database, Error,
     error::Result,
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
-    Database, Error,
 };
 use async_trait::async_trait;
-use serde::{de::IntoDeserializer, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::IntoDeserializer};
 use sqlx::{
+    FromRow, Row,
     error::Error::ColumnDecode,
     sqlite::{SqliteQueryResult, SqliteRow},
-    FromRow, Row,
 };
 use std::{str::FromStr, sync::Arc};
 use strum_macros::{Display, EnumIter, FromRepr};

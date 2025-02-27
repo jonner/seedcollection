@@ -1,23 +1,23 @@
 //! Manage samples that are allocated to a [Project]
 use super::{
-    note::{self, Note},
     Project,
+    note::{self, Note},
 };
 use crate::{
+    Database,
     error::Result,
     loadable::Loadable,
     query::{
         Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, SortSpecs, ToSql,
     },
     sample::Sample,
-    Database,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{
+    QueryBuilder, Sqlite,
     prelude::*,
     sqlite::{SqliteQueryResult, SqliteRow},
-    QueryBuilder, Sqlite,
 };
 use std::sync::Arc;
 

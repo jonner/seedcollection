@@ -7,14 +7,14 @@ use crate::{
         table::SeedctlTable,
     },
 };
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Parser;
 use libseed::{
-    loadable::Loadable,
-    query::{Cmp, CompoundFilter, Op},
-    taxonomy::{self, quickfind, Taxon},
     Database,
     Error::DatabaseError,
+    loadable::Loadable,
+    query::{Cmp, CompoundFilter, Op},
+    taxonomy::{self, Taxon, quickfind},
 };
 use std::path::PathBuf;
 use tabled::Table;

@@ -6,12 +6,12 @@ use crate::{
         rows::{GerminationRow, UserRow},
     },
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use libseed::{
+    Database,
     loadable::Loadable,
     taxonomy::Germination,
     user::{User, UserStatus},
-    Database,
 };
 use std::path::PathBuf;
 use tokio::fs;

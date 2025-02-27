@@ -1,24 +1,24 @@
 use crate::{
+    Message, MessageType, TemplateKey,
     auth::SqliteUser,
     error::{self, Error},
     html::SortOption,
     state::AppState,
     util::app_url,
-    Message, MessageType, TemplateKey,
 };
 use anyhow::anyhow;
 use axum::{
+    Form, Router,
     extract::{Path, Query, State},
     http::HeaderMap,
     response::IntoResponse,
     routing::get,
-    Form, Router,
 };
 use axum_template::RenderHtml;
 use libseed::{
     empty_string_as_none,
     loadable::{ExternalRef, Loadable},
-    project::{allocation, Allocation},
+    project::{Allocation, allocation},
     query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     sample::{self, Certainty, Sample, SortField},
     source::Source,

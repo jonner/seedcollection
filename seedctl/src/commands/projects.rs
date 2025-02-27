@@ -8,11 +8,11 @@ use crate::{
 };
 use anyhow::Result;
 use libseed::{
+    Database,
     loadable::{ExternalRef, Loadable},
-    project::{allocation, Allocation, Project},
+    project::{Allocation, Project, allocation},
     query::{CompoundFilter, Op},
     user::User,
-    Database,
 };
 
 /// Handle the `seedctl projects` command and its subcommands

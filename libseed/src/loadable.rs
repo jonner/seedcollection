@@ -5,8 +5,8 @@
 //! joins to other tables and sometimes just query the single table while still making it easy to
 //! fetch the referenced object later.
 use crate::{
-    error::{Error, Result},
     Database,
+    error::{Error, Result},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -119,7 +119,7 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
                 *self = Self::Object(obj);
                 self.object()
             }
-            Self::Object(ref mut obj) => {
+            Self::Object(obj) => {
                 let id = obj.id();
                 if force {
                     *obj = T::load(id, db).await?;
@@ -137,7 +137,7 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
                 *self = Self::Object(obj);
                 self.object_mut()
             }
-            Self::Object(ref mut obj) => Ok(obj),
+            Self::Object(obj) => Ok(obj),
         }
     }
 

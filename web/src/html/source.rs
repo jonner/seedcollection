@@ -1,11 +1,11 @@
-use crate::{auth::SqliteUser, util::app_url, Message, MessageType, TemplateKey};
-use anyhow::{anyhow, Context};
+use crate::{Message, MessageType, TemplateKey, auth::SqliteUser, util::app_url};
+use anyhow::{Context, anyhow};
 use axum::{
+    Form, Router,
     extract::{Path, Query, State},
     http::HeaderMap,
     response::IntoResponse,
     routing::get,
-    Form, Router,
 };
 use axum_template::RenderHtml;
 use libseed::{
