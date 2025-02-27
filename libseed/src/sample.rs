@@ -325,9 +325,7 @@ impl Sample {
             f.add_to_query(&mut builder);
         }
         builder.push(" ORDER BY ");
-        let s: SortSpecs<SortField> = sort
-            .map(Into::into)
-            .unwrap_or(SortField::TaxonSequence.into());
+        let s: SortSpecs<SortField> = sort.unwrap_or(SortField::TaxonSequence.into());
         builder.push(s.to_sql());
         builder
     }
