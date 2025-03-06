@@ -9,8 +9,8 @@ use crate::{
 use anyhow::{Result, anyhow};
 use inquire::validator::Validation;
 use libseed::{
-    Database,
     Error::{AuthUserNotFound, DatabaseError},
+    database::Database,
     loadable::Loadable,
     query::{Cmp, CompoundFilter, Op},
     source::{self, Source},

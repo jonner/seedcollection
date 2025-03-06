@@ -1,6 +1,6 @@
 //! Objects to manage the origin of seed samples
 use crate::{
-    Database,
+    database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op},
@@ -262,7 +262,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn test_insert_sources(pool: Pool<Sqlite>) {
-        let db = Database(pool);
+        let db = Database::new(pool);
         async fn check(
             db: &Database,
             name: String,

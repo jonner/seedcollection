@@ -2,7 +2,7 @@ use crate::{EnvConfig, template_engine};
 use anyhow::{Context, Result};
 use axum_template::engine::Engine;
 use lettre::{AsyncSmtpTransport, Tokio1Executor};
-use libseed::Database;
+use libseed::database::Database;
 use std::{path::PathBuf, sync::Arc};
 use tracing::{debug, trace};
 
@@ -52,7 +52,7 @@ impl SharedState {
         let template = template_engine("test", "./templates");
         debug!("Creating test shared app state");
         Self {
-            db: Database::new(pool),
+            db: Database::from(pool),
             tmpl: template,
             config: EnvConfig {
                 listen: crate::ListenConfig {

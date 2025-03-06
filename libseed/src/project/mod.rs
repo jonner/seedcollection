@@ -1,6 +1,6 @@
 //! API for managing projects in the database
 use crate::{
-    Database,
+    database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
@@ -251,7 +251,7 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Project> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Database;
+    use crate::database::Database;
     use crate::loadable::Loadable;
     use crate::project::Project;
     use sqlx::Pool;
@@ -263,7 +263,7 @@ mod tests {
         fixtures(path = "../../../db/fixtures", scripts("users"))
     ))]
     async fn test_insert_projects(pool: Pool<Sqlite>) {
-        let db = Database(pool);
+        let db = Database::new(pool);
         async fn check(db: &Database, name: String, desc: Option<String>, userid: i64) {
             let mut c = Project::new(name, desc, userid);
             let res = c.insert(db).await.expect("failed to insert");

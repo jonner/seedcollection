@@ -10,8 +10,8 @@ use crate::{
 use anyhow::{Result, anyhow};
 use clap::Parser;
 use libseed::{
-    Database,
     Error::DatabaseError,
+    database::Database,
     loadable::Loadable,
     query::{Cmp, CompoundFilter, Op},
     taxonomy::{self, Taxon, quickfind},

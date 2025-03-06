@@ -1,5 +1,5 @@
 //! functions related to `seedctl` configuration
-use libseed::{Database, user::User};
+use libseed::{database::Database, user::User};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::{
@@ -92,7 +92,7 @@ impl Config {
 
     /// Check whether the current [Config] object represents a valid configuration
     pub(crate) async fn validate(&self) -> Result<(Database, User), Error> {
-        let db = libseed::Database::open(&self.database).await?;
+        let db = Database::open(&self.database).await?;
         let user = User::load_by_username(&self.username, &db)
             .await
             .map_err(Error::Database)?

@@ -1,6 +1,6 @@
 //! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
-    Database,
+    database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
@@ -505,7 +505,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users", "sources", "taxa"))
     ))]
     async fn insert_samples(pool: Pool<Sqlite>) {
-        let db = Database(pool);
+        let db = Database::new(pool);
 
         #[allow(clippy::too_many_arguments)]
         async fn check(
