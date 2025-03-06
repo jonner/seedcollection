@@ -4,7 +4,7 @@ use super::{
     note::{self, Note},
 };
 use crate::{
-    Database,
+    database::Database,
     error::Result,
     loadable::Loadable,
     query::{
@@ -309,7 +309,7 @@ impl FromRow<'_, SqliteRow> for Allocation {
 
 #[cfg(test)]
 mod tests {
-    use crate::Database;
+    use crate::database::Database;
 
     use super::*;
     use sqlx::Pool;
@@ -324,7 +324,7 @@ mod tests {
         )
     ))]
     async fn load_allocations(pool: Pool<Sqlite>) {
-        let db = Database(pool);
+        let db = Database::new(pool);
         async fn check_sample(a: &Allocation, db: &Database) {
             tracing::debug!("loading sample");
             let s = Sample::load(a.sample.id(), db)

@@ -1,6 +1,6 @@
 //! Manage notes associated with project allocations
 use crate::{
-    Database,
+    database::Database,
     error::{Error, Result},
     loadable::Loadable,
     query::{DynFilterPart, FilterPart},
@@ -206,7 +206,7 @@ mod tests {
         )
     ))]
     async fn test_query_notes(pool: Pool<Sqlite>) {
-        let db = Database(pool);
+        let db = Database::new(pool);
         let mut note = Note::load(3, &db).await.expect("Failed to load notes");
         tracing::debug!("{note:?}");
         assert_eq!(note.id, 3);

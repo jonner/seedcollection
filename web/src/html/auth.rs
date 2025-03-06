@@ -15,7 +15,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    Database,
+    database::Database,
     loadable::Loadable,
     user::{User, UserStatus},
 };

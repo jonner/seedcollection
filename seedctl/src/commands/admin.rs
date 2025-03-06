@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::{Context, Result, anyhow};
 use libseed::{
-    Database,
+    database::Database,
     loadable::Loadable,
     taxonomy::Germination,
     user::{User, UserStatus},

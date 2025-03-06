@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::Result;
 use libseed::{
-    Database,
+    database::Database,
     loadable::{ExternalRef, Loadable},
     project::{Allocation, Project, allocation},
     query::{CompoundFilter, Op},

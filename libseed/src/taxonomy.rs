@@ -1,6 +1,7 @@
 //! Objects related to querying the taxonomic database
 use crate::{
-    Database, Error,
+    Error,
+    database::Database,
     error::Result,
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
@@ -505,7 +506,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("taxa"))
     ))]
     async fn fetch_taxon(pool: Pool<Sqlite>) {
-        let db = Database(pool);
+        let db = Database::new(pool);
         let taxon = Taxon::load(CANADA_WILD_RYE, &db)
             .await
             .expect("Unable to load taxon");
@@ -520,7 +521,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("taxa"))
     ))]
     async fn fetch_many(pool: Pool<Sqlite>) {
-        let db = Database(pool);
+        let db = Database::new(pool);
         let taxa = Taxon::load_all(Some(Filter::Genus("Elymus".to_string()).into()), None, &db)
             .await
             .expect("Unable to load taxon");

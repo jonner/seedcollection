@@ -10,8 +10,8 @@ use crate::{
 };
 use anyhow::{Result, anyhow};
 use libseed::{
-    Database,
     Error::{AuthUserNotFound, DatabaseError},
+    database::Database,
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     sample::{self, Certainty, Sample},

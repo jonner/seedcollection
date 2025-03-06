@@ -6,7 +6,7 @@ use axum::{
     routing::get,
 };
 use axum_template::RenderHtml;
-use libseed::{Database, loadable::Loadable};
+use libseed::{database::Database, loadable::Loadable};
 use libseed::{
     empty_string_as_none,
     query::{Cmp, CompoundFilter, LimitSpec, Op},

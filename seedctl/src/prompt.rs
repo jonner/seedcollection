@@ -1,7 +1,7 @@
 //! Functions related to prompting the user for input data
 use inquire::{CustomUserError, autocompletion::Autocomplete};
 use libseed::{
-    Database,
+    database::Database,
     query::{Cmp, CompoundFilter, Op},
     source::{self, Source},
     taxonomy::{Taxon, quickfind},

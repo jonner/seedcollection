@@ -4,7 +4,8 @@ use async_trait::async_trait;
 use axum::{extract::FromRequestParts, http::request::Parts};
 use axum_login::{AuthUser, AuthnBackend, UserId};
 use libseed::{
-    Database, empty_string_as_none,
+    database::Database,
+    empty_string_as_none,
     user::{User, UserStatus},
 };
 use serde::{Deserialize, Serialize};
