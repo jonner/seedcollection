@@ -505,7 +505,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users", "sources", "taxa"))
     ))]
     async fn insert_samples(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
 
         #[allow(clippy::too_many_arguments)]
         async fn check(

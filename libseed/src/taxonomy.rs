@@ -506,7 +506,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("taxa"))
     ))]
     async fn fetch_taxon(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         let taxon = Taxon::load(CANADA_WILD_RYE, &db)
             .await
             .expect("Unable to load taxon");
@@ -521,7 +521,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("taxa"))
     ))]
     async fn fetch_many(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         let taxa = Taxon::load_all(Some(Filter::Genus("Elymus".to_string()).into()), None, &db)
             .await
             .expect("Unable to load taxon");

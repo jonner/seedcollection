@@ -262,7 +262,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn test_insert_sources(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         async fn check(
             db: &Database,
             name: String,
