@@ -507,6 +507,7 @@ mod tests {
     async fn insert_samples(pool: Pool<Sqlite>) {
         let db = Database(pool);
 
+        #[allow(clippy::too_many_arguments)]
         async fn check(
             db: &Database,
             taxon: i64,
