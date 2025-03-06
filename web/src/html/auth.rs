@@ -256,7 +256,7 @@ mod test {
         fixtures(path = "../../../db/fixtures", scripts("users", "sources", "taxa"))
     ))]
     async fn test_verification(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         // expires yesterday
         const KEY1: &str = "aRbitrarykeyvalue21908fs0fqwaerilkiljanslaoi";
         // expires in an hour

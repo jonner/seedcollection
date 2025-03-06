@@ -7,6 +7,15 @@ use tracing::trace;
 #[derive(Clone, Debug)]
 pub struct Database(Pool<Sqlite>);
 
+impl From<Pool<Sqlite>> for Database {
+    /// **WARNING**: This is primarily intended for tests. You should probably
+    /// use [Database::open()] instead of creating the pool yourself, since
+    /// [Database::open()] will perform database schema migration automatically.
+    fn from(value: Pool<Sqlite>) -> Self {
+        Self(value)
+    }
+}
+
 impl Database {
     /// Open a connection to the specified database. This will also perform any
     /// necessary sql migrations to ensure that the database is up to date with the
@@ -22,12 +31,5 @@ impl Database {
     /// gets a reference to the underlying sqlx connection pool
     pub fn pool(&self) -> &Pool<Sqlite> {
         &self.0
-    }
-
-    /// This constructor is primarily intended for tests. Use [Database::open()]
-    /// instead as that function will perform database schema migration
-    /// automatically.
-    pub fn new(pool: Pool<Sqlite>) -> Self {
-        Self(pool)
     }
 }

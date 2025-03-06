@@ -340,7 +340,7 @@ mod tests {
 
     #[test(sqlx::test(migrations = "../db/migrations/",))]
     async fn register_user(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         const PASSWORD: &str = "my-super-secret-password";
         let hash = User::hash_password(PASSWORD).expect("Failed to hash password");
         let mut user = User::new(
@@ -374,7 +374,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn modify_user(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         const NEWNAME: &str = "TestUsername84902";
         let mut user = User::load(1, &db)
             .await
@@ -395,7 +395,7 @@ mod tests {
         fixtures(path = "../../db/fixtures", scripts("users"))
     ))]
     async fn delete_user(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         User::delete_id(&1, &db)
             .await
             .expect("failed to delete user");

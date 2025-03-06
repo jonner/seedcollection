@@ -324,7 +324,7 @@ mod tests {
         )
     ))]
     async fn load_allocations(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         async fn check_sample(a: &Allocation, db: &Database) {
             tracing::debug!("loading sample");
             let s = Sample::load(a.sample.id(), db)

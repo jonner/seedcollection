@@ -263,7 +263,7 @@ mod tests {
         fixtures(path = "../../../db/fixtures", scripts("users"))
     ))]
     async fn test_insert_projects(pool: Pool<Sqlite>) {
-        let db = Database::new(pool);
+        let db = Database::from(pool);
         async fn check(db: &Database, name: String, desc: Option<String>, userid: i64) {
             let mut c = Project::new(name, desc, userid);
             let res = c.insert(db).await.expect("failed to insert");
