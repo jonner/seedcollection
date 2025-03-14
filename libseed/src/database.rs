@@ -1,4 +1,8 @@
-use crate::{Error, Result, taxonomy::Taxon};
+use crate::{
+    Error, Result,
+    taxonomy::Taxon,
+    user::{User, UserStatus},
+};
 
 use sqlparser::{dialect::SQLiteDialect, parser::Parser};
 use sqlx::{Connection, FromRow, Pool, Row, Sqlite, SqlitePool};
@@ -234,6 +238,29 @@ impl Database {
             .map(|_| ())
             .map_err(|e| Error::DatabaseUpgrade(format!("Failed to detach new database: {e}")));
         res_upgrade.and(res_tx).and(res_pragma).and(res_detach)
+    }
+
+    pub async fn init(
+        &mut self,
+        admin_user: String,
+        admin_email: String,
+        admin_password: String,
+    ) -> Result<User> {
+        debug!("Initializing database with a new admin user {admin_user} ({admin_email})");
+        // hash the password
+        let pwhash = User::hash_password(&admin_password)?;
+
+        let mut user = User::new(
+            admin_user,
+            admin_email,
+            pwhash,
+            UserStatus::Unverified,
+            None,
+            None,
+            None,
+        );
+        user.insert(self).await?;
+        Ok(user)
     }
 
     async fn do_upgrade<I: IntoIterator<Item = String>>(
