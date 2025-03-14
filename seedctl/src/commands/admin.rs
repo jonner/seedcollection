@@ -245,27 +245,39 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
                 zipfile,
                 download,
             } => {
-                let db =
-                    Database::open(dbpath.ok_or_else(|| anyhow!("No database specified"))?).await?;
+                let dbpath = dbpath.ok_or_else(|| anyhow!("No database specified"))?;
+                let db = Database::open(&dbpath).await?;
+                let response = inquire::Confirm::new(&format!("Upgrading database '{}'. Make sure that your database is backed up before proceeding. Continue?", dbpath.display()))
+                    .with_default(false)
+                    .prompt()?;
+                if !response {
+                    return Err(inquire::InquireError::OperationCanceled.into());
+                }
                 let newdbfile = resolve_database_file(new_database, zipfile, download).await?;
                 db.upgrade(newdbfile, |summary| {
-                    for taxon_change in summary.changes.iter() {
-                        println!("Taxon '{}' changed:", taxon_change.taxon.complete_name);
-                        for mismatch in taxon_change.changes.iter() {
+                    if !summary.is_empty() {
+                        for taxon_change in summary.changes.iter() {
+                            println!("Taxon '{}' changed:", taxon_change.taxon.complete_name);
+                            for mismatch in taxon_change.changes.iter() {
+                                println!(
+                                    " - Field '{}' changed from '{}' to '{}'",
+                                    mismatch.property_name, mismatch.old_value, mismatch.new_value
+                                )
+                            }
+                        }
+                        for replacement in summary.replacements.iter() {
                             println!(
-                                " - Field '{}' changed from '{}' to '{}'",
-                                mismatch.property_name, mismatch.old_value, mismatch.new_value
+                                "Taxon '{}' ({}) will be changed to '{}' ({})",
+                                replacement.old.complete_name,
+                                replacement.old.id,
+                                replacement.new.complete_name,
+                                replacement.new.id
                             )
                         }
-                    }
-                    for replacement in summary.replacements.iter() {
+                    } else {
                         println!(
-                            "Taxon '{}' ({}) will be changed to '{}' ({})",
-                            replacement.old.complete_name,
-                            replacement.old.id,
-                            replacement.new.complete_name,
-                            replacement.new.id
-                        )
+                            "No relevant changes detected when upgrading to the new database."
+                        );
                     }
                     match inquire::Confirm::new("Proceed with database upgrade?")
                         .with_default(false)

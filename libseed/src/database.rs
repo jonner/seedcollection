@@ -51,6 +51,12 @@ pub struct DatabaseUpgradeSummary {
     pub invalid: Vec<Taxon>,
 }
 
+impl DatabaseUpgradeSummary {
+    pub fn is_empty(&self) -> bool {
+        self.changes.is_empty() && self.replacements.is_empty() && self.invalid.is_empty()
+    }
+}
+
 /// An enumeration for specifying which action to take for a database upgrade
 #[derive(Debug, PartialEq)]
 pub enum UpgradeAction {
