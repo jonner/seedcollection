@@ -389,6 +389,43 @@ pub(crate) enum UserCommands {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum DatabaseCommands {
+    #[command(about = "Initialize a new database",
+        group(
+            clap::ArgGroup::new("init")
+                .required(true)
+                .multiple(false)
+                .args(&["new_database", "zipfile", "download"]),
+        ))]
+    Init {
+        #[arg(
+            short,
+            long,
+            help = "path to the uncompressed 'ITIS.sqlite' database containing the new taxonomy."
+        )]
+        new_database: Option<PathBuf>,
+        #[arg(
+            short,
+            long,
+            help = "path to the compressed zip file downloaded from ITIS that contains the new sqlite database (Usually named 'itisSqlite.zip')."
+        )]
+        zipfile: Option<PathBuf>,
+        #[arg(long, help = "Download a new database from the ITIS website")]
+        download: bool,
+        #[arg(short = 'u', long, help = "username for the database administrator")]
+        admin_user: Option<String>,
+        #[arg(
+            short = 'e',
+            long,
+            help = "email address for the database administrator"
+        )]
+        admin_email: Option<String>,
+        #[arg(
+            short,
+            long,
+            help = "Optional path to a file containing the admin user's password. If not given, you will be prompted for your password"
+        )]
+        passwordfile: Option<PathBuf>,
+    },
     #[command(about = "Upgrade the database to use a newer taxonomy from ITIS",
         group(
             clap::ArgGroup::new("upgrade")
