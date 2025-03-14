@@ -35,6 +35,8 @@ pub(crate) enum Error {
     CannotFormatConfig(#[source] serde_json::Error),
     #[error("File permissions error for '{path}': {1}", path = .0.to_string_lossy())]
     FilePermissions(PathBuf, &'static str, #[source] std::io::Error),
+    #[error("Invalid arguments: {0}")]
+    InvalidArgument(String),
 }
 
 impl Config {
