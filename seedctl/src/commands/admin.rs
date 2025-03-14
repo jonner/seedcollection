@@ -1,6 +1,7 @@
 //! Commands for administration of seedctl or the database itself
 use crate::{
     cli::{AdminCommands, GerminationCommands, UserCommands},
+    config::{Config, config_file},
     output::{
         self,
         rows::{GerminationRow, UserRow},
@@ -181,6 +182,64 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
             }
         }
         AdminCommands::Database { command } => match command {
+            crate::DatabaseCommands::Init {
+                new_database,
+                zipfile,
+                download,
+                admin_user,
+                admin_email,
+                passwordfile,
+            } => {
+                let project_dirs =
+                    directories::ProjectDirs::from("org", "quotidian", "seedcollection")
+                        .ok_or_else(|| anyhow!("Cannot find default project data directory"))?;
+                let mut default_db_path = project_dirs.data_dir().to_path_buf();
+                default_db_path.push("seedcollection.sqlite");
+                let dest_path = dbpath.unwrap_or(default_db_path);
+                println!(
+                    "Attempting to Initialize new seedcollection database at '{}'...",
+                    dest_path.display()
+                );
+                if tokio::fs::try_exists(&dest_path).await?
+                    && !(inquire::Confirm::new(&format!(
+                        "Overwrite existing database file '{}'",
+                        dest_path.display(),
+                    ))
+                    .prompt()?)
+                {
+                    return Err(anyhow!("Refusing to overwrite existing database file"));
+                }
+                let source_db = resolve_database_file(new_database, zipfile, download).await?;
+                debug!("Copying {source_db:?} to {dest_path:?}");
+                tokio::fs::copy(source_db, &dest_path).await?;
+                let mut db = Database::open(&dest_path).await?;
+                let username = admin_user
+                    .or_else(|| inquire::Text::new("Administrator username:").prompt().ok())
+                    .ok_or_else(|| anyhow!("No Administrator username specified"))?;
+                let email = admin_email
+                    .or_else(|| {
+                        inquire::Text::new("Administrator email address:")
+                            .prompt()
+                            .ok()
+                    })
+                    .ok_or_else(|| anyhow!("No Administrator email specified"))?;
+                let password = match passwordfile {
+                    Some(f) => tokio::fs::read_to_string(f).await?,
+                    None => inquire::Password::new("Administrator password:")
+                        .with_display_toggle_enabled()
+                        .with_display_mode(inquire::PasswordDisplayMode::Masked)
+                        .prompt()?,
+                };
+
+                let user = db.init(username.clone(), email, password.clone()).await?;
+                println!("Added user to database:");
+                println!("{}: {}", user.id, user.username);
+                let cfg = Config::new(username.clone(), password, dest_path);
+                cfg.validate().await?;
+                cfg.save_to_file(&config_file().await?).await?;
+                println!("Logged in as {username}");
+                Ok(())
+            }
             crate::DatabaseCommands::Upgrade {
                 new_database,
                 zipfile,
@@ -188,27 +247,7 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
             } => {
                 let db =
                     Database::open(dbpath.ok_or_else(|| anyhow!("No database specified"))?).await?;
-                let newdbfile = match new_database {
-                    Some(path) => {
-                        println!("Using new database at {path:?}");
-                        path
-                    }
-                    None => {
-                        let zipfile = match zipfile {
-                            Some(zipfile) => {
-                                println!("Using zipfile {zipfile:?}");
-                                std::fs::File::open(zipfile)?
-                            }
-                            None => {
-                                if !download {
-                                    return Err(anyhow!("No new database specified"));
-                                }
-                                download_latest_itis().await?
-                            }
-                        };
-                        itis_extract_database(zipfile)?
-                    }
-                };
+                let newdbfile = resolve_database_file(new_database, zipfile, download).await?;
                 db.upgrade(newdbfile, |summary| {
                     for taxon_change in summary.changes.iter() {
                         println!("Taxon '{}' changed:", taxon_change.taxon.complete_name);
@@ -243,17 +282,50 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
     }
 }
 
+async fn resolve_database_file(
+    new_database: Option<PathBuf>,
+    zipfile: Option<PathBuf>,
+    download: bool,
+) -> Result<PathBuf, anyhow::Error> {
+    let itisdbfile = match new_database {
+        Some(path) => {
+            println!("Using new taxonomy database at '{}'", path.display());
+            path
+        }
+        None => {
+            let zipfile = match zipfile {
+                Some(zipfile) => {
+                    println!(
+                        "Using new taxonomy database from compressed file '{}'",
+                        zipfile.display()
+                    );
+                    std::fs::File::open(zipfile)?
+                }
+                None => {
+                    if !download {
+                        return Err(anyhow!("No new taxonomy database specified"));
+                    }
+                    download_latest_itis().await?
+                }
+            };
+            itis_extract_database(zipfile)?
+        }
+    };
+    Ok(itisdbfile)
+}
+
 fn itis_extract_database(archivefile: std::fs::File) -> Result<PathBuf> {
-    let mut archive = zip::ZipArchive::new(archivefile)?;
+    let mut archive = zip::ZipArchive::new(archivefile)
+        .with_context(|| "Failed to open zip archive {archivefile:?}")?;
     for i in 0..archive.len() {
         let file = archive.by_index(i)?;
         if file.name().ends_with("ITIS.sqlite") {
             debug!("Found sqlite database '{}'", file.name());
-            let path = PathBuf::from("ITIS.sqlite");
-            let mut dbfile = std::fs::File::create(&path)?;
+            let (mut dbfile, path) = tempfile::NamedTempFile::new()?.keep()?;
             let mut stream = BufReader::new(file);
-            std::io::copy(&mut stream, &mut dbfile)?;
-            debug!("extracted database from zip file");
+            std::io::copy(&mut stream, &mut dbfile)
+                .with_context(|| "Failed to copy temp file to {path:?}")?;
+            debug!("extracted database from zip file into {:?}", path);
             return Ok(path);
         }
     }
@@ -268,7 +340,6 @@ async fn download_latest_itis() -> Result<std::fs::File> {
     // FIXME: provide some progress monitoring
     while let Some(chunk_result) = stream.next().await {
         let chunk = chunk_result?;
-        debug!(".");
         latest_file.write_all(&chunk)?;
     }
     latest_file.flush()?;

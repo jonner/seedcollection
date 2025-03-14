@@ -42,36 +42,10 @@ endif
 ##################
 # DATABASE SETUP #
 ##################
-./db/itis/itisSqlite.zip:
-	curl https://www.itis.gov/downloads/itisSqlite.zip --output $@
-CLEANDBFILES+=./db/itis/itisSqlite.zip
-
-./db/itis/seedcollection.sqlite.orig: ./db/itis/itisSqlite.zip
-	unzip -j $< -d ./db/itis/ "*/ITIS.sqlite"
-	mv ./db/itis/ITIS.sqlite $@
-	touch $@
-CLEANDBFILES+=./db/itis/seedcollection.sqlite.orig
-
-./db/itis/seedcollection.sqlite.stamp: ./db/itis/seedcollection.sqlite.orig ./db/itis/minnesota-itis-input-modified.csv
+INIT_DB ?= $(HOME)/.local/share/seedcollection/seedcollection.sqlite
+INIT_DB_ARGS ?= --download
+prepare-db: $(INIT_DB) ./db/itis/minnesota-itis-input-modified.csv
+	cargo run -p seedctl -- admin database init $(INIT_DB_ARGS)
 	python ./db/itis/match-species.py --updatedb -d $^
-	@USER_COUNT=$(shell cargo run -p seedctl -- admin -d $< users list --format json | jq length) ; \
-	if [ -z "$$USER_COUNT" ] || [ $$USER_COUNT -eq 0 ]; then \
-		echo "No users found. Adding a new user..."; \
-		cargo run -p seedctl -- admin -d $< users add; \
-	else \
-		echo "Users already exist. Skipping user creation."; \
-		exit 1; \
-	fi
-	touch $@
-CLEANDBFILES+=./db/itis/ITIS.sqlite.stamp
 
-./db/itis/seedcollection.sqlite: ./db/itis/seedcollection.sqlite.stamp
-	cp ./db/itis/seedcollection.sqlite.orig $@
-CLEANDBFILES+=./db/itis/seedcollection.sqlite
-
-prepare-db: ./db/itis/seedcollection.sqlite
-
-clean-db:
-	@rm -f $(CLEANDBFILES)
-
-.PHONY: check-sqlx-env prepare-db clean-db container run-container
+.PHONY: check-sqlx-env prepare-db container run-container

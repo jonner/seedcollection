@@ -26,20 +26,6 @@ mod config;
 mod output;
 mod prompt;
 
-async fn ensure_config_dir() -> Result<PathBuf> {
-    let dirs = directories::ProjectDirs::from("org", "quotidian", "seedctl")
-        .ok_or_else(|| anyhow!("Failed to get directory for config files"))?;
-    let config_dir = dirs.config_dir();
-    fs::create_dir_all(config_dir).await?;
-    Ok(config_dir.to_path_buf())
-}
-
-async fn config_file() -> Result<PathBuf> {
-    let mut dir = ensure_config_dir().await?;
-    dir.push("config");
-    Ok(dir)
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();

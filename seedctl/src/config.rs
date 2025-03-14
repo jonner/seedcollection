@@ -35,6 +35,10 @@ pub(crate) enum Error {
     CannotFormatConfig(#[source] serde_json::Error),
     #[error("File permissions error for '{path}': {1}", path = .0.to_string_lossy())]
     FilePermissions(PathBuf, &'static str, #[source] std::io::Error),
+    #[error("System configuration error: {0}")]
+    SystemConfiguration(String),
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
 }
 
 impl Config {
@@ -105,4 +109,19 @@ impl Config {
             })?;
         Ok((db, user))
     }
+}
+
+pub async fn ensure_config_dir() -> Result<PathBuf, Error> {
+    let dirs = directories::ProjectDirs::from("org", "quotidian", "seedctl").ok_or_else(|| {
+        Error::SystemConfiguration("Failed to get directory for config files".into())
+    })?;
+    let config_dir = dirs.config_dir();
+    tokio::fs::create_dir_all(config_dir).await?;
+    Ok(config_dir.to_path_buf())
+}
+
+pub async fn config_file() -> Result<PathBuf, Error> {
+    let mut dir = ensure_config_dir().await?;
+    dir.push("config");
+    Ok(dir)
 }
