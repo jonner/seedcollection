@@ -25,8 +25,8 @@ pub(crate) enum Error {
     NotLoggedIn,
     #[error("Failed to parse config file")]
     ConfigParseFailed(#[source] serde_json::Error),
-    #[error("Incorrect username or password")]
-    LoginFailure,
+    #[error("Incorrect username or password for database '{db}'. Please log in again.")]
+    LoginFailure { db: String },
     #[error("Unable to run database migrations")]
     DatabaseMigrationFailure(#[from] sqlx::migrate::MigrateError),
     #[error(transparent)]
@@ -96,9 +96,13 @@ impl Config {
         let user = User::load_by_username(&self.username, &db)
             .await
             .map_err(Error::Database)?
-            .ok_or_else(|| Error::LoginFailure)?;
+            .ok_or_else(|| Error::LoginFailure {
+                db: self.database.display().to_string(),
+            })?;
         user.verify_password(&self.password)
-            .map_err(|_| Error::LoginFailure)?;
+            .map_err(|_| Error::LoginFailure {
+                db: self.database.display().to_string(),
+            })?;
         Ok((db, user))
     }
 }
