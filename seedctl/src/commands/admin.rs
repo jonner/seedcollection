@@ -1,6 +1,5 @@
 //! Commands for administration of seedctl or the database itself
 use crate::{
-    Error,
     cli::{AdminCommands, GerminationCommands, UserCommands},
     output::{
         self,
@@ -40,11 +39,8 @@ async fn get_password(path: Option<PathBuf>) -> anyhow::Result<String> {
 pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminCommands) -> Result<()> {
     match command {
         AdminCommands::Users { command } => {
-            let db = Database::open(
-                dbpath
-                    .ok_or_else(|| Error::InvalidArgument("No database specified".to_string()))?,
-            )
-            .await?;
+            let db =
+                Database::open(dbpath.ok_or_else(|| anyhow!("No database specified"))?).await?;
             match command {
                 UserCommands::List { output } => {
                     let users = User::load_all(&db).await?;
@@ -115,11 +111,8 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
             }
         }
         AdminCommands::Germination { command } => {
-            let db = Database::open(
-                dbpath
-                    .ok_or_else(|| Error::InvalidArgument("No database specified".to_string()))?,
-            )
-            .await?;
+            let db =
+                Database::open(dbpath.ok_or_else(|| anyhow!("No database specified"))?).await?;
             match command {
                 GerminationCommands::List { output } => {
                     let codes = Germination::load_all(&db).await?;
@@ -194,10 +187,7 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
                 download,
             } => {
                 let db =
-                    Database::open(dbpath.ok_or_else(|| {
-                        Error::InvalidArgument("No database specified".to_string())
-                    })?)
-                    .await?;
+                    Database::open(dbpath.ok_or_else(|| anyhow!("No database specified"))?).await?;
                 let newdbfile = match new_database {
                     Some(path) => {
                         println!("Using new database at {path:?}");
