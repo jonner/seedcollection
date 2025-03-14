@@ -11,7 +11,6 @@ use anyhow::{Result, anyhow};
 use clap::Parser;
 use libseed::{
     Error::DatabaseError,
-    database::Database,
     loadable::Loadable,
     query::{Cmp, CompoundFilter, Op},
     taxonomy::{self, Taxon, quickfind},
@@ -53,11 +52,7 @@ async fn main() -> Result<()> {
 
     match args.command {
         Commands::Admin { database, command } => {
-            let dbpath = database
-                .or(config_db)
-                .ok_or_else(|| anyhow!("No database specified"))?;
-            let db = Database::open(dbpath).await?;
-            return commands::admin::handle_command(&db, command).await;
+            return commands::admin::handle_command(database.or(config_db), command).await;
         }
         Commands::Login { username, database } => {
             let username = username
