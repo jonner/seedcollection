@@ -394,7 +394,7 @@ pub(crate) enum DatabaseCommands {
             clap::ArgGroup::new("upgrade")
                 .required(true)
                 .multiple(false)
-                .args(&["new_database", "zip", "download"]),
+                .args(&["new_database", "zipfile", "download"]),
         ))]
     Upgrade {
         #[arg(
@@ -408,7 +408,7 @@ pub(crate) enum DatabaseCommands {
             long,
             help = "path to the compressed zip file downloaded from ITIS that contains the new sqlite database (Usually named 'itisSqlite.zip')."
         )]
-        zip: Option<PathBuf>,
+        zipfile: Option<PathBuf>,
         #[arg(long, help = "Download a new database from the ITIS website")]
         download: bool,
     },

@@ -190,7 +190,7 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
         AdminCommands::Database { command } => match command {
             crate::DatabaseCommands::Upgrade {
                 new_database,
-                zip,
+                zipfile,
                 download,
             } => {
                 let db =
@@ -204,7 +204,7 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
                         path
                     }
                     None => {
-                        let zipfile = match zip {
+                        let zipfile = match zipfile {
                             Some(zipfile) => {
                                 println!("Using zipfile {zipfile:?}");
                                 std::fs::File::open(zipfile)?
