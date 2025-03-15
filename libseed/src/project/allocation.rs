@@ -4,12 +4,15 @@ use super::{
     note::{self, Note},
 };
 use crate::{
-    core::database::Database,
+    core::{
+        database::Database,
+        query::{
+            Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, SortSpecs,
+            ToSql,
+        },
+    },
     error::Result,
     loadable::Loadable,
-    query::{
-        Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, SortSpecs, ToSql,
-    },
     sample::Sample,
 };
 use async_trait::async_trait;

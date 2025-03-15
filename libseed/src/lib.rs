@@ -7,7 +7,6 @@ pub mod core;
 mod error;
 pub mod loadable;
 pub mod project;
-pub mod query;
 pub mod sample;
 pub mod source;
 pub mod taxonomy;

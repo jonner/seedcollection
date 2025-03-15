@@ -1,8 +1,7 @@
 use anyhow::Result;
 use libseed::{
-    core::database::Database,
+    core::{database::Database, query::Cmp},
     project::{Allocation, Project, allocation},
-    query::Cmp,
     sample::{self, Certainty, Sample},
     source::Source,
     taxonomy::{Germination, NativeStatus, Rank, Taxon},

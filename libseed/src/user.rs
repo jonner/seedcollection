@@ -1,9 +1,11 @@
 //! Objects representing a user of the application
 use crate::{
-    core::database::Database,
+    core::{
+        database::Database,
+        query::{DynFilterPart, FilterPart},
+    },
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{DynFilterPart, FilterPart},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;

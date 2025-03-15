@@ -1,9 +1,11 @@
 //! API for managing projects in the database
 use crate::{
-    core::database::Database,
+    core::{
+        database::Database,
+        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
+    },
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
     sample::Sample,
 };
 pub use allocation::Allocation;

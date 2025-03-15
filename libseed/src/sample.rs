@@ -1,9 +1,11 @@
 //! Objects to keep track of samples of seeds that were collected or purchased
 use crate::{
-    core::database::Database,
+    core::{
+        database::Database,
+        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
+    },
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
     source::Source,
     taxonomy::{Rank, Taxon},
     user::User,

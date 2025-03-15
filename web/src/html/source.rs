@@ -9,9 +9,9 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
+    core::query::{Cmp, CompoundFilter, Op},
     empty_string_as_none,
     loadable::Loadable,
-    query::{Cmp, CompoundFilter, Op},
     sample::{Filter, Sample},
     source,
     source::Source,
