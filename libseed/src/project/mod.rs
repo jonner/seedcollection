@@ -1,4 +1,4 @@
-//! API for managing projects in the database
+//! Seed collection projects
 use crate::{
     core::{
         database::Database,

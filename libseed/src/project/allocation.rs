@@ -1,4 +1,4 @@
-//! Manage samples that are allocated to a [Project]
+//! Samples that are allocated to a [Project]
 use super::{
     Project,
     note::{self, Note},

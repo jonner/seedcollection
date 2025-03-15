@@ -1,4 +1,4 @@
-//! Manage notes associated with project allocations
+//! Notes associated with project allocations
 use crate::core::{
     database::Database,
     error::{Error, Result},
