@@ -6,13 +6,13 @@ use super::{
 use crate::{
     core::{
         database::Database,
+        loadable::Loadable,
         query::{
             Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, SortSpecs,
             ToSql,
         },
     },
     error::Result,
-    loadable::Loadable,
     sample::Sample,
 };
 use async_trait::async_trait;

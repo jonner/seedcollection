@@ -3,10 +3,10 @@ use crate::{
     Error,
     core::{
         database::Database,
+        loadable::{ExternalRef, Loadable},
         query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
     },
     error::Result,
-    loadable::{ExternalRef, Loadable},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::IntoDeserializer};

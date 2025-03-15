@@ -16,9 +16,11 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    core::query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
+    core::{
+        loadable::{ExternalRef, Loadable},
+        query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
+    },
     empty_string_as_none,
-    loadable::{ExternalRef, Loadable},
     project::{Allocation, allocation},
     sample::{self, Certainty, Sample, SortField},
     source::Source,

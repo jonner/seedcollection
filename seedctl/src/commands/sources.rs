@@ -12,9 +12,9 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
     core::{
         database::Database,
+        loadable::Loadable,
         query::{Cmp, CompoundFilter, Op},
     },
-    loadable::Loadable,
     source::{self, Source},
     user::User,
 };

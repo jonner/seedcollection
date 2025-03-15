@@ -2,10 +2,10 @@
 use crate::{
     core::{
         database::Database,
+        loadable::{ExternalRef, Loadable},
         query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
     },
     error::{Error, Result},
-    loadable::{ExternalRef, Loadable},
     sample::Sample,
 };
 pub use allocation::Allocation;
@@ -254,7 +254,7 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Project> {
 #[cfg(test)]
 mod tests {
     use crate::core::database::Database;
-    use crate::loadable::Loadable;
+    use crate::core::loadable::Loadable;
     use crate::project::Project;
     use sqlx::Pool;
     use sqlx::Sqlite;

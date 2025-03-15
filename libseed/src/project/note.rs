@@ -2,10 +2,10 @@
 use crate::{
     core::{
         database::Database,
+        loadable::Loadable,
         query::{DynFilterPart, FilterPart},
     },
     error::{Error, Result},
-    loadable::Loadable,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

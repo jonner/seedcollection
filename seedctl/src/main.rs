@@ -11,8 +11,10 @@ use anyhow::{Result, anyhow};
 use clap::Parser;
 use libseed::{
     Error::DatabaseError,
-    core::query::{Cmp, CompoundFilter, Op},
-    loadable::Loadable,
+    core::{
+        loadable::Loadable,
+        query::{Cmp, CompoundFilter, Op},
+    },
     taxonomy::{self, Taxon, quickfind},
 };
 use std::path::PathBuf;

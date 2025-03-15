@@ -11,8 +11,10 @@ use anyhow::{Context, Result, anyhow};
 use futures::StreamExt;
 use indicatif::{HumanBytes, ProgressBar};
 use libseed::{
-    core::database::{Database, UpgradeAction},
-    loadable::Loadable,
+    core::{
+        database::{Database, UpgradeAction},
+        loadable::Loadable,
+    },
     taxonomy::Germination,
     user::{User, UserStatus},
 };

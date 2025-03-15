@@ -13,9 +13,9 @@ use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
     core::{
         database::Database,
+        loadable::{ExternalRef, Loadable},
         query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     },
-    loadable::{ExternalRef, Loadable},
     sample::{self, Certainty, Sample},
     user::User,
 };

@@ -2,10 +2,10 @@
 use crate::{
     core::{
         database::Database,
+        loadable::{ExternalRef, Loadable},
         query::{DynFilterPart, FilterPart},
     },
     error::{Error, Result},
-    loadable::{ExternalRef, Loadable},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;

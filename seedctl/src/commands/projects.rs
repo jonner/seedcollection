@@ -10,9 +10,9 @@ use anyhow::Result;
 use libseed::{
     core::{
         database::Database,
+        loadable::{ExternalRef, Loadable},
         query::{CompoundFilter, Op},
     },
-    loadable::{ExternalRef, Loadable},
     project::{Allocation, Project, allocation},
     user::User,
 };
