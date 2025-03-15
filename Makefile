@@ -44,8 +44,8 @@ endif
 ##################
 INIT_DB ?= $(HOME)/.local/share/seedcollection/seedcollection.sqlite
 INIT_DB_ARGS ?= --download
-prepare-db: $(INIT_DB) ./db/itis/minnesota-itis-input-modified.csv
-	cargo run -p seedctl -- admin database init $(INIT_DB_ARGS)
-	python ./db/itis/match-species.py --updatedb -d $^
+prepare-db: ./db/itis/minnesota-itis-input-modified.csv
+	cargo run -p seedctl -- admin -d $(INIT_DB) database init $(INIT_DB_ARGS)
+	python ./db/itis/match-species.py --updatedb -d $^ $(INIT_DB)
 
 .PHONY: check-sqlx-env prepare-db container run-container
