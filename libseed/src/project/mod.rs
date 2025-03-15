@@ -2,10 +2,10 @@
 use crate::{
     core::{
         database::Database,
+        error::{Error, Result},
         loadable::{ExternalRef, Loadable},
         query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
     },
-    error::{Error, Result},
     sample::Sample,
 };
 pub use allocation::Allocation;

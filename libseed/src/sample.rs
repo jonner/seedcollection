@@ -2,10 +2,10 @@
 use crate::{
     core::{
         database::Database,
+        error::{Error, Result},
         loadable::{ExternalRef, Loadable},
         query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
     },
-    error::{Error, Result},
     source::Source,
     taxonomy::{Rank, Taxon},
     user::User,

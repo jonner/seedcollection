@@ -1,12 +1,9 @@
 //! Objects related to querying the taxonomic database
-use crate::{
-    Error,
-    core::{
-        database::Database,
-        loadable::{ExternalRef, Loadable},
-        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
-    },
-    error::Result,
+use crate::core::{
+    database::Database,
+    error::{Error, Result},
+    loadable::{ExternalRef, Loadable},
+    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::IntoDeserializer};
