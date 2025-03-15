@@ -4,7 +4,7 @@ use super::{
     note::{self, Note},
 };
 use crate::{
-    database::Database,
+    core::database::Database,
     error::Result,
     loadable::Loadable,
     query::{
@@ -309,7 +309,7 @@ impl FromRow<'_, SqliteRow> for Allocation {
 
 #[cfg(test)]
 mod tests {
-    use crate::database::Database;
+    use crate::core::database::Database;
 
     use super::*;
     use sqlx::Pool;

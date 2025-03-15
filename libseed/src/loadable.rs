@@ -5,7 +5,7 @@
 //! joins to other tables and sometimes just query the single table while still making it easy to
 //! fetch the referenced object later.
 use crate::{
-    database::Database,
+    core::database::Database,
     error::{Error, Result},
 };
 use async_trait::async_trait;

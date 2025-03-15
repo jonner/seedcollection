@@ -1,6 +1,6 @@
 //! Objects to manage the origin of seed samples
 use crate::{
-    database::Database,
+    core::database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op},

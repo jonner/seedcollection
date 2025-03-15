@@ -1,6 +1,6 @@
 use anyhow::Result;
 use libseed::{
-    database::Database,
+    core::database::Database,
     project::{Allocation, Project, allocation},
     query::Cmp,
     sample::{self, Certainty, Sample},

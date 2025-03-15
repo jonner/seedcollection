@@ -10,7 +10,7 @@ use anyhow::{Result, anyhow};
 use inquire::validator::Validation;
 use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
-    database::Database,
+    core::database::Database,
     loadable::Loadable,
     query::{Cmp, CompoundFilter, Op},
     source::{self, Source},

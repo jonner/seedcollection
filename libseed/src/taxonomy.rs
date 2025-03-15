@@ -1,7 +1,7 @@
 //! Objects related to querying the taxonomic database
 use crate::{
     Error,
-    database::Database,
+    core::database::Database,
     error::Result,
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},

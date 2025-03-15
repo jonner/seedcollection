@@ -1,6 +1,6 @@
 //! Objects representing a user of the application
 use crate::{
-    database::Database,
+    core::database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{DynFilterPart, FilterPart},

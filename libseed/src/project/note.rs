@@ -1,6 +1,6 @@
 //! Manage notes associated with project allocations
 use crate::{
-    database::Database,
+    core::database::Database,
     error::{Error, Result},
     loadable::Loadable,
     query::{DynFilterPart, FilterPart},

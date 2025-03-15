@@ -3,7 +3,7 @@
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 
-pub mod database;
+pub mod core;
 mod error;
 pub mod loadable;
 pub mod project;
@@ -13,7 +13,7 @@ pub mod source;
 pub mod taxonomy;
 pub mod user;
 
-pub use database::Database;
+pub use core::database::Database;
 pub use error::Error;
 pub use error::Result;
 
