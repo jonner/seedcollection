@@ -211,6 +211,10 @@ pub(crate) async fn handle_command(dbpath: Option<PathBuf>, command: AdminComman
                     return Err(anyhow!("Refusing to overwrite existing database file"));
                 }
                 let source_db = resolve_database_file(new_database, zipfile, download).await?;
+                let db_parent_dir = dest_path
+                    .parent()
+                    .ok_or_else(|| anyhow!("Couldn't determine path for database"))?;
+                tokio::fs::create_dir_all(db_parent_dir).await?;
                 debug!("Copying {source_db:?} to {dest_path:?}");
                 tokio::fs::copy(source_db, &dest_path).await?;
                 let mut db = Database::open(&dest_path).await?;
