@@ -9,15 +9,16 @@ use crate::{
 };
 use anyhow::{Context, Result, anyhow};
 use futures::StreamExt;
+use indicatif::{HumanBytes, ProgressBar};
 use libseed::{
     database::{Database, UpgradeAction},
     loadable::Loadable,
     taxonomy::Germination,
     user::{User, UserStatus},
 };
-use std::io::BufReader;
 use std::io::Write;
 use std::path::PathBuf;
+use std::{io::BufReader, time::Duration};
 use tokio::fs;
 use tracing::debug;
 
@@ -349,12 +350,17 @@ async fn download_latest_itis() -> Result<std::fs::File> {
     let itis_url = "https://www.itis.gov/downloads/itisSqlite.zip";
     println!("Downloading latest database from '{itis_url}'");
     let mut stream = reqwest::get(itis_url).await?.bytes_stream();
-    // FIXME: provide some progress monitoring
+    let progress = ProgressBar::new_spinner();
+    progress.enable_steady_tick(Duration::from_millis(100));
+    let mut total_downloaded: u64 = 0;
     while let Some(chunk_result) = stream.next().await {
         let chunk = chunk_result?;
+        total_downloaded += chunk.len() as u64;
+        progress.set_message(format!("{}", HumanBytes(total_downloaded)));
         latest_file.write_all(&chunk)?;
     }
     latest_file.flush()?;
+    progress.finish();
     println!("Downloaded file");
     Ok(latest_file)
 }
