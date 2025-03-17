@@ -28,104 +28,131 @@ pub(crate) async fn handle_command(
             admin_email,
             passwordfile,
         } => {
-            let project_dirs = directories::ProjectDirs::from("org", "quotidian", "seedcollection")
-                .ok_or_else(|| anyhow!("Cannot find default project data directory"))?;
-            let mut default_db_path = project_dirs.data_dir().to_path_buf();
-            default_db_path.push("seedcollection.sqlite");
-            let dest_path = dbpath.unwrap_or(default_db_path);
-            println!(
-                "Attempting to Initialize new seedcollection database at '{}'...",
-                dest_path.display()
-            );
-            if tokio::fs::try_exists(&dest_path).await?
-                && !(inquire::Confirm::new(&format!(
-                    "Overwrite existing database file '{}'",
-                    dest_path.display(),
-                ))
-                .prompt()?)
-            {
-                return Err(anyhow!("Refusing to overwrite existing database file"));
-            }
-            let source_db = resolve_database_file(new_database, zipfile, download).await?;
-            debug!("Copying {source_db:?} to {dest_path:?}");
-            tokio::fs::copy(source_db, &dest_path).await?;
-            let mut db = Database::open(&dest_path).await?;
-            let username = admin_user
-                .or_else(|| inquire::Text::new("Administrator username:").prompt().ok())
-                .ok_or_else(|| anyhow!("No Administrator username specified"))?;
-            let email = admin_email
-                .or_else(|| {
-                    inquire::Text::new("Administrator email address:")
-                        .prompt()
-                        .ok()
-                })
-                .ok_or_else(|| anyhow!("No Administrator email specified"))?;
-            let password = match passwordfile {
-                Some(f) => tokio::fs::read_to_string(f).await?,
-                None => inquire::Password::new("Administrator password:")
-                    .with_display_toggle_enabled()
-                    .with_display_mode(inquire::PasswordDisplayMode::Masked)
-                    .prompt()?,
-            };
-
-            let user = db.init(username.clone(), email, password.clone()).await?;
-            println!("Added user to database:");
-            println!("{}: {}", user.id, user.username);
-            let cfg = Config::new(username.clone(), password, dest_path);
-            cfg.validate().await?;
-            cfg.save_to_file(&config::config_file().await?).await?;
-            println!("Logged in as {username}");
-            Ok(())
+            initialize_database(
+                dbpath,
+                new_database,
+                zipfile,
+                download,
+                admin_user,
+                admin_email,
+                passwordfile,
+            )
+            .await
         }
         DatabaseCommands::Upgrade {
             new_database,
             zipfile,
             download,
-        } => {
-            let dbpath = dbpath.ok_or_else(|| anyhow!("No database specified"))?;
-            let db = Database::open(&dbpath).await?;
-            let response = inquire::Confirm::new(&format!("Upgrading database '{}'. Make sure that your database is backed up before proceeding. Continue?", dbpath.display()))
-                .with_default(false)
-                .prompt()?;
-            if !response {
-                return Err(inquire::InquireError::OperationCanceled.into());
-            }
-            let newdbfile = resolve_database_file(new_database, zipfile, download).await?;
-            db.upgrade(newdbfile, |summary| {
-                if !summary.is_empty() {
-                    for taxon_change in summary.changes.iter() {
-                        println!("Taxon '{}' changed:", taxon_change.taxon.complete_name);
-                        for mismatch in taxon_change.changes.iter() {
-                            println!(
-                                " - Field '{}' changed from '{}' to '{}'",
-                                mismatch.property_name, mismatch.old_value, mismatch.new_value
-                            )
-                        }
-                    }
-                    for replacement in summary.replacements.iter() {
-                        println!(
-                            "Taxon '{}' ({}) will be changed to '{}' ({})",
-                            replacement.old.complete_name,
-                            replacement.old.id,
-                            replacement.new.complete_name,
-                            replacement.new.id
-                        )
-                    }
-                } else {
-                    println!("No relevant changes detected when upgrading to the new database.");
-                }
-                match inquire::Confirm::new("Proceed with database upgrade?")
-                    .with_default(false)
-                    .prompt()
-                {
-                    Ok(true) => UpgradeAction::Proceed,
-                    _ => UpgradeAction::Abort,
-                }
-            })
-            .await?;
-            Ok(())
-        }
+        } => upgrade_database(dbpath, new_database, zipfile, download).await,
     }
+}
+
+async fn upgrade_database(
+    dbpath: Option<PathBuf>,
+    new_database: Option<PathBuf>,
+    zipfile: Option<PathBuf>,
+    download: bool,
+) -> std::result::Result<(), anyhow::Error> {
+    let dbpath = dbpath.ok_or_else(|| anyhow!("No database specified"))?;
+    let db = Database::open(&dbpath).await?;
+    let response = inquire::Confirm::new(&format!("Upgrading database '{}'. Make sure that your database is backed up before proceeding. Continue?", dbpath.display()))
+        .with_default(false)
+        .prompt()?;
+    if !response {
+        return Err(inquire::InquireError::OperationCanceled.into());
+    }
+    let newdbfile = resolve_database_file(new_database, zipfile, download).await?;
+    db.upgrade(newdbfile, |summary| {
+        if !summary.is_empty() {
+            for taxon_change in summary.changes.iter() {
+                println!("Taxon '{}' changed:", taxon_change.taxon.complete_name);
+                for mismatch in taxon_change.changes.iter() {
+                    println!(
+                        " - Field '{}' changed from '{}' to '{}'",
+                        mismatch.property_name, mismatch.old_value, mismatch.new_value
+                    )
+                }
+            }
+            for replacement in summary.replacements.iter() {
+                println!(
+                    "Taxon '{}' ({}) will be changed to '{}' ({})",
+                    replacement.old.complete_name,
+                    replacement.old.id,
+                    replacement.new.complete_name,
+                    replacement.new.id
+                )
+            }
+        } else {
+            println!("No relevant changes detected when upgrading to the new database.");
+        }
+        match inquire::Confirm::new("Proceed with database upgrade?")
+            .with_default(false)
+            .prompt()
+        {
+            Ok(true) => UpgradeAction::Proceed,
+            _ => UpgradeAction::Abort,
+        }
+    })
+    .await?;
+    Ok(())
+}
+
+async fn initialize_database(
+    dbpath: Option<PathBuf>,
+    new_database: Option<PathBuf>,
+    zipfile: Option<PathBuf>,
+    download: bool,
+    admin_user: Option<String>,
+    admin_email: Option<String>,
+    passwordfile: Option<PathBuf>,
+) -> std::result::Result<(), anyhow::Error> {
+    let project_dirs = directories::ProjectDirs::from("org", "quotidian", "seedcollection")
+        .ok_or_else(|| anyhow!("Cannot find default project data directory"))?;
+    let mut default_db_path = project_dirs.data_dir().to_path_buf();
+    default_db_path.push("seedcollection.sqlite");
+    let dest_path = dbpath.unwrap_or(default_db_path);
+    println!(
+        "Attempting to Initialize new seedcollection database at '{}'...",
+        dest_path.display()
+    );
+    if tokio::fs::try_exists(&dest_path).await?
+        && !(inquire::Confirm::new(&format!(
+            "Overwrite existing database file '{}'",
+            dest_path.display(),
+        ))
+        .prompt()?)
+    {
+        return Err(anyhow!("Refusing to overwrite existing database file"));
+    }
+    let source_db = resolve_database_file(new_database, zipfile, download).await?;
+    debug!("Copying {source_db:?} to {dest_path:?}");
+    tokio::fs::copy(source_db, &dest_path).await?;
+    let mut db = Database::open(&dest_path).await?;
+    let username = admin_user
+        .or_else(|| inquire::Text::new("Administrator username:").prompt().ok())
+        .ok_or_else(|| anyhow!("No Administrator username specified"))?;
+    let email = admin_email
+        .or_else(|| {
+            inquire::Text::new("Administrator email address:")
+                .prompt()
+                .ok()
+        })
+        .ok_or_else(|| anyhow!("No Administrator email specified"))?;
+    let password = match passwordfile {
+        Some(f) => tokio::fs::read_to_string(f).await?,
+        None => inquire::Password::new("Administrator password:")
+            .with_display_toggle_enabled()
+            .with_display_mode(inquire::PasswordDisplayMode::Masked)
+            .prompt()?,
+    };
+    let user = db.init(username.clone(), email, password.clone()).await?;
+    println!("Added user to database:");
+    println!("{}: {}", user.id, user.username);
+    let cfg = Config::new(username.clone(), password, dest_path);
+    cfg.validate().await?;
+    cfg.save_to_file(&config::config_file().await?).await?;
+    println!("Logged in as {username}");
+    Ok(())
 }
 
 fn itis_extract_database(archivefile: std::fs::File) -> Result<PathBuf> {
