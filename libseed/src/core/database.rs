@@ -243,7 +243,83 @@ impl Database {
             .await
             .map(|_| ())
             .map_err(|e| Error::DatabaseUpgrade(format!("Failed to detach new database: {e}")));
-        res_upgrade.and(res_tx).and(res_pragma).and(res_detach)
+        debug!("Removing all non-plant taxa to conserve space");
+        let res_clean = self.clean_non_plant_taxa().await;
+        // It seems that phylo_sort_seq is always 0 in new DB??? Make sure it's set.
+        debug!("Updating taxonomic order...");
+        let res_order = self.ensure_taxonomic_order().await;
+        res_upgrade
+            .and(res_tx)
+            .and(res_pragma)
+            .and(res_detach)
+            .and(res_clean)
+            .and(res_order)
+    }
+
+    pub async fn ensure_taxonomic_order(&self) -> Result<()> {
+        sqlx::query("UPDATE taxonomic_units SET phylo_sort_seq = H.rowid FROM (SELECT ROW_NUMBER() OVER (ORDER BY hierarchy_string) AS rowid, tsn FROM hierarchy) as H WHERE H.tsn=taxonomic_units.tsn")
+            .execute(&self.0)
+            .await.map(|_| ()).map_err(Into::into)
+    }
+
+    pub async fn clean_non_plant_taxa(&self) -> Result<()> {
+        let mut connection = self.0.acquire().await?;
+        sqlx::query(
+            "CREATE TEMP TABLE plantids AS
+            SELECT T.tsn FROM taxonomic_units T WHERE T.kingdom_id IS ?",
+        )
+        .bind(crate::taxonomy::KINGDOM_PLANTAE)
+        .execute(connection.as_mut())
+        .await?;
+
+        // hierarchy
+        sqlx::query("DELETE FROM hierarchy WHERE TSN NOT IN (SELECT tsn FROM plantids)")
+            .execute(connection.as_mut())
+            .await?;
+        // jurisdiction
+        sqlx::query("DELETE FROM jurisdiction")
+            .execute(connection.as_mut())
+            .await?;
+        // longnames
+        sqlx::query("DELETE FROM longnames WHERE tsn NOT IN (SELECT tsn FROM plantids)")
+            .execute(connection.as_mut())
+            .await?;
+        // nodc_ids
+        sqlx::query("DELETE FROM nodc_ids")
+            .execute(connection.as_mut())
+            .await?;
+        // reference_links
+        sqlx::query("DELETE FROM reference_links")
+            .execute(connection.as_mut())
+            .await?;
+        // synonym_links
+        sqlx::query("DELETE FROM synonym_links WHERE tsn NOT IN (SELECT tsn FROM plantids)")
+            .execute(connection.as_mut())
+            .await?;
+        // tu_comments_links (delete comments from here as well?)
+        sqlx::query("DELETE FROM comments")
+            .execute(connection.as_mut())
+            .await?;
+        sqlx::query("DELETE FROM tu_comments_links")
+            .execute(connection.as_mut())
+            .await?;
+        // vern_ref_links
+        sqlx::query("DELETE FROM vern_ref_links")
+            .execute(connection.as_mut())
+            .await?;
+        // vernaculars
+        sqlx::query("DELETE FROM vernaculars WHERE tsn NOT IN (SELECT tsn FROM plantids)")
+            .execute(connection.as_mut())
+            .await?;
+        // taxonomic_units
+        sqlx::query("DELETE FROM taxonomic_units WHERE tsn NOT IN (SELECT tsn FROM plantids)")
+            .execute(connection.as_mut())
+            .await?;
+        sqlx::query("DROP TABLE plantids")
+            .execute(connection.as_mut())
+            .await?;
+        sqlx::query("VACUUM").execute(connection.as_mut()).await?;
+        Ok(())
     }
 
     pub async fn init(
@@ -252,6 +328,10 @@ impl Database {
         admin_email: String,
         admin_password: String,
     ) -> Result<User> {
+        debug!("Removing all non-plant taxa to conserve space");
+        self.clean_non_plant_taxa().await?;
+        debug!("ensuring taxonomic order is set");
+        self.ensure_taxonomic_order().await?;
         debug!("Initializing database with a new admin user {admin_user} ({admin_email})");
         // hash the password
         let pwhash = User::hash_password(&admin_password)?;
@@ -320,11 +400,6 @@ impl Database {
                 .await?;
         }
         sqlx::query("PRAGMA foreign_key_check")
-            .execute(tx.as_mut())
-            .await?;
-        // It seems that phylo_sort_seq is always 0 in new DB??? Make sure it's set.
-        println!("Updating taxonomic order...");
-        sqlx::query("UPDATE taxonomic_units SET phylo_sort_seq = H.rowid FROM (SELECT ROW_NUMBER() OVER (ORDER BY hierarchy_string) AS rowid, tsn FROM hierarchy) as H WHERE H.tsn=taxonomic_units.tsn")
             .execute(tx.as_mut())
             .await?;
         Ok(())
