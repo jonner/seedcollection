@@ -45,5 +45,5 @@ pub enum Error {
     DatabaseUpgrade(String),
 }
 
-/// A convenience type alias for a [Result] with [Error](self::Error) as its error type
+/// A convenience type alias for a [Result] with [Error] as its error type
 pub type Result<T, E = Error> = std::result::Result<T, E>;

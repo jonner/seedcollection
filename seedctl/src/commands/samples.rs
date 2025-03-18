@@ -11,9 +11,11 @@ use crate::{
 use anyhow::{Result, anyhow};
 use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
-    database::Database,
-    loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
+    core::{
+        database::Database,
+        loadable::{ExternalRef, Loadable},
+        query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
+    },
     sample::{self, Certainty, Sample},
     user::User,
 };

@@ -1,5 +1,5 @@
 //! Objects to manage the origin of seed samples
-use crate::{
+use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},

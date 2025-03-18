@@ -4,7 +4,7 @@
 //! This reference can be either a stub object or a full object. This allows you to sometimes query with
 //! joins to other tables and sometimes just query the single table while still making it easy to
 //! fetch the referenced object later.
-use crate::{
+use crate::core::{
     database::Database,
     error::{Error, Result},
 };

@@ -1,5 +1,5 @@
 //! functions related to `seedctl` configuration
-use libseed::{database::Database, user::User};
+use libseed::{core::database::Database, user::User};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::{

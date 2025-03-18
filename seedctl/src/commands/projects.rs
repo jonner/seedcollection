@@ -8,10 +8,12 @@ use crate::{
 };
 use anyhow::Result;
 use libseed::{
-    database::Database,
-    loadable::{ExternalRef, Loadable},
+    core::{
+        database::Database,
+        loadable::{ExternalRef, Loadable},
+        query::{CompoundFilter, Op},
+    },
     project::{Allocation, Project, allocation},
-    query::{CompoundFilter, Op},
     user::User,
 };
 

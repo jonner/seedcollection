@@ -16,10 +16,12 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
+    core::{
+        loadable::Loadable,
+        query::{CompoundFilter, Op},
+    },
     empty_string_as_none,
-    loadable::Loadable,
     project::{self, Allocation, Note, NoteType, Project, allocation},
-    query::{CompoundFilter, Op},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};

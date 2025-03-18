@@ -1,5 +1,5 @@
 //! Objects representing a user of the application
-use crate::{
+use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},

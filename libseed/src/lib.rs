@@ -3,19 +3,16 @@
 use serde::{Deserialize, Deserializer};
 use std::str::FromStr;
 
-pub mod database;
-mod error;
-pub mod loadable;
+pub mod core;
 pub mod project;
-pub mod query;
 pub mod sample;
 pub mod source;
 pub mod taxonomy;
 pub mod user;
 
-pub use database::Database;
-pub use error::Error;
-pub use error::Result;
+pub use core::database::Database;
+pub use core::error::Error;
+pub use core::error::Result;
 
 /// A utility function to deserialize an Optional value as None when it is an
 /// empty string

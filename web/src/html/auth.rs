@@ -15,8 +15,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    database::Database,
-    loadable::Loadable,
+    core::{database::Database, loadable::Loadable},
     user::{User, UserStatus},
 };
 use minijinja::context;

@@ -2,7 +2,7 @@ use crate::{EnvConfig, template_engine};
 use anyhow::{Context, Result};
 use axum_template::engine::Engine;
 use lettre::{AsyncSmtpTransport, Tokio1Executor};
-use libseed::database::Database;
+use libseed::core::database::Database;
 use std::{path::PathBuf, sync::Arc};
 use tracing::{debug, trace};
 

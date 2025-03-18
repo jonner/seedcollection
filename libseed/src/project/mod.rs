@@ -1,9 +1,11 @@
-//! API for managing projects in the database
+//! Seed collection projects
 use crate::{
-    database::Database,
-    error::{Error, Result},
-    loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
+    core::{
+        database::Database,
+        error::{Error, Result},
+        loadable::{ExternalRef, Loadable},
+        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
+    },
     sample::Sample,
 };
 pub use allocation::Allocation;
@@ -251,8 +253,8 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Project> {
 
 #[cfg(test)]
 mod tests {
-    use crate::database::Database;
-    use crate::loadable::Loadable;
+    use crate::core::database::Database;
+    use crate::core::loadable::Loadable;
     use crate::project::Project;
     use sqlx::Pool;
     use sqlx::Sqlite;

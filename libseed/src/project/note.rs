@@ -1,5 +1,5 @@
-//! Manage notes associated with project allocations
-use crate::{
+//! Notes associated with project allocations
+use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::Loadable,

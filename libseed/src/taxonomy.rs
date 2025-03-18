@@ -1,8 +1,7 @@
 //! Objects related to querying the taxonomic database
-use crate::{
-    Error,
+use crate::core::{
     database::Database,
-    error::Result,
+    error::{Error, Result},
     loadable::{ExternalRef, Loadable},
     query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
 };

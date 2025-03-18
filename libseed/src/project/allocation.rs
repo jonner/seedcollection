@@ -1,14 +1,17 @@
-//! Manage samples that are allocated to a [Project]
+//! Samples that are allocated to a [Project]
 use super::{
     Project,
     note::{self, Note},
 };
 use crate::{
-    database::Database,
-    error::Result,
-    loadable::Loadable,
-    query::{
-        Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, SortSpecs, ToSql,
+    core::{
+        database::Database,
+        error::Result,
+        loadable::Loadable,
+        query::{
+            Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, SortSpecs,
+            ToSql,
+        },
     },
     sample::Sample,
 };
@@ -309,7 +312,7 @@ impl FromRow<'_, SqliteRow> for Allocation {
 
 #[cfg(test)]
 mod tests {
-    use crate::database::Database;
+    use crate::core::database::Database;
 
     use super::*;
     use sqlx::Pool;
