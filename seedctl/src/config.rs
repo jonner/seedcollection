@@ -30,7 +30,7 @@ pub(crate) enum Error {
     #[error("Unable to run database migrations")]
     DatabaseMigrationFailure(#[from] sqlx::migrate::MigrateError),
     #[error(transparent)]
-    Database(#[from] libseed::Error),
+    Database(#[from] sqlx::Error),
     #[error("Failed to format config in JSON")]
     CannotFormatConfig(#[source] serde_json::Error),
     #[error("File permissions error for '{path}': {1}", path = .0.to_string_lossy())]

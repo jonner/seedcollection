@@ -144,12 +144,14 @@ impl User {
     }
 
     /// Fetch the user with the given username from the database
-    pub async fn load_by_username(username: &str, db: &Database) -> Result<Option<User>> {
+    pub async fn load_by_username(
+        username: &str,
+        db: &Database,
+    ) -> Result<Option<User>, sqlx::Error> {
         Self::build_query(Some(Filter::Username(username.to_string()).into()))
             .build_query_as()
             .fetch_optional(db.pool())
             .await
-            .map_err(|e| e.into())
     }
 
     /// Update the database to match the values currently stored in the object
