@@ -358,8 +358,8 @@ impl Loadable for Taxon {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        let mut query = Taxon::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
-        Ok(query.build_query_as().fetch_one(db.pool()).await?)
+        let mut builder = Taxon::query_builder(Some(Filter::Id(Cmp::Equal, id).into()), None);
+        Ok(builder.build_query_as().fetch_one(db.pool()).await?)
     }
 
     async fn delete_id(_id: &Self::Id, _db: &Database) -> Result<SqliteQueryResult> {
@@ -388,11 +388,11 @@ impl Taxon {
 
     /// Fetch the heirarchy of child taxa for this taxon
     pub async fn fetch_children(&self, db: &Database) -> Result<Vec<Self>> {
-        let mut query = Taxon::build_query(Some(Filter::ParentId(self.id).into()), None);
-        Ok(query.build_query_as().fetch_all(db.pool()).await?)
+        let mut builder = Taxon::query_builder(Some(Filter::ParentId(self.id).into()), None);
+        Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 
-    fn build_query(
+    fn query_builder(
         filter: Option<DynFilterPart>,
         limit: Option<LimitSpec>,
     ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
@@ -444,7 +444,7 @@ impl Taxon {
         limit: Option<LimitSpec>,
         db: &Database,
     ) -> Result<Vec<Taxon>, sqlx::Error> {
-        Taxon::build_query(filter, limit)
+        Taxon::query_builder(filter, limit)
             .build_query_as()
             .fetch_all(db.pool())
             .await
@@ -467,7 +467,9 @@ impl Taxon {
         Ok(())
     }
 
-    fn build_count(filter: Option<DynFilterPart>) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
+    fn count_query_builder(
+        filter: Option<DynFilterPart>,
+    ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
         let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
             r#"SELECT COUNT(tsn) as count
             FROM taxonomic_units T
@@ -485,7 +487,7 @@ impl Taxon {
 
     /// Query how many taxa in the database match the given filter
     pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i32> {
-        Self::build_count(filter)
+        Self::count_query_builder(filter)
             .build()
             .fetch_one(db.pool())
             .await?

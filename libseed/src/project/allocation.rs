@@ -175,7 +175,7 @@ impl Loadable for Allocation {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        let mut builder = Self::build_query(Some(Filter::Id(id).into()), None);
+        let mut builder = Self::query_builder(Some(Filter::Id(id).into()), None);
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
     }
 
@@ -230,7 +230,7 @@ impl ToSql for SortField {
 }
 
 impl Allocation {
-    fn build_query(
+    fn query_builder(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
     ) -> QueryBuilder<'static, Sqlite> {
@@ -267,7 +267,7 @@ impl Allocation {
         sort: Option<SortSpecs<SortField>>,
         db: &Database,
     ) -> Result<Vec<Self>, sqlx::Error> {
-        Self::build_query(filter, sort)
+        Self::query_builder(filter, sort)
             .build_query_as()
             .fetch_all(db.pool())
             .await
@@ -280,7 +280,7 @@ impl Allocation {
         filter: Option<DynFilterPart>,
         db: &Database,
     ) -> Result<Self, sqlx::Error> {
-        Self::build_query(filter, None)
+        Self::query_builder(filter, None)
             .build_query_as()
             .fetch_one(db.pool())
             .await

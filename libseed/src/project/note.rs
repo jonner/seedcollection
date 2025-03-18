@@ -83,7 +83,7 @@ impl Loadable for Note {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::build_query(Some(Arc::new(NoteFilter::Id(id))))
+        Self::query_builder(Some(Arc::new(NoteFilter::Id(id))))
             .build_query_as()
             .fetch_one(db.pool())
             .await
@@ -126,7 +126,7 @@ impl Note {
         }
     }
 
-    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT pnoteid, psid, notedate, notetype, notesummary, notedetails FROM sc_project_notes"#,
         );
@@ -144,7 +144,7 @@ impl Note {
         filter: Option<DynFilterPart>,
         db: &Database,
     ) -> Result<Vec<Note>, sqlx::Error> {
-        Self::build_query(filter)
+        Self::query_builder(filter)
             .build_query_as()
             .fetch_all(db.pool())
             .await

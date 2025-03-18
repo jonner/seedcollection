@@ -61,7 +61,7 @@ impl Loadable for Project {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::build_query(Some(Filter::Id(id).into()))
+        Self::query_builder(Some(Filter::Id(id).into()))
             .build_query_as()
             .fetch_one(db.pool())
             .await
@@ -123,7 +123,7 @@ impl FilterPart for Filter {
 }
 
 impl Project {
-    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT P.projectid, P.projname, P.projdescription, P.userid, U.username
             FROM sc_projects P INNER JOIN sc_users U ON U.userid=P.userid"#,
@@ -146,7 +146,7 @@ impl Project {
 
     /// Load all matched projects from the database
     pub async fn load_all(filter: Option<DynFilterPart>, db: &Database) -> Result<Vec<Self>> {
-        Self::build_query(filter)
+        Self::query_builder(filter)
             .build_query_as()
             .fetch_all(db.pool())
             .await

@@ -109,7 +109,7 @@ impl Loadable for Source {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::build_query(Some(Filter::Id(id).into()))
+        Self::query_builder(Some(Filter::Id(id).into()))
             .build_query_as()
             .fetch_one(db.pool())
             .await
@@ -126,7 +126,7 @@ impl Loadable for Source {
 }
 
 impl Source {
-    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut qb = QueryBuilder::new(
             r#"SELECT L.srcid, L.srcname, L.srcdesc, L.latitude, L.longitude,
             L.userid, U.username FROM sc_sources L
@@ -151,7 +151,7 @@ impl Source {
 
     /// Loads all matching sources from the database
     pub async fn load_all(filter: Option<DynFilterPart>, db: &Database) -> Result<Vec<Source>> {
-        Self::build_query(filter)
+        Self::query_builder(filter)
             .build_query_as()
             .fetch_all(db.pool())
             .await

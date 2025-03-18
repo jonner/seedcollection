@@ -303,7 +303,7 @@ impl Loadable for Sample {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        let mut builder = Self::build_query(Some(Filter::Id(Cmp::Equal, id).into()), None);
+        let mut builder = Self::query_builder(Some(Filter::Id(Cmp::Equal, id).into()), None);
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
     }
 
@@ -317,7 +317,7 @@ impl Loadable for Sample {
 }
 
 impl Sample {
-    fn build_query(
+    fn query_builder(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
     ) -> QueryBuilder<'static, Sqlite> {
@@ -332,7 +332,7 @@ impl Sample {
         builder
     }
 
-    fn build_stats_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn stats_query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             "SELECT COUNT(*) as nsamples, COUNT(DISTINCT tsn) as ntaxa, COUNT(DISTINCT srcid) as nsources FROM vsamples",
         );
@@ -355,7 +355,7 @@ impl Sample {
             fbuilder = fbuilder.push(f);
         }
         let newfilter = fbuilder.build();
-        let mut builder = Self::build_query(Some(newfilter), sort);
+        let mut builder = Self::query_builder(Some(newfilter), sort);
         Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 
@@ -365,13 +365,13 @@ impl Sample {
         sort: Option<SortSpecs<SortField>>,
         db: &Database,
     ) -> Result<Vec<Sample>> {
-        let mut builder = Self::build_query(filter, sort);
+        let mut builder = Self::query_builder(filter, sort);
         Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 
     /// Queries the count of all matching samples from the database
     pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
-        let mut builder = Self::build_stats_query(filter);
+        let mut builder = Self::stats_query_builder(filter);
         builder
             .build()
             .fetch_one(db.pool())
@@ -382,7 +382,7 @@ impl Sample {
 
     /// Queries the count of all matching samples from the database
     pub async fn stats(filter: Option<DynFilterPart>, db: &Database) -> Result<SampleStats> {
-        let mut builder = Self::build_stats_query(filter);
+        let mut builder = Self::stats_query_builder(filter);
         builder
             .build_query_as()
             .fetch_one(db.pool())

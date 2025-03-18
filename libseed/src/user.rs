@@ -95,7 +95,7 @@ impl Loadable for User {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::build_query(Some(Filter::Id(id).into()))
+        Self::query_builder(Some(Filter::Id(id).into()))
             .build_query_as()
             .fetch_one(db.pool())
             .await
@@ -112,7 +112,7 @@ impl Loadable for User {
 }
 
 impl User {
-    fn build_query(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT
                 userid,
@@ -136,7 +136,7 @@ impl User {
 
     /// Fetch all users from the database
     pub async fn load_all(db: &Database) -> Result<Vec<User>> {
-        Self::build_query(None)
+        Self::query_builder(None)
             .build_query_as()
             .fetch_all(db.pool())
             .await
@@ -148,7 +148,7 @@ impl User {
         username: &str,
         db: &Database,
     ) -> Result<Option<User>, sqlx::Error> {
-        Self::build_query(Some(Filter::Username(username.to_string()).into()))
+        Self::query_builder(Some(Filter::Username(username.to_string()).into()))
             .build_query_as()
             .fetch_optional(db.pool())
             .await
