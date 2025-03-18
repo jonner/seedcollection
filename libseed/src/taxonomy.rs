@@ -16,7 +16,7 @@ use std::{str::FromStr, sync::Arc};
 use strum_macros::{Display, EnumIter, FromRepr};
 use tracing::debug;
 
-const KINGDOM_PLANTAE: i64 = 3;
+pub(crate) const KINGDOM_PLANTAE: i64 = 3;
 
 /// The taxonomic rank of a taxon
 #[derive(Debug, Clone, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq)]
