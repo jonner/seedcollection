@@ -31,6 +31,12 @@ pub(crate) enum Error {
     DatabaseMigrationFailure(#[from] sqlx::migrate::MigrateError),
     #[error(transparent)]
     Database(#[from] sqlx::Error),
+    #[error("Failed to open database '{db}'")]
+    DatabaseOpen {
+        db: PathBuf,
+        #[source]
+        error: sqlx::Error,
+    },
     #[error("Failed to format config in JSON")]
     CannotFormatConfig(#[source] serde_json::Error),
     #[error("File permissions error for '{path}': {1}", path = .0.to_string_lossy())]
@@ -96,7 +102,12 @@ impl Config {
 
     /// Check whether the current [Config] object represents a valid configuration
     pub(crate) async fn validate(&self) -> Result<(Database, User), Error> {
-        let db = Database::open(&self.database).await?;
+        let db = Database::open(&self.database)
+            .await
+            .map_err(|e| Error::DatabaseOpen {
+                db: self.database.clone(),
+                error: e,
+            })?;
         let user = User::load_by_username(&self.username, &db)
             .await
             .map_err(Error::Database)?
