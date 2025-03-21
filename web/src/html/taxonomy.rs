@@ -18,7 +18,6 @@ use libseed::{
 };
 use minijinja::context;
 use serde::Deserialize;
-use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::debug;
 
@@ -179,7 +178,7 @@ async fn show_taxon(
     let children = taxon.fetch_children(&state.db).await?;
     let samples = Sample::load_all_user(
         user.id,
-        Some(Arc::new(sample::Filter::TaxonId(Cmp::Equal, id))),
+        Some(sample::Filter::TaxonId(Cmp::Equal, id).into()),
         None,
         &state.db,
     )

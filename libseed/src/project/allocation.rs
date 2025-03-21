@@ -22,13 +22,6 @@ use sqlx::{
     prelude::*,
     sqlite::{SqliteQueryResult, SqliteRow},
 };
-use std::sync::Arc;
-
-impl From<Filter> for DynFilterPart {
-    fn from(value: Filter) -> Self {
-        Arc::new(value)
-    }
-}
 
 // FIXME: Can we combine SortField and Filter somehow???
 /// A type to specify a field that can be used to filter allocation objects when
@@ -289,7 +282,7 @@ impl Allocation {
     /// Load all notes associated with this allocation
     pub async fn load_notes(&mut self, db: &Database) -> Result<()> {
         self.notes =
-            Note::load_all(Some(Arc::new(note::NoteFilter::AllocationId(self.id))), db).await?;
+            Note::load_all(Some(note::NoteFilter::AllocationId(self.id).into()), db).await?;
         Ok(())
     }
 }
@@ -342,7 +335,7 @@ mod tests {
         }
 
         // check allocations for project 1
-        let assigned = Allocation::load_all(Some(Arc::new(Filter::ProjectId(1))), None, &db)
+        let assigned = Allocation::load_all(Some(Filter::ProjectId(1).into()), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 
@@ -370,7 +363,7 @@ mod tests {
         check_sample(&assigned[1], &db).await;
 
         // check allocations for project 2
-        let assigned = Allocation::load_all(Some(Arc::new(Filter::ProjectId(2))), None, &db)
+        let assigned = Allocation::load_all(Some(Filter::ProjectId(2).into()), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 
@@ -385,7 +378,7 @@ mod tests {
         check_sample(&assigned[1], &db).await;
 
         // check allocations for sample 1
-        let assigned = Allocation::load_all(Some(Arc::new(Filter::SampleId(1))), None, &db)
+        let assigned = Allocation::load_all(Some(Filter::SampleId(1).into()), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 

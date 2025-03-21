@@ -28,7 +28,6 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
-use std::sync::Arc;
 use tracing::debug;
 
 pub(crate) fn router() -> Router<AppState> {
@@ -152,7 +151,7 @@ async fn show_sample(
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
 
     let mut allocations = Allocation::load_all(
-        Some(Arc::new(allocation::Filter::SampleId(id))),
+        Some(allocation::Filter::SampleId(id).into()),
         None,
         &state.db,
     )

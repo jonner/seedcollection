@@ -21,7 +21,6 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
-use std::sync::Arc;
 
 use crate::{error, state::AppState};
 
@@ -87,7 +86,7 @@ async fn show_source(
     let src = Source::load(id, &state.db).await?;
     let samples = Sample::load_all_user(
         user.id,
-        Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
+        Some(Filter::SourceId(Cmp::Equal, id).into()),
         None,
         &state.db,
     )
@@ -165,7 +164,7 @@ async fn update_source(
     };
     let samples = Sample::load_all_user(
         user.id,
-        Some(Arc::new(Filter::SourceId(Cmp::Equal, id))),
+        Some(Filter::SourceId(Cmp::Equal, id).into()),
         None,
         &state.db,
     )

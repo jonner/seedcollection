@@ -16,7 +16,6 @@ use sqlx::{
     FromRow, QueryBuilder, Row, Sqlite,
     sqlite::{SqliteQueryResult, SqliteRow},
 };
-use std::sync::Arc;
 use tracing::debug;
 
 pub mod allocation;
@@ -74,12 +73,6 @@ impl Loadable for Project {
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
-    }
-}
-
-impl From<Filter> for DynFilterPart {
-    fn from(value: Filter) -> Self {
-        Arc::new(value)
     }
 }
 

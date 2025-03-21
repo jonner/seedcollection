@@ -4,7 +4,7 @@ use serde::{
     Deserialize, Serialize,
     de::{IntoDeserializer, value},
 };
-use std::{str::FromStr, sync::Arc};
+use std::{ops::Deref, str::FromStr, sync::Arc};
 
 /// An operator for combining filter parts to form a more complex filter expression
 #[derive(Clone)]
@@ -38,7 +38,7 @@ impl CompoundFilterBuilder {
 
     /// Generate a new [CompoundFilter] object from this builder object
     pub fn build(self) -> DynFilterPart {
-        Arc::new(self.top)
+        self.top.into()
     }
 }
 
@@ -238,4 +238,22 @@ impl<T: ToSql> From<Vec<T>> for SortSpecs<T> {
     }
 }
 
-pub type DynFilterPart = Arc<dyn FilterPart + Sync>;
+#[derive(Clone)]
+pub struct DynFilterPart(Arc<dyn FilterPart + Sync>);
+
+impl Deref for DynFilterPart {
+    type Target = Arc<dyn FilterPart + Sync>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<F> From<F> for DynFilterPart
+where
+    F: FilterPart + Send + Sync + 'static,
+{
+    fn from(value: F) -> Self {
+        DynFilterPart(Arc::new(value))
+    }
+}

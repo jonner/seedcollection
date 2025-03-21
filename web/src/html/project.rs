@@ -30,7 +30,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
-use std::{collections::HashSet, sync::Arc};
+use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
 use super::{SortOption, error_alert_response};
@@ -390,7 +390,7 @@ async fn add_sample_prep(
      */
     let samples = Sample::load_all_user(
         user.id,
-        Some(Arc::new(sample::Filter::IdNotIn(ids))),
+        Some(sample::Filter::IdNotIn(ids).into()),
         None,
         &state.db,
     )

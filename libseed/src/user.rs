@@ -15,7 +15,6 @@ use sqlx::{
     prelude::*,
     sqlite::{SqliteQueryResult, SqliteRow},
 };
-use std::sync::Arc;
 use time::OffsetDateTime;
 use tracing::debug;
 
@@ -24,12 +23,6 @@ use tracing::debug;
 pub enum UserStatus {
     Unverified = 0,
     Verified = 1,
-}
-
-impl From<Filter> for DynFilterPart {
-    fn from(value: Filter) -> Self {
-        Arc::new(value)
-    }
 }
 
 enum Filter {

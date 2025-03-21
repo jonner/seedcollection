@@ -16,7 +16,7 @@ use sqlx::{
     FromRow, QueryBuilder, Row, Sqlite,
     sqlite::{SqliteQueryResult, SqliteRow},
 };
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 use strum_macros::Display;
 
 /// A representation of the certainty of identification for a sample
@@ -28,12 +28,6 @@ pub enum Certainty {
 
     /// ID is uncertain
     Uncertain = 2,
-}
-
-impl From<Filter> for DynFilterPart {
-    fn from(value: Filter) -> Self {
-        Arc::new(value)
-    }
 }
 
 // FIXME: can we combine this with `SortField`?

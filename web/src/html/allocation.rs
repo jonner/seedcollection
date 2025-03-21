@@ -25,7 +25,6 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use strum::IntoEnumIterator;
 use tracing::error;
 
@@ -210,8 +209,7 @@ async fn remove_allocation(
     State(state): State<AppState>,
     Path((id, psid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let mut projects =
-        Project::load_all(Some(Arc::new(project::Filter::Id(id))), &state.db).await?;
+    let mut projects = Project::load_all(Some(project::Filter::Id(id).into()), &state.db).await?;
     let Some(c) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
