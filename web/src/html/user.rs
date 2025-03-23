@@ -21,7 +21,7 @@ use libseed::{
     project::{self, Project},
     sample::{self, Sample, SampleStats},
     source::{self, Source},
-    user::UserStatus,
+    user::{UserStatus, verification::UserVerification},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -110,7 +110,11 @@ async fn update_profile(
     Ok([("HX-Redirect", app_url("/user/me"))])
 }
 
-fn verification_url(state: &std::sync::Arc<crate::state::SharedState>, vcode: String) -> String {
+fn verification_url(
+    state: &std::sync::Arc<crate::state::SharedState>,
+    userid: i64,
+    vcode: String,
+) -> String {
     // FIXME: figure out how to do the host/port stuff properly. Right now this will send a link to
     // host 0.0.0.0 if that's what we configured the server to listen on...
     let mut url = "https://".to_string();
@@ -118,16 +122,17 @@ fn verification_url(state: &std::sync::Arc<crate::state::SharedState>, vcode: St
     if state.config.listen.https_port != 443 {
         url.push_str(&format!(":{}", state.config.listen.https_port));
     }
-    url.push_str(&app_url(&format!("/auth/verify/{vcode}")));
+    url.push_str(&app_url(&format!("/auth/verify/{userid}/{vcode}")));
     url
 }
 
 fn verification_email(
     state: &std::sync::Arc<crate::state::SharedState>,
+    userid: i64,
     vcode: String,
     user: SqliteUser,
 ) -> Result<lettre::Message, Error> {
-    let verification_url = verification_url(state, vcode);
+    let verification_url = verification_url(state, userid, vcode);
     let emailbody = state
         .tmpl
         .render(
@@ -156,8 +161,9 @@ fn verification_email(
 }
 
 async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), error::Error> {
-    let vcode = user.new_verification_code(&state.db).await?;
-    let email = verification_email(state, vcode, user)?;
+    let mut uv = UserVerification::new(user.id, None);
+    uv.insert(&state.db).await?;
+    let email = verification_email(state, user.id, uv.key, user)?;
     match state.config.mail_transport {
         crate::MailTransport::File(ref path) => AsyncFileTransport::<Tokio1Executor>::new(path)
             .send(email)

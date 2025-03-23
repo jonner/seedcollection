@@ -8,7 +8,6 @@ use crate::core::{
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
 use password_hash::{PasswordHash, SaltString, rand_core::OsRng};
-use rand::distributions::{Alphanumeric, DistString};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     QueryBuilder, Sqlite,
@@ -17,6 +16,9 @@ use sqlx::{
 };
 use time::OffsetDateTime;
 use tracing::debug;
+use verification::UserVerification;
+
+pub mod verification;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[repr(i64)]
@@ -292,27 +294,11 @@ impl User {
         Ok(())
     }
 
-    /// Generate a new code that can be used to verify a user account.
-    ///
-    /// The generated verification code is also stored in the database and
-    /// associated with the user account. This verification code will be sent to
-    /// the user via some out-of-band communication channel like email, and then
-    /// when they click the link with the verification code, there account can
-    /// be marked as verified.
-    pub async fn new_verification_code(&self, db: &Database) -> Result<String> {
-        let key = Alphanumeric.sample_string(&mut OsRng, 24);
-        debug!(key, "Generated a new verification code");
-        sqlx::query!(
-            r#"UPDATE sc_user_verification SET uvexpiration=0 WHERE userid=?;
-            INSERT into sc_user_verification (userid, uvkey, uvexpiration) VALUES(?, ?, ?)"#,
-            self.id,
-            self.id,
-            key,
-            (4 * 60 * 60)
-        )
-        .execute(db.pool())
-        .await?;
-        Ok(key)
+    pub async fn verify(&mut self, key: &str, db: &Database) -> Result<()> {
+        let mut uv = UserVerification::find(self.id, key, db).await?;
+        uv.verify(db).await?;
+        self.status = UserStatus::Verified;
+        self.update(db).await.map(|_| ())
     }
 }
 
@@ -455,5 +441,57 @@ mod tests {
         assert!(user.change_password("new-password").is_ok());
         assert!(user.verify_password("new-password").is_ok());
         assert!(user.verify_password(pw).is_err());
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../db/fixtures",
+            scripts("users", "sources", "taxa", "user-verifications")
+        )
+    ))]
+    async fn test_user_verify(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        // expires in an hour
+        const KEY: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
+        const USERID: i64 = 1;
+
+        // make sure that the user is unverified before this
+        let mut user = User::load(USERID, &db).await.expect("Failed to load user");
+        assert_eq!(user.status, UserStatus::Unverified);
+        user.verify(KEY, &db).await.expect("Failed to verify user");
+        assert_eq!(user.status, UserStatus::Verified);
+        // re-load from db to make sure it's also updated in the db
+        let user = User::load(USERID, &db).await.expect("Failed to load user");
+        assert_eq!(user.status, UserStatus::Verified);
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../db/fixtures",
+            scripts("users", "sources", "taxa", "user-verifications")
+        )
+    ))]
+    async fn test_user_verify_wrong_user(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        // expires in an hour
+        const KEY: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
+        const WRONG_USERID: i64 = 2;
+
+        // make sure that the user is unverified before this
+        let mut user = User::load(WRONG_USERID, &db)
+            .await
+            .expect("Failed to load user");
+        assert_eq!(user.status, UserStatus::Unverified);
+        user.verify(KEY, &db).await.expect_err(
+            "We were mistakenly able to verify a verification key for a different user",
+        );
+        assert_eq!(user.status, UserStatus::Unverified);
+        // re-load from db to make sure it's also updated in the db
+        let user = User::load(WRONG_USERID, &db)
+            .await
+            .expect("Failed to load user");
+        assert_eq!(user.status, UserStatus::Unverified);
     }
 }

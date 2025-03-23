@@ -48,6 +48,7 @@ const APP_PREFIX: &str = "/app/";
 pub(crate) enum MessageType {
     Success,
     Warning,
+    Info,
     Error,
 }
 
