@@ -28,7 +28,7 @@ impl Indexable for i64 {
 #[async_trait]
 pub trait Loadable {
     /// The type of the ID for this object in the database
-    type Id: Clone + Send + Indexable;
+    type Id: Clone + Send + Indexable + sqlx::Type<sqlx::Sqlite>;
 
     /// return the ID associated with this particular object
     fn id(&self) -> Self::Id;
@@ -65,6 +65,29 @@ pub enum ExternalRef<T: Loadable + Sync + Send> {
     /// If the object has been loaded from the database, it is represented as an
     /// object of type T.
     Object(T),
+}
+
+impl<T> sqlx::Type<sqlx::Sqlite> for ExternalRef<T>
+where
+    T: Loadable + Sync + Send,
+{
+    fn type_info() -> <sqlx::Sqlite as sqlx::Database>::TypeInfo {
+        <T::Id as sqlx::Type<sqlx::Sqlite>>::type_info()
+    }
+}
+
+impl<'r, T, DB> sqlx::Decode<'r, DB> for ExternalRef<T>
+where
+    T: Loadable + Sync + Send,
+    DB: sqlx::Database,
+    <T as Loadable>::Id: sqlx::Decode<'r, DB>,
+{
+    fn decode(
+        value: <DB as sqlx::Database>::ValueRef<'r>,
+    ) -> std::result::Result<Self, sqlx::error::BoxDynError> {
+        let id = <T::Id as sqlx::Decode<DB>>::decode(value)?;
+        Ok(Self::Stub(id))
+    }
 }
 
 impl<T: Loadable + Sync + Send> Default for ExternalRef<T> {
