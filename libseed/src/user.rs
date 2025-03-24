@@ -225,7 +225,7 @@ impl User {
     }
 
     /// Insert a new row into the database with the values stored in this object
-    pub async fn insert(&mut self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, db: &Database) -> Result<()> {
         if self.username.trim().is_empty() {
             return Err(Error::InvalidStateMissingAttribute("username".to_string()));
         }
@@ -234,7 +234,7 @@ impl User {
         }
         debug!(?self, "Inserting user into database");
         // Don't insert the register_date, the database will set it to the current timestamp
-        sqlx::query(
+        let user = sqlx::query_as(
             r#"INSERT INTO
                 sc_users
                 (
@@ -245,7 +245,8 @@ impl User {
                     userdisplayname,
                     userprofile
                 )
-                VALUES (?, ?, ?, ?, ?, ?)"#,
+                VALUES (?, ?, ?, ?, ?, ?)
+                RETURNING *"#,
         )
         .bind(&self.username)
         .bind(&self.email)
@@ -253,10 +254,10 @@ impl User {
         .bind(&self.status)
         .bind(&self.display_name)
         .bind(&self.profile)
-        .execute(db.pool())
-        .await
-        .inspect(|r| self.id = r.last_insert_rowid())
-        .map_err(|e| e.into())
+        .fetch_one(db.pool())
+        .await?;
+        *self = user;
+        Ok(())
     }
 
     pub fn validate_username(username: &str) -> Result<()> {
@@ -347,10 +348,9 @@ mod tests {
             None,
             None,
         );
-        let res = user.insert(&db).await.expect("Failed to insert user");
-        let userid = res.last_insert_rowid();
+        user.insert(&db).await.expect("Failed to insert user");
 
-        let loaded = User::load(userid, &db)
+        let loaded = User::load(user.id, &db)
             .await
             .expect("Unable to load new user");
         assert_eq!(user.id, loaded.id);
@@ -358,7 +358,7 @@ mod tests {
         assert_eq!(user.email, loaded.email);
         assert_eq!(user.pwhash, loaded.pwhash);
         assert_eq!(user.status, loaded.status);
-        assert_ne!(user.register_date, loaded.register_date);
+        assert_eq!(user.register_date, loaded.register_date);
         assert_eq!(user.display_name, loaded.display_name);
         assert_eq!(user.profile, loaded.profile);
         assert!(loaded.verify_password(PASSWORD).is_ok());
