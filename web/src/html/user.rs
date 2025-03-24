@@ -1,9 +1,9 @@
 use crate::{
-    Message, MessageType, TemplateKey,
+    TemplateKey,
     auth::SqliteUser,
     error::{self, Error},
     state::AppState,
-    util::app_url,
+    util::{FlashMessage, FlashMessageKind, app_url},
 };
 use anyhow::{Context, anyhow};
 use axum::{
@@ -194,14 +194,14 @@ async fn resend_verification(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
     let message = match send_verification(user, &state).await {
-        Ok(_) => Message {
-            r#type: MessageType::Success,
+        Ok(_) => FlashMessage {
+            kind: FlashMessageKind::Success,
             msg: "Sent verification email".to_string(),
         },
         Err(e) => {
             warn!("Failed to send verification email: {e:?}");
-            Message {
-                r#type: MessageType::Error,
+            FlashMessage {
+                kind: FlashMessageKind::Error,
                 msg: "Failed to send verification email".to_string(),
             }
         }

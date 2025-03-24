@@ -1,4 +1,4 @@
-{% from "_macros.html.j2" import show_message, icon %}
+{% from "_macros.html.j2" import flash_message, icon %}
 
 {% macro project_form(id, project=none, message=none, request=none) -%}
 <form 
@@ -10,7 +10,7 @@ hx-post="{{ "/project/new" | app_url }}"
 hx-target-error="#message-box"
  id="{{ id }}">
     <div id="message-box">
-    {{ show_message(message) }}
+    {{ flash_message(message) }}
     </div>
     <div class="row px-3 mb-3">
         <label class="form-label" for="ProjectNameInput">Name</label>
@@ -117,12 +117,12 @@ hx-target-error="#message-box"
 {% endmacro %}
 
 {% macro allocation_note_form(sample, note=none, request=none, message=none) -%}
-{% from "_macros.html.j2" import show_message %}
+{% from "_macros.html.j2" import flash_message %}
 <form hx-{% if note %}put{% else %}post{% endif %}=""
       hx-target="this"
       hx-target-error="#message-box">
     <div id="message-box">
-    {{ show_message(message) }}
+    {{ flash_message(message) }}
     </div>
     <div class="row">
         <div class="col-sm-6 mb-3">
@@ -166,12 +166,12 @@ hx-target-error="#message-box"
 {%- endmacro %}
 
 {% macro project_add_sample(project, samples, messages=none) %}
-{% from "_macros.html.j2" import show_message %}
+{% from "_macros.html.j2" import flash_message %}
 {% if samples %}
 <form id="project-add-form"
     hx-post="{{ ("/project/" ~ project.id ~ "/add") | app_url }}">
     {% for msg in messages %}
-    {{ show_message(msg) }}
+    {{ flash_message(msg) }}
     {% endfor %}
     <div>
         {% for sample in samples %}

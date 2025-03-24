@@ -1,10 +1,10 @@
 use super::error_alert_response;
 use crate::{
-    Message, MessageType, TemplateKey,
+    TemplateKey,
     auth::SqliteUser,
     error::{self, Error},
     state::AppState,
-    util::app_url,
+    util::{FlashMessage, FlashMessageKind, app_url},
 };
 use anyhow::anyhow;
 use axum::{
@@ -315,8 +315,8 @@ async fn modify_note(
                 note => note,
                 note_types => note_types,
                 allocation => allocation,
-                message => Message {
-                    r#type: MessageType::Error,
+                message => FlashMessage {
+                    kind: FlashMessageKind::Error,
                     msg: format!("Failed to update note: {e}"),
                 }),
             )

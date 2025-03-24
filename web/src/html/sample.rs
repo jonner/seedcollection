@@ -1,10 +1,10 @@
 use crate::{
-    Message, MessageType, TemplateKey,
+    TemplateKey,
     auth::SqliteUser,
     error::{self, Error},
     html::SortOption,
     state::AppState,
-    util::app_url,
+    util::{FlashMessage, FlashMessageKind, app_url},
 };
 use anyhow::anyhow;
 use axum::{
@@ -238,8 +238,8 @@ async fn insert_sample(
             key,
             state.tmpl.clone(),
             context!(sources => sources,
-                         message => Message {
-                             r#type: MessageType::Error,
+                         message => FlashMessage {
+                             kind: FlashMessageKind::Error,
                              msg: format!("Failed to save sample: {}", e),
                          },
                          request => params),
@@ -256,8 +256,8 @@ async fn insert_sample(
                     key,
                     state.tmpl.clone(),
                     context!(sources => sources,
-                    message => Message {
-                        r#type: MessageType::Success,
+                    message => FlashMessage {
+                        kind: FlashMessageKind::Success,
                         msg: format!(
                             "Added new sample {}: {} to the database",
                             sample.id, sample.taxon.object()?.complete_name
@@ -306,16 +306,16 @@ async fn update_sample(
     let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(params),
-            Message {
-                r#type: MessageType::Error,
+            FlashMessage {
+                kind: FlashMessageKind::Error,
                 msg: format!("Failed to save sample: {}", e),
             },
             None,
         ),
         Ok(_) => (
             None,
-            Message {
-                r#type: MessageType::Success,
+            FlashMessage {
+                kind: FlashMessageKind::Success,
                 msg: format!("Updated sample {}", id),
             },
             Some([("HX-Redirect", app_url(&format!("/sample/{id}")))]),
@@ -359,8 +359,8 @@ async fn delete_sample(
                 state.tmpl.clone(),
                 context!(sources => sources,
                 sample => sample,
-                message => Message {
-                    r#type: MessageType::Error,
+                message => FlashMessage {
+                    kind: FlashMessageKind::Error,
                     msg: format!("Error deleting sample: {}", e),
                 }),
             )
@@ -372,8 +372,8 @@ async fn delete_sample(
                 key,
                 state.tmpl.clone(),
                 context!(deleted => true,
-                message => Message {
-                    r#type: MessageType::Success,
+                message => FlashMessage {
+                    kind: FlashMessageKind::Success,
                     msg: format!("Deleted sample {id}"),
                 }),
             ),

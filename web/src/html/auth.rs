@@ -1,10 +1,10 @@
-use super::{Message, MessageType, error_alert_response};
+use super::error_alert_response;
 use crate::{
     TemplateKey,
     auth::{AuthSession, Credentials},
     error,
     state::AppState,
-    util::app_url,
+    util::{FlashMessage, FlashMessageKind, app_url},
 };
 use axum::{
     Form, Router,
@@ -125,24 +125,24 @@ async fn logout(mut auth: AuthSession) -> impl IntoResponse {
     }
 }
 
-fn verification_error_message(err: VerificationError) -> Message {
+fn verification_error_message(err: VerificationError) -> FlashMessage {
     let profile_url = app_url("/user/me");
 
     match err {
-        VerificationError::Expired => Message {
-            r#type: MessageType::Error,
+        VerificationError::Expired => FlashMessage {
+            kind: FlashMessageKind::Error,
             msg: format!(
                 "This verification code has expired. Please visit your <a href='{profile_url}'>user profile</a> to request a new verification code to be emailed to you."
             ),
         },
-        VerificationError::AlreadyVerified => Message {
-            r#type: MessageType::Info,
+        VerificationError::AlreadyVerified => FlashMessage {
+            kind: FlashMessageKind::Info,
             msg: "This email address has already been verified.".into(),
         },
         VerificationError::InternalError(_)
         | VerificationError::MultipleKeysFound
-        | VerificationError::KeyNotFound => Message {
-            r#type: MessageType::Warning,
+        | VerificationError::KeyNotFound => FlashMessage {
+            kind: FlashMessageKind::Warning,
             msg: format!(
                 "The verification code you provided could not be found. Check your verification email and make sure that the link you clicked was not corrupted in some way. Visit your <a href='{profile_url}'>user profile</a> to request a new verification code to be emailed to you. "
             ),
@@ -158,8 +158,8 @@ async fn show_verification(
 ) -> Result<impl IntoResponse, error::Error> {
     let message = UserVerification::find(userid, &vkey, &state.db)
         .await
-        .map_or_else(verification_error_message, |_uv| Message {
-            r#type: MessageType::Warning,
+        .map_or_else(verification_error_message, |_uv| FlashMessage {
+            kind: FlashMessageKind::Warning,
             msg: "Verification of your email address is required in order to perform
             some actions on this website. Click below to verify your email
             address."
@@ -180,12 +180,12 @@ async fn verify_user(
     let res = UserVerification::find(userid, &vkey, &state.db).await;
     let message = match res {
         Ok(mut uv) => match uv.verify(&state.db).await {
-            Ok(_) => Message {
-                r#type: MessageType::Success,
+            Ok(_) => FlashMessage {
+                kind: FlashMessageKind::Success,
                 msg: "You have successfully verified your account".into(),
             },
-            Err(_e) => Message {
-                r#type: MessageType::Error,
+            Err(_e) => FlashMessage {
+                kind: FlashMessageKind::Error,
                 msg: "Failed to verify user".into(),
             },
         },

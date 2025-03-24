@@ -1,4 +1,8 @@
-use crate::{Message, MessageType, TemplateKey, auth::SqliteUser, util::app_url};
+use crate::{
+    TemplateKey,
+    auth::SqliteUser,
+    util::{FlashMessage, FlashMessageKind, app_url},
+};
 use anyhow::{Context, anyhow};
 use axum::{
     Form, Router,
@@ -147,16 +151,16 @@ async fn update_source(
     let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(&params),
-            Message {
-                r#type: MessageType::Error,
+            FlashMessage {
+                kind: FlashMessageKind::Error,
                 msg: e.to_string(),
             },
             None,
         ),
         Ok(_) => (
             None,
-            Message {
-                r#type: MessageType::Success,
+            FlashMessage {
+                kind: FlashMessageKind::Success,
                 msg: "Successfully updated source".to_string(),
             },
             Some([("HX-Redirect", app_url(&format!("/source/{id}")))]),
@@ -216,8 +220,8 @@ async fn new_source(
     let mut headers = HeaderMap::new();
     match do_insert(&user, &params, &state).await {
         Err(e) => {
-            message = Some(Message {
-                r#type: MessageType::Error,
+            message = Some(FlashMessage {
+                kind: FlashMessageKind::Error,
                 msg: e.to_string(),
             });
             request = Some(&params)
@@ -225,8 +229,8 @@ async fn new_source(
         Ok(result) => {
             let newid = result.last_insert_rowid();
             let url = app_url(&format!("/source/{newid}"));
-            message = Some(Message {
-                r#type: MessageType::Success,
+            message = Some(FlashMessage {
+                kind: FlashMessageKind::Success,
                 msg: format!("Successfully added source {newid}"),
             });
             if params.modal.is_some() {

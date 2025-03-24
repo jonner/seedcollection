@@ -66,10 +66,10 @@
 {% endwith %}
 {%- endmacro %}
 
-{% macro show_message(message) -%}
+{% macro flash_message(message) -%}
     {% if message %}
     <div role="alert" class="mb-3 alert alert-dismissible fade show
-        alert-{% if message.type == "Error" %}danger{% elif message.type == "Warning" %}warning{% elif message.type == "Info" %}info{% elif message.type== "Success" %}success{% endif %}">
+        alert-{% if message.kind == "Error" %}danger{% elif message.kind == "Warning" %}warning{% elif message.kind == "Info" %}info{% elif message.kind == "Success" %}success{% endif %}">
         {{ message.msg }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>

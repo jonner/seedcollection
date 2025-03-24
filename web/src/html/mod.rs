@@ -1,4 +1,10 @@
-use crate::{Message, MessageType, TemplateKey, auth::AuthSession, error, state::AppState};
+use crate::{
+    TemplateKey,
+    auth::AuthSession,
+    error,
+    state::AppState,
+    util::{FlashMessage, FlashMessageKind},
+};
 use axum::{
     Router,
     extract::{OriginalUri, Request, State},
@@ -32,8 +38,8 @@ pub(crate) fn error_alert_response(
         RenderHtml(
             "_ALERT.html.j2",
             state.tmpl.clone(),
-            context!(message => Message {
-                r#type: MessageType::Error,
+            context!(message => FlashMessage {
+                kind: FlashMessageKind::Error,
                 msg: message,
             }),
         ),
