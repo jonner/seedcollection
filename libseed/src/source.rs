@@ -14,7 +14,6 @@ use sqlx::{
     prelude::*,
     sqlite::{SqliteQueryResult, SqliteRow},
 };
-use std::sync::Arc;
 
 /// A type for specifying fields that can be used for filtering a database query
 /// for sources
@@ -31,18 +30,6 @@ pub enum Filter {
 
     /// Compare the description of the source to the given value
     Description(Cmp, String),
-}
-
-impl From<Filter> for DynFilterPart {
-    fn from(value: Filter) -> Self {
-        Arc::new(value)
-    }
-}
-
-impl From<Filter> for Option<DynFilterPart> {
-    fn from(value: Filter) -> Self {
-        Some(Arc::new(value))
-    }
 }
 
 impl FilterPart for Filter {

@@ -20,7 +20,7 @@ use axum_template::{RenderHtml, engine::Engine};
 use clap::Parser;
 use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
 use minijinja::{Environment, context};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use state::{AppState, SharedState};
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
@@ -43,19 +43,6 @@ mod state;
 mod util;
 
 const APP_PREFIX: &str = "/app/";
-
-#[derive(Serialize)]
-pub(crate) enum MessageType {
-    Success,
-    Warning,
-    Error,
-}
-
-#[derive(Serialize)]
-pub(crate) struct Message {
-    r#type: MessageType,
-    msg: String,
-}
 
 // Because minijinja loads an entire folder, we need to remove the `/` prefix
 // and add a `.html.j2` suffix. We can implement our own custom key extractor that

@@ -2,6 +2,7 @@ use crate::APP_PREFIX;
 use axum::http::Uri;
 use minijinja::ErrorKind;
 use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
+use serde::Serialize;
 use std::collections::BTreeMap;
 
 pub(crate) fn app_url(value: &str) -> String {
@@ -224,4 +225,18 @@ fn test_markdown_ids() {
         markdown(Some("This is just some text")).as_str(),
         Some("<p>This is just some text</p>\n")
     );
+}
+
+#[derive(Serialize)]
+pub(crate) enum FlashMessageKind {
+    Success,
+    Warning,
+    Info,
+    Error,
+}
+
+#[derive(Serialize)]
+pub(crate) struct FlashMessage {
+    pub kind: FlashMessageKind,
+    pub msg: String,
 }

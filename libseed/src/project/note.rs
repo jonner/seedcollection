@@ -8,7 +8,6 @@ use crate::core::{
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{QueryBuilder, Sqlite, sqlite::SqliteQueryResult};
-use std::sync::Arc;
 use strum_macros::EnumIter;
 use time::Date;
 use tracing::debug;
@@ -83,7 +82,7 @@ impl Loadable for Note {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::query_builder(Some(Arc::new(NoteFilter::Id(id))))
+        Self::query_builder(Some(NoteFilter::Id(id).into()))
             .build_query_as()
             .fetch_one(db.pool())
             .await
@@ -228,7 +227,7 @@ mod tests {
         assert_eq!(note, loaded);
 
         // fetch all notes for a sample
-        let notes = Note::load_all(Some(Arc::new(NoteFilter::AllocationId(1))), &db)
+        let notes = Note::load_all(Some(NoteFilter::AllocationId(1).into()), &db)
             .await
             .expect("Unable to load notes for sample");
         assert_eq!(notes.len(), 2);

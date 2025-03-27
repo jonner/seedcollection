@@ -12,7 +12,7 @@ use sqlx::{
     error::Error::ColumnDecode,
     sqlite::{SqliteQueryResult, SqliteRow},
 };
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 use strum_macros::{Display, EnumIter, FromRepr};
 use tracing::debug;
 
@@ -192,12 +192,6 @@ impl FromRow<'_, SqliteRow> for Taxon {
             seq: row.try_get("seq").unwrap_or(None),
             germination: None,
         })
-    }
-}
-
-impl From<Filter> for DynFilterPart {
-    fn from(value: Filter) -> Self {
-        Arc::new(value)
     }
 }
 

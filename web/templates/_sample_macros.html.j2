@@ -1,4 +1,4 @@
-{% from "_macros.html.j2" import icon, show_message %}
+{% from "_macros.html.j2" import icon, flash_message %}
 
 {% macro month_options(selected) -%}
 <option value="">Choose a month...</option>
@@ -23,7 +23,7 @@
 {% else %}
 <form hx-post="{{ "/sample/new" | app_url }}">
 {% endif %}
-{{ show_message(message) }}
+{{ flash_message(message) }}
     <div class="row g-6">
         <div class="mb-3 col-12">
             <label for="SampleTaxonInput" class="form-label">Taxon</label>

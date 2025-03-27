@@ -5,7 +5,7 @@ use crate::{
 };
 
 use sqlparser::{dialect::SQLiteDialect, parser::Parser};
-use sqlx::{Connection, FromRow, Pool, Row, Sqlite, SqlitePool};
+use sqlx::{Connection, FromRow, Pool, Row, Sqlite, SqlitePool, sqlite::SqliteConnectOptions};
 use std::path::{Path, PathBuf};
 use tracing::{debug, trace, warn};
 
@@ -84,8 +84,7 @@ impl Database {
     /// necessary sql migrations to ensure that the database is up to date with the
     /// latest schema changes.
     pub async fn open<P: AsRef<Path>>(db: P) -> Result<Self, sqlx::Error> {
-        let dbpool =
-            SqlitePool::connect(&format!("sqlite://{}", db.as_ref().to_string_lossy())).await?;
+        let dbpool = SqlitePool::connect_with(SqliteConnectOptions::new().filename(db)).await?;
         trace!("Running database migrations");
         sqlx::migrate!("../db/migrations").run(&dbpool).await?;
         Ok(Database(dbpool))

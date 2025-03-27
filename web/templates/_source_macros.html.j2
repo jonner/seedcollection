@@ -1,4 +1,4 @@
-{% from "_macros.html.j2" import show_message %}
+{% from "_macros.html.j2" import flash_message %}
 
 {% macro source_form(id, source=none, message=none, request=none, modal=false) -%}
 <div id="delete-error-display"></div>
@@ -7,7 +7,7 @@
 {% else %}
 <form hx-post="{{ "/source/new" | app_url }}" id="{{ id }}">
 {% endif %}
-    {{ show_message(message) }}
+    {{ flash_message(message) }}
     <div class="row g-6 mb-3">
         <div class="col-12">
             <label class="form-label" for="SourceNameInput">Name</label>

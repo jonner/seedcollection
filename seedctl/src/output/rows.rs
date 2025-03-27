@@ -8,7 +8,6 @@ use libseed::{
     user::User,
 };
 use serde::{Serialize, Serializer, ser::SerializeSeq};
-use std::sync::Arc;
 use tabled::Tabled;
 
 #[derive(Tabled, Serialize)]
@@ -156,7 +155,7 @@ impl SampleRowDetails {
         taxon.load_germination_info(db).await?;
         let src = sample.source.object()?;
         let allocations = Allocation::load_all(
-            Some(Arc::new(allocation::Filter::SampleId(sample.id))),
+            Some(allocation::Filter::SampleId(sample.id).into()),
             None,
             db,
         )

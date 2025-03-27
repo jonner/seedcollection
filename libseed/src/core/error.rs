@@ -1,5 +1,19 @@
 //! Objects related to reporting errors from this library
 
+#[derive(Debug, thiserror::Error)]
+pub enum VerificationError {
+    #[error("Verification code expired")]
+    Expired,
+    #[error("Verification code not found")]
+    KeyNotFound,
+    #[error("Verification code already verified")]
+    AlreadyVerified,
+    #[error("Multiple verification codes found for same key")]
+    MultipleKeysFound,
+    #[error(transparent)]
+    InternalError(#[from] sqlx::Error),
+}
+
 /// A list of error types that can occur within this library
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
@@ -43,6 +57,9 @@ pub enum Error {
 
     #[error("Database upgrade failed: {0}")]
     DatabaseUpgrade(String),
+
+    #[error(transparent)]
+    UserVerification(#[from] VerificationError),
 }
 
 /// A convenience type alias for a [Result] with [Error] as its error type

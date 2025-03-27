@@ -90,9 +90,9 @@ async fn add_user(
         None,
         None,
     );
-    let id = user.insert(db).await?.last_insert_rowid();
+    user.insert(db).await?;
     println!("Added user to database:");
-    println!("{}: {}", id, username);
+    println!("{}: {}", user.id, username);
     Ok(())
 }
 

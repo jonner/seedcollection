@@ -1,9 +1,9 @@
 use crate::{
-    Message, MessageType, TemplateKey,
+    TemplateKey,
     auth::SqliteUser,
     error::{self, Error},
     state::AppState,
-    util::{app_url, format_id_number},
+    util::{FlashMessage, FlashMessageKind, app_url, format_id_number},
 };
 use anyhow::anyhow;
 use axum::{
@@ -30,7 +30,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
-use std::{collections::HashSet, sync::Arc};
+use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
 use super::{SortOption, error_alert_response};
@@ -151,8 +151,8 @@ async fn insert_project(
                     "_ALERT.html.j2",
                     state.tmpl.clone(),
                     context!( message =>
-                    Message {
-                        r#type: MessageType::Success,
+                    FlashMessage {
+                        kind: FlashMessageKind::Success,
                         msg: format!(
                             r#"Added new project {}: {} to the database"#,
                             id, params.name
@@ -288,16 +288,16 @@ async fn modify_project(
     let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
             Some(&params),
-            Message {
-                r#type: MessageType::Error,
+            FlashMessage {
+                kind: FlashMessageKind::Error,
                 msg: e.to_string(),
             },
             None,
         ),
         Ok(_) => (
             None,
-            Message {
-                r#type: MessageType::Success,
+            FlashMessage {
+                kind: FlashMessageKind::Success,
                 msg: "Successfully updated project".to_string(),
             },
             Some([("HX-Redirect", app_url(&format!("/project/{id}")))]),
@@ -358,8 +358,8 @@ async fn delete_project(
         state.tmpl.clone(),
         context!(
         project => project,
-        message => Message {
-            r#type: MessageType::Error,
+        message => FlashMessage {
+            kind: FlashMessageKind::Error,
             msg: format!("Failed to delete project: {errmsg}")
         },
         ),
@@ -390,7 +390,7 @@ async fn add_sample_prep(
      */
     let samples = Sample::load_all_user(
         user.id,
-        Some(Arc::new(sample::Filter::IdNotIn(ids))),
+        Some(sample::Filter::IdNotIn(ids).into()),
         None,
         &state.db,
     )
@@ -453,8 +453,8 @@ async fn add_sample(
             .map(|id| format_id_number(*id, Some("S"), None))
             .collect::<Vec<String>>()
             .join(", ");
-        messages.push(Message {
-            r#type: MessageType::Warning,
+        messages.push(FlashMessage {
+            kind: FlashMessageKind::Warning,
             msg: format!("Some samples could not be added to the project. The following samples may not exist or you may not have permissions to add them top this project: {strval}.",),
         })
     }
@@ -471,8 +471,8 @@ async fn add_sample(
             Err(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
                 if e.is_unique_violation() =>
             {
-                messages.push(Message {
-                    r#type: MessageType::Warning,
+                messages.push(FlashMessage {
+                    kind: FlashMessageKind::Warning,
                     msg: format!(
                         "Sample {} is already a member of this project",
                         format_id_number(id, Some("S"), None),
@@ -480,8 +480,8 @@ async fn add_sample(
                 })
             }
             Err(e) => {
-                messages.push(Message {
-                    r#type: MessageType::Error,
+                messages.push(FlashMessage {
+                    kind: FlashMessageKind::Error,
                     msg: format!(
                         "Failed to add sample {}: Database error",
                         format_id_number(id, Some("S"), None),
@@ -495,16 +495,16 @@ async fn add_sample(
     if n_inserted > 0 {
         messages.insert(
             0,
-            Message {
-                r#type: MessageType::Success,
+            FlashMessage {
+                kind: FlashMessageKind::Success,
                 msg: format!("Added {n_inserted} samples to this project"),
             },
         );
     } else {
         messages.insert(
             0,
-            Message {
-                r#type: MessageType::Error,
+            FlashMessage {
+                kind: FlashMessageKind::Error,
                 msg: "No samples were added to this project".to_string(),
             },
         );
