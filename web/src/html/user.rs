@@ -128,11 +128,10 @@ fn verification_url(
 
 fn verification_email(
     state: &std::sync::Arc<crate::state::SharedState>,
-    userid: i64,
     vcode: String,
     user: SqliteUser,
 ) -> Result<lettre::Message, Error> {
-    let verification_url = verification_url(state, userid, vcode);
+    let verification_url = verification_url(state, user.id, vcode);
     let emailbody = state
         .tmpl
         .render(
@@ -163,7 +162,7 @@ fn verification_email(
 async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), error::Error> {
     let mut uv = UserVerification::new(user.id, None);
     uv.insert(&state.db).await?;
-    let email = verification_email(state, user.id, uv.key, user)?;
+    let email = verification_email(state, uv.key, user)?;
     match state.config.mail_transport {
         crate::MailTransport::File(ref path) => AsyncFileTransport::<Tokio1Executor>::new(path)
             .send(email)
