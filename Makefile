@@ -10,7 +10,10 @@ SEEDWEB_DATABASE_DIR ?= ./db/itis
 SEEDWEB_HTTP_PORT ?= 8080
 SEEDWEB_HTTPS_PORT ?= 8443
 
-container: Containerfile config.yaml.docker
+update-container: Containerfile
+	$(CONTAINERCMD) pull rust:alpine alpine:latest
+
+container: update-container Containerfile config.yaml.docker
 	$(CONTAINERCMD) build -t seedweb:latest .
 
 run-container: container
