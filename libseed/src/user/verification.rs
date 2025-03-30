@@ -56,10 +56,10 @@ impl UserVerification {
     }
 
     /// Create a new user verification request for the given user
-    pub fn new(userid: i64, expiration: Option<i64>) -> Self {
+    pub fn new(user: ExternalRef<User>, expiration: Option<i64>) -> Self {
         Self {
             id: <Self as Loadable>::Id::invalid_value(),
-            user: ExternalRef::Stub(userid),
+            user,
             key: Self::new_key(),
             requested: None,
             expiration: expiration.unwrap_or(Self::DEFAULT_EXPIRATION),
@@ -240,7 +240,7 @@ mod tests {
     ))]
     async fn create_user_verification(pool: Pool<Sqlite>) {
         let db = Database::from(pool);
-        let mut uv = UserVerification::new(1, None);
+        let mut uv = UserVerification::new(ExternalRef::Stub(1), None);
         uv.insert(&db)
             .await
             .expect("Failed to insert user verification");

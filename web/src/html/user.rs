@@ -160,7 +160,8 @@ fn verification_email(
 }
 
 async fn send_verification(user: SqliteUser, state: &AppState) -> Result<(), error::Error> {
-    let mut uv = UserVerification::new(user.id, None);
+    let libuser: &libseed::user::User = &user;
+    let mut uv = UserVerification::new(libuser.clone().into(), None);
     uv.insert(&state.db).await?;
     let email = verification_email(state, uv.key, user)?;
     match state.config.mail_transport {
