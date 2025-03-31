@@ -14,6 +14,18 @@ use std::ops::{Deref, DerefMut};
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SqliteUser(User);
 
+impl From<SqliteUser> for User {
+    fn from(value: SqliteUser) -> Self {
+        value.0
+    }
+}
+
+impl From<User> for SqliteUser {
+    fn from(value: User) -> Self {
+        Self(value)
+    }
+}
+
 impl Deref for SqliteUser {
     type Target = User;
 
