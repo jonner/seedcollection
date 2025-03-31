@@ -173,6 +173,14 @@ impl UserVerification {
             // if no requested date was set, just consider the request to be expired
             .unwrap_or(true)
     }
+
+    pub async fn load_all(db: &Database) -> Result<Vec<Self>> {
+        Self::query_builder(None)
+            .build_query_as()
+            .fetch_all(db.pool())
+            .await
+            .map_err(Into::into)
+    }
 }
 
 #[async_trait]

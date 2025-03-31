@@ -2,7 +2,7 @@
 use crate::core::{
     database::Database,
     error::{Error, Result},
-    loadable::{ExternalRef, Loadable},
+    loadable::{ExternalRef, Indexable, Loadable},
     query::{DynFilterPart, FilterPart},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
@@ -300,6 +300,15 @@ impl User {
         self.status = UserStatus::Verified;
         self.update(db).await.map(|_| ())
     }
+
+    pub async fn generate_verification_request(&self, db: &Database) -> Result<UserVerification> {
+        if !self.id() == <Self as Loadable>::Id::invalid_value() {
+            return Err(Error::InvalidUpdateObjectNotFound);
+        }
+        let mut uv = UserVerification::new(self.clone().into(), None);
+        uv.insert(db).await?;
+        Ok(uv)
+    }
 }
 
 impl FromRow<'_, SqliteRow> for ExternalRef<User> {
@@ -493,5 +502,31 @@ mod tests {
             .await
             .expect("Failed to load user");
         assert_eq!(user.status, UserStatus::Unverified);
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("users", "sources", "taxa"))
+    ))]
+    async fn test_user_generate_verification(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let nuvs = UserVerification::load_all(&db)
+            .await
+            .expect("Failed to get user verifications from db")
+            .len();
+        let user = User::load(1, &db).await.expect("Failed to get user list");
+        let uv = user
+            .generate_verification_request(&db)
+            .await
+            .expect("Failed to generate verification request");
+        let nuvs_after = UserVerification::load_all(&db)
+            .await
+            .expect("Failed to get user list")
+            .len();
+        assert_eq!(nuvs + 1, nuvs_after);
+        let dbuv = UserVerification::find(user.id, &uv.key, &db)
+            .await
+            .expect("Failed to load userverification from db");
+        assert_eq!(uv, dbuv);
     }
 }
