@@ -2,7 +2,7 @@ use super::error_alert_response;
 use crate::{
     TemplateKey,
     auth::SqliteUser,
-    error::{self, Error},
+    error::Error,
     state::AppState,
     util::{FlashMessage, FlashMessageKind, app_url},
 };
@@ -47,7 +47,7 @@ async fn show_allocation(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     // make sure that this is our sample
     let mut allocation = Allocation::load_one(
         Some(
@@ -61,7 +61,7 @@ async fn show_allocation(
     )
     .await
     .map_err(|e| match e {
-        sqlx::Error::RowNotFound => error::Error::NotFound(format!(
+        sqlx::Error::RowNotFound => Error::NotFound(format!(
             "Project allocation '{allocid}' was not found in the database"
         )),
         _ => e.into(),
@@ -181,7 +181,7 @@ async fn show_add_allocation_note(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let allocation = Allocation::load_one(
         Some(
             CompoundFilter::builder(Op::And)
@@ -208,7 +208,7 @@ async fn remove_allocation(
     user: SqliteUser,
     State(state): State<AppState>,
     Path((id, psid)): Path<(i64, i64)>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut projects = Project::load_all(Some(project::Filter::Id(id).into()), &state.db).await?;
     let Some(c) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
@@ -229,7 +229,7 @@ async fn delete_note(
     TemplateKey(_key): TemplateKey,
     State(state): State<AppState>,
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     // make sure this is a note the user can delete
     let mut note = Note::load(noteid, &state.db).await?;
     let allocation = Allocation::load(note.psid, &state.db).await?;
@@ -251,7 +251,7 @@ async fn show_edit_note(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     // make sure this is a note the user can edit
     let note = Note::load(noteid, &state.db).await.map_err(|e| match e {
         libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
@@ -287,7 +287,7 @@ async fn modify_note(
     State(state): State<AppState>,
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
     Form(params): Form<NoteParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     // make sure this is a note the user can edit
     let mut note = Note::load(noteid, &state.db).await?;
     let allocation = Allocation::load(note.psid, &state.db).await?;

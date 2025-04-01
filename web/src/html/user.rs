@@ -1,7 +1,7 @@
 use crate::{
     TemplateKey,
     auth::SqliteUser,
-    error::{self, Error},
+    error::Error,
     state::AppState,
     util::{FlashMessage, FlashMessageKind, app_url},
 };
@@ -78,7 +78,7 @@ async fn update_profile(
     mut user: SqliteUser,
     State(state): State<AppState>,
     Form(params): Form<ProfileParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut need_reverify = false;
     if params.email.is_empty() {
         return Err(anyhow!("email cannot be empty").into());
@@ -112,7 +112,7 @@ async fn resend_verification(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let uv = user.generate_verification_request(&state.db).await?;
     let message = match state.send_verification(uv).await {
         Ok(_) => FlashMessage {

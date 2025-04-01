@@ -1,7 +1,7 @@
 use crate::{
     TemplateKey,
     auth::SqliteUser,
-    error::{self, Error},
+    error::Error,
     html::SortOption,
     state::AppState,
     util::{FlashMessage, FlashMessageKind, app_url},
@@ -123,7 +123,7 @@ async fn list_samples(
                      filteronly => headers.get("HX-Request").is_some()),
         )
         .into_response(),
-        Err(e) => error::Error::from(e).into_response(),
+        Err(e) => Error::from(e).into_response(),
     }
 }
 
@@ -132,7 +132,7 @@ async fn show_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut sample = Sample::load(id, &state.db).await.map_err(|e| match e {
         libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
             Error::NotFound(format!("Sample {id} could not be found"))
@@ -175,7 +175,7 @@ async fn new_sample(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
     Ok(RenderHtml(
         key,
@@ -207,7 +207,7 @@ async fn do_insert(
     user: &SqliteUser,
     params: &SampleParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, error::Error> {
+) -> Result<SqliteQueryResult, Error> {
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
@@ -231,7 +231,7 @@ async fn insert_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
     match do_insert(&user, &params, &state).await {
         Err(e) => Ok(RenderHtml(
@@ -275,7 +275,7 @@ async fn do_update(
     id: i64,
     params: &SampleParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, error::Error> {
+) -> Result<SqliteQueryResult, Error> {
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
@@ -301,7 +301,7 @@ async fn update_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
     let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
@@ -343,7 +343,7 @@ async fn delete_sample(
     Path(id): Path<i64>,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut sample = Sample::load(id, &state.db).await?;
     if sample.user.id() != user.id {
         return Err(Error::Unauthorized(

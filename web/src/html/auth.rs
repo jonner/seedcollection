@@ -2,7 +2,7 @@ use super::error_alert_response;
 use crate::{
     TemplateKey,
     auth::{AuthSession, Credentials},
-    error,
+    error::Error,
     state::AppState,
     util::{FlashMessage, FlashMessageKind, app_url},
 };
@@ -79,9 +79,9 @@ async fn register_user(
     State(state): State<AppState>,
     TemplateKey(key): TemplateKey,
     Form(params): Form<RegisterParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     if !state.config.user_registration_enabled {
-        return Err(error::Error::UserRegistrationDisabled);
+        return Err(Error::UserRegistrationDisabled);
     }
     match params.validate() {
         Ok(_) => {
@@ -116,9 +116,9 @@ async fn register_user(
 async fn show_register(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     if !state.config.user_registration_enabled {
-        return Err(error::Error::UserRegistrationDisabled);
+        return Err(Error::UserRegistrationDisabled);
     }
     Ok(RenderHtml(key, state.tmpl.clone(), ()))
 }
@@ -133,7 +133,7 @@ async fn show_login(
     auth: AuthSession,
     State(state): State<AppState>,
     Query(NextUrl { next }): Query<NextUrl>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -224,7 +224,7 @@ async fn show_verification(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((userid, vkey)): Path<(i64, String)>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let message = UserVerification::find(userid, &vkey, &state.db)
         .await
         .map_or_else(verification_error_message, |_uv| FlashMessage {
@@ -245,7 +245,7 @@ async fn verify_user(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((userid, vkey)): Path<(i64, String)>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let res = UserVerification::find(userid, &vkey, &state.db).await;
     let message = match res {
         Ok(mut uv) => match uv.verify(&state.db).await {

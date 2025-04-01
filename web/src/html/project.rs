@@ -1,7 +1,7 @@
 use crate::{
     TemplateKey,
     auth::SqliteUser,
-    error::{self, Error},
+    error::Error,
     state::AppState,
     util::{FlashMessage, FlashMessageKind, app_url, format_id_number},
 };
@@ -60,7 +60,7 @@ async fn list_projects(
     State(state): State<AppState>,
     OptionalQuery(params): OptionalQuery<ProjectListParams>,
     headers: HeaderMap,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     trace!(?params, "Listing projects");
     let mut fbuilder = CompoundFilter::builder(Op::And).push(project::Filter::User(user.id));
     let namefilter = params.and_then(|p| {
@@ -93,7 +93,7 @@ async fn show_new_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
 }
 
@@ -108,7 +108,7 @@ async fn do_insert(
     user: SqliteUser,
     params: &ProjectParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, error::Error> {
+) -> Result<SqliteQueryResult, Error> {
     let mut project = Project::new(
         params.name.clone(),
         params.description.as_ref().cloned(),
@@ -121,7 +121,7 @@ async fn insert_project(
     user: SqliteUser,
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     if params.name.is_empty() {
         return Ok(error_alert_response(
             &state,
@@ -261,7 +261,7 @@ async fn do_update(
     id: i64,
     params: &ProjectParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, error::Error> {
+) -> Result<SqliteQueryResult, Error> {
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
@@ -277,7 +277,7 @@ async fn modify_project(
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let fb = CompoundFilter::builder(Op::And)
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
@@ -323,7 +323,7 @@ async fn delete_project(
     TemplateKey(key): TemplateKey,
     Path(id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load(id, &state.db)
         .await
         .map_err(|_| Error::NotFound("That project does not exist".to_string()))?;
@@ -371,7 +371,7 @@ async fn add_sample_prep(
     user: &SqliteUser,
     id: i64,
     state: &AppState,
-) -> Result<(Project, Vec<Sample>), error::Error> {
+) -> Result<(Project, Vec<Sample>), Error> {
     let project = Project::load(id, &state.db).await?;
 
     let ids_in_project = sqlx::query!(
@@ -403,7 +403,7 @@ async fn show_add_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let (project, samples) = add_sample_prep(&user, id, &state).await?;
     Ok(RenderHtml(
         key,
@@ -421,7 +421,7 @@ async fn add_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<Vec<(String, String)>>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut messages = Vec::new();
     let toadd: HashSet<i64> = params
         .iter()
