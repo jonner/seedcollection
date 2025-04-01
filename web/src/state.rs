@@ -134,6 +134,7 @@ impl SharedState {
                 },
                 database: "test-database.sqlite".to_string(),
                 mail_transport: crate::MailTransport::File("/tmp/".to_string()),
+                user_registration_enabled: false,
             },
             datadir: ".".into(),
         }

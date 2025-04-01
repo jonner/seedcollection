@@ -30,6 +30,7 @@ pub(crate) fn router() -> Router<AppState> {
             "/verify/{userid}/{key}",
             get(show_verification).post(verify_user),
         )
+        .route("/register", get(show_register).post(register_user))
 }
 
 #[derive(Clone, Deserialize)]
@@ -37,33 +38,88 @@ pub(crate) struct RegisterParams {
     pub(crate) username: String,
     pub(crate) email: String,
     pub(crate) password: String,
+    pub(crate) passwordconfirm: String,
 }
 
-#[allow(dead_code)]
+impl RegisterParams {
+    pub fn validate(&self) -> Result<(), Vec<FlashMessage>> {
+        let mut flash_messages: Vec<FlashMessage> = Vec::default();
+        const PASSWORD_MIN_LENGTH: u16 = 8;
+        if let Err(e) = User::validate_username(&self.username) {
+            flash_messages.push(FlashMessage {
+                kind: FlashMessageKind::Error,
+                msg: e.to_string(),
+            })
+        }
+        if self.email.is_empty() {
+            flash_messages.push(FlashMessage {
+                kind: FlashMessageKind::Error,
+                msg: "Email address is not valid".to_string(),
+            })
+        }
+        if self.password.len() < PASSWORD_MIN_LENGTH as usize {
+            flash_messages.push(FlashMessage {
+                kind: FlashMessageKind::Error,
+                msg: format!("Password must be at least {PASSWORD_MIN_LENGTH} characters long"),
+            })
+        } else if self.password != self.passwordconfirm {
+            flash_messages.push(FlashMessage {
+                kind: FlashMessageKind::Error,
+                msg: "Passwords don't match".to_string(),
+            })
+        }
+        match flash_messages.is_empty() {
+            true => Ok(()),
+            false => Err(flash_messages),
+        }
+    }
+}
+
 async fn register_user(
     State(state): State<AppState>,
+    TemplateKey(key): TemplateKey,
     Form(params): Form<RegisterParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    let password_hash = User::hash_password(&params.password)?;
-    let mut user = User::new(
-        params.username,
-        params.email,
-        password_hash,
-        UserStatus::Unverified,
-        None,
-        None,
-        None,
-    );
-    user.insert(&state.db).await?;
-    let uv = user.generate_verification_request(&state.db).await?;
-    state.send_verification(uv).await
+    if !state.config.user_registration_enabled {
+        return Err(error::Error::UserRegistrationDisabled);
+    }
+    match params.validate() {
+        Ok(_) => {
+            let password_hash = User::hash_password(&params.password)?;
+            let mut user = User::new(
+                params.username,
+                params.email,
+                password_hash,
+                UserStatus::Unverified,
+                None,
+                None,
+                None,
+            );
+            user.insert(&state.db).await?;
+            let uv = user.generate_verification_request(&state.db).await?;
+            state.send_verification(uv).await?;
+            Ok([("HX-redirect", app_url("/auth/login"))].into_response())
+        }
+        Err(messages) => Ok(RenderHtml(
+            key,
+            state.tmpl.clone(),
+            context! {
+                username => params.username,
+                email_address => params.email,
+                messages => messages,
+            },
+        )
+        .into_response()),
+    }
 }
 
-#[allow(dead_code)]
 async fn show_register(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, error::Error> {
+    if !state.config.user_registration_enabled {
+        return Err(error::Error::UserRegistrationDisabled);
+    }
     Ok(RenderHtml(key, state.tmpl.clone(), ()))
 }
 

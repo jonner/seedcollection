@@ -180,6 +180,8 @@ struct EnvConfig {
     listen: ListenConfig,
     database: String,
     mail_transport: MailTransport,
+    #[serde(default)]
+    user_registration_enabled: bool,
 }
 
 impl EnvConfig {
@@ -533,7 +535,8 @@ prod:
                     host: "0.0.0.0".to_string(),
                     http_port: 8080,
                     https_port: 8443,
-                }
+                },
+                user_registration_enabled: false
             }
         );
         assert_eq!(
@@ -545,7 +548,8 @@ prod:
                     host: "0.0.0.0".to_string(),
                     http_port: 8080,
                     https_port: 8443,
-                }
+                },
+                user_registration_enabled: false
             }
         );
     }

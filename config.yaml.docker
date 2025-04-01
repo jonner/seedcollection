@@ -6,6 +6,7 @@ dev:
     host: "0.0.0.0"
     http_port: 80
     https_port: 443
+  user_registration_enabled: true
 prod:
   database: /usr/share/seedweb/db/seedcollection.sqlite
   asset_root: "/usr/share/seedweb"
@@ -15,4 +16,5 @@ prod:
     credentials:
       username: "jonathon@quotidian.org"
   listen: *DEFAULT_LISTEN
+  user_registration_enabled: false
 
