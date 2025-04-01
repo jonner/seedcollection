@@ -14,7 +14,10 @@ use axum::{
     routing::{get, post},
 };
 use axum_template::RenderHtml;
-use libseed::{core::error::VerificationError, user::verification::UserVerification};
+use libseed::{
+    core::error::VerificationError,
+    user::{User, UserStatus, verification::UserVerification},
+};
 use minijinja::context;
 use serde::Deserialize;
 use tracing::error;
@@ -38,12 +41,21 @@ pub(crate) struct RegisterParams {
 
 #[allow(dead_code)]
 async fn register_user(
-    auth: AuthSession,
+    State(state): State<AppState>,
     Form(params): Form<RegisterParams>,
 ) -> Result<impl IntoResponse, error::Error> {
-    auth.backend
-        .register(params.username, params.email, params.password)
-        .await
+    let password_hash = User::hash_password(&params.password)?;
+    let mut user = User::new(
+        params.username,
+        params.email,
+        password_hash,
+        UserStatus::Unverified,
+        None,
+        None,
+        None,
+    );
+    user.insert(&state.db).await?;
+    Ok(())
 }
 
 #[allow(dead_code)]
