@@ -55,7 +55,8 @@ async fn register_user(
         None,
     );
     user.insert(&state.db).await?;
-    Ok(())
+    let uv = user.generate_verification_request(&state.db).await?;
+    state.send_verification(uv).await
 }
 
 #[allow(dead_code)]

@@ -1,17 +1,19 @@
-use crate::{EnvConfig, template_engine};
+use crate::{EnvConfig, error::Error, template_engine, util::app_url};
 use anyhow::{Context, Result};
-use axum_template::engine::Engine;
-use lettre::{AsyncSmtpTransport, Tokio1Executor};
-use libseed::core::database::Database;
+use axum_template::{TemplateEngine, engine::Engine};
+use lettre::{
+    AsyncFileTransport, AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
+    message::{Mailbox, header::ContentType},
+};
+use libseed::{core::database::Database, user::verification::UserVerification};
+use minijinja::context;
 use std::{path::PathBuf, sync::Arc};
 use tracing::{debug, trace};
-
-type TemplateEngine = Engine<minijinja::Environment<'static>>;
 
 #[derive(Debug)]
 pub(crate) struct SharedState {
     pub(crate) db: Database,
-    pub(crate) tmpl: TemplateEngine,
+    pub(crate) tmpl: Engine<minijinja::Environment<'static>>,
     pub(crate) config: EnvConfig,
     pub(crate) datadir: PathBuf,
 }
@@ -45,6 +47,76 @@ impl SharedState {
             config: env,
             datadir,
         })
+    }
+
+    async fn create_verification_email(
+        &self,
+        uv: &mut UserVerification,
+    ) -> Result<lettre::Message, Error> {
+        // FIXME: figure out how to do the host/port stuff properly. Right now this will send a link to
+        // host 0.0.0.0 if that's what we configured the server to listen on...
+        let mut verification_url = "https://".to_string();
+        verification_url.push_str(&self.config.listen.host);
+        if self.config.listen.https_port != 443 {
+            verification_url.push_str(&format!(":{}", self.config.listen.https_port));
+        }
+        verification_url.push_str(&app_url(&format!(
+            "/auth/verify/{}/{}",
+            uv.user.id(),
+            uv.key
+        )));
+        let user = uv.user.load(&self.db, false).await?;
+        let emailbody = self
+            .tmpl
+            .render(
+                "verification-email",
+                context!(user => user,
+                     verification_url => verification_url),
+            )
+            .with_context(|| "Failed to render email")?;
+        let email = lettre::Message::builder()
+            .from(
+                "NOBODY <jonathon@quotidian.org>"
+                    .parse()
+                    .with_context(|| "failed to parse sender address")?,
+            )
+            .to(Mailbox::new(
+                user.display_name.clone(),
+                user.email
+                    .parse()
+                    .with_context(|| "Failed to parse recipient address")?,
+            ))
+            .subject("Verify your email address")
+            .header(ContentType::TEXT_PLAIN)
+            .body(emailbody)
+            .with_context(|| "Failed to create email message")?;
+        Ok(email)
+    }
+
+    pub async fn send_verification(&self, mut uv: UserVerification) -> Result<(), Error> {
+        let email = self.create_verification_email(&mut uv).await?;
+        match self.config.mail_transport {
+            crate::MailTransport::File(ref path) => AsyncFileTransport::<Tokio1Executor>::new(path)
+                .send(email)
+                .await
+                .map_err(anyhow::Error::from)
+                .map(|_| ()),
+            crate::MailTransport::LocalSmtp => {
+                AsyncSmtpTransport::<Tokio1Executor>::unencrypted_localhost()
+                    .send(email)
+                    .await
+                    .map_err(anyhow::Error::from)
+                    .map(|_| ())
+            }
+            crate::MailTransport::Smtp(ref cfg) => cfg
+                .build()?
+                .send(email)
+                .await
+                .map_err(anyhow::Error::from)
+                .map(|_| ()),
+        }
+        .with_context(|| "Failed to send email")
+        .map_err(|e| e.into())
     }
 
     #[cfg(test)]
