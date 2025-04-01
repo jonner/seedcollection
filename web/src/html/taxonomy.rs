@@ -1,4 +1,4 @@
-use crate::{TemplateKey, auth::SqliteUser, error, state::AppState};
+use crate::{TemplateKey, auth::SqliteUser, error::Error, state::AppState};
 use axum::{
     Form, Router,
     extract::{Path, Query, Request, State},
@@ -36,7 +36,7 @@ async fn root(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let ranks: Vec<Rank> = Rank::iter().collect();
     Ok(RenderHtml(
         key,
@@ -58,7 +58,7 @@ async fn list_taxa(
     State(state): State<AppState>,
     Query(params): Query<ListParams>,
     req: Request,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let rank = match params.rank {
         Some(r) => r,
         None => Rank::Species,
@@ -89,7 +89,7 @@ async fn show_all_children(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let samples: Vec<Sample> = sqlx::query_as(
         r#"WITH RECURSIVE CTE AS (
             SELECT
@@ -167,10 +167,10 @@ async fn show_taxon(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut taxon = Taxon::load(id, &state.db).await.map_err(|e| match e {
         libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
-            error::Error::NotFound(format!("Taxon '{id}' was not found in the database"))
+            Error::NotFound(format!("Taxon '{id}' was not found in the database"))
         }
         _ => e.into(),
     })?;
@@ -206,7 +206,7 @@ async fn datalist(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(DatalistParams { taxon }): Query<DatalistParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let taxa = filter_taxa(taxon, None, None, &state.db).await?;
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
@@ -227,7 +227,7 @@ async fn search(
         rank,
         minnesota,
     }): Query<SearchParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let taxa = filter_taxa(taxon, rank, minnesota, &state.db).await?;
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
@@ -237,7 +237,7 @@ async fn filter_taxa(
     rank: Option<Rank>,
     minnesota: Option<bool>,
     db: &Database,
-) -> Result<Vec<Taxon>, error::Error> {
+) -> Result<Vec<Taxon>, Error> {
     match taxon.is_empty() {
         true => Ok(Vec::new()),
         false => {
@@ -262,7 +262,7 @@ async fn filter_taxa(
 async fn editgerm(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let codes = Germination::load_all(&state.db).await?;
     Ok(RenderHtml(
         key,
@@ -280,7 +280,7 @@ struct AddGermParams {
 async fn addgerm(
     State(state): State<AppState>,
     Form(params): Form<AddGermParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let newid = sqlx::query!(
         "INSERT INTO sc_taxon_germination (tsn, germid) VALUES (?, ?)",
         params.taxon,

@@ -1,6 +1,8 @@
 use crate::{
     TemplateKey,
     auth::SqliteUser,
+    error::Error,
+    state::AppState,
     util::{FlashMessage, FlashMessageKind, app_url},
 };
 use anyhow::{Context, anyhow};
@@ -26,8 +28,6 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
-use crate::{error, state::AppState};
-
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(add_source).post(new_source))
@@ -52,7 +52,7 @@ async fn list_sources(
     State(state): State<AppState>,
     Query(params): Query<SourceListParams>,
     headers: HeaderMap,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut fbuilder = CompoundFilter::builder(Op::And).push(source::Filter::UserId(user.id));
 
     if let Some(filterstring) = params.filter {
@@ -77,7 +77,7 @@ async fn add_source(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
 }
 
@@ -86,7 +86,7 @@ async fn show_source(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let src = Source::load(id, &state.db).await?;
     let samples = Sample::load_all_user(
         user.id,
@@ -123,7 +123,7 @@ async fn do_update(
     id: i64,
     params: &SourceParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, error::Error> {
+) -> Result<SqliteQueryResult, Error> {
     let mut src = Source::load(id, &state.db).await?;
     src.name = params
         .name
@@ -143,10 +143,10 @@ async fn update_source(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<SourceParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let src = Source::load(id, &state.db).await?;
     if src.userid != user.id {
-        return Err(error::Error::Unauthorized("Not yours".to_string()));
+        return Err(Error::Unauthorized("Not yours".to_string()));
     }
     let (request, message, headers) = match do_update(id, &params, &state).await {
         Err(e) => (
@@ -194,7 +194,7 @@ async fn do_insert(
     user: &SqliteUser,
     params: &SourceParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, error::Error> {
+) -> Result<SqliteQueryResult, Error> {
     let mut source = Source::new(
         params
             .name
@@ -214,7 +214,7 @@ async fn new_source(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SourceParams>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let message;
     let mut request: Option<&SourceParams> = None;
     let mut headers = HeaderMap::new();
@@ -265,10 +265,10 @@ async fn delete_source(
     user: SqliteUser,
     Path(id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     let mut src = Source::load(id, &state.db).await?;
     if src.userid != user.id {
-        return Err(error::Error::Unauthorized("Not yours".to_string()));
+        return Err(Error::Unauthorized("Not yours".to_string()));
     }
     src.delete(&state.db).await?;
     Ok([("HX-redirect", app_url("/source/list"))])

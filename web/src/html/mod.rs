@@ -1,7 +1,7 @@
 use crate::{
     TemplateKey,
     auth::AuthSession,
-    error,
+    error::Error,
     state::AppState,
     util::{FlashMessage, FlashMessageKind},
 };
@@ -88,7 +88,7 @@ async fn root(
     auth: AuthSession,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-) -> Result<impl IntoResponse, error::Error> {
+) -> Result<impl IntoResponse, Error> {
     tracing::info!("root");
     Ok(RenderHtml(
         key,
