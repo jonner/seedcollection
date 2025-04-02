@@ -45,7 +45,7 @@ endif
 ##################
 # DATABASE SETUP #
 ##################
-INIT_DB ?= $(HOME)/.local/share/seedcollection/seedcollection.sqlite
+INIT_DB ?= $(SEEDWEB_DATABASE_DIR)/seedcollection.sqlite
 INIT_DB_ARGS ?= --download
 prepare-db: ./db/itis/minnesota-itis-input-modified.csv
 	cargo run -p seedctl -- admin -d $(INIT_DB) database init $(INIT_DB_ARGS)
