@@ -10,7 +10,10 @@ SEEDWEB_DATABASE_DIR ?= ./db/itis
 SEEDWEB_HTTP_PORT ?= 8080
 SEEDWEB_HTTPS_PORT ?= 8443
 
-container: Dockerfile config.yaml.docker
+update-container: Containerfile
+	$(CONTAINERCMD) pull rust:alpine alpine:latest
+
+container: update-container Containerfile config.yaml.docker
 	$(CONTAINERCMD) build -t seedweb:latest .
 
 run-container: container
@@ -42,7 +45,7 @@ endif
 ##################
 # DATABASE SETUP #
 ##################
-INIT_DB ?= $(HOME)/.local/share/seedcollection/seedcollection.sqlite
+INIT_DB ?= $(SEEDWEB_DATABASE_DIR)/seedcollection.sqlite
 INIT_DB_ARGS ?= --download
 prepare-db: ./db/itis/minnesota-itis-input-modified.csv
 	cargo run -p seedctl -- admin -d $(INIT_DB) database init $(INIT_DB_ARGS)
