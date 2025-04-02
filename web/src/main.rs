@@ -490,9 +490,8 @@ async fn root() -> impl IntoResponse {
     Redirect::permanent(APP_PREFIX)
 }
 
-async fn favicon_redirect(State(state): State<AppState>) -> impl IntoResponse {
-    let path = state.datadir.join("static/favicon.ico");
-    Redirect::permanent(path.to_str().unwrap_or_default())
+async fn favicon_redirect() -> impl IntoResponse {
+    Redirect::permanent("/static/favicon.ico")
 }
 
 #[cfg(test)]
