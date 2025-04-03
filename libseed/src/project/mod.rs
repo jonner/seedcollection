@@ -12,10 +12,7 @@ pub use allocation::Allocation;
 use async_trait::async_trait;
 pub use note::{Note, NoteFilter, NoteType};
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    FromRow, QueryBuilder, Row, Sqlite,
-    sqlite::{SqliteQueryResult, SqliteRow},
-};
+use sqlx::{FromRow, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 use tracing::debug;
 
 pub mod allocation;
@@ -179,13 +176,14 @@ impl Project {
         &mut self,
         sample: ExternalRef<Sample>,
         db: &Database,
-    ) -> Result<SqliteQueryResult> {
+    ) -> Result<()> {
         sqlx::query("INSERT INTO sc_project_samples (projectid, sampleid) VALUES (?, ?)")
             .bind(self.id)
             .bind(sample.id())
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
+            .map(|_| ())
     }
 
     /// Add this project to the database. If this call completes successfully,
