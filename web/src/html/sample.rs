@@ -27,7 +27,6 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqliteQueryResult;
 use tracing::debug;
 
 pub(crate) fn router() -> Router<AppState> {
@@ -269,11 +268,7 @@ async fn insert_sample(
     }
 }
 
-async fn do_update(
-    id: i64,
-    params: &SampleParams,
-    state: &AppState,
-) -> Result<SqliteQueryResult, Error> {
+async fn do_update(id: i64, params: &SampleParams, state: &AppState) -> Result<(), Error> {
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
