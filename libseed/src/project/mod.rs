@@ -72,6 +72,26 @@ impl Loadable for Project {
             .map_err(|e| e.into())
             .map(|_| ())
     }
+
+    async fn update(&self, db: &Database) -> Result<()> {
+        if self.name.is_empty() {
+            return Err(Error::InvalidStateMissingAttribute("name".to_string()));
+        }
+        if self.id < 0 {
+            return Err(Error::InvalidStateMissingAttribute("id".to_string()));
+        }
+        debug!(?self, "Updating project in database");
+        sqlx::query(
+            "UPDATE sc_projects SET projname=?, projdescription=?, userid=? WHERE projectid=?",
+        )
+        .bind(self.name.clone())
+        .bind(self.description.as_ref().cloned())
+        .bind(self.userid)
+        .bind(self.id)
+        .execute(db.pool())
+        .await?;
+        Ok(())
+    }
 }
 
 /// A type for specifying fields for filtering a [Project]
@@ -205,27 +225,6 @@ impl Project {
         .await?;
         *self = newval;
         Ok(self.id)
-    }
-
-    /// Update the project in the database such that it matches this object
-    pub async fn update(&self, db: &Database) -> Result<()> {
-        if self.name.is_empty() {
-            return Err(Error::InvalidStateMissingAttribute("name".to_string()));
-        }
-        if self.id < 0 {
-            return Err(Error::InvalidStateMissingAttribute("id".to_string()));
-        }
-        debug!(?self, "Updating project in database");
-        sqlx::query(
-            "UPDATE sc_projects SET projname=?, projdescription=?, userid=? WHERE projectid=?",
-        )
-        .bind(self.name.clone())
-        .bind(self.description.as_ref().cloned())
-        .bind(self.userid)
-        .bind(self.id)
-        .execute(db.pool())
-        .await?;
-        Ok(())
     }
 
     /// Create a new project with the given data. It will initially have an

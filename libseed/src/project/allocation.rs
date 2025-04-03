@@ -4,6 +4,7 @@ use super::{
     note::{self, Note},
 };
 use crate::{
+    Error,
     core::{
         database::Database,
         error::Result,
@@ -174,6 +175,12 @@ impl Loadable for Allocation {
             .await
             .map_err(|e| e.into())
             .map(|_| ())
+    }
+
+    async fn update(&self, _db: &Database) -> Result<()> {
+        return Err(Error::InvalidOperation(
+            "Cannot update an allocation".into(),
+        ));
     }
 }
 
