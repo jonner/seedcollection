@@ -84,7 +84,7 @@ async fn main() -> Result<()> {
 
     match args.command {
         // already handled above
-        Commands::Login { .. } | Commands::Logout {} | Commands::Admin { .. } => Ok(()),
+        Commands::Login { .. } | Commands::Logout | Commands::Admin { .. } => Ok(()),
         Commands::Status => {
             println!("Using database '{}'", cfg.database.to_string_lossy());
             println!("Logged in as user '{}'", cfg.username);
