@@ -170,12 +170,11 @@ impl Note {
     }
 
     /// Update the note in the database such that it matches this object
-    pub async fn update(&self, db: &Database) -> sqlx::Result<Note> {
+    pub async fn update(&self, db: &Database) -> sqlx::Result<()> {
         debug!(?self, "Updating note in database");
-        sqlx::query_as(
+        sqlx::query(
             r#"UPDATE sc_project_notes
-            SET psid=?, notedate=?, notetype=?, notesummary=?, notedetails=? WHERE pnoteid=?
-            RETURNING *"#,
+            SET psid=?, notedate=?, notetype=?, notesummary=?, notedetails=? WHERE pnoteid=?"#,
         )
         .bind(self.psid)
         .bind(self.date)
@@ -183,8 +182,9 @@ impl Note {
         .bind(&self.summary)
         .bind(&self.details)
         .bind(self.id)
-        .fetch_one(db.pool())
-        .await
+        .execute(db.pool())
+        .await?;
+        Ok(())
     }
 }
 
