@@ -82,7 +82,7 @@ impl UserVerification {
     }
 
     /// Insert this new user verification request into the database
-    pub async fn insert(&mut self, db: &Database) -> Result<()> {
+    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
         if self.id != Self::invalid_id() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
@@ -99,7 +99,7 @@ impl UserVerification {
         .fetch_one(db.pool())
         .await?;
         *self = uv;
-        Ok(())
+        Ok(self.id)
     }
 
     /// Update this user verification request in the database
