@@ -49,7 +49,6 @@ async fn modify_user(
     }
     user.update(db)
         .await
-        .map(|_| ())
         .with_context(|| "Failed to modify user")
 }
 
