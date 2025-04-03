@@ -29,7 +29,6 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqliteQueryResult;
 use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
@@ -257,18 +256,15 @@ async fn show_project(
     .into_response())
 }
 
-async fn do_update(
-    id: i64,
-    params: &ProjectParams,
-    state: &AppState,
-) -> Result<SqliteQueryResult, Error> {
+async fn do_update(id: i64, params: &ProjectParams, state: &AppState) -> Result<Project, Error> {
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
     let mut project = Project::load(id, &state.db).await?;
     project.name.clone_from(&params.name);
     project.description.clone_from(&params.description);
-    project.update(&state.db).await.map_err(|e| e.into())
+    project.update(&state.db).await?;
+    Ok(project)
 }
 
 async fn modify_project(

@@ -209,7 +209,7 @@ impl Project {
     }
 
     /// Update the project in the database such that it matches this object
-    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<()> {
         if self.name.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("name".to_string()));
         }
@@ -225,8 +225,8 @@ impl Project {
         .bind(self.userid)
         .bind(self.id)
         .execute(db.pool())
-        .await
-        .map_err(|e| e.into())
+        .await?;
+        Ok(())
     }
 
     /// Create a new project with the given data. It will initially have an
