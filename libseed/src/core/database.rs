@@ -405,10 +405,7 @@ impl Database {
     }
 }
 
-pub(crate) async fn check_table(
-    conn: &mut sqlx::SqliteConnection,
-    table_name: &str,
-) -> Result<(), Error> {
+pub(crate) async fn check_table(conn: &mut sqlx::SqliteConnection, table_name: &str) -> Result<()> {
     let create_old: String =
         sqlx::query("SELECT sql FROM sqlite_schema WHERE tbl_name=? AND type='table'")
             .bind(table_name)
