@@ -105,14 +105,14 @@ pub struct Germination {
 
 impl Germination {
     /// Loads all germination codes from the database
-    pub async fn load_all(db: &Database) -> Result<Vec<Germination>, sqlx::Error> {
+    pub async fn load_all(db: &Database) -> sqlx::Result<Vec<Germination>> {
         sqlx::query_as("SELECT * FROM sc_germination_codes")
             .fetch_all(db.pool())
             .await
     }
 
     /// Loads a particular germination code from the database
-    pub async fn load(id: i64, db: &Database) -> Result<Germination, sqlx::Error> {
+    pub async fn load(id: i64, db: &Database) -> sqlx::Result<Germination> {
         sqlx::query_as("SELECT * FROM sc_germination_codes WHERE germid=?")
             .bind(id)
             .fetch_one(db.pool())
@@ -437,7 +437,7 @@ impl Taxon {
         filter: Option<DynFilterPart>,
         limit: Option<LimitSpec>,
         db: &Database,
-    ) -> Result<Vec<Taxon>, sqlx::Error> {
+    ) -> sqlx::Result<Vec<Taxon>> {
         Taxon::query_builder(filter, limit)
             .build_query_as()
             .fetch_all(db.pool())

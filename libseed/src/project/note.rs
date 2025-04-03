@@ -139,10 +139,7 @@ impl Note {
     }
 
     /// Load all matching notes from the database
-    pub async fn load_all(
-        filter: Option<DynFilterPart>,
-        db: &Database,
-    ) -> Result<Vec<Note>, sqlx::Error> {
+    pub async fn load_all(filter: Option<DynFilterPart>, db: &Database) -> sqlx::Result<Vec<Note>> {
         Self::query_builder(filter)
             .build_query_as()
             .fetch_all(db.pool())
@@ -172,7 +169,7 @@ impl Note {
     }
 
     /// Update the note in the database such that it matches this object
-    pub async fn update(&self, db: &Database) -> Result<Note, sqlx::Error> {
+    pub async fn update(&self, db: &Database) -> sqlx::Result<Note> {
         debug!(?self, "Updating note in database");
         sqlx::query_as(
             r#"UPDATE sc_project_notes

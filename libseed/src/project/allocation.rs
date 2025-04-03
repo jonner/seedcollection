@@ -259,7 +259,7 @@ impl Allocation {
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
         db: &Database,
-    ) -> Result<Vec<Self>, sqlx::Error> {
+    ) -> sqlx::Result<Vec<Self>> {
         Self::query_builder(filter, sort)
             .build_query_as()
             .fetch_all(db.pool())
@@ -269,10 +269,7 @@ impl Allocation {
     /// Load a single matching [Allocation] from the database. Note that this is
     /// only useful when the `filter` that is specified will return a single result. For
     /// example if you're filtering by [Filter::Id]
-    pub async fn load_one(
-        filter: Option<DynFilterPart>,
-        db: &Database,
-    ) -> Result<Self, sqlx::Error> {
+    pub async fn load_one(filter: Option<DynFilterPart>, db: &Database) -> sqlx::Result<Self> {
         Self::query_builder(filter, None)
             .build_query_as()
             .fetch_one(db.pool())

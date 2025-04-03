@@ -83,7 +83,7 @@ impl Database {
     /// Open a connection to the specified database. This will also perform any
     /// necessary sql migrations to ensure that the database is up to date with the
     /// latest schema changes.
-    pub async fn open<P: AsRef<Path>>(db: P) -> Result<Self, sqlx::Error> {
+    pub async fn open<P: AsRef<Path>>(db: P) -> sqlx::Result<Self> {
         let dbpool = SqlitePool::connect_with(SqliteConnectOptions::new().filename(db)).await?;
         trace!("Running database migrations");
         sqlx::migrate!("../db/migrations").run(&dbpool).await?;
