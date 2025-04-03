@@ -49,6 +49,9 @@ pub trait Loadable {
     /// Delete the object with the id `id` from the database
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()>;
 
+    /// Update the sample in the database so that it matches this object
+    async fn update(&self, db: &Database) -> Result<()>;
+
     fn invalid_id() -> Self::Id {
         Self::Id::invalid_value()
     }

@@ -108,6 +108,25 @@ impl Loadable for Source {
             .map_err(|e| e.into())
             .map(|_| ())
     }
+
+    async fn update(&self, db: &Database) -> Result<()> {
+        if self.id < 0 {
+            return Err(Error::InvalidUpdateObjectNotFound);
+        }
+
+        sqlx::query(
+            "UPDATE sc_sources SET srcname=?, srcdesc=?, latitude=?, longitude=? WHERE srcid=?",
+        )
+        .bind(self.name.clone())
+        .bind(self.description.as_ref().cloned())
+        .bind(self.latitude)
+        .bind(self.longitude)
+        .bind(self.id)
+        .execute(db.pool())
+        .await
+        .map(|_| ())
+        .map_err(|e| e.into())
+    }
 }
 
 impl Source {
@@ -188,26 +207,6 @@ impl Source {
         .await?;
         *self = newval;
         Ok(self.id)
-    }
-
-    /// Update the source in the database such that it matches this object
-    pub async fn update(&self, db: &Database) -> Result<()> {
-        if self.id < 0 {
-            return Err(Error::InvalidUpdateObjectNotFound);
-        }
-
-        sqlx::query(
-            "UPDATE sc_sources SET srcname=?, srcdesc=?, latitude=?, longitude=? WHERE srcid=?",
-        )
-        .bind(self.name.clone())
-        .bind(self.description.as_ref().cloned())
-        .bind(self.latitude)
-        .bind(self.longitude)
-        .bind(self.id)
-        .execute(db.pool())
-        .await
-        .map(|_| ())
-        .map_err(|e| e.into())
     }
 
     /// Creates a new source object with the given data. It will initially have

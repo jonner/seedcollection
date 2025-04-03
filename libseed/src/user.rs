@@ -101,6 +101,37 @@ impl Loadable for User {
             .map_err(|e| e.into())
             .map(|_| ())
     }
+
+    async fn update(&self, db: &Database) -> Result<()> {
+        if self.id < 0 {
+            return Err(Error::InvalidUpdateObjectNotFound);
+        }
+
+        debug!(?self, "Updating user in database");
+        sqlx::query(
+            "UPDATE
+                        sc_users
+                    SET
+                        username=?,
+                        useremail=?,
+                        userstatus=?,
+                        userdisplayname=?,
+                        userprofile=?,
+                        pwhash=?
+                    WHERE
+                        userid=?",
+        )
+        .bind(&self.username)
+        .bind(&self.email)
+        .bind(&self.status)
+        .bind(&self.display_name)
+        .bind(&self.profile)
+        .bind(&self.pwhash)
+        .bind(self.id)
+        .execute(db.pool())
+        .await?;
+        Ok(())
+    }
 }
 
 impl User {
@@ -141,38 +172,6 @@ impl User {
             .build_query_as()
             .fetch_optional(db.pool())
             .await
-    }
-
-    /// Update the database to match the values currently stored in the object
-    pub async fn update(&self, db: &Database) -> Result<()> {
-        if self.id < 0 {
-            return Err(Error::InvalidUpdateObjectNotFound);
-        }
-
-        debug!(?self, "Updating user in database");
-        sqlx::query(
-            "UPDATE
-                        sc_users
-                    SET
-                        username=?,
-                        useremail=?,
-                        userstatus=?,
-                        userdisplayname=?,
-                        userprofile=?,
-                        pwhash=?
-                    WHERE
-                        userid=?",
-        )
-        .bind(&self.username)
-        .bind(&self.email)
-        .bind(&self.status)
-        .bind(&self.display_name)
-        .bind(&self.profile)
-        .bind(&self.pwhash)
-        .bind(self.id)
-        .execute(db.pool())
-        .await?;
-        Ok(())
     }
 
     /// A helper function to hash a password with a randomly generated salt using the Argon2 hasher

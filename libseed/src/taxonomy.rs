@@ -355,6 +355,10 @@ impl Loadable for Taxon {
     async fn delete_id(_id: &Self::Id, _db: &Database) -> Result<()> {
         Err(Error::InvalidOperation("Cannot delete taxon".to_string()))
     }
+
+    async fn update(&self, _db: &Database) -> Result<()> {
+        return Err(Error::InvalidOperation("Cannot update taxon".into()));
+    }
 }
 
 impl Taxon {

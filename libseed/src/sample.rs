@@ -306,6 +306,31 @@ impl Loadable for Sample {
             .map_err(|e| e.into())
             .map(|_| ())
     }
+
+    async fn update(&self, db: &Database) -> Result<()> {
+        if self.id < 0 {
+            return Err(Error::InvalidUpdateObjectNotFound);
+        }
+        if self.taxon.id() < 0 {
+            return Err(Error::InvalidStateMissingAttribute("taxon".to_string()));
+        }
+        if self.source.id() < 0 {
+            return Err(Error::InvalidStateMissingAttribute("source".to_string()));
+        }
+
+        sqlx::query("Update sc_samples SET tsn=?, srcid=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")
+            .bind(self.taxon.id())
+            .bind(self.source.id())
+            .bind(self.month)
+            .bind(self.year)
+            .bind(self.quantity)
+            .bind(&self.notes)
+            .bind(&self.certainty)
+            .bind(self.id)
+            .execute(db.pool())
+            .await?;
+        Ok(())
+    }
 }
 
 impl Sample {
@@ -409,32 +434,6 @@ impl Sample {
         // FIXME: this will invalidate any of the external refs we had already loaded (e.g. taxon, user, source)
         *self = newval;
         Ok(self.id)
-    }
-
-    /// Update the sample in the database so that it matches this object
-    pub async fn update(&self, db: &Database) -> Result<()> {
-        if self.id < 0 {
-            return Err(Error::InvalidUpdateObjectNotFound);
-        }
-        if self.taxon.id() < 0 {
-            return Err(Error::InvalidStateMissingAttribute("taxon".to_string()));
-        }
-        if self.source.id() < 0 {
-            return Err(Error::InvalidStateMissingAttribute("source".to_string()));
-        }
-
-        sqlx::query("Update sc_samples SET tsn=?, srcid=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")
-            .bind(self.taxon.id())
-            .bind(self.source.id())
-            .bind(self.month)
-            .bind(self.year)
-            .bind(self.quantity)
-            .bind(&self.notes)
-            .bind(&self.certainty)
-            .bind(self.id)
-            .execute(db.pool())
-            .await?;
-        Ok(())
     }
 
     /// Create a new sample with the given data. It iwll initially have an

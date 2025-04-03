@@ -102,31 +102,6 @@ impl UserVerification {
         Ok(self.id)
     }
 
-    /// Update this user verification request in the database
-    pub async fn update(&self, db: &Database) -> Result<()> {
-        if self.id == Self::invalid_id() {
-            return Err(Error::InvalidUpdateObjectNotFound);
-        }
-        if self.requested.is_none() {
-            return Err(Error::InvalidStateMissingAttribute("request date".into()));
-        }
-        debug!(?self, "Updating user verification in database");
-        sqlx::query(
-            r#"UPDATE sc_user_verification
-            SET userid=?, uvkey=?, uvrequested=?, uvexpiration=?, uvconfirmed=? WHERE uvid=?
-            RETURNING *"#,
-        )
-        .bind(self.user.id())
-        .bind(&self.key)
-        .bind(self.requested)
-        .bind(self.expiration)
-        .bind(self.confirmed)
-        .bind(self.id)
-        .execute(db.pool())
-        .await?;
-        Ok(())
-    }
-
     /// Search the database for a user verification request with the given key
     pub async fn find(
         userid: i64,
@@ -210,6 +185,30 @@ impl Loadable for UserVerification {
             .await
             .map_err(|e| e.into())
             .map(|_| ())
+    }
+
+    async fn update(&self, db: &Database) -> Result<()> {
+        if self.id == Self::invalid_id() {
+            return Err(Error::InvalidUpdateObjectNotFound);
+        }
+        if self.requested.is_none() {
+            return Err(Error::InvalidStateMissingAttribute("request date".into()));
+        }
+        debug!(?self, "Updating user verification in database");
+        sqlx::query(
+            r#"UPDATE sc_user_verification
+            SET userid=?, uvkey=?, uvrequested=?, uvexpiration=?, uvconfirmed=? WHERE uvid=?
+            RETURNING *"#,
+        )
+        .bind(self.user.id())
+        .bind(&self.key)
+        .bind(self.requested)
+        .bind(self.expiration)
+        .bind(self.confirmed)
+        .bind(self.id)
+        .execute(db.pool())
+        .await?;
+        Ok(())
     }
 }
 

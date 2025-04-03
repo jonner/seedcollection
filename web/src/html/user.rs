@@ -14,6 +14,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
+    core::loadable::Loadable,
     project::{self, Project},
     sample::{self, Sample, SampleStats},
     source::{self, Source},

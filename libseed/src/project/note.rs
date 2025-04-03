@@ -96,6 +96,23 @@ impl Loadable for Note {
             .map_err(|e| e.into())
             .map(|_| ())
     }
+
+    async fn update(&self, db: &Database) -> Result<()> {
+        debug!(?self, "Updating note in database");
+        sqlx::query(
+            r#"UPDATE sc_project_notes
+            SET psid=?, notedate=?, notetype=?, notesummary=?, notedetails=? WHERE pnoteid=?"#,
+        )
+        .bind(self.psid)
+        .bind(self.date)
+        .bind(self.kind as i64)
+        .bind(&self.summary)
+        .bind(&self.details)
+        .bind(self.id)
+        .execute(db.pool())
+        .await?;
+        Ok(())
+    }
 }
 
 impl FilterPart for NoteFilter {
@@ -168,24 +185,6 @@ impl Note {
         .await?;
         *self = newval;
         Ok(self.id)
-    }
-
-    /// Update the note in the database such that it matches this object
-    pub async fn update(&self, db: &Database) -> sqlx::Result<()> {
-        debug!(?self, "Updating note in database");
-        sqlx::query(
-            r#"UPDATE sc_project_notes
-            SET psid=?, notedate=?, notetype=?, notesummary=?, notedetails=? WHERE pnoteid=?"#,
-        )
-        .bind(self.psid)
-        .bind(self.date)
-        .bind(self.kind as i64)
-        .bind(&self.summary)
-        .bind(&self.details)
-        .bind(self.id)
-        .execute(db.pool())
-        .await?;
-        Ok(())
     }
 }
 
