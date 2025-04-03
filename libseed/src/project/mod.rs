@@ -190,16 +190,22 @@ impl Project {
     /// Add this project to the database. If this call completes successfully,
     /// the `id` of this object will be updated to the ID of the inserted row in the
     /// database
-    pub async fn insert(&mut self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
         debug!(?self, "Inserting project into database");
-        sqlx::query("INSERT INTO sc_projects (projname, projdescription, userid) VALUES (?, ?, ?)")
-            .bind(self.name.clone())
-            .bind(self.description.clone())
-            .bind(self.userid)
-            .execute(db.pool())
-            .await
-            .inspect(|r| self.id = r.last_insert_rowid())
-            .map_err(|e| e.into())
+        let newval = sqlx::query_as(
+            "INSERT INTO sc_projects
+                (projname, projdescription, userid)
+            VALUES
+                (?, ?, ?)
+            RETURNING *",
+        )
+        .bind(self.name.clone())
+        .bind(self.description.clone())
+        .bind(self.userid)
+        .fetch_one(db.pool())
+        .await?;
+        *self = newval;
+        Ok(self.id)
     }
 
     /// Update the project in the database such that it matches this object
@@ -261,11 +267,8 @@ mod tests {
         let db = Database::from(pool);
         async fn check(db: &Database, name: String, desc: Option<String>, userid: i64) {
             let mut c = Project::new(name, desc, userid);
-            let res = c.insert(db).await.expect("failed to insert");
-            assert_eq!(res.rows_affected(), 1);
-            let cload = Project::load(res.last_insert_rowid(), db)
-                .await
-                .expect("Failed to load project");
+            let id = c.insert(db).await.expect("failed to insert");
+            let cload = Project::load(id, db).await.expect("Failed to load project");
             assert_eq!(c, cload);
         }
 

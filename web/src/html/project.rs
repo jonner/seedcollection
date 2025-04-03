@@ -108,13 +108,14 @@ async fn do_insert(
     user: SqliteUser,
     params: &ProjectParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, Error> {
+) -> Result<Project, Error> {
     let mut project = Project::new(
         params.name.clone(),
         params.description.as_ref().cloned(),
         user.id,
     );
-    project.insert(&state.db).await.map_err(|e| e.into())
+    project.insert(&state.db).await?;
+    Ok(project)
 }
 
 async fn insert_project(
@@ -140,10 +141,9 @@ async fn insert_project(
             )
             .into_response())
         }
-        Ok(result) => {
-            let id = result.last_insert_rowid();
-            debug!(id, "successfully inserted project");
-            let projecturl = app_url(&format!("/project/{}", id));
+        Ok(project) => {
+            debug!(project.id, "successfully inserted project");
+            let projecturl = app_url(&format!("/project/{}", project.id));
 
             Ok((
                 [("HX-Redirect", projecturl)],
@@ -155,7 +155,7 @@ async fn insert_project(
                         kind: FlashMessageKind::Success,
                         msg: format!(
                             r#"Added new project {}: {} to the database"#,
-                            id, params.name
+                            project.id, params.name
                             )
                     },
                     ),
