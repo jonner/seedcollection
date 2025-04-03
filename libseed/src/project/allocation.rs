@@ -4,7 +4,6 @@ use super::{
     note::{self, Note},
 };
 use crate::{
-    Error,
     core::{
         database::Database,
         error::Result,

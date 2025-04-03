@@ -462,7 +462,7 @@ async fn add_sample(
             .allocate_sample(ExternalRef::Object(sample), &state.db)
             .await
         {
-            Ok(res) => n_inserted += res.rows_affected(),
+            Ok(_) => n_inserted += 1,
             Err(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
                 if e.is_unique_violation() =>
             {
