@@ -147,7 +147,7 @@ impl User {
     }
 
     /// Update the database to match the values currently stored in the object
-    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<()> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
@@ -174,8 +174,8 @@ impl User {
         .bind(&self.pwhash)
         .bind(self.id)
         .execute(db.pool())
-        .await
-        .map_err(|e| e.into())
+        .await?;
+        Ok(())
     }
 
     /// A helper function to hash a password with a randomly generated salt using the Argon2 hasher
@@ -295,7 +295,7 @@ impl User {
         let mut uv = UserVerification::find(self.id, key, db).await?;
         uv.verify(db).await?;
         self.status = UserStatus::Verified;
-        self.update(db).await.map(|_| ())
+        self.update(db).await
     }
 
     pub async fn generate_verification_request(&self, db: &Database) -> Result<UserVerification> {
