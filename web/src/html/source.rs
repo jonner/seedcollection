@@ -194,7 +194,7 @@ async fn do_insert(
     user: &SqliteUser,
     params: &SourceParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, Error> {
+) -> Result<Source, Error> {
     let mut source = Source::new(
         params
             .name
@@ -206,7 +206,8 @@ async fn do_insert(
         params.longitude,
         user.id,
     );
-    source.insert(&state.db).await.map_err(|e| e.into())
+    source.insert(&state.db).await?;
+    Ok(source)
 }
 
 async fn new_source(
@@ -226,12 +227,11 @@ async fn new_source(
             });
             request = Some(&params)
         }
-        Ok(result) => {
-            let newid = result.last_insert_rowid();
-            let url = app_url(&format!("/source/{newid}"));
+        Ok(source) => {
+            let url = app_url(&format!("/source/{}", source.id));
             message = Some(FlashMessage {
                 kind: FlashMessageKind::Success,
-                msg: format!("Successfully added source {newid}"),
+                msg: format!("Successfully added source {}", source.id),
             });
             if params.modal.is_some() {
                 headers.append(

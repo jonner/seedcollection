@@ -127,7 +127,7 @@ pub(crate) async fn handle_command(
                 )
             };
 
-            let newid = source.insert(db).await?.last_insert_rowid();
+            let newid = source.insert(db).await?;
             println!("Added source {newid} to database");
             Ok(())
         }
