@@ -7,11 +7,7 @@ use crate::core::{
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::IntoDeserializer};
-use sqlx::{
-    FromRow, Row,
-    error::Error::ColumnDecode,
-    sqlite::{SqliteQueryResult, SqliteRow},
-};
+use sqlx::{FromRow, Row, error::Error::ColumnDecode, sqlite::SqliteRow};
 use std::str::FromStr;
 use strum_macros::{Display, EnumIter, FromRepr};
 use tracing::debug;
@@ -356,7 +352,7 @@ impl Loadable for Taxon {
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
     }
 
-    async fn delete_id(_id: &Self::Id, _db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete_id(_id: &Self::Id, _db: &Database) -> Result<()> {
         Err(Error::InvalidOperation("Cannot delete taxon".to_string()))
     }
 }

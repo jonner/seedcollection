@@ -335,11 +335,6 @@ async fn delete_project(
     }
 
     let errmsg = match project.delete(&state.db).await {
-        Err(e) => {
-            warn!(?e, "Failed to delete project");
-            e.to_string()
-        }
-        Ok(res) if (res.rows_affected() == 0) => "No project found".to_string(),
         Ok(_) => {
             debug!(id, "Successfully deleted project");
             return Ok((
@@ -347,6 +342,10 @@ async fn delete_project(
                 RenderHtml(key, state.tmpl.clone(), context!(deleted => true, id => id)),
             )
                 .into_response());
+        }
+        Err(e) => {
+            warn!(?e, "Failed to delete project");
+            e.to_string()
         }
     };
     Ok(RenderHtml(

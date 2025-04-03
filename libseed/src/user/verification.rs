@@ -12,7 +12,7 @@ use rand::{
     rngs::OsRng,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, QueryBuilder, Sqlite, sqlite::SqliteQueryResult};
+use sqlx::{FromRow, QueryBuilder, Sqlite};
 use time::{Duration, OffsetDateTime};
 use tracing::debug;
 
@@ -203,12 +203,13 @@ impl Loadable for UserVerification {
             .map_err(Into::into)
     }
 
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query(r#"DELETE FROM sc_user_verification WHERE uvid=?"#)
             .bind(id)
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
+            .map(|_| ())
     }
 }
 

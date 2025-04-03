@@ -4,6 +4,7 @@ use super::{
     note::{self, Note},
 };
 use crate::{
+    Error,
     core::{
         database::Database,
         error::Result,
@@ -17,11 +18,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    QueryBuilder, Sqlite,
-    prelude::*,
-    sqlite::{SqliteQueryResult, SqliteRow},
-};
+use sqlx::{QueryBuilder, Sqlite, prelude::*, sqlite::SqliteRow};
 
 // FIXME: Can we combine SortField and Filter somehow???
 /// A type to specify a field that can be used to filter allocation objects when
@@ -172,11 +169,12 @@ impl Loadable for Allocation {
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
     }
 
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query!("DELETE FROM sc_project_samples WHERE psid=?", id)
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
+            .map(|_| ())
     }
 }
 

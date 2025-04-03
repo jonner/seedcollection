@@ -67,12 +67,13 @@ impl Loadable for Project {
             .map_err(|e| e.into())
     }
 
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query("DELETE FROM sc_projects WHERE projectid=?")
             .bind(id)
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
+            .map(|_| ())
     }
 }
 

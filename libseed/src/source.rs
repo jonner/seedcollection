@@ -10,10 +10,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use sqlx::QueryBuilder;
 use sqlx::Sqlite;
-use sqlx::{
-    prelude::*,
-    sqlite::{SqliteQueryResult, SqliteRow},
-};
+use sqlx::{prelude::*, sqlite::SqliteRow};
 
 /// A type for specifying fields that can be used for filtering a database query
 /// for sources
@@ -103,12 +100,13 @@ impl Loadable for Source {
             .map_err(|e| e.into())
     }
 
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
             .bind(id)
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
+            .map(|_| ())
     }
 }
 

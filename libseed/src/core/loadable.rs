@@ -10,7 +10,6 @@ use crate::core::{
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqliteQueryResult;
 
 /// A trait that the [Loadable::Id] type must implement to be used with Loadable.
 pub trait Indexable {
@@ -41,14 +40,14 @@ pub trait Loadable {
 
     /// Convenience function to delete the object with the id `self.id()` from
     /// the database
-    async fn delete(&mut self, db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete(&mut self, db: &Database) -> Result<()> {
         Self::delete_id(&self.id(), db)
             .await
             .inspect(|_| self.set_id(Self::Id::invalid_value()))
     }
 
     /// Delete the object with the id `id` from the database
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult>;
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()>;
 
     fn invalid_id() -> Self::Id {
         Self::Id::invalid_value()
@@ -171,7 +170,7 @@ impl<T: Loadable + Sync + Send> ExternalRef<T> {
     }
 
     /// Delete the referenced object from the database
-    pub async fn delete(&mut self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn delete(&mut self, db: &Database) -> Result<()> {
         match self {
             Self::Stub(id) => T::delete_id(id, db).await,
             Self::Object(obj) => obj.delete(db).await,
