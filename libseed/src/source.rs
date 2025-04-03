@@ -193,7 +193,7 @@ impl Source {
     }
 
     /// Update the source in the database such that it matches this object
-    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<()> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
@@ -208,6 +208,7 @@ impl Source {
         .bind(self.id)
         .execute(db.pool())
         .await
+        .map(|_| ())
         .map_err(|e| e.into())
     }
 
