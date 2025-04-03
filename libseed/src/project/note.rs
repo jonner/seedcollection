@@ -148,12 +148,12 @@ impl Note {
 
     /// Insert this note into the database. If successful, the ID of the note
     /// object will be updated to match the ID of the newly-inserted row.
-    pub async fn insert(&self, db: &Database) -> Result<Note> {
+    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
         if self.summary.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
         }
         debug!(?self, "Inserting note into database");
-        sqlx::query_as(
+        let newval = sqlx::query_as(
             r#"INSERT INTO sc_project_notes
             (psid, notedate, notetype, notesummary, notedetails)
             VALUES (?, ?, ?, ?, ?) RETURNING *"#,
@@ -164,8 +164,9 @@ impl Note {
         .bind(&self.summary)
         .bind(&self.details)
         .fetch_one(db.pool())
-        .await
-        .map_err(|e| e.into())
+        .await?;
+        *self = newval;
+        Ok(self.id)
     }
 
     /// Update the note in the database such that it matches this object
