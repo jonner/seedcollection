@@ -17,7 +17,7 @@ use axum_extra::extract::OptionalQuery;
 use axum_template::RenderHtml;
 use libseed::{
     core::{
-        loadable::{ExternalRef, Loadable},
+        loadable::Loadable,
         query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec},
     },
     empty_string_as_none,
@@ -458,10 +458,7 @@ async fn add_sample(
     let mut n_inserted = 0;
     for sample in valid_samples {
         let id = sample.id;
-        match project
-            .allocate_sample(ExternalRef::Object(sample), &state.db)
-            .await
-        {
+        match project.allocate_sample(sample.into(), &state.db).await {
             Ok(_) => n_inserted += 1,
             Err(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
                 if e.is_unique_violation() =>
