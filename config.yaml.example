@@ -6,6 +6,7 @@ dev:
     host: "0.0.0.0"
     http_port: 8080
     https_port: 8443
+  user_registration_enabled: true
 prod:
   database: seedcollection.sqlite.prod
   mail_transport: !Smtp
@@ -16,3 +17,4 @@ prod:
       passwordfile: "/path/to/smtpd/password"
   asset_root: "/path/to/assets"
   listen: *DEFAULT_LISTEN
+  user_registration_enabled: true

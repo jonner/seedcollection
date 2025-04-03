@@ -67,6 +67,12 @@ pub enum ExternalRef<T: Loadable + Sync + Send> {
     Object(T),
 }
 
+impl<T: Loadable + Sync + Send> From<T> for ExternalRef<T> {
+    fn from(value: T) -> Self {
+        Self::Object(value)
+    }
+}
+
 impl<T> sqlx::Type<sqlx::Sqlite> for ExternalRef<T>
 where
     T: Loadable + Sync + Send,

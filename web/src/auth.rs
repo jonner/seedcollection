@@ -1,18 +1,26 @@
-use crate::error::{self, Error};
+use crate::error::Error;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use axum::{extract::FromRequestParts, http::request::Parts};
 use axum_login::{AuthUser, AuthnBackend, UserId};
-use libseed::{
-    core::database::Database,
-    empty_string_as_none,
-    user::{User, UserStatus},
-};
+use libseed::{core::database::Database, empty_string_as_none, user::User};
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct SqliteUser(User);
+
+impl From<SqliteUser> for User {
+    fn from(value: SqliteUser) -> Self {
+        value.0
+    }
+}
+
+impl From<User> for SqliteUser {
+    fn from(value: User) -> Self {
+        Self(value)
+    }
+}
 
 impl Deref for SqliteUser {
     type Target = User;
@@ -84,26 +92,6 @@ impl AuthnBackend for SqliteAuthBackend {
 }
 
 impl SqliteAuthBackend {
-    pub(crate) async fn register(
-        &self,
-        username: String,
-        email: String,
-        password: String,
-    ) -> Result<(), error::Error> {
-        let password_hash = User::hash_password(&password)?;
-        let mut user = User::new(
-            username,
-            email,
-            password_hash,
-            UserStatus::Unverified,
-            None,
-            None,
-            None,
-        );
-        user.insert(&self.db).await?;
-        Ok(())
-    }
-
     pub(crate) fn new(db: Database) -> Self {
         Self { db }
     }
