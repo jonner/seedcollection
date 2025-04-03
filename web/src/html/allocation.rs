@@ -152,7 +152,7 @@ async fn add_allocation_note(
         .into_response();
     }
 
-    let note = Note::new(
+    let mut note = Note::new(
         allocid,
         params.date,
         params.notetype,
