@@ -26,7 +26,6 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqliteQueryResult;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -119,11 +118,7 @@ struct SourceParams {
     modal: Option<i64>,
 }
 
-async fn do_update(
-    id: i64,
-    params: &SourceParams,
-    state: &AppState,
-) -> Result<SqliteQueryResult, Error> {
+async fn do_update(id: i64, params: &SourceParams, state: &AppState) -> Result<Source, Error> {
     let mut src = Source::load(id, &state.db).await?;
     src.name = params
         .name
@@ -134,7 +129,8 @@ async fn do_update(
     src.latitude = params.latitude;
     src.longitude = params.longitude;
 
-    src.update(&state.db).await.map_err(|e| e.into())
+    src.update(&state.db).await?;
+    Ok(src)
 }
 
 async fn update_source(
