@@ -207,7 +207,7 @@ async fn do_insert(
     user: &SqliteUser,
     params: &SampleParams,
     state: &AppState,
-) -> Result<SqliteQueryResult, Error> {
+) -> Result<Sample, Error> {
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
@@ -223,7 +223,8 @@ async fn do_insert(
         params.notes.clone(),
         certainty,
     );
-    sample.insert(&state.db).await.map_err(|e| e.into())
+    sample.insert(&state.db).await?;
+    Ok(sample)
 }
 
 async fn insert_sample(
@@ -245,10 +246,7 @@ async fn insert_sample(
                          request => params),
         )
         .into_response()),
-        Ok(result) => {
-            let id = result.last_insert_rowid();
-            let sample = Sample::load(id, &state.db).await?;
-
+        Ok(sample) => {
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
             Ok((
                 [("HX-Redirect", sampleurl)],
