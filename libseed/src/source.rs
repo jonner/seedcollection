@@ -232,9 +232,23 @@ impl Source {
 
 impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
-        Source::from_row(row)
-            .map(ExternalRef::Object)
-            .or_else(|_| row.try_get("tsn").map(ExternalRef::Stub))
+        Source::from_row(row).map(ExternalRef::Object).or_else(|_| {
+            let srcid = row
+                // first try to decode srcid column as i64
+                .try_get::<i64, _>("srcid")
+                .or_else(|_err| {
+                    // earlier versions of the database used a TEXT type for srcid :/
+                    row.try_get::<String, _>("srcid").and_then(|idstr| {
+                        idstr.parse::<<Source as Loadable>::Id>().map_err(|e| {
+                            sqlx::Error::ColumnDecode {
+                                index: "srcid".into(),
+                                source: e.into(),
+                            }
+                        })
+                    })
+                });
+            srcid.map(ExternalRef::Stub)
+        })
     }
 }
 
