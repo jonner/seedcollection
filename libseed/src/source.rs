@@ -170,25 +170,26 @@ impl Source {
     /// Add this source to the database. If this call completes successfully,
     /// the id of this object will be updated to the ID of the inserted row in the
     /// database
-    pub async fn insert(&mut self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
         if self.id != -1 {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
 
-        sqlx::query(
+        let newval = sqlx::query_as(
             r#"INSERT INTO sc_sources
           (srcname, srcdesc, latitude, longitude, userid)
-          VALUES (?, ?, ?, ?, ?)"#,
+          VALUES (?, ?, ?, ?, ?)
+          RETURNING *"#,
         )
         .bind(&self.name)
         .bind(&self.description)
         .bind(self.latitude)
         .bind(self.longitude)
         .bind(self.userid)
-        .execute(db.pool())
-        .await
-        .inspect(|r| self.id = r.last_insert_rowid())
-        .map_err(|e| e.into())
+        .fetch_one(db.pool())
+        .await?;
+        *self = newval;
+        Ok(self.id)
     }
 
     /// Update the source in the database such that it matches this object
@@ -275,8 +276,7 @@ mod tests {
             let mut src = Source::new(name, desc, lat, lon, userid);
             // full data
             let res = src.insert(db).await.expect("failed to insert");
-            assert_eq!(res.rows_affected(), 1);
-            let srcloaded = Source::load(res.last_insert_rowid(), db)
+            let srcloaded = Source::load(res, db)
                 .await
                 .expect("Failed to load inserted object");
             assert_eq!(src, srcloaded);
