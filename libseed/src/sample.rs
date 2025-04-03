@@ -414,7 +414,7 @@ impl Sample {
     }
 
     /// Update the sample in the database so that it matches this object
-    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<()> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
@@ -435,7 +435,8 @@ impl Sample {
             .bind(&self.certainty)
             .bind(self.id)
             .execute(db.pool())
-            .await.map_err(|e| e.into())
+            .await?;
+        Ok(())
     }
 
     /// Create a new sample with the given data. It iwll initially have an
