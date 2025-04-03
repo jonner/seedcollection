@@ -120,7 +120,7 @@ impl Germination {
     }
 
     /// Update the germination code in the database so that it matches this object
-    pub async fn update(&self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn update(&self, db: &Database) -> Result<()> {
         if self.id < 0 {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
@@ -132,8 +132,8 @@ impl Germination {
         .bind(&self.description)
         .bind(self.id)
         .execute(db.pool())
-        .await
-        .map_err(Into::into)
+        .await?;
+        Ok(())
     }
 }
 
