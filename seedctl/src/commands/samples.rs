@@ -176,7 +176,7 @@ pub(crate) async fn handle_command(
                     certainty,
                 )
             };
-            let newid = sample.insert(db).await?.last_insert_rowid();
+            let newid = sample.insert(db).await?;
             println!("Added sample {newid} to database");
             Ok(())
         }

@@ -387,11 +387,17 @@ impl Sample {
     /// Add this sample to the database. If this call completes successfully,
     /// the id of this object will be updated to the ID of the inserted row in the
     /// database
-    pub async fn insert(&mut self, db: &Database) -> Result<SqliteQueryResult> {
+    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
         if self.id != -1 {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
-        sqlx::query("INSERT INTO sc_samples (tsn, userid, srcid, month, year, quantity, notes, certainty) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        let newval = sqlx::query_as(
+            "INSERT INTO sc_samples
+                (tsn, userid, srcid, month, year, quantity, notes, certainty)
+            VALUES
+                (?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING *",
+        )
         .bind(self.taxon.id())
         .bind(self.user.id())
         .bind(self.source.id())
@@ -400,10 +406,11 @@ impl Sample {
         .bind(self.quantity)
         .bind(&self.notes)
         .bind(&self.certainty)
-        .execute(db.pool())
-        .await
-        .inspect(|r| self.id = r.last_insert_rowid())
-        .map_err(|e| e.into())
+        .fetch_one(db.pool())
+        .await?;
+        // FIXME: this will invalidate any of the external refs we had already loaded (e.g. taxon, user, source)
+        *self = newval;
+        Ok(self.id)
     }
 
     /// Update the sample in the database so that it matches this object
@@ -517,9 +524,8 @@ mod tests {
         ) {
             let mut sample =
                 Sample::new(taxon, user, source, month, year, quantity, notes, certainty);
-            let res = sample.insert(db).await;
-            let res = res.expect("Failed to insert sample");
-            let loaded = Sample::load(res.last_insert_rowid(), db)
+            let id = sample.insert(db).await.expect("Failed to insert sample");
+            let loaded = Sample::load(id, db)
                 .await
                 .expect("Failed to load sample from database");
             assert_eq!(sample.id, loaded.id);
