@@ -562,4 +562,43 @@ mod tests {
         )
         .await;
     }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../db/fixtures",
+            scripts("users", "sources", "taxa", "samples")
+        )
+    ))]
+    async fn update_samples(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let mut sample1 = Sample::load(4, &db).await.expect("Failed to load sample 4");
+
+        assert_eq!(sample1.id, 4);
+        assert_eq!(sample1.taxon.id(), 40683);
+        assert_eq!(sample1.month, Some(11));
+        assert_eq!(sample1.year, Some(2023));
+        assert_eq!(sample1.source.id(), 1);
+        assert_eq!(sample1.user.id(), 2);
+        // save external refs to make sure that they remain equivalent after update
+        let taxon = sample1.taxon.clone();
+        let src = sample1.source.clone();
+        let user = sample1.user.clone();
+        println!("{sample1:?}");
+
+        sample1.month = Some(12);
+        sample1.update(&db).await.expect("Failed to update sample1");
+
+        assert_eq!(sample1.id, 4);
+        assert_eq!(sample1.taxon.id(), 40683);
+        assert_eq!(sample1.taxon, taxon);
+        assert_eq!(sample1.month, Some(12));
+        assert_eq!(sample1.year, Some(2023));
+        assert_eq!(sample1.source.id(), 1);
+        assert_eq!(sample1.source, src);
+        assert_eq!(sample1.user.id(), 2);
+        assert_eq!(sample1.user, user);
+
+        println!("{sample1:?}");
+    }
 }
