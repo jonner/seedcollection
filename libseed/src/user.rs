@@ -224,7 +224,7 @@ impl User {
     }
 
     /// Insert a new row into the database with the values stored in this object
-    pub async fn insert(&mut self, db: &Database) -> Result<()> {
+    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
         if self.username.trim().is_empty() {
             return Err(Error::InvalidStateMissingAttribute("username".to_string()));
         }
@@ -256,7 +256,7 @@ impl User {
         .fetch_one(db.pool())
         .await?;
         *self = user;
-        Ok(())
+        Ok(self.id)
     }
 
     pub fn validate_username(username: &str) -> Result<()> {
