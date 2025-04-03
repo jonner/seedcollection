@@ -139,10 +139,7 @@ impl User {
     }
 
     /// Fetch the user with the given username from the database
-    pub async fn load_by_username(
-        username: &str,
-        db: &Database,
-    ) -> Result<Option<User>, sqlx::Error> {
+    pub async fn load_by_username(username: &str, db: &Database) -> sqlx::Result<Option<User>> {
         Self::query_builder(Some(Filter::Username(username.to_string()).into()))
             .build_query_as()
             .fetch_optional(db.pool())
