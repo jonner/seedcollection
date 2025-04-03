@@ -7,7 +7,7 @@ use crate::core::{
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{QueryBuilder, Sqlite, sqlite::SqliteQueryResult};
+use sqlx::{QueryBuilder, Sqlite};
 use strum_macros::EnumIter;
 use time::Date;
 use tracing::debug;
@@ -89,11 +89,12 @@ impl Loadable for Note {
             .map_err(|e| e.into())
     }
 
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query!("DELETE FROM sc_project_notes WHERE pnoteid=?", id)
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
+            .map(|_| ())
     }
 }
 

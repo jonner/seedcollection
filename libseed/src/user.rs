@@ -9,11 +9,7 @@ use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
 use password_hash::{PasswordHash, SaltString, rand_core::OsRng};
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    QueryBuilder, Sqlite,
-    prelude::*,
-    sqlite::{SqliteQueryResult, SqliteRow},
-};
+use sqlx::{QueryBuilder, Sqlite, prelude::*, sqlite::SqliteRow};
 use time::OffsetDateTime;
 use tracing::debug;
 use verification::UserVerification;
@@ -97,12 +93,13 @@ impl Loadable for User {
             .map_err(|e| e.into())
     }
 
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query("DELETE FROM sc_users WHERE userid=?")
             .bind(id)
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
+            .map(|_| ())
     }
 }
 

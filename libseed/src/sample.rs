@@ -12,10 +12,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::IntoDeserializer};
-use sqlx::{
-    FromRow, QueryBuilder, Row, Sqlite,
-    sqlite::{SqliteQueryResult, SqliteRow},
-};
+use sqlx::{FromRow, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 use std::str::FromStr;
 use strum_macros::Display;
 
@@ -301,12 +298,13 @@ impl Loadable for Sample {
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
     }
 
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<SqliteQueryResult> {
+    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query("DELETE FROM sc_samples WHERE sampleid=?")
             .bind(id)
             .execute(db.pool())
             .await
             .map_err(|e| e.into())
+            .map(|_| ())
     }
 }
 
