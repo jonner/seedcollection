@@ -74,10 +74,12 @@ async fn show_allocation(
         .object_mut()?
         .load_germination_info(&state.db)
         .await?;
+    let project = Project::load(allocation.projectid, &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
+                 project => project,
                  allocation => allocation),
     )
     .into_response())
@@ -193,12 +195,14 @@ async fn show_add_allocation_note(
         &state.db,
     )
     .await?;
+    let project = Project::load(projectid, &state.db).await?;
     let note_types: Vec<NoteType> = NoteType::iter().collect();
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
                  note_types => note_types,
+                 project => project,
                  allocation => allocation),
     )
     .into_response())
@@ -233,7 +237,7 @@ async fn delete_note(
     // make sure this is a note the user can delete
     let mut note = Note::load(noteid, &state.db).await?;
     let allocation = Allocation::load(note.psid, &state.db).await?;
-    if note.psid != allocid || allocation.project.id != projectid {
+    if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id() != user.id {
@@ -260,7 +264,7 @@ async fn show_edit_note(
         _ => e.into(),
     })?;
     let allocation = Allocation::load(note.psid, &state.db).await?;
-    if note.psid != allocid || allocation.project.id != projectid {
+    if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id() != user.id {
@@ -268,6 +272,7 @@ async fn show_edit_note(
             "No permission to delete this note".to_string(),
         ));
     }
+    let project = Project::load(projectid, &state.db).await?;
 
     let note_types: Vec<NoteType> = NoteType::iter().collect();
     Ok(RenderHtml(
@@ -276,6 +281,7 @@ async fn show_edit_note(
         context!(user => user,
                  note => note,
                  note_types => note_types,
+                 project => project,
                  allocation => allocation),
     )
     .into_response())
@@ -291,7 +297,7 @@ async fn modify_note(
     // make sure this is a note the user can edit
     let mut note = Note::load(noteid, &state.db).await?;
     let allocation = Allocation::load(note.psid, &state.db).await?;
-    if note.psid != allocid || allocation.project.id != projectid {
+    if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
     if allocation.sample.user.id() != user.id {
@@ -299,6 +305,7 @@ async fn modify_note(
             "No permission to delete this note".to_string(),
         ));
     }
+    let project = Project::load(projectid, &state.db).await?;
 
     note.date = params.date;
     note.summary = params.summary;
@@ -315,6 +322,7 @@ async fn modify_note(
                 note => note,
                 note_types => note_types,
                 allocation => allocation,
+                project => project,
                 message => FlashMessage {
                     kind: FlashMessageKind::Error,
                     msg: format!("Failed to update note: {e}"),

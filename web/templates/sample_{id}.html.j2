@@ -68,8 +68,8 @@
 </div>
 <h5>Project Allocations</h5>
 <ul>
-    {% for a in allocations %}
-    <li><a href="{{ ("/project/" ~ a.project.id ~ "/sample/" ~ a.id) | app_url }}">{{ a.project.name }}</a>
+    {% for (project, allocation ) in projects %}
+    <li><a href="{{ ("/project/" ~ project.id ~ "/sample/" ~ allocation.id) | app_url }}">{{ project.name }}</a>
     </li>
     {% else %}
     <li class="text-secondary">None</li>

@@ -10,6 +10,7 @@ edition = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 clap = { workspace = true }
+futures = { workspace = true }
 libseed = { workspace = true }
 serde = { workspace = true }
 sqlx = { workspace = true }
