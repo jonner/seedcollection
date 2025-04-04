@@ -22,7 +22,7 @@ use libseed::{
         query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     },
     empty_string_as_none,
-    project::{Allocation, Project, allocation},
+    project::{AllocatedSample, Project, allocation},
     sample::{self, Certainty, Sample, SortField},
     source::Source,
 };
@@ -150,7 +150,7 @@ async fn show_sample(
     // needed for edit form
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
 
-    let mut allocations = Allocation::load_all(
+    let mut allocations = AllocatedSample::load_all(
         Some(allocation::Filter::SampleId(id).into()),
         None,
         &state.db,
