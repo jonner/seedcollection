@@ -2,7 +2,7 @@ use anyhow::Result;
 use futures::future::try_join_all;
 use libseed::{
     core::{database::Database, loadable::Loadable, query::Cmp},
-    project::{Allocation, Project, allocation},
+    project::{AllocatedSample, Project, allocation},
     sample::{self, Certainty, Sample},
     source::Source,
     taxonomy::{Germination, NativeStatus, Rank, Taxon},
@@ -156,7 +156,7 @@ impl SampleRowDetails {
         let taxon = sample.taxon.load_mut(db).await?;
         taxon.load_germination_info(db).await?;
         let src = sample.source.object()?;
-        let allocations = Allocation::load_all(
+        let allocations = AllocatedSample::load_all(
             Some(allocation::Filter::SampleId(sample.id).into()),
             None,
             db,
@@ -214,7 +214,7 @@ pub(crate) struct AllocationRow {
 }
 
 impl AllocationRow {
-    pub(crate) fn new(allocation: &Allocation) -> Result<Self> {
+    pub(crate) fn new(allocation: &AllocatedSample) -> Result<Self> {
         let sample = &allocation.sample;
         Ok(Self {
             id: allocation.id,
@@ -249,7 +249,7 @@ pub(crate) struct AllocationRowFull {
 }
 
 impl AllocationRowFull {
-    pub(crate) fn new(allocation: &Allocation) -> Result<Self> {
+    pub(crate) fn new(allocation: &AllocatedSample) -> Result<Self> {
         let sample = &allocation.sample;
         Ok(Self {
             id: allocation.id,

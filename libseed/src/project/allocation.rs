@@ -136,7 +136,7 @@ impl FilterPart for Filter {
 
 /// An object representing a [Sample] that has been allocated to a particular [Project]
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
-pub struct Allocation {
+pub struct AllocatedSample {
     /// A unique ID representing this allocation in the database
     pub id: i64,
 
@@ -153,7 +153,7 @@ pub struct Allocation {
 }
 
 #[async_trait]
-impl Loadable for Allocation {
+impl Loadable for AllocatedSample {
     type Id = i64;
 
     fn id(&self) -> Self::Id {
@@ -226,7 +226,7 @@ impl ToSql for SortField {
     }
 }
 
-impl Allocation {
+impl AllocatedSample {
     fn query_builder(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
@@ -286,7 +286,7 @@ impl Allocation {
     }
 }
 
-impl FromRow<'_, SqliteRow> for Allocation {
+impl FromRow<'_, SqliteRow> for AllocatedSample {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         // querying for allocation will try to return the latest note if any exist
         let mut notes = Vec::new();
@@ -320,7 +320,7 @@ mod tests {
     ))]
     async fn load_allocations(pool: Pool<Sqlite>) {
         let db = Database::from(pool);
-        async fn check_sample(a: &Allocation, db: &Database) {
+        async fn check_sample(a: &AllocatedSample, db: &Database) {
             tracing::debug!("loading sample");
             let s = Sample::load(a.sample.id(), db)
                 .await
@@ -334,7 +334,7 @@ mod tests {
         }
 
         // check allocations for project 1
-        let assigned = Allocation::load_all(Some(Filter::ProjectId(1).into()), None, &db)
+        let assigned = AllocatedSample::load_all(Some(Filter::ProjectId(1).into()), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 
@@ -362,7 +362,7 @@ mod tests {
         check_sample(&assigned[1], &db).await;
 
         // check allocations for project 2
-        let assigned = Allocation::load_all(Some(Filter::ProjectId(2).into()), None, &db)
+        let assigned = AllocatedSample::load_all(Some(Filter::ProjectId(2).into()), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 
@@ -377,7 +377,7 @@ mod tests {
         check_sample(&assigned[1], &db).await;
 
         // check allocations for sample 1
-        let assigned = Allocation::load_all(Some(Filter::SampleId(1).into()), None, &db)
+        let assigned = AllocatedSample::load_all(Some(Filter::SampleId(1).into()), None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 

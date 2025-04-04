@@ -8,7 +8,7 @@ use crate::{
     },
     sample::Sample,
 };
-pub use allocation::Allocation;
+pub use allocation::AllocatedSample;
 use async_trait::async_trait;
 pub use note::{Note, NoteFilter, NoteType};
 use serde::{Deserialize, Serialize};
@@ -38,7 +38,7 @@ pub struct Project {
     /// The collection of samples associated with this project
     #[sqlx(skip)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub allocations: Vec<Allocation>,
+    pub allocations: Vec<AllocatedSample>,
 
     /// The user that owns this project
     pub userid: i64,
@@ -187,7 +187,7 @@ impl Project {
             fbuilder = fbuilder.push(filter);
         }
 
-        self.allocations = Allocation::load_all(Some(fbuilder.build()), sort, db).await?;
+        self.allocations = AllocatedSample::load_all(Some(fbuilder.build()), sort, db).await?;
         Ok(())
     }
 

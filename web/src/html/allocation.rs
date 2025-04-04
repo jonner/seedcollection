@@ -21,7 +21,7 @@ use libseed::{
         query::{CompoundFilter, Op},
     },
     empty_string_as_none,
-    project::{self, Allocation, Note, NoteType, Project, allocation},
+    project::{self, AllocatedSample, Note, NoteType, Project, allocation},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -49,7 +49,7 @@ async fn show_allocation(
     Path((projectid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
     // make sure that this is our sample
-    let mut allocation = Allocation::load_one(
+    let mut allocation = AllocatedSample::load_one(
         Some(
             CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
@@ -109,7 +109,7 @@ async fn add_allocation_note(
     };
 
     // just querying to make sure that this is our sample
-    let _alloc = match Allocation::load_one(
+    let _alloc = match AllocatedSample::load_one(
         Some(
             CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
@@ -184,7 +184,7 @@ async fn show_add_allocation_note(
     State(state): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
-    let allocation = Allocation::load_one(
+    let allocation = AllocatedSample::load_one(
         Some(
             CompoundFilter::builder(Op::And)
                 .push(allocation::Filter::Id(allocid))
@@ -236,7 +236,7 @@ async fn delete_note(
 ) -> Result<impl IntoResponse, Error> {
     // make sure this is a note the user can delete
     let mut note = Note::load(noteid, &state.db).await?;
-    let allocation = Allocation::load(note.psid, &state.db).await?;
+    let allocation = AllocatedSample::load(note.psid, &state.db).await?;
     if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -263,7 +263,7 @@ async fn show_edit_note(
         }
         _ => e.into(),
     })?;
-    let allocation = Allocation::load(note.psid, &state.db).await?;
+    let allocation = AllocatedSample::load(note.psid, &state.db).await?;
     if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -296,7 +296,7 @@ async fn modify_note(
 ) -> Result<impl IntoResponse, Error> {
     // make sure this is a note the user can edit
     let mut note = Note::load(noteid, &state.db).await?;
-    let allocation = Allocation::load(note.psid, &state.db).await?;
+    let allocation = AllocatedSample::load(note.psid, &state.db).await?;
     if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
