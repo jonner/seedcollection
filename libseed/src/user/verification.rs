@@ -2,7 +2,6 @@ use crate::{
     Error,
     core::{
         error::VerificationError,
-        loadable::Indexable,
         query::{CompoundFilter, Op},
     },
 };
@@ -58,7 +57,7 @@ impl UserVerification {
     /// Create a new user verification request for the given user
     pub fn new(user: ExternalRef<User>, expiration: Option<i64>) -> Self {
         Self {
-            id: <Self as Loadable>::Id::invalid_value(),
+            id: Self::invalid_id(),
             user,
             key: Self::new_key(),
             requested: None,

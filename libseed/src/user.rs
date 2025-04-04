@@ -2,7 +2,7 @@
 use crate::core::{
     database::Database,
     error::{Error, Result},
-    loadable::{ExternalRef, Indexable, Loadable},
+    loadable::{ExternalRef, Loadable},
     query::{DynFilterPart, FilterPart},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
@@ -295,7 +295,7 @@ impl User {
     }
 
     pub async fn generate_verification_request(&self, db: &Database) -> Result<UserVerification> {
-        if !self.id() == <Self as Loadable>::Id::invalid_value() {
+        if !self.id() == Self::invalid_id() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
         let mut uv = UserVerification::new(self.clone().into(), None);
