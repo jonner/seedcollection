@@ -29,7 +29,7 @@ where
     match fmt {
         OutputFormat::Table => {
             let tbuilder = Table::builder(vec![item]).index().column(0).transpose();
-            Ok(format!("{}n", tbuilder.build().styled()))
+            Ok(format!("{}", tbuilder.build().styled()))
         }
         OutputFormat::Csv => Err(anyhow!("CSV format is not valid for single items")),
         OutputFormat::Json => serde_json::to_string(&item).map_err(|e| e.into()),
