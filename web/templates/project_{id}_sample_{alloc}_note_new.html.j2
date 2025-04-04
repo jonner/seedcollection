@@ -6,13 +6,13 @@
 {{ breadcrumbs([
 {"name": "Home", "link": ("/" | app_url) },
 {"name": "Projects", "link": ("/project/list" | app_url) },
-{"name": allocation.project.id | idfmt("P"), "link": ("/project/" ~ allocation.project.id) | app_url },
-{"name": allocation.sample.id | idfmt("S"), "link": ("/project/" ~ allocation.project.id ~ "/sample/" ~ allocation.id) | app_url },
+{"name": project.id | idfmt("P"), "link": ("/project/" ~ project.id) | app_url },
+{"name": allocation.sample.id | idfmt("S"), "link": ("/project/" ~ project.id ~ "/sample/" ~ allocation.id) | app_url },
 {"name": "Add Note", "active": true },
 ]) }}
 <h2>{{ self.title() }}</h2>
 <div>Sample {{ allocation.sample.id | idfmt("S") }}: {{ allocation.sample.taxon.complete_name }}</div>
-<div>Project {{ allocation.project.id | idfmt("P") }}: {{ allocation.project.name }}</div>
+<div>Project {{ project.id | idfmt("P") }}: {{ project.name }}</div>
 {{ allocation_note_form(allocation, message=message) }}
 {% endblock %}
 

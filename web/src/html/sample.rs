@@ -15,13 +15,14 @@ use axum::{
     routing::get,
 };
 use axum_template::RenderHtml;
+use futures::future::try_join_all;
 use libseed::{
     core::{
         loadable::{ExternalRef, Loadable},
         query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
     },
     empty_string_as_none,
-    project::{Allocation, allocation},
+    project::{Allocation, Project, allocation},
     sample::{self, Certainty, Sample, SortField},
     source::Source,
 };
@@ -155,9 +156,18 @@ async fn show_sample(
         &state.db,
     )
     .await?;
-    for alloc in allocations.iter_mut() {
-        alloc.load_notes(&state.db).await?;
-    }
+
+    try_join_all(
+        allocations
+            .iter_mut()
+            .map(|alloc| alloc.load_notes(&state.db)),
+    )
+    .await?;
+
+    let projects = try_join_all(allocations.iter().map(async |alloc| -> libseed::Result<_> {
+        Ok((Project::load(alloc.projectid, &state.db).await?, alloc))
+    }))
+    .await?;
 
     Ok(RenderHtml(
         key,
@@ -165,7 +175,7 @@ async fn show_sample(
         context!(user => user,
                  sample => sample,
                  sources => sources,
-                 allocations => allocations),
+                 projects => projects),
     )
     .into_response())
 }

@@ -1,6 +1,7 @@
 use anyhow::Result;
+use futures::future::try_join_all;
 use libseed::{
-    core::{database::Database, query::Cmp},
+    core::{database::Database, loadable::Loadable, query::Cmp},
     project::{Allocation, Project, allocation},
     sample::{self, Certainty, Sample},
     source::Source,
@@ -101,25 +102,26 @@ where
     }
 }
 
-fn display_allocations(allocations: &[Allocation]) -> Vec<String> {
-    allocations
+fn display_projects(projects: &[Project]) -> Vec<String> {
+    projects
         .iter()
-        .map(|a| format!("{} ({})", a.project.name, a.project.id))
+        .map(|p| format!("{} ({})", p.name, p.id))
         .collect::<Vec<String>>()
 }
-fn table_display_allocations(allocations: &[Allocation]) -> String {
-    let s = display_allocations(allocations).join("\n");
+
+fn table_display_projects(projects: &[Project]) -> String {
+    let s = display_projects(projects).join("\n");
     match s.is_empty() {
         true => "Not allocated to any project".to_string(),
         false => s,
     }
 }
-fn serialize_allocations<S>(allocations: &[Allocation], s: S) -> Result<S::Ok, S::Error>
+fn serialize_allocations<S>(projects: &[Project], s: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    let vals = display_allocations(allocations);
-    let mut seq = s.serialize_seq(Some(allocations.len()))?;
+    let vals = display_projects(projects);
+    let mut seq = s.serialize_seq(Some(projects.len()))?;
     for elem in vals {
         seq.serialize_element(&elem)?;
     }
@@ -144,9 +146,9 @@ pub(crate) struct SampleRowDetails {
     germination: Option<Vec<Germination>>,
     #[tabled(display("tabled::derive::display::option", ""))]
     notes: Option<String>,
-    #[tabled(display("table_display_allocations"))]
+    #[tabled(display("table_display_projects"))]
     #[serde(serialize_with = "serialize_allocations")]
-    allocations: Vec<Allocation>,
+    projects: Vec<Project>,
 }
 
 impl SampleRowDetails {
@@ -160,6 +162,12 @@ impl SampleRowDetails {
             db,
         )
         .await?;
+        let projects = try_join_all(
+            allocations
+                .into_iter()
+                .map(|alloc| Project::load(alloc.projectid, db)),
+        )
+        .await?;
 
         Ok(Self {
             id: sample.id,
@@ -171,7 +179,7 @@ impl SampleRowDetails {
             certainty: sample.certainty.clone(),
             germination: taxon.germination.clone(),
             notes: sample.notes.as_ref().cloned(),
-            allocations,
+            projects,
         })
     }
 }

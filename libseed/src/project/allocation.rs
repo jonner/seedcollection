@@ -144,7 +144,7 @@ pub struct Allocation {
     pub sample: Sample,
 
     /// The project that the sample is allocated to
-    pub project: Project,
+    pub projectid: <Project as Loadable>::Id,
 
     /// Project-specific notes for this allocation. This can be used to track
     /// status of this sample within the project, etc. For example, has the sample been
@@ -234,14 +234,12 @@ impl Allocation {
         let sort = sort.unwrap_or(SortSpec::new(SortField::Taxon, SortOrder::Ascending).into());
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
             r#"
-            SELECT PS.psid,
+            SELECT PS.psid, PS.projectid,
             S.*,
-            P.projectid, P.projname, P.projdescription,
             N.pnoteid, N.notedate, N.notetype, N.notesummary, N.notedetails
 
             FROM sc_project_samples PS
             INNER JOIN vsamples S ON PS.sampleid=S.sampleid
-            INNER JOIN sc_projects P on P.projectid=PS.projectid
             LEFT JOIN ( SELECT * FROM
             (SELECT *, ROW_NUMBER() OVER (PARTITION BY psid ORDER BY DATE(notedate) DESC, pnoteid DESC) AS rownr
             FROM sc_project_notes ORDER BY pnoteid DESC)
@@ -298,7 +296,7 @@ impl FromRow<'_, SqliteRow> for Allocation {
         Ok(Self {
             id: row.try_get("psid")?,
             sample: Sample::from_row(row)?,
-            project: Project::from_row(row)?,
+            projectid: row.try_get("projectid")?,
             notes,
         })
     }
@@ -329,10 +327,10 @@ mod tests {
                 .expect("Failed to load sample");
             assert_eq!(a.sample, s);
 
-            let c = Project::load(a.project.id(), db)
+            let c = Project::load(a.projectid, db)
                 .await
                 .expect("Failed to load project");
-            assert_eq!(a.project, c);
+            assert_eq!(a.projectid, c.id());
         }
 
         // check allocations for project 1
@@ -344,7 +342,7 @@ mod tests {
 
         tracing::debug!("{:?}", assigned[0]);
         assert_eq!(assigned[0].sample.id(), 1);
-        assert_eq!(assigned[0].project.id(), 1);
+        assert_eq!(assigned[0].projectid, 1);
         // querying allocations should also load the latest note
         assert_eq!(assigned[0].notes.len(), 1);
         assert_eq!(assigned[0].notes[0].id, 2);
@@ -360,7 +358,7 @@ mod tests {
 
         tracing::debug!("{:?}", assigned[1]);
         assert_eq!(assigned[1].sample.id(), 2);
-        assert_eq!(assigned[1].project.id(), 1);
+        assert_eq!(assigned[1].projectid, 1);
         check_sample(&assigned[1], &db).await;
 
         // check allocations for project 2
@@ -371,11 +369,11 @@ mod tests {
         assert_eq!(assigned.len(), 2);
 
         assert_eq!(assigned[0].sample.id(), 1);
-        assert_eq!(assigned[0].project.id(), 2);
+        assert_eq!(assigned[0].projectid, 2);
         check_sample(&assigned[0], &db).await;
 
         assert_eq!(assigned[1].sample.id(), 3);
-        assert_eq!(assigned[1].project.id(), 2);
+        assert_eq!(assigned[1].projectid, 2);
         check_sample(&assigned[1], &db).await;
 
         // check allocations for sample 1
@@ -386,11 +384,11 @@ mod tests {
         assert_eq!(assigned.len(), 2);
 
         assert_eq!(assigned[0].sample.id(), 1);
-        assert_eq!(assigned[0].project.id(), 1);
+        assert_eq!(assigned[0].projectid, 1);
         check_sample(&assigned[0], &db).await;
 
         assert_eq!(assigned[1].sample.id(), 1);
-        assert_eq!(assigned[1].project.id(), 2);
+        assert_eq!(assigned[1].projectid, 2);
         check_sample(&assigned[1], &db).await;
     }
 }
