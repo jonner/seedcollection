@@ -133,14 +133,14 @@ impl std::fmt::Display for Cmp {
 }
 
 /// A type for specifying the number of rows to return for an SQL query
-pub struct LimitSpec(
+pub struct LimitSpec {
     /// The number of items to return
-    pub i32,
+    pub count: i32,
     /// An optional offset of rows to return. For example, if this value is
     /// `Some(10)`, it means to start returning items starting with the 10th
     /// row.
-    pub Option<i32>,
-);
+    pub offset: Option<i32>,
+}
 
 /// A type for specifying the sort order of an SQL query
 #[derive(Deserialize, Serialize, Clone, Debug)]

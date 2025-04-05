@@ -68,7 +68,10 @@ async fn list_taxa(
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
     let taxa: Vec<Taxon> = Taxon::load_all(
         Some(taxonomy::Filter::Rank(rank).into()),
-        Some(LimitSpec(PAGE_SIZE, Some(PAGE_SIZE * (pg - 1)))),
+        Some(LimitSpec {
+            count: PAGE_SIZE,
+            offset: Some(PAGE_SIZE * (pg - 1)),
+        }),
         &state.db,
     )
     .await?;
@@ -252,9 +255,16 @@ async fn filter_taxa(
                 filter = filter.push(taxonomy::Filter::Minnesota(true));
             }
             /* FIXME: pagination for /search endpoing? */
-            Taxon::load_all(Some(filter.build()), Some(LimitSpec(200, None)), db)
-                .await
-                .map_err(Into::into)
+            Taxon::load_all(
+                Some(filter.build()),
+                Some(LimitSpec {
+                    count: 200,
+                    offset: None,
+                }),
+                db,
+            )
+            .await
+            .map_err(Into::into)
         }
     }
 }
