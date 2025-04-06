@@ -1,4 +1,4 @@
-use crate::{TemplateKey, auth::SqliteUser, error::Error, state::AppState};
+use crate::{TemplateKey, auth::SqliteUser, error::Error, state::AppState, util::Paginator};
 use axum::{
     Form, Router,
     extract::{Path, Query, Request, State},
@@ -48,7 +48,6 @@ async fn root(
     ))
 }
 
-const PAGE_SIZE: i32 = 100;
 #[derive(Deserialize)]
 struct ListParams {
     rank: Option<Rank>,
@@ -66,16 +65,12 @@ async fn list_taxa(
         Some(r) => r,
         None => Rank::Species,
     };
-    let pg = params.page.unwrap_or(1);
     let count = Taxon::count(Some(taxonomy::Filter::Rank(rank.clone()).into()), &state.db).await?;
-    let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
+    let paginator = Paginator::new(count as usize, None, params.page);
     let taxa: Vec<Taxon> = Taxon::load_all(
         Some(taxonomy::Filter::Rank(rank).into()),
         None,
-        Some(LimitSpec {
-            count: PAGE_SIZE,
-            offset: Some(PAGE_SIZE * (pg - 1)),
-        }),
+        Some(paginator.limits()),
         &state.db,
     )
     .await?;
@@ -85,8 +80,8 @@ async fn list_taxa(
         state.tmpl.clone(),
         context!(user => user,
                  taxa => taxa,
-                 page => pg,
-                 total_pages => total_pages,
+                 page => paginator.current_page(),
+                 total_pages => paginator.n_pages(),
                  request_uri => req.uri().to_string()),
     ))
 }

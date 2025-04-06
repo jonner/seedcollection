@@ -145,6 +145,7 @@ pub mod filter {
 }
 
 /// A type for specifying the number of rows to return for an SQL query
+#[derive(Debug, PartialEq)]
 pub struct LimitSpec {
     /// The number of items to return
     pub count: i32,

@@ -1,12 +1,105 @@
 use crate::APP_PREFIX;
 use axum::http::Uri;
+use libseed::core::query::LimitSpec;
 use minijinja::ErrorKind;
 use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, num::NonZero};
 
 pub(crate) fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")
+}
+
+pub const PAGE_SIZE: i32 = 100;
+
+pub struct Paginator {
+    n_pages: usize,
+    pagesize: usize,
+    page: NonZero<usize>,
+}
+
+impl Paginator {
+    pub fn new(total_items: usize, pagesize: Option<i32>, page: Option<i32>) -> Self {
+        let pagesize = pagesize.unwrap_or(PAGE_SIZE) as usize;
+        let n_pages = total_items.div_ceil(pagesize);
+        Self {
+            n_pages,
+            pagesize,
+            page: page
+                .and_then(|p| NonZero::new((p as usize).min(n_pages)))
+                .unwrap_or(unsafe { NonZero::new_unchecked(1) }),
+        }
+    }
+
+    pub fn n_pages(&self) -> usize {
+        self.n_pages
+    }
+
+    pub fn current_page(&self) -> usize {
+        self.page.get()
+    }
+
+    pub fn limits(&self) -> LimitSpec {
+        LimitSpec {
+            count: self.pagesize as i32,
+            offset: Some(((self.page.get() - 1) * self.pagesize) as i32),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_paginator {
+    use crate::util::Paginator;
+    use libseed::core::query::LimitSpec;
+
+    #[test]
+    fn test_paginator() {
+        let p = Paginator::new(100, Some(20), None);
+        assert_eq!(p.n_pages(), 5);
+        assert_eq!(p.current_page(), 1);
+        assert_eq!(
+            p.limits(),
+            LimitSpec {
+                count: 20,
+                offset: Some(0)
+            }
+        );
+
+        // page 0 gets clamped to 1
+        let p = Paginator::new(100, Some(20), Some(0));
+        assert_eq!(p.n_pages(), 5);
+        assert_eq!(p.current_page(), 1);
+        assert_eq!(
+            p.limits(),
+            LimitSpec {
+                count: 20,
+                offset: Some(0)
+            }
+        );
+
+        let p = Paginator::new(101, Some(20), Some(5));
+        assert_eq!(p.n_pages(), 6);
+        assert_eq!(p.current_page(), 5);
+        assert_eq!(
+            p.limits(),
+            LimitSpec {
+                count: 20,
+                offset: Some(80)
+            }
+        );
+
+        // specifying a page beyond the max will clamp to the max
+        let p = Paginator::new(101, Some(20), Some(7));
+        assert_eq!(p.n_pages(), 6);
+        assert_eq!(p.current_page(), 6);
+        assert_eq!(
+            p.limits(),
+            LimitSpec {
+                count: 20,
+                offset: Some(100)
+            }
+        );
+    }
 }
 
 /// A minijinja template filter for appending (or replacing) a given query param
