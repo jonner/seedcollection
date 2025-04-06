@@ -4,7 +4,10 @@ use crate::{
         database::Database,
         error::{Error, Result},
         loadable::{ExternalRef, Loadable},
-        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortSpecs, ToSql},
+        query::{
+            DynFilterPart, LimitSpec, SortSpecs, ToSql,
+            filter::{Cmp, FilterPart, and},
+        },
     },
     sample::Sample,
 };
@@ -210,8 +213,7 @@ impl Project {
         sort: Option<SortSpecs<allocation::SortField>>,
         db: &Database,
     ) -> Result<()> {
-        let mut fbuilder =
-            CompoundFilter::builder(Op::And).push(allocation::Filter::ProjectId(self.id));
+        let mut fbuilder = and().push(allocation::Filter::ProjectId(self.id));
         if let Some(filter) = filter {
             fbuilder = fbuilder.push(filter);
         }

@@ -3,7 +3,10 @@ use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortSpecs, ToSql},
+    query::{
+        DynFilterPart, LimitSpec, SortSpecs, ToSql,
+        filter::{Cmp, FilterPart, and},
+    },
 };
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -192,7 +195,7 @@ impl Source {
         filter: Option<DynFilterPart>,
         db: &Database,
     ) -> Result<Vec<Source>> {
-        let mut fbuilder = CompoundFilter::builder(Op::And).push(Filter::UserId(userid));
+        let mut fbuilder = and().push(Filter::UserId(userid));
         if let Some(f) = filter {
             fbuilder = fbuilder.push(f);
         }

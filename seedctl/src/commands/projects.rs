@@ -11,7 +11,7 @@ use libseed::{
     core::{
         database::Database,
         loadable::{ExternalRef, Loadable},
-        query::{CompoundFilter, Op},
+        query::filter::and,
     },
     project::{AllocatedSample, Project, allocation},
     user::User,
@@ -72,7 +72,7 @@ pub(crate) async fn handle_command(
             Ok(())
         }
         ProjectCommands::RemoveSample { project, sample } => {
-            let fb = CompoundFilter::builder(Op::And)
+            let fb = and()
                 .push(allocation::Filter::ProjectId(project))
                 .push(allocation::Filter::SampleId(sample));
             let mut alloc = AllocatedSample::load_one(Some(fb.build()), db).await?;

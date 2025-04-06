@@ -10,7 +10,10 @@ use libseed::{
     core::{
         database::Database,
         loadable::Loadable,
-        query::{Cmp, CompoundFilter, LimitSpec, Op},
+        query::{
+            LimitSpec,
+            filter::{Cmp, and},
+        },
     },
     empty_string_as_none,
     sample::{self, Sample},
@@ -182,7 +185,7 @@ async fn show_taxon(
     let children = taxon.fetch_children(&state.db).await?;
     let samples = Sample::load_all(
         Some(
-            CompoundFilter::builder(Op::And)
+            and()
                 .push(sample::Filter::TaxonId(Cmp::Equal, id))
                 .push(sample::Filter::UserId(user.id))
                 .build(),
@@ -250,7 +253,7 @@ async fn filter_taxa(
     match taxon.is_empty() {
         true => Ok(Vec::new()),
         false => {
-            let mut filter = CompoundFilter::builder(Op::And);
+            let mut filter = and();
             if let Some(quickfilter) = libseed::taxonomy::quickfind(taxon) {
                 filter = filter.push(quickfilter);
             }

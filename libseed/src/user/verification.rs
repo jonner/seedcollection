@@ -1,10 +1,3 @@
-use crate::{
-    Error,
-    core::{
-        error::VerificationError,
-        query::{CompoundFilter, LimitSpec, Op, SortSpecs, ToSql},
-    },
-};
 use async_trait::async_trait;
 use rand::{
     distributions::{Alphanumeric, DistString},
@@ -16,10 +9,14 @@ use time::{Duration, OffsetDateTime};
 use tracing::debug;
 
 use crate::{
-    Database, Result,
+    Database, Error, Result,
     core::{
+        error::VerificationError,
         loadable::{ExternalRef, Loadable},
-        query::{DynFilterPart, FilterPart},
+        query::{
+            DynFilterPart, LimitSpec, SortSpecs, ToSql,
+            filter::{FilterPart, and},
+        },
     },
     user::User,
 };
@@ -127,7 +124,7 @@ impl UserVerification {
         key: &str,
         db: &Database,
     ) -> Result<UserVerification, VerificationError> {
-        let f = CompoundFilter::builder(Op::And)
+        let f = and()
             .push(Filter::Key(key.into()))
             .push(Filter::Userid(userid))
             .build();

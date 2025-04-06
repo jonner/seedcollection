@@ -17,12 +17,11 @@ use axum_template::RenderHtml;
 use libseed::{
     core::{
         loadable::Loadable,
-        query::{Cmp, CompoundFilter, Op},
+        query::filter::{Cmp, and, or},
     },
     empty_string_as_none,
     sample::{Filter, Sample},
-    source,
-    source::Source,
+    source::{self, Source},
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
@@ -52,10 +51,10 @@ async fn list_sources(
     Query(params): Query<SourceListParams>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, Error> {
-    let mut fbuilder = CompoundFilter::builder(Op::And).push(source::Filter::UserId(user.id));
+    let mut fbuilder = and().push(source::Filter::UserId(user.id));
 
     if let Some(filterstring) = params.filter {
-        let subfilter = CompoundFilter::builder(Op::Or)
+        let subfilter = or()
             .push(source::Filter::Name(Cmp::Like, filterstring.clone()))
             .push(source::Filter::Description(Cmp::Like, filterstring.clone()))
             .build();
@@ -89,7 +88,7 @@ async fn show_source(
     let src = Source::load(id, &state.db).await?;
     let samples = Sample::load_all(
         Some(
-            CompoundFilter::builder(Op::And)
+            and()
                 .push(Filter::SourceId(Cmp::Equal, id))
                 .push(Filter::UserId(user.id))
                 .build(),
@@ -169,7 +168,7 @@ async fn update_source(
     };
     let samples = Sample::load_all(
         Some(
-            CompoundFilter::builder(Op::And)
+            and()
                 .push(Filter::SourceId(Cmp::Equal, id))
                 .push(Filter::UserId(user.id))
                 .build(),

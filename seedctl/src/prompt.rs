@@ -4,7 +4,7 @@ use libseed::{
     core::{
         database::Database,
         loadable::Loadable,
-        query::{Cmp, CompoundFilter, Op},
+        query::filter::{Cmp, and},
     },
     source::{self, Source},
     taxonomy::{Taxon, quickfind},
@@ -146,7 +146,7 @@ struct SourceCompleter {
 
 impl Autocomplete for SourceCompleter {
     fn get_suggestions(&mut self, input: &str) -> Result<Vec<String>, CustomUserError> {
-        let fbuilder = CompoundFilter::builder(Op::And)
+        let fbuilder = and()
             .push(source::Filter::UserId(self.userid))
             .push(source::Filter::Name(Cmp::Like, input.to_string()));
         let mut sources = Ok(vec![]);

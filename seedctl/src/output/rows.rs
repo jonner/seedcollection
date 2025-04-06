@@ -1,7 +1,7 @@
 use anyhow::Result;
 use futures::future::try_join_all;
 use libseed::{
-    core::{database::Database, loadable::Loadable, query::Cmp},
+    core::{database::Database, loadable::Loadable, query::filter::Cmp},
     project::{AllocatedSample, Project, allocation},
     sample::{self, Certainty, Sample},
     source::Source,

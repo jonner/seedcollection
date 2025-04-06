@@ -4,7 +4,10 @@ use crate::{
         database::Database,
         error::{Error, Result},
         loadable::{ExternalRef, Loadable},
-        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortSpecs, ToSql},
+        query::{
+            DynFilterPart, LimitSpec, SortSpecs, ToSql,
+            filter::{Cmp, FilterPart, or},
+        },
     },
     source::Source,
     taxonomy::{Rank, Taxon},
@@ -72,8 +75,7 @@ pub enum Filter {
 /// Creates a query filter to match any [Sample] object when any of the
 /// components of the taxon name matches the given `substr`
 pub fn taxon_name_like(substr: &str) -> DynFilterPart {
-    CompoundFilter::builder(Op::Or)
-        .push(Filter::TaxonName1(Cmp::Like, substr.into()))
+    or().push(Filter::TaxonName1(Cmp::Like, substr.into()))
         .push(Filter::TaxonName2(Cmp::Like, substr.into()))
         .push(Filter::TaxonName3(Cmp::Like, substr.into()))
         .push(Filter::TaxonCommonName(Cmp::Like, substr.into()))
