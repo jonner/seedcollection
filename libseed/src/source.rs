@@ -99,7 +99,7 @@ impl Loadable for Source {
         self.id = id
     }
 
-    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+    async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
         if self.id != Self::invalid_id() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id()));
         }
@@ -118,7 +118,7 @@ impl Loadable for Source {
         .fetch_one(db.pool())
         .await?;
         *self = newval;
-        Ok(self.id)
+        Ok(&self.id)
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
@@ -301,7 +301,7 @@ mod tests {
             let mut src = Source::new(name, desc, lat, lon, userid);
             // full data
             let res = src.insert(db).await.expect("failed to insert");
-            let srcloaded = Source::load(res, db)
+            let srcloaded = Source::load(res.clone(), db)
                 .await
                 .expect("Failed to load inserted object");
             assert_eq!(src, srcloaded);

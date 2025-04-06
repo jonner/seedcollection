@@ -37,7 +37,7 @@ pub trait Loadable {
     fn set_id(&mut self, id: Self::Id);
 
     /// Insert the object into the Database
-    async fn insert(&mut self, db: &Database) -> Result<Self::Id>;
+    async fn insert(&mut self, db: &Database) -> Result<&Self::Id>;
 
     /// Load the object with the given `id` from the database
     async fn load(id: Self::Id, db: &Database) -> Result<Self>

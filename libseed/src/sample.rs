@@ -296,7 +296,7 @@ impl Loadable for Sample {
         self.id = id
     }
 
-    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+    async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
         if self.id != Self::invalid_id() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
@@ -319,7 +319,7 @@ impl Loadable for Sample {
         .await?;
         // FIXME: this will invalidate any of the external refs we had already loaded (e.g. taxon, user, source)
         *self = newval;
-        Ok(self.id)
+        Ok(&self.id)
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
@@ -510,7 +510,7 @@ mod tests {
             let mut sample =
                 Sample::new(taxon, user, source, month, year, quantity, notes, certainty);
             let id = sample.insert(db).await.expect("Failed to insert sample");
-            let loaded = Sample::load(id, db)
+            let loaded = Sample::load(*id, db)
                 .await
                 .expect("Failed to load sample from database");
             assert_eq!(sample.id, loaded.id);

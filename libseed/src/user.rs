@@ -86,7 +86,7 @@ impl Loadable for User {
         self.id = id
     }
 
-    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+    async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
         if self.username.trim().is_empty() {
             return Err(Error::InvalidStateMissingAttribute("username".to_string()));
         }
@@ -118,7 +118,7 @@ impl Loadable for User {
         .fetch_one(db.pool())
         .await?;
         *self = user;
-        Ok(self.id)
+        Ok(&self.id)
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {

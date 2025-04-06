@@ -351,7 +351,7 @@ impl Loadable for Taxon {
         self.id = id
     }
 
-    async fn insert(&mut self, _db: &Database) -> Result<Self::Id> {
+    async fn insert(&mut self, _db: &Database) -> Result<&Self::Id> {
         return Err(Error::InvalidOperation("Can't insert new taxon".into()));
     }
 

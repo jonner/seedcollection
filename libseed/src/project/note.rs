@@ -84,7 +84,7 @@ impl Loadable for Note {
         self.id = id
     }
 
-    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+    async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
         if self.id != Self::invalid_id() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
@@ -105,7 +105,7 @@ impl Loadable for Note {
         .fetch_one(db.pool())
         .await?;
         *self = newval;
-        Ok(self.id)
+        Ok(&self.id)
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
