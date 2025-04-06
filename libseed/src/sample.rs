@@ -296,6 +296,32 @@ impl Loadable for Sample {
         self.id = id
     }
 
+    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+        if self.id != -1 {
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
+        }
+        let newval = sqlx::query_as(
+            "INSERT INTO sc_samples
+                (tsn, userid, srcid, month, year, quantity, notes, certainty)
+            VALUES
+                (?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING *",
+        )
+        .bind(self.taxon.id())
+        .bind(self.user.id())
+        .bind(self.source.id())
+        .bind(self.month)
+        .bind(self.year)
+        .bind(self.quantity)
+        .bind(&self.notes)
+        .bind(&self.certainty)
+        .fetch_one(db.pool())
+        .await?;
+        // FIXME: this will invalidate any of the external refs we had already loaded (e.g. taxon, user, source)
+        *self = newval;
+        Ok(self.id)
+    }
+
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         let mut builder = Self::query_builder(Some(Filter::Id(Cmp::Equal, id).into()), None, None);
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
@@ -395,35 +421,6 @@ impl Sample {
             .fetch_one(db.pool())
             .await
             .map_err(Into::into)
-    }
-
-    /// Add this sample to the database. If this call completes successfully,
-    /// the id of this object will be updated to the ID of the inserted row in the
-    /// database
-    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
-        if self.id != -1 {
-            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
-        }
-        let newval = sqlx::query_as(
-            "INSERT INTO sc_samples
-                (tsn, userid, srcid, month, year, quantity, notes, certainty)
-            VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING *",
-        )
-        .bind(self.taxon.id())
-        .bind(self.user.id())
-        .bind(self.source.id())
-        .bind(self.month)
-        .bind(self.year)
-        .bind(self.quantity)
-        .bind(&self.notes)
-        .bind(&self.certainty)
-        .fetch_one(db.pool())
-        .await?;
-        // FIXME: this will invalidate any of the external refs we had already loaded (e.g. taxon, user, source)
-        *self = newval;
-        Ok(self.id)
     }
 
     /// Create a new sample with the given data. It iwll initially have an

@@ -60,6 +60,24 @@ impl Loadable for Project {
         self.id = id
     }
 
+    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+        debug!(?self, "Inserting project into database");
+        let newval = sqlx::query_as(
+            "INSERT INTO sc_projects
+                (projname, projdescription, userid)
+            VALUES
+                (?, ?, ?)
+            RETURNING *",
+        )
+        .bind(self.name.clone())
+        .bind(self.description.clone())
+        .bind(self.userid)
+        .fetch_one(db.pool())
+        .await?;
+        *self = newval;
+        Ok(self.id)
+    }
+
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         Self::query_builder(Some(Filter::Id(id).into()), None, None)
             .build_query_as()
@@ -226,37 +244,16 @@ impl Project {
     /// Allocate the given sample to this project
     pub async fn allocate_sample(
         &mut self,
-        sample: ExternalRef<Sample>,
+        sample: Sample,
         db: &Database,
-    ) -> Result<()> {
-        sqlx::query("INSERT INTO sc_project_samples (projectid, sampleid) VALUES (?, ?)")
-            .bind(self.id)
-            .bind(sample.id())
-            .execute(db.pool())
-            .await
-            .map_err(|e| e.into())
-            .map(|_| ())
-    }
-
-    /// Add this project to the database. If this call completes successfully,
-    /// the `id` of this object will be updated to the ID of the inserted row in the
-    /// database
-    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
-        debug!(?self, "Inserting project into database");
-        let newval = sqlx::query_as(
-            "INSERT INTO sc_projects
-                (projname, projdescription, userid)
-            VALUES
-                (?, ?, ?)
-            RETURNING *",
-        )
-        .bind(self.name.clone())
-        .bind(self.description.clone())
-        .bind(self.userid)
-        .fetch_one(db.pool())
-        .await?;
-        *self = newval;
-        Ok(self.id)
+    ) -> Result<<AllocatedSample as Loadable>::Id> {
+        let mut allocation = AllocatedSample {
+            id: AllocatedSample::invalid_id(),
+            sample,
+            projectid: self.id,
+            notes: Default::default(),
+        };
+        allocation.insert(db).await
     }
 
     /// Create a new project with the given data. It will initially have an

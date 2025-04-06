@@ -15,7 +15,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    core::error::VerificationError,
+    core::{error::VerificationError, loadable::Loadable},
     user::{User, UserStatus, verification::UserVerification},
 };
 use minijinja::context;
