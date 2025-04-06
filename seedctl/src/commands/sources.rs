@@ -39,7 +39,7 @@ pub(crate) async fn handle_command(
             });
             let sources = match useronly {
                 true => Source::load_all_user(user.id, filter, db).await?,
-                false => Source::load_all(filter, db).await?,
+                false => Source::load_all(filter, None, None, db).await?,
             };
             let str = match output.full {
                 true => {

@@ -7,6 +7,7 @@
 use crate::core::{
     database::Database,
     error::{Error, Result},
+    query::{DynFilterPart, LimitSpec, SortSpecs, ToSql},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -28,6 +29,7 @@ impl Indexable for i64 {
 pub trait Loadable {
     /// The type of the ID for this object in the database
     type Id: Clone + Send + Indexable + sqlx::Type<sqlx::Sqlite>;
+    type Sort: ToSql;
 
     /// return the ID associated with this particular object
     fn id(&self) -> Self::Id;
@@ -35,6 +37,16 @@ pub trait Loadable {
     fn set_id(&mut self, id: Self::Id);
     /// Load the object with the given `id` from the database
     async fn load(id: Self::Id, db: &Database) -> Result<Self>
+    where
+        Self: Sized;
+
+    /// Load matching objects from the database
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<Self::Sort>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<Self>>
     where
         Self: Sized;
 

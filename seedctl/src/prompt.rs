@@ -3,6 +3,7 @@ use inquire::{CustomUserError, autocompletion::Autocomplete};
 use libseed::{
     core::{
         database::Database,
+        loadable::Loadable,
         query::{Cmp, CompoundFilter, Op},
     },
     source::{self, Source},
@@ -69,6 +70,7 @@ impl Autocomplete for TaxonCompleter {
         if input.len() > 2 {
             taxa = futures::executor::block_on(Taxon::load_all(
                 quickfind(input.to_string()),
+                None,
                 None,
                 &self.db,
             ));
@@ -149,8 +151,12 @@ impl Autocomplete for SourceCompleter {
             .push(source::Filter::Name(Cmp::Like, input.to_string()));
         let mut sources = Ok(vec![]);
         if input.len() > 2 {
-            sources =
-                futures::executor::block_on(Source::load_all(Some(fbuilder.build()), &self.db));
+            sources = futures::executor::block_on(Source::load_all(
+                Some(fbuilder.build()),
+                None,
+                None,
+                &self.db,
+            ));
         }
         sources
             .map(|taxa| {

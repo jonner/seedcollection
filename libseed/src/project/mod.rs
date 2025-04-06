@@ -4,7 +4,7 @@ use crate::{
         database::Database,
         error::{Error, Result},
         loadable::{ExternalRef, Loadable},
-        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs},
+        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortSpecs, ToSql},
     },
     sample::Sample,
 };
@@ -47,6 +47,7 @@ pub struct Project {
 #[async_trait]
 impl Loadable for Project {
     type Id = i64;
+    type Sort = SortField;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -57,9 +58,22 @@ impl Loadable for Project {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::query_builder(Some(Filter::Id(id).into()))
+        Self::query_builder(Some(Filter::Id(id).into()), None, None)
             .build_query_as()
             .fetch_one(db.pool())
+            .await
+            .map_err(|e| e.into())
+    }
+
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<Self::Sort>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<Self>> {
+        Self::query_builder(filter, sort, limit)
+            .build_query_as()
+            .fetch_all(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -133,8 +147,28 @@ impl FilterPart for Filter {
     }
 }
 
+pub enum SortField {
+    Id,
+    Name,
+    UserId,
+}
+
+impl ToSql for SortField {
+    fn to_sql(&self) -> String {
+        match self {
+            SortField::Id => "P.projectid".into(),
+            SortField::Name => "P.projname".into(),
+            SortField::UserId => "P.userid".into(),
+        }
+    }
+}
+
 impl Project {
-    fn query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn query_builder(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT P.projectid, P.projname, P.projdescription, P.userid, U.username
             FROM sc_projects P INNER JOIN sc_users U ON U.userid=P.userid"#,
@@ -142,6 +176,10 @@ impl Project {
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
+        }
+        builder.push(sort.unwrap_or(SortField::Id.into()).to_sql());
+        if let Some(l) = limit {
+            builder.push(l.to_sql());
         }
         builder
     }
@@ -153,15 +191,6 @@ impl Project {
             f.add_to_query(&mut builder);
         }
         builder
-    }
-
-    /// Load all matched projects from the database
-    pub async fn load_all(filter: Option<DynFilterPart>, db: &Database) -> Result<Vec<Self>> {
-        Self::query_builder(filter)
-            .build_query_as()
-            .fetch_all(db.pool())
-            .await
-            .map_err(|e| e.into())
     }
 
     /// query the number of matching projects in the database
@@ -187,7 +216,8 @@ impl Project {
             fbuilder = fbuilder.push(filter);
         }
 
-        self.allocations = AllocatedSample::load_all(Some(fbuilder.build()), sort, db).await?;
+        self.allocations =
+            AllocatedSample::load_all(Some(fbuilder.build()), sort, None, db).await?;
         Ok(())
     }
 

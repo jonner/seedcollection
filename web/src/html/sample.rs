@@ -153,6 +153,7 @@ async fn show_sample(
     let mut allocations = AllocatedSample::load_all(
         Some(allocation::Filter::SampleId(id).into()),
         None,
+        None,
         &state.db,
     )
     .await?;

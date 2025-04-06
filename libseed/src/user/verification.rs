@@ -2,7 +2,7 @@ use crate::{
     Error,
     core::{
         error::VerificationError,
-        query::{CompoundFilter, Op},
+        query::{CompoundFilter, LimitSpec, Op, SortSpecs, ToSql},
     },
 };
 use async_trait::async_trait;
@@ -46,6 +46,18 @@ pub struct UserVerification {
     pub confirmed: bool,
 }
 
+pub enum SortField {
+    Id,
+}
+
+impl ToSql for SortField {
+    fn to_sql(&self) -> String {
+        match self {
+            SortField::Id => "uvid".to_string(),
+        }
+    }
+}
+
 impl UserVerification {
     const DEFAULT_EXPIRATION: i64 = 10 * 60 * 60;
 
@@ -66,7 +78,11 @@ impl UserVerification {
         }
     }
 
-    fn query_builder<'q>(filter: Option<DynFilterPart>) -> QueryBuilder<'q, Sqlite> {
+    fn query_builder<'q>(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'q, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT
             *
@@ -76,6 +92,10 @@ impl UserVerification {
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
+        }
+        builder.push(sort.unwrap_or(SortField::Id.into()).to_sql());
+        if let Some(l) = limit {
+            builder.push(l.to_sql());
         }
         builder
     }
@@ -111,7 +131,7 @@ impl UserVerification {
             .push(Filter::Key(key.into()))
             .push(Filter::Userid(userid))
             .build();
-        let mut uvs: Vec<UserVerification> = Self::query_builder(Some(f))
+        let mut uvs: Vec<UserVerification> = Self::query_builder(Some(f), None, None)
             .build_query_as()
             .fetch_all(db.pool())
             .await
@@ -147,19 +167,12 @@ impl UserVerification {
             // if no requested date was set, just consider the request to be expired
             .unwrap_or(true)
     }
-
-    pub async fn load_all(db: &Database) -> Result<Vec<Self>> {
-        Self::query_builder(None)
-            .build_query_as()
-            .fetch_all(db.pool())
-            .await
-            .map_err(Into::into)
-    }
 }
 
 #[async_trait]
 impl Loadable for UserVerification {
     type Id = i64;
+    type Sort = SortField;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -170,13 +183,30 @@ impl Loadable for UserVerification {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::query_builder(Some(Filter::Id(id).into()))
+        Self::query_builder(Some(Filter::Id(id).into()), None, None)
             .build_query_as()
             .fetch_one(db.pool())
             .await
             .map_err(Into::into)
     }
 
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<Self::Sort>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<Self>> {
+        if sort.is_some() {
+            return Err(Error::InvalidOperation(
+                "UserVerification is not sortable".into(),
+            ));
+        }
+        Self::query_builder(filter, sort, limit)
+            .build_query_as()
+            .fetch_all(db.pool())
+            .await
+            .map_err(Into::into)
+    }
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query(r#"DELETE FROM sc_user_verification WHERE uvid=?"#)
             .bind(id)

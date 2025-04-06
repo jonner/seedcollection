@@ -3,7 +3,7 @@ use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op},
+    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortSpecs, ToSql},
 };
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -83,6 +83,7 @@ pub struct Source {
 #[async_trait]
 impl Loadable for Source {
     type Id = i64;
+    type Sort = SortField;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -93,9 +94,22 @@ impl Loadable for Source {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::query_builder(Some(Filter::Id(id).into()))
+        Self::query_builder(Some(Filter::Id(id).into()), None, None)
             .build_query_as()
             .fetch_one(db.pool())
+            .await
+            .map_err(|e| e.into())
+    }
+
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<Self::Sort>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<Source>> {
+        Self::query_builder(filter, sort, limit)
+            .build_query_as()
+            .fetch_all(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -129,8 +143,24 @@ impl Loadable for Source {
     }
 }
 
+pub enum SortField {
+    Name,
+}
+
+impl ToSql for SortField {
+    fn to_sql(&self) -> String {
+        match self {
+            SortField::Name => "srcname".into(),
+        }
+    }
+}
+
 impl Source {
-    fn query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn query_builder(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'static, Sqlite> {
         let mut qb = QueryBuilder::new(
             r#"SELECT L.srcid, L.srcname, L.srcdesc, L.latitude, L.longitude,
             L.userid, U.username FROM sc_sources L
@@ -140,7 +170,10 @@ impl Source {
             qb.push(" WHERE ");
             f.add_to_query(&mut qb);
         }
-        qb.push(" ORDER BY srcname ASC");
+        qb.push(sort.unwrap_or(SortField::Name.into()).to_sql());
+        if let Some(l) = limit {
+            qb.push(l.to_sql());
+        }
         qb
     }
 
@@ -153,15 +186,6 @@ impl Source {
         qb
     }
 
-    /// Loads all matching sources from the database
-    pub async fn load_all(filter: Option<DynFilterPart>, db: &Database) -> Result<Vec<Source>> {
-        Self::query_builder(filter)
-            .build_query_as()
-            .fetch_all(db.pool())
-            .await
-            .map_err(|e| e.into())
-    }
-
     /// Loads all matching sources from the database for the given user
     pub async fn load_all_user(
         userid: i64,
@@ -172,7 +196,7 @@ impl Source {
         if let Some(f) = filter {
             fbuilder = fbuilder.push(f);
         }
-        Self::load_all(Some(fbuilder.build()), db).await
+        Self::load_all(Some(fbuilder.build()), None, None, db).await
     }
 
     pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {

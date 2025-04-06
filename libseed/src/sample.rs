@@ -4,7 +4,7 @@ use crate::{
         database::Database,
         error::{Error, Result},
         loadable::{ExternalRef, Loadable},
-        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortSpecs, ToSql},
+        query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortSpecs, ToSql},
     },
     source::Source,
     taxonomy::{Rank, Taxon},
@@ -284,6 +284,7 @@ pub struct Sample {
 #[async_trait]
 impl Loadable for Sample {
     type Id = i64;
+    type Sort = SortField;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -294,8 +295,18 @@ impl Loadable for Sample {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        let mut builder = Self::query_builder(Some(Filter::Id(Cmp::Equal, id).into()), None);
+        let mut builder = Self::query_builder(Some(Filter::Id(Cmp::Equal, id).into()), None, None);
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
+    }
+
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<Self::Sort>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<Self>> {
+        let mut builder = Self::query_builder(filter, sort, limit);
+        Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
@@ -337,15 +348,18 @@ impl Sample {
     fn query_builder(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
+        limit: Option<LimitSpec>,
     ) -> QueryBuilder<'static, Sqlite> {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("SELECT * FROM vsamples");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" ORDER BY ");
         let s: SortSpecs<SortField> = sort.unwrap_or(SortField::TaxonSequence.into());
         builder.push(s.to_sql());
+        if let Some(l) = limit {
+            builder.push(l.to_sql());
+        }
         builder
     }
 
@@ -372,17 +386,7 @@ impl Sample {
             fbuilder = fbuilder.push(f);
         }
         let newfilter = fbuilder.build();
-        let mut builder = Self::query_builder(Some(newfilter), sort);
-        Ok(builder.build_query_as().fetch_all(db.pool()).await?)
-    }
-
-    /// Loads all matching samples from the database
-    pub async fn load_all(
-        filter: Option<DynFilterPart>,
-        sort: Option<SortSpecs<SortField>>,
-        db: &Database,
-    ) -> Result<Vec<Sample>> {
-        let mut builder = Self::query_builder(filter, sort);
+        let mut builder = Self::query_builder(Some(newfilter), sort, None);
         Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 

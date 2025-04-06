@@ -78,7 +78,7 @@ pub(crate) async fn handle_command(
             });
             let samples = match useronly {
                 true => Sample::load_all_user(user.id, Some(filter), sort, db).await?,
-                false => Sample::load_all(Some(filter), sort, db).await?,
+                false => Sample::load_all(Some(filter), sort, None, db).await?,
             };
             let str = match output.full {
                 true => {

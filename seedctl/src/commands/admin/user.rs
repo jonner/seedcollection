@@ -96,7 +96,7 @@ async fn add_user(
 }
 
 async fn list_users(db: &Database, output: crate::OutputOptions) -> Result<()> {
-    let users = User::load_all(db).await?;
+    let users = User::load_all(None, None, None, db).await?;
     let str = output::format_seq(users.iter().map(UserRow::new), output.format)?;
     println!("{str}");
     Ok(())

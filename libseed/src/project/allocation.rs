@@ -10,8 +10,8 @@ use crate::{
         error::Result,
         loadable::Loadable,
         query::{
-            Cmp, CompoundFilter, DynFilterPart, FilterPart, Op, SortOrder, SortSpec, SortSpecs,
-            ToSql,
+            Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortOrder, SortSpec,
+            SortSpecs, ToSql,
         },
     },
     sample::Sample,
@@ -155,6 +155,7 @@ pub struct AllocatedSample {
 #[async_trait]
 impl Loadable for AllocatedSample {
     type Id = i64;
+    type Sort = SortField;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -165,8 +166,21 @@ impl Loadable for AllocatedSample {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        let mut builder = Self::query_builder(Some(Filter::Id(id).into()), None);
+        let mut builder = Self::query_builder(Some(Filter::Id(id).into()), None, None);
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
+    }
+
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<SortField>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<Self>> {
+        Self::query_builder(filter, sort, limit)
+            .build_query_as()
+            .fetch_all(db.pool())
+            .await
+            .map_err(Into::into)
     }
 
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
@@ -230,6 +244,7 @@ impl AllocatedSample {
     fn query_builder(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
+        limit: Option<LimitSpec>,
     ) -> QueryBuilder<'static, Sqlite> {
         let sort = sort.unwrap_or(SortSpec::new(SortField::Taxon, SortOrder::Ascending).into());
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
@@ -250,29 +265,19 @@ impl AllocatedSample {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" ORDER BY ");
         builder.push(sort.to_sql());
+        if let Some(l) = limit {
+            builder.push(l.to_sql());
+        }
 
         builder
-    }
-
-    /// Load all matching [Allocation]s from the database
-    pub async fn load_all(
-        filter: Option<DynFilterPart>,
-        sort: Option<SortSpecs<SortField>>,
-        db: &Database,
-    ) -> sqlx::Result<Vec<Self>> {
-        Self::query_builder(filter, sort)
-            .build_query_as()
-            .fetch_all(db.pool())
-            .await
     }
 
     /// Load a single matching [Allocation] from the database. Note that this is
     /// only useful when the `filter` that is specified will return a single result. For
     /// example if you're filtering by [Filter::Id]
     pub async fn load_one(filter: Option<DynFilterPart>, db: &Database) -> sqlx::Result<Self> {
-        Self::query_builder(filter, None)
+        Self::query_builder(filter, None, None)
             .build_query_as()
             .fetch_one(db.pool())
             .await
@@ -280,8 +285,13 @@ impl AllocatedSample {
 
     /// Load all notes associated with this allocation
     pub async fn load_notes(&mut self, db: &Database) -> Result<()> {
-        self.notes =
-            Note::load_all(Some(note::NoteFilter::AllocationId(self.id).into()), db).await?;
+        self.notes = Note::load_all(
+            Some(note::NoteFilter::AllocationId(self.id).into()),
+            None,
+            None,
+            db,
+        )
+        .await?;
         Ok(())
     }
 }
@@ -334,9 +344,10 @@ mod tests {
         }
 
         // check allocations for project 1
-        let assigned = AllocatedSample::load_all(Some(Filter::ProjectId(1).into()), None, &db)
-            .await
-            .expect("Failed to load assigned samples for first project");
+        let assigned =
+            AllocatedSample::load_all(Some(Filter::ProjectId(1).into()), None, None, &db)
+                .await
+                .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
@@ -362,9 +373,10 @@ mod tests {
         check_sample(&assigned[1], &db).await;
 
         // check allocations for project 2
-        let assigned = AllocatedSample::load_all(Some(Filter::ProjectId(2).into()), None, &db)
-            .await
-            .expect("Failed to load assigned samples for first project");
+        let assigned =
+            AllocatedSample::load_all(Some(Filter::ProjectId(2).into()), None, None, &db)
+                .await
+                .expect("Failed to load assigned samples for first project");
 
         assert_eq!(assigned.len(), 2);
 
@@ -377,7 +389,7 @@ mod tests {
         check_sample(&assigned[1], &db).await;
 
         // check allocations for sample 1
-        let assigned = AllocatedSample::load_all(Some(Filter::SampleId(1).into()), None, &db)
+        let assigned = AllocatedSample::load_all(Some(Filter::SampleId(1).into()), None, None, &db)
             .await
             .expect("Failed to load assigned samples for first project");
 

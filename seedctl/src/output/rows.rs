@@ -159,6 +159,7 @@ impl SampleRowDetails {
         let allocations = AllocatedSample::load_all(
             Some(allocation::Filter::SampleId(sample.id).into()),
             None,
+            None,
             db,
         )
         .await?;
@@ -378,6 +379,7 @@ impl TaxonRowDetails {
         taxon.load_germination_info(db).await?;
         let mut samples = Sample::load_all(
             Some(sample::Filter::TaxonId(Cmp::Equal, taxon.id).into()),
+            None,
             None,
             db,
         )

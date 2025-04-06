@@ -142,6 +142,18 @@ pub struct LimitSpec {
     pub offset: Option<i32>,
 }
 
+impl ToSql for LimitSpec {
+    fn to_sql(&self) -> String {
+        format!(
+            " LIMIT {} {} ",
+            self.count,
+            self.offset
+                .map(|n| format!("OFFSET {n}"))
+                .unwrap_or_default()
+        )
+    }
+}
+
 /// A type for specifying the sort order of an SQL query
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub enum SortOrder {
@@ -197,6 +209,14 @@ impl<T: ToSql> SortSpec<T> {
     }
 }
 
+pub struct Unsortable;
+
+impl ToSql for Unsortable {
+    fn to_sql(&self) -> String {
+        unimplemented!("This object is not sortable")
+    }
+}
+
 /// A type representing an ordered list of multiple sort specifications. The
 /// purpose of this type is merely to facilitate various convienience conversion
 /// functions by implementing [From]
@@ -210,11 +230,13 @@ impl<T: ToSql> From<SortSpec<T>> for SortSpecs<T> {
 
 impl<T: ToSql> ToSql for SortSpecs<T> {
     fn to_sql(&self) -> String {
-        self.0
-            .iter()
-            .map(ToSql::to_sql)
-            .collect::<Vec<String>>()
-            .join(",")
+        " ORDER BY ".to_string()
+            + &self
+                .0
+                .iter()
+                .map(ToSql::to_sql)
+                .collect::<Vec<String>>()
+                .join(",")
     }
 }
 
