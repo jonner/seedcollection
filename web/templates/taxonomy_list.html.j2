@@ -1,4 +1,5 @@
 {% extends "root.html.j2" %}
+{% from "_macros.html.j2" import pagination %}
 {% block title %}Taxonomy{% endblock %}
 {% block content %}
     <h2>Taxonomy</h2>
@@ -12,46 +13,5 @@
         </li>
         {% endfor %}
     </ul>
-    {{ pagenav }}
+    {{ pagination(total_pages, page, request_uri)}}
 {% endblock %}
-
-{% set pagenav %}
-<nav aria-label="page navigation">
-    <ul class="pagination">
-        {% with start = [(page-1) - 5, 0]|max, end = [(page-1) + 6, total_pages]|min %}
-        {% if start > 0 %}
-        <li class="page-item">
-            <a class="page-link" href="{{ request_uri | append_query_param("page", "1") }}">1</a>
-        </li>
-        {% if start > 1 %}
-        <li class="page-item">
-            <span class="page-link">...</span>
-        </li>
-        {% endif %}
-        {% endif %}
-
-        {% for i in range(end - start) %}
-        {% with p = start + i %}
-        <li clas="page-item">
-        {% if p + 1 == page %}
-        <span class="page-link active">{{ p + 1 }}</span>
-        {% else %}
-        <a class="page-link" href="{{ request_uri | append_query_param("page", p + 1)}}">{{p + 1}}</a>
-        {% endif %}
-        </li>
-        {% endwith %}
-        {% endfor %}
-        {% if end < (total_pages-1) %}
-        <li class="page-item">
-            <span class="page-link">...</span>
-        </li>
-        {% endif %}
-        {% if end < total_pages %}
-        <li class="page-item">
-            <a class="page-link" href="{{ request_uri | append_query_param("page", total_pages)}}">{{total_pages}}</a>
-        </li>
-        {% endif %}
-        {% endwith %}
-    </ul>
-</nav>
-{% endset %}
