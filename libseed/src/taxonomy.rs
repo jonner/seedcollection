@@ -198,7 +198,7 @@ impl FromRow<'_, SqliteRow> for Taxon {
 #[derive(Clone)]
 pub enum Filter {
     /// Match taxa with the given ID
-    Id(Cmp, i64),
+    Id(Cmp, <Taxon as Loadable>::Id),
 
     /// Match taxa with the given taxonomic rank
     Rank(Rank),
@@ -227,7 +227,7 @@ pub enum Filter {
     Minnesota(bool),
 
     /// Match taxa whose parent taxon has the given id
-    ParentId(i64),
+    ParentId(<Taxon as Loadable>::Id),
 }
 
 impl FilterPart for Filter {
@@ -290,7 +290,7 @@ pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
                         .push(Filter::Name2(part.to_string()))
                         .push(Filter::Name3(part.to_string()))
                         .push(Filter::Vernacular(part.to_string()));
-                    if let Ok(n) = part.parse::<i64>() {
+                    if let Ok(n) = part.parse::<<Taxon as Loadable>::Id>() {
                         builder = builder.push(Filter::Id(Cmp::NumericPrefix, n));
                     }
                     builder.build()
@@ -305,7 +305,7 @@ pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
 /// An object representing a particular taxon from the database
 pub struct Taxon {
     /// A unique ID that identifies this taxon in the database
-    pub id: i64,
+    pub id: <Taxon as Loadable>::Id,
 
     /// The taxonomic rank for this taxon
     pub rank: Rank,
@@ -329,7 +329,7 @@ pub struct Taxon {
     pub native_status: Option<NativeStatus>,
 
     /// The id of the parent taxon
-    pub parentid: Option<i64>,
+    pub parentid: Option<<Taxon as Loadable>::Id>,
 
     /// A sequence number that defines taxonomic order
     pub seq: Option<i64>,
@@ -514,7 +514,7 @@ mod tests {
     use sqlx::{Pool, Sqlite};
     use test_log::test;
 
-    const CANADA_WILD_RYE: i64 = 40683;
+    const CANADA_WILD_RYE: <Taxon as Loadable>::Id = 40683;
 
     #[test(sqlx::test(
         migrations = "../db/migrations/",

@@ -1,12 +1,15 @@
 //! Objects to manage the origin of seed samples
-use crate::core::{
-    database::Database,
-    error::{Error, Result},
-    loadable::{ExternalRef, Loadable},
-    query::{
-        DynFilterPart, LimitSpec, SortSpecs, ToSql,
-        filter::{Cmp, FilterPart, and},
+use crate::{
+    core::{
+        database::Database,
+        error::{Error, Result},
+        loadable::{ExternalRef, Loadable},
+        query::{
+            DynFilterPart, LimitSpec, SortSpecs, ToSql,
+            filter::{Cmp, FilterPart, and},
+        },
     },
+    user::User,
 };
 use async_trait::async_trait;
 use serde::Deserialize;
@@ -20,10 +23,10 @@ use sqlx::{prelude::*, sqlite::SqliteRow};
 #[derive(Clone)]
 pub enum Filter {
     /// Match the ID of the source to the given value
-    Id(i64),
+    Id(<Source as Loadable>::Id),
 
     /// Match the id of the source's user to the given value
-    UserId(i64),
+    UserId(<User as Loadable>::Id),
 
     /// Compare the name of the source to the given value
     Name(Cmp, String),
@@ -61,7 +64,7 @@ impl FilterPart for Filter {
 pub struct Source {
     /// A unique ID that identifies this source in the database
     #[sqlx(rename = "srcid")]
-    pub id: i64,
+    pub id: <Self as Loadable>::Id,
 
     /// The name of the source
     #[sqlx(rename = "srcname")]
@@ -80,7 +83,7 @@ pub struct Source {
     pub longitude: Option<f64>,
 
     /// The database user to whom this source belongs
-    pub userid: i64,
+    pub userid: <User as Loadable>::Id,
 }
 
 #[async_trait]
@@ -97,8 +100,8 @@ impl Loadable for Source {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
-        if self.id != -1 {
-            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
+        if self.id != Self::invalid_id() {
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id()));
         }
 
         let newval = sqlx::query_as(
@@ -149,7 +152,7 @@ impl Loadable for Source {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
-        if self.id < 0 {
+        if self.id == Self::invalid_id() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
 
@@ -213,7 +216,7 @@ impl Source {
 
     /// Loads all matching sources from the database for the given user
     pub async fn load_all_user(
-        userid: i64,
+        userid: <User as Loadable>::Id,
         filter: Option<DynFilterPart>,
         db: &Database,
     ) -> Result<Vec<Source>> {
@@ -240,7 +243,7 @@ impl Source {
         description: Option<String>,
         latitude: Option<f64>,
         longitude: Option<f64>,
-        userid: i64,
+        userid: <User as Loadable>::Id,
     ) -> Self {
         Self {
             id: Self::invalid_id(),
@@ -257,8 +260,8 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Source> {
     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
         Source::from_row(row).map(ExternalRef::Object).or_else(|_| {
             let srcid = row
-                // first try to decode srcid column as i64
-                .try_get::<i64, _>("srcid")
+                // first try to decode srcid column as an id
+                .try_get::<<Source as Loadable>::Id, _>("srcid")
                 .or_else(|_err| {
                     // earlier versions of the database used a TEXT type for srcid :/
                     row.try_get::<String, _>("srcid").and_then(|idstr| {
@@ -293,7 +296,7 @@ mod tests {
             desc: Option<String>,
             lat: Option<f64>,
             lon: Option<f64>,
-            userid: i64,
+            userid: <User as Loadable>::Id,
         ) {
             let mut src = Source::new(name, desc, lat, lon, userid);
             // full data

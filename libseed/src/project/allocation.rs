@@ -15,6 +15,7 @@ use crate::{
         },
     },
     sample::Sample,
+    user::User,
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -26,16 +27,16 @@ use sqlx::{QueryBuilder, Sqlite, prelude::*, sqlite::SqliteRow};
 #[derive(Clone)]
 pub enum Filter {
     /// Filter by the allocation ID (NOTE: this is different than the sample ID)
-    Id(i64),
+    Id(<AllocatedSample as Loadable>::Id),
 
     /// Filter based on the user ID of the sample
-    UserId(i64),
+    UserId(<User as Loadable>::Id),
 
     /// Filter based on the ID of the project that the sample is allocated to
-    ProjectId(i64),
+    ProjectId(<Project as Loadable>::Id),
 
     /// Filter based on the ID of the sample
-    SampleId(i64),
+    SampleId(<Sample as Loadable>::Id),
 
     /// Filter for samples whose first taxon name (often genus) matches the given string
     TaxonName1(Cmp, String),
@@ -137,7 +138,7 @@ impl FilterPart for Filter {
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct AllocatedSample {
     /// A unique ID representing this allocation in the database
-    pub id: i64,
+    pub id: <AllocatedSample as Loadable>::Id,
 
     /// The Sample associated with this allocation
     pub sample: Sample,

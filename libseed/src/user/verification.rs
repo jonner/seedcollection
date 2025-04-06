@@ -25,7 +25,7 @@ use crate::{
 pub struct UserVerification {
     /// the database ID for this user
     #[sqlx(rename = "uvid")]
-    pub id: i64,
+    pub id: <Self as Loadable>::Id,
     /// The user associated with this verification request
     #[sqlx(rename = "userid")]
     pub user: ExternalRef<User>,
@@ -99,7 +99,7 @@ impl UserVerification {
 
     /// Search the database for a user verification request with the given key
     pub async fn find(
-        userid: i64,
+        userid: <User as Loadable>::Id,
         key: &str,
         db: &Database,
     ) -> Result<UserVerification, VerificationError> {
@@ -238,8 +238,8 @@ impl Loadable for UserVerification {
 }
 
 pub enum Filter {
-    Id(i64),
-    Userid(i64),
+    Id(<UserVerification as Loadable>::Id),
+    Userid(<User as Loadable>::Id),
     Key(String),
 }
 
@@ -265,7 +265,7 @@ mod tests {
     // expires in an hour
     const KEY: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
     // user id associated with the valid key
-    const USERID: i64 = 1;
+    const USERID: <User as Loadable>::Id = 1;
 
     #[test(sqlx::test(
         migrations = "../db/migrations/",

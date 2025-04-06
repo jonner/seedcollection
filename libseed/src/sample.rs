@@ -35,19 +35,19 @@ pub enum Certainty {
 #[derive(Clone)]
 pub enum Filter {
     /// Compared the sample's ID with the given value
-    Id(Cmp, i64),
+    Id(Cmp, <Sample as Loadable>::Id),
 
     /// Matches Samples whose IDs are *not* contained in the given list
-    IdNotIn(Vec<i64>),
+    IdNotIn(Vec<<Sample as Loadable>::Id>),
 
     /// Compares the ID of a sample's [Source] with the given value
-    SourceId(Cmp, i64),
+    SourceId(Cmp, <Source as Loadable>::Id),
 
     /// Matches samples whose [Source] name contains the given string
     SourceName(Cmp, String),
 
     /// Compares the ID of the sample's [Taxon] with the given value
-    TaxonId(Cmp, i64),
+    TaxonId(Cmp, <Taxon as Loadable>::Id),
 
     /// Matches samples whose first [Taxon] name (typically genus) contains the given string
     TaxonName1(Cmp, String),
@@ -62,7 +62,7 @@ pub enum Filter {
     TaxonCommonName(Cmp, String),
 
     /// Matches samples whose user ID matches the given value
-    UserId(i64),
+    UserId(<User as Loadable>::Id),
 
     /// Compares the sample's note field with the given string value
     Notes(Cmp, String),
@@ -264,7 +264,7 @@ pub struct SampleStats {
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Sample {
     /// A unique ID to represent this sample
-    pub id: i64,
+    pub id: <Sample as Loadable>::Id,
     /// The user that is owns this sample
     pub user: ExternalRef<User>,
     /// The taxon associated with this seed sample
@@ -297,7 +297,7 @@ impl Loadable for Sample {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
-        if self.id != -1 {
+        if self.id != Self::invalid_id() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
         let newval = sqlx::query_as(
@@ -347,13 +347,13 @@ impl Loadable for Sample {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
-        if self.id < 0 {
+        if self.id == Self::invalid_id() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
-        if self.taxon.id() < 0 {
+        if self.taxon.id() == Taxon::invalid_id() {
             return Err(Error::InvalidStateMissingAttribute("taxon".to_string()));
         }
-        if self.source.id() < 0 {
+        if self.source.id() == Source::invalid_id() {
             return Err(Error::InvalidStateMissingAttribute("source".to_string()));
         }
 
@@ -427,9 +427,9 @@ impl Sample {
     /// invalid ID until it is inserted into the database.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        taxonid: i64,
-        userid: i64,
-        sourceid: i64,
+        taxonid: <Taxon as Loadable>::Id,
+        userid: <User as Loadable>::Id,
+        sourceid: <Source as Loadable>::Id,
         month: Option<u8>,
         year: Option<u32>,
         quantity: Option<f64>,
@@ -498,9 +498,9 @@ mod tests {
         #[allow(clippy::too_many_arguments)]
         async fn check(
             db: &Database,
-            taxon: i64,
-            user: i64,
-            source: i64,
+            taxon: <Taxon as Loadable>::Id,
+            user: <User as Loadable>::Id,
+            source: <Source as Loadable>::Id,
             quantity: Option<f64>,
             month: Option<u8>,
             year: Option<u32>,
