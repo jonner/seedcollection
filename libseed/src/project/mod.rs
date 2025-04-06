@@ -61,7 +61,7 @@ impl Loadable for Project {
         self.id = id
     }
 
-    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+    async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
         debug!(?self, "Inserting project into database");
         let newval = sqlx::query_as(
             "INSERT INTO sc_projects
@@ -76,7 +76,7 @@ impl Loadable for Project {
         .fetch_one(db.pool())
         .await?;
         *self = newval;
-        Ok(self.id)
+        Ok(&self.id)
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
@@ -254,7 +254,7 @@ impl Project {
             projectid: self.id,
             notes: Default::default(),
         };
-        allocation.insert(db).await
+        allocation.insert(db).await.copied()
     }
 
     /// Create a new project with the given data. It will initially have an
@@ -302,7 +302,9 @@ mod tests {
         ) {
             let mut c = Project::new(name, desc, userid);
             let id = c.insert(db).await.expect("failed to insert");
-            let cload = Project::load(id, db).await.expect("Failed to load project");
+            let cload = Project::load(*id, db)
+                .await
+                .expect("Failed to load project");
             assert_eq!(c, cload);
         }
 

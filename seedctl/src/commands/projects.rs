@@ -33,8 +33,7 @@ pub(crate) async fn handle_command(
             userid,
         } => {
             let mut project = Project::new(name, description, userid.unwrap_or(user.id));
-            let id = project.insert(db).await?;
-            let project = Project::load(id, db).await?;
+            project.insert(db).await?;
             println!("Added project to database:");
             println!("{}: {}", project.id, project.name);
             Ok(())
