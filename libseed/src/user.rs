@@ -3,7 +3,7 @@ use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{DynFilterPart, FilterPart, LimitSpec, SortSpecs, ToSql},
+    query::{DynFilterPart, LimitSpec, SortSpecs, ToSql, filter::FilterPart},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;

@@ -6,128 +6,140 @@ use serde::{
 };
 use std::{ops::Deref, str::FromStr, sync::Arc};
 
-/// An operator for combining filter parts to form a more complex filter expression
-#[derive(Clone)]
-pub enum Op {
-    Or,
-    And,
-}
+pub mod filter {
+    use super::DynFilterPart;
 
-#[derive(Clone)]
-/// An object that allows you easily build compound filters that can be applied to SQL queries
-pub struct CompoundFilterBuilder {
-    top: CompoundFilter,
-}
-
-impl CompoundFilterBuilder {
-    /// Create a new [CompoundFilterBuilder] object that will combine all filter
-    /// expressions using the given operator
-    pub fn new(op: Op) -> Self {
-        Self {
-            top: CompoundFilter::new(op),
-        }
+    /// An operator for combining filter parts to form a more complex filter expression
+    #[derive(Clone)]
+    pub enum Op {
+        Or,
+        And,
     }
 
-    /// Add a new filter expression to this compound filter. It will be combined
-    /// with all existing filter expressions using the operator that was specified in
-    /// the constructor.
-    pub fn push<F: Into<DynFilterPart>>(mut self, filter: F) -> Self {
-        self.top.add_filter(filter.into());
-        self
+    #[derive(Clone)]
+    /// An object that allows you easily build compound filters that can be applied to SQL queries
+    pub struct CompoundFilterBuilder {
+        pub(crate) top: CompoundFilter,
     }
 
-    /// Generate a new [CompoundFilter] object from this builder object
-    pub fn build(self) -> DynFilterPart {
-        self.top.into()
-    }
-}
-
-/// A Trait implemented by anything that can be a filter. It could be a single field or a
-/// multi-level compound filter condition.
-pub trait FilterPart: Send {
-    /// convert the given filter part to SQL syntax and add it to the given [sqlx::QueryBuilder] object
-    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>);
-}
-
-#[derive(Clone)]
-/// An object that represents one or more filter conditions that are combined by a single logical
-/// operator ([Op]). Multiple compound filters can be combined together into larger filter
-/// conditions
-pub struct CompoundFilter {
-    conditions: Vec<DynFilterPart>,
-    op: Op,
-}
-
-impl CompoundFilter {
-    /// Create a new compound filter object
-    pub fn new(op: Op) -> Self {
-        Self {
-            conditions: Default::default(),
-            op,
-        }
+    pub fn and() -> CompoundFilterBuilder {
+        CompoundFilterBuilder::new(Op::And)
     }
 
-    /// Create an builder object that is used for building compound filters
-    pub fn builder(op: Op) -> CompoundFilterBuilder {
-        CompoundFilterBuilder::new(op)
+    pub fn or() -> CompoundFilterBuilder {
+        CompoundFilterBuilder::new(Op::Or)
     }
 
-    /// Add a new filter expression to the current filter. It will be combined
-    /// with the operator [Op] that was specified in [CompoundFilter::new()]
-    pub fn add_filter(&mut self, filter: DynFilterPart) {
-        self.conditions.push(filter);
-    }
-}
-
-impl FilterPart for CompoundFilter {
-    fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
-        if self.conditions.is_empty() {
-            builder.push("TRUE");
-            return;
-        }
-
-        let mut first = true;
-        builder.push(" (");
-        let separator = match self.op {
-            Op::And => " AND ",
-            Op::Or => " OR ",
-        };
-
-        for cond in &self.conditions {
-            if first {
-                first = false;
-            } else {
-                builder.push(separator);
+    impl CompoundFilterBuilder {
+        /// Create a new [CompoundFilterBuilder] object that will combine all filter
+        /// expressions using the given operator
+        pub fn new(op: Op) -> Self {
+            Self {
+                top: CompoundFilter::new(op),
             }
-            cond.add_to_query(builder);
         }
-        builder.push(")");
+
+        /// Add a new filter expression to this compound filter. It will be combined
+        /// with all existing filter expressions using the operator that was specified in
+        /// the constructor.
+        pub fn push<F: Into<DynFilterPart>>(mut self, filter: F) -> Self {
+            self.top.add_filter(filter.into());
+            self
+        }
+
+        /// Generate a new [CompoundFilter] object from this builder object
+        pub fn build(self) -> DynFilterPart {
+            self.top.into()
+        }
     }
-}
 
-#[derive(Clone)]
-/// An object representing the comparison operator that is used in a filter expression
-pub enum Cmp {
-    Equal,
-    NotEqual,
-    Like,
-    LessThan,
-    GreaterThan,
-    LessThanEqual,
-    GreatherThanEqual,
-    NumericPrefix,
-}
+    /// A Trait implemented by anything that can be a filter. It could be a single field or a
+    /// multi-level compound filter condition.
+    pub trait FilterPart: Send {
+        /// convert the given filter part to SQL syntax and add it to the given [sqlx::QueryBuilder] object
+        fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>);
+    }
 
-impl std::fmt::Display for Cmp {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Cmp::Equal => write!(f, " IS "),
-            Cmp::NotEqual => write!(f, " IS NOT "),
-            Cmp::NumericPrefix | Cmp::Like => write!(f, " LIKE "),
-            Cmp::LessThan => write!(f, " < "),
-            Cmp::GreaterThan => write!(f, " != "),
-            Cmp::LessThanEqual => write!(f, " <= "),
-            Cmp::GreatherThanEqual => write!(f, " >= "),
+    #[derive(Clone)]
+    /// An object that represents one or more filter conditions that are combined by a single logical
+    /// operator ([Op]). Multiple compound filters can be combined together into larger filter
+    /// conditions
+    pub struct CompoundFilter {
+        pub(crate) conditions: Vec<DynFilterPart>,
+        pub(crate) op: Op,
+    }
+
+    impl CompoundFilter {
+        /// Create a new compound filter object
+        pub fn new(op: Op) -> Self {
+            Self {
+                conditions: Default::default(),
+                op,
+            }
+        }
+
+        /// Create an builder object that is used for building compound filters
+        pub fn builder(op: Op) -> CompoundFilterBuilder {
+            CompoundFilterBuilder::new(op)
+        }
+
+        /// Add a new filter expression to the current filter. It will be combined
+        /// with the operator [Op] that was specified in [CompoundFilter::new()]
+        pub fn add_filter(&mut self, filter: DynFilterPart) {
+            self.conditions.push(filter);
+        }
+    }
+
+    impl FilterPart for CompoundFilter {
+        fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
+            if self.conditions.is_empty() {
+                builder.push("TRUE");
+                return;
+            }
+
+            let mut first = true;
+            builder.push(" (");
+            let separator = match self.op {
+                Op::And => " AND ",
+                Op::Or => " OR ",
+            };
+
+            for cond in &self.conditions {
+                if first {
+                    first = false;
+                } else {
+                    builder.push(separator);
+                }
+                cond.add_to_query(builder);
+            }
+            builder.push(")");
+        }
+    }
+
+    #[derive(Clone)]
+    /// An object representing the comparison operator that is used in a filter expression
+    pub enum Cmp {
+        Equal,
+        NotEqual,
+        Like,
+        LessThan,
+        GreaterThan,
+        LessThanEqual,
+        GreatherThanEqual,
+        NumericPrefix,
+    }
+
+    impl std::fmt::Display for Cmp {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            match self {
+                Cmp::Equal => write!(f, " IS "),
+                Cmp::NotEqual => write!(f, " IS NOT "),
+                Cmp::NumericPrefix | Cmp::Like => write!(f, " LIKE "),
+                Cmp::LessThan => write!(f, " < "),
+                Cmp::GreaterThan => write!(f, " != "),
+                Cmp::LessThanEqual => write!(f, " <= "),
+                Cmp::GreatherThanEqual => write!(f, " >= "),
+            }
         }
     }
 }
@@ -261,10 +273,10 @@ impl<T: ToSql> From<Vec<T>> for SortSpecs<T> {
 }
 
 #[derive(Clone)]
-pub struct DynFilterPart(Arc<dyn FilterPart + Sync>);
+pub struct DynFilterPart(Arc<dyn filter::FilterPart + Sync>);
 
 impl Deref for DynFilterPart {
-    type Target = Arc<dyn FilterPart + Sync>;
+    type Target = Arc<dyn filter::FilterPart + Sync>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -273,7 +285,7 @@ impl Deref for DynFilterPart {
 
 impl<F> From<F> for DynFilterPart
 where
-    F: FilterPart + Send + Sync + 'static,
+    F: filter::FilterPart + Send + Sync + 'static,
 {
     fn from(value: F) -> Self {
         DynFilterPart(Arc::new(value))

@@ -13,7 +13,7 @@ use libseed::{
     Error::DatabaseError,
     core::{
         loadable::Loadable,
-        query::{Cmp, CompoundFilter, Op},
+        query::filter::{Cmp, and},
     },
     taxonomy::{self, Taxon, quickfind},
 };
@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
                     true => Some(true),
                     false => None,
                 };
-                let mut filter = CompoundFilter::builder(Op::And);
+                let mut filter = and();
                 if let Some(id) = None {
                     filter = filter.push(taxonomy::Filter::Id(Cmp::Equal, id));
                 }

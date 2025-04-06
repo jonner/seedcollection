@@ -16,10 +16,7 @@ use axum::{
 };
 use axum_template::RenderHtml;
 use libseed::{
-    core::{
-        loadable::Loadable,
-        query::{CompoundFilter, Op},
-    },
+    core::{loadable::Loadable, query::filter::and},
     empty_string_as_none,
     project::{self, AllocatedSample, Note, NoteType, Project, allocation},
 };
@@ -51,7 +48,7 @@ async fn show_allocation(
     // make sure that this is our sample
     let mut allocation = AllocatedSample::load_one(
         Some(
-            CompoundFilter::builder(Op::And)
+            and()
                 .push(allocation::Filter::Id(allocid))
                 .push(allocation::Filter::UserId(user.id))
                 .push(allocation::Filter::ProjectId(projectid))
@@ -111,7 +108,7 @@ async fn add_allocation_note(
     // just querying to make sure that this is our sample
     let _alloc = match AllocatedSample::load_one(
         Some(
-            CompoundFilter::builder(Op::And)
+            and()
                 .push(allocation::Filter::Id(allocid))
                 .push(allocation::Filter::UserId(user.id))
                 .push(allocation::Filter::ProjectId(projectid))
@@ -186,7 +183,7 @@ async fn show_add_allocation_note(
 ) -> Result<impl IntoResponse, Error> {
     let allocation = AllocatedSample::load_one(
         Some(
-            CompoundFilter::builder(Op::And)
+            and()
                 .push(allocation::Filter::Id(allocid))
                 .push(allocation::Filter::UserId(user.id))
                 .push(allocation::Filter::ProjectId(projectid))

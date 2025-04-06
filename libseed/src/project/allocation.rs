@@ -10,8 +10,8 @@ use crate::{
         error::Result,
         loadable::Loadable,
         query::{
-            Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortOrder, SortSpec,
-            SortSpecs, ToSql,
+            DynFilterPart, LimitSpec, SortOrder, SortSpec, SortSpecs, ToSql,
+            filter::{Cmp, FilterPart, or},
         },
     },
     sample::Sample,
@@ -59,8 +59,7 @@ pub enum Filter {
 /// Creates a query filter to match an [Allocation] object when the any of the
 /// components of the sample's taxon name matches the given `substr`
 pub fn taxon_name_like(substr: &str) -> DynFilterPart {
-    CompoundFilter::builder(Op::Or)
-        .push(Filter::TaxonName1(Cmp::Like, substr.into()))
+    or().push(Filter::TaxonName1(Cmp::Like, substr.into()))
         .push(Filter::TaxonName2(Cmp::Like, substr.into()))
         .push(Filter::TaxonName3(Cmp::Like, substr.into()))
         .push(Filter::TaxonCommonName(Cmp::Like, substr.into()))

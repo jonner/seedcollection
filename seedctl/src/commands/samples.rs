@@ -14,7 +14,10 @@ use libseed::{
     core::{
         database::Database,
         loadable::{ExternalRef, Loadable},
-        query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
+        query::{
+            SortOrder, SortSpec, SortSpecs,
+            filter::{Cmp, and, or},
+        },
     },
     sample::{self, Certainty, Sample},
     user::User,
@@ -36,9 +39,9 @@ pub(crate) async fn handle_command(
             output,
             rank,
         } => {
-            let mut builder = CompoundFilter::builder(Op::And);
+            let mut builder = and();
             if let Some(s) = filter {
-                let fbuilder = CompoundFilter::builder(Op::Or)
+                let fbuilder = or()
                     .push(sample::taxon_name_like(&s))
                     .push(sample::Filter::SourceName(Cmp::Like, s.clone()))
                     .push(sample::Filter::Notes(Cmp::Like, s.clone()));
@@ -330,7 +333,7 @@ pub(crate) async fn handle_command(
         SampleCommands::Stats { all } => {
             let filter = match all {
                 false => {
-                    let mut builder = CompoundFilter::builder(Op::And);
+                    let mut builder = and();
                     builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0));
                     Some(builder.build())
                 }

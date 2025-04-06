@@ -13,7 +13,7 @@ use libseed::{
     core::{
         database::Database,
         loadable::Loadable,
-        query::{Cmp, CompoundFilter, Op},
+        query::filter::{Cmp, or},
     },
     source::{self, Source},
     user::User,
@@ -32,8 +32,7 @@ pub(crate) async fn handle_command(
             user: useronly,
         } => {
             let filter = filter.map(|f| {
-                CompoundFilter::builder(Op::Or)
-                    .push(source::Filter::Name(Cmp::Like, f.clone()))
+                or().push(source::Filter::Name(Cmp::Like, f.clone()))
                     .push(source::Filter::Description(Cmp::Like, f.clone()))
                     .build()
             });

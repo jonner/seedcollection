@@ -19,7 +19,10 @@ use futures::future::try_join_all;
 use libseed::{
     core::{
         loadable::{ExternalRef, Loadable},
-        query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec, SortSpecs},
+        query::{
+            SortOrder, SortSpec, SortSpecs,
+            filter::{Cmp, or},
+        },
     },
     empty_string_as_none,
     project::{AllocatedSample, Project, allocation},
@@ -62,7 +65,7 @@ async fn list_samples(
 
     let filter = params.filter.as_ref().map(|f| {
         let idprefix: Result<i64, _> = f.parse();
-        let mut builder = CompoundFilter::builder(Op::Or)
+        let mut builder = or()
             .push(sample::Filter::UserId(user.id))
             .push(sample::taxon_name_like(f))
             .push(sample::Filter::Notes(Cmp::Like, f.clone()))

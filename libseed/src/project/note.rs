@@ -3,7 +3,7 @@ use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::Loadable,
-    query::{DynFilterPart, FilterPart, LimitSpec, SortSpecs, ToSql},
+    query::{DynFilterPart, LimitSpec, SortSpecs, ToSql, filter::FilterPart},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

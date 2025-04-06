@@ -18,7 +18,10 @@ use axum_template::RenderHtml;
 use libseed::{
     core::{
         loadable::Loadable,
-        query::{Cmp, CompoundFilter, Op, SortOrder, SortSpec},
+        query::{
+            SortOrder, SortSpec,
+            filter::{Cmp, and, or},
+        },
     },
     empty_string_as_none,
     project::{
@@ -61,12 +64,11 @@ async fn list_projects(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, Error> {
     trace!(?params, "Listing projects");
-    let mut fbuilder = CompoundFilter::builder(Op::And).push(project::Filter::User(user.id));
+    let mut fbuilder = and().push(project::Filter::User(user.id));
     let namefilter = params.and_then(|p| {
         p.filter.map(|filterstring| {
             debug!(?filterstring, "Got project filter");
-            CompoundFilter::builder(Op::Or)
-                .push(project::Filter::Name(Cmp::Like, filterstring.clone()))
+            or().push(project::Filter::Name(Cmp::Like, filterstring.clone()))
                 .push(project::Filter::Description(
                     Cmp::Like,
                     filterstring.clone(),
@@ -183,7 +185,7 @@ async fn show_project(
     headers: HeaderMap,
 ) -> Result<impl IntoResponse, Error> {
     let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
-    let fb = CompoundFilter::builder(Op::And)
+    let fb = and()
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
 
@@ -199,8 +201,7 @@ async fn show_project(
     );
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
-            CompoundFilter::builder(Op::Or)
-                .push(taxon_name_like(fragment))
+            or().push(taxon_name_like(fragment))
                 .push(allocation::Filter::SourceName(Cmp::Like, fragment.clone()))
                 .push(allocation::Filter::Notes(Cmp::Like, fragment.clone()))
                 .build(),
@@ -274,7 +275,7 @@ async fn modify_project(
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let fb = CompoundFilter::builder(Op::And)
+    let fb = and()
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
     let projects = Project::load_all(Some(fb.build()), None, None, &state.db).await?;
@@ -385,7 +386,7 @@ async fn add_sample_prep(
      */
     let samples = Sample::load_all(
         Some(
-            CompoundFilter::builder(Op::And)
+            and()
                 .push(sample::Filter::IdNotIn(ids))
                 .push(sample::Filter::UserId(user.id))
                 .build(),
@@ -435,7 +436,7 @@ async fn add_sample(
         // FIXME: maybe display a proper error message?
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
-    let mut fb = CompoundFilter::builder(Op::Or);
+    let mut fb = or();
     for id in &toadd {
         fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
     }

@@ -3,7 +3,10 @@ use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortSpecs, ToSql},
+    query::{
+        DynFilterPart, LimitSpec, SortSpecs, ToSql,
+        filter::{Cmp, FilterPart, and, or},
+    },
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::IntoDeserializer};
@@ -279,10 +282,10 @@ pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
         true => None,
         false => {
             let parts = taxon.split(' ');
-            let mut filter = CompoundFilter::builder(Op::And);
+            let mut filter = and();
             for part in parts {
                 filter = filter.push({
-                    let mut builder = CompoundFilter::builder(Op::Or)
+                    let mut builder = or()
                         .push(Filter::Name1(part.to_string()))
                         .push(Filter::Name2(part.to_string()))
                         .push(Filter::Name3(part.to_string()))
