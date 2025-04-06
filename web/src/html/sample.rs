@@ -63,6 +63,7 @@ async fn list_samples(
     let filter = params.filter.as_ref().map(|f| {
         let idprefix: Result<i64, _> = f.parse();
         let mut builder = CompoundFilter::builder(Op::Or)
+            .push(sample::Filter::UserId(user.id))
             .push(sample::taxon_name_like(f))
             .push(sample::Filter::Notes(Cmp::Like, f.clone()))
             .push(sample::Filter::SourceName(Cmp::Like, f.clone()));
@@ -112,7 +113,7 @@ async fn list_samples(
             selected: matches!(field, SortField::Quantity),
         },
     ];
-    match Sample::load_all_user(user.id, filter, sort, &state.db).await {
+    match Sample::load_all(filter, sort, None, &state.db).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),

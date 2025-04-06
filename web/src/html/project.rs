@@ -383,9 +383,14 @@ async fn add_sample_prep(
      * [ query ids first ], then
      *  'WHERE NOT IN (1, 2, 3, 4, 5...)'
      */
-    let samples = Sample::load_all_user(
-        user.id,
-        Some(sample::Filter::IdNotIn(ids).into()),
+    let samples = Sample::load_all(
+        Some(
+            CompoundFilter::builder(Op::And)
+                .push(sample::Filter::IdNotIn(ids))
+                .push(sample::Filter::UserId(user.id))
+                .build(),
+        ),
+        None,
         None,
         &state.db,
     )
@@ -434,7 +439,8 @@ async fn add_sample(
     for id in &toadd {
         fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
     }
-    let valid_samples = Sample::load_all_user(user.id, Some(fb.build()), None, &state.db).await?;
+    fb = fb.push(sample::Filter::UserId(user.id));
+    let valid_samples = Sample::load_all(Some(fb.build()), None, None, &state.db).await?;
 
     let valid_ids = valid_samples
         .iter()

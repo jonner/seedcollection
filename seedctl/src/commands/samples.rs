@@ -50,7 +50,6 @@ pub(crate) async fn handle_command(
             if let Some(rank) = rank {
                 builder = builder.push(sample::Filter::TaxonRank(Cmp::GreatherThanEqual, rank))
             }
-            let filter = builder.build();
             let sort = sort.map(|vec| {
                 let order = match reverse {
                     true => SortOrder::Descending,
@@ -76,10 +75,11 @@ pub(crate) async fn handle_command(
                         .collect(),
                 )
             });
-            let samples = match useronly {
-                true => Sample::load_all_user(user.id, Some(filter), sort, db).await?,
-                false => Sample::load_all(Some(filter), sort, None, db).await?,
-            };
+            if useronly {
+                builder = builder.push(sample::Filter::UserId(user.id));
+            }
+            let filter = builder.build();
+            let samples = Sample::load_all(Some(filter), sort, None, db).await?;
             let str = match output.full {
                 true => {
                     let records = samples

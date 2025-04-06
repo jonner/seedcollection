@@ -180,9 +180,14 @@ async fn show_taxon(
     })?;
     let hierarchy = taxon.fetch_hierarchy(&state.db).await?;
     let children = taxon.fetch_children(&state.db).await?;
-    let samples = Sample::load_all_user(
-        user.id,
-        Some(sample::Filter::TaxonId(Cmp::Equal, id).into()),
+    let samples = Sample::load_all(
+        Some(
+            CompoundFilter::builder(Op::And)
+                .push(sample::Filter::TaxonId(Cmp::Equal, id))
+                .push(sample::Filter::UserId(user.id))
+                .build(),
+        ),
+        None,
         None,
         &state.db,
     )

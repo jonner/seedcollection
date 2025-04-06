@@ -87,9 +87,14 @@ async fn show_source(
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, Error> {
     let src = Source::load(id, &state.db).await?;
-    let samples = Sample::load_all_user(
-        user.id,
-        Some(Filter::SourceId(Cmp::Equal, id).into()),
+    let samples = Sample::load_all(
+        Some(
+            CompoundFilter::builder(Op::And)
+                .push(Filter::SourceId(Cmp::Equal, id))
+                .push(Filter::UserId(user.id))
+                .build(),
+        ),
+        None,
         None,
         &state.db,
     )
@@ -162,9 +167,14 @@ async fn update_source(
             Some([("HX-Redirect", app_url(&format!("/source/{id}")))]),
         ),
     };
-    let samples = Sample::load_all_user(
-        user.id,
-        Some(Filter::SourceId(Cmp::Equal, id).into()),
+    let samples = Sample::load_all(
+        Some(
+            CompoundFilter::builder(Op::And)
+                .push(Filter::SourceId(Cmp::Equal, id))
+                .push(Filter::UserId(user.id))
+                .build(),
+        ),
+        None,
         None,
         &state.db,
     )
