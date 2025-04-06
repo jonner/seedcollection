@@ -100,7 +100,7 @@ impl Loadable for Source {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
-        if self.id != Self::invalid_id() {
+        if self.exists() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id()));
         }
 
@@ -152,7 +152,7 @@ impl Loadable for Source {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
-        if self.id == Self::invalid_id() {
+        if !self.exists() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
 

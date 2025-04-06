@@ -28,7 +28,7 @@ impl Indexable for i64 {
 #[async_trait]
 pub trait Loadable {
     /// The type of the ID for this object in the database
-    type Id: Clone + Send + Indexable + sqlx::Type<sqlx::Sqlite>;
+    type Id: Clone + Send + Indexable + sqlx::Type<sqlx::Sqlite> + PartialEq;
     type Sort: ToSql;
 
     /// return the ID associated with this particular object
@@ -70,6 +70,10 @@ pub trait Loadable {
 
     fn invalid_id() -> Self::Id {
         Self::Id::invalid_value()
+    }
+
+    fn exists(&self) -> bool {
+        self.id() != Self::invalid_id()
     }
 }
 

@@ -62,6 +62,9 @@ impl Loadable for Project {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
+        if self.exists() {
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id()));
+        }
         debug!(?self, "Inserting project into database");
         let newval = sqlx::query_as(
             "INSERT INTO sc_projects
@@ -110,11 +113,11 @@ impl Loadable for Project {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
+        if !self.exists() {
+            return Err(Error::InvalidUpdateObjectNotFound);
+        }
         if self.name.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("name".to_string()));
-        }
-        if self.id < 0 {
-            return Err(Error::InvalidStateMissingAttribute("id".to_string()));
         }
         debug!(?self, "Updating project in database");
         sqlx::query(

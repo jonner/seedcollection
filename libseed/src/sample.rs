@@ -297,7 +297,7 @@ impl Loadable for Sample {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
-        if self.id != Self::invalid_id() {
+        if self.exists() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
         let newval = sqlx::query_as(
@@ -347,7 +347,7 @@ impl Loadable for Sample {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
-        if self.id == Self::invalid_id() {
+        if !self.exists() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
         if self.taxon.id() == Taxon::invalid_id() {

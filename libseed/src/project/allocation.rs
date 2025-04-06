@@ -166,6 +166,9 @@ impl Loadable for AllocatedSample {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
+        if self.exists() {
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id()));
+        }
         let newval = sqlx::query_as(
             "INSERT INTO sc_project_samples
                 (projectid, sampleid)
