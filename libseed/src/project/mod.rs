@@ -10,6 +10,7 @@ use crate::{
         },
     },
     sample::Sample,
+    user::User,
 };
 pub use allocation::AllocatedSample;
 use async_trait::async_trait;
@@ -28,7 +29,7 @@ pub mod note;
 pub struct Project {
     /// A unique ID that identifies this project in the database
     #[sqlx(rename = "projectid")]
-    pub id: i64,
+    pub id: <Self as Loadable>::Id,
 
     /// A short name for this project
     #[sqlx(rename = "projname")]
@@ -44,7 +45,7 @@ pub struct Project {
     pub allocations: Vec<AllocatedSample>,
 
     /// The user that owns this project
-    pub userid: i64,
+    pub userid: <User as Loadable>::Id,
 }
 
 #[async_trait]
@@ -133,10 +134,10 @@ impl Loadable for Project {
 #[derive(Clone)]
 pub enum Filter {
     /// Filter by project ID
-    Id(i64),
+    Id(<Project as Loadable>::Id),
 
     /// Filter by the id of the user that owns the project
-    User(i64),
+    User(<User as Loadable>::Id),
 
     /// Filter by a string that uses [Cmp] to compare to the project name
     Name(Cmp, String),
@@ -258,7 +259,7 @@ impl Project {
 
     /// Create a new project with the given data. It will initially have an
     /// invalid ID until it is inserted into the database.
-    pub fn new(name: String, description: Option<String>, userid: i64) -> Self {
+    pub fn new(name: String, description: Option<String>, userid: <User as Loadable>::Id) -> Self {
         Self {
             id: Self::invalid_id(),
             name,
@@ -279,11 +280,12 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Project> {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::database::Database;
-    use crate::core::loadable::Loadable;
-    use crate::project::Project;
-    use sqlx::Pool;
-    use sqlx::Sqlite;
+    use crate::{
+        core::{database::Database, loadable::Loadable},
+        project::Project,
+        user::User,
+    };
+    use sqlx::{Pool, Sqlite};
     use test_log::test;
 
     #[test(sqlx::test(
@@ -292,7 +294,12 @@ mod tests {
     ))]
     async fn test_insert_projects(pool: Pool<Sqlite>) {
         let db = Database::from(pool);
-        async fn check(db: &Database, name: String, desc: Option<String>, userid: i64) {
+        async fn check(
+            db: &Database,
+            name: String,
+            desc: Option<String>,
+            userid: <User as Loadable>::Id,
+        ) {
             let mut c = Project::new(name, desc, userid);
             let id = c.insert(db).await.expect("failed to insert");
             let cload = Project::load(id, db).await.expect("Failed to load project");

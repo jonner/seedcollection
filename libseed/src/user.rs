@@ -24,7 +24,7 @@ pub enum UserStatus {
 }
 
 enum Filter {
-    Id(i64),
+    Id(<User as Loadable>::Id),
     Username(String),
 }
 
@@ -43,7 +43,7 @@ impl FilterPart for Filter {
 pub struct User {
     /// the database ID for this user
     #[sqlx(rename = "userid")]
-    pub id: i64,
+    pub id: <Self as Loadable>::Id,
 
     /// the username for this user
     pub username: String,
@@ -152,7 +152,7 @@ impl Loadable for User {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
-        if self.id < 0 {
+        if self.id == Self::invalid_id() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
 
@@ -483,7 +483,7 @@ mod tests {
         let db = Database::from(pool);
         // expires in an hour
         const KEY: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
-        const USERID: i64 = 1;
+        const USERID: <User as Loadable>::Id = 1;
 
         // make sure that the user is unverified before this
         let mut user = User::load(USERID, &db).await.expect("Failed to load user");
@@ -506,7 +506,7 @@ mod tests {
         let db = Database::from(pool);
         // expires in an hour
         const KEY: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
-        const WRONG_USERID: i64 = 2;
+        const WRONG_USERID: <User as Loadable>::Id = 2;
 
         // make sure that the user is unverified before this
         let mut user = User::load(WRONG_USERID, &db)

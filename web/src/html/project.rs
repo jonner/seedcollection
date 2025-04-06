@@ -179,7 +179,7 @@ struct ShowProjectQueryParams {
 async fn show_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    Path(id): Path<i64>,
+    Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
     query: Result<Query<ShowProjectQueryParams>, QueryRejection>,
     headers: HeaderMap,
@@ -257,7 +257,11 @@ async fn show_project(
     .into_response())
 }
 
-async fn do_update(id: i64, params: &ProjectParams, state: &AppState) -> Result<Project, Error> {
+async fn do_update(
+    id: <Project as Loadable>::Id,
+    params: &ProjectParams,
+    state: &AppState,
+) -> Result<Project, Error> {
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
@@ -271,7 +275,7 @@ async fn do_update(id: i64, params: &ProjectParams, state: &AppState) -> Result<
 async fn modify_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    Path(id): Path<i64>,
+    Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
@@ -318,7 +322,7 @@ async fn modify_project(
 async fn delete_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    Path(id): Path<i64>,
+    Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load(id, &state.db)
@@ -365,7 +369,7 @@ async fn delete_project(
 
 async fn add_sample_prep(
     user: &SqliteUser,
-    id: i64,
+    id: <Project as Loadable>::Id,
     state: &AppState,
 ) -> Result<(Project, Vec<Sample>), Error> {
     let project = Project::load(id, &state.db).await?;
@@ -403,7 +407,7 @@ async fn show_add_sample(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path(id): Path<i64>,
+    Path(id): Path<<Project as Loadable>::Id>,
 ) -> Result<impl IntoResponse, Error> {
     let (project, samples) = add_sample_prep(&user, id, &state).await?;
     Ok(RenderHtml(
@@ -420,14 +424,14 @@ async fn add_sample(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Path(id): Path<i64>,
+    Path(id): Path<<Project as Loadable>::Id>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, Error> {
     let mut messages = Vec::new();
-    let toadd: HashSet<i64> = params
+    let toadd: HashSet<<Sample as Loadable>::Id> = params
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
-            "sample" => value.parse::<i64>().ok(),
+            "sample" => value.parse::<<Sample as Loadable>::Id>().ok(),
             _ => None,
         })
         .collect();
@@ -446,7 +450,7 @@ async fn add_sample(
     let valid_ids = valid_samples
         .iter()
         .map(|s| s.id())
-        .collect::<HashSet<i64>>();
+        .collect::<HashSet<<Sample as Loadable>::Id>>();
     let invalid = &toadd - &valid_ids;
     if !invalid.is_empty() {
         warn!("Some samples dropped, possibly because they were not owned by user {user:?}");

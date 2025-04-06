@@ -12,6 +12,8 @@ use strum_macros::EnumIter;
 use time::Date;
 use tracing::debug;
 
+use super::AllocatedSample;
+
 /// A category for a note
 #[derive(sqlx::Type, Debug, Copy, Clone, Serialize, Deserialize, EnumIter, PartialEq)]
 #[repr(i64)]
@@ -36,10 +38,10 @@ pub enum NoteType {
 #[derive(Clone)]
 pub enum NoteFilter {
     /// Filter against the ID of the note
-    Id(i64),
+    Id(<Note as Loadable>::Id),
 
     /// Filter against the ID of the associated [Allocation](super::Allocation) object
-    AllocationId(i64),
+    AllocationId(<AllocatedSample as Loadable>::Id),
 }
 
 /// An object that represents a project-specific note tied to a particular [Allocation](super::Allocation) object
@@ -47,10 +49,10 @@ pub enum NoteFilter {
 pub struct Note {
     /// A unique ID that identifies this note in the database
     #[sqlx(rename = "pnoteid")]
-    pub id: i64,
+    pub id: <Self as Loadable>::Id,
 
     /// the ID of the allocation that is associated with this note
-    pub psid: i64,
+    pub psid: <AllocatedSample as Loadable>::Id,
 
     /// The date that this note was added to the database
     #[sqlx(rename = "notedate")]
@@ -83,6 +85,9 @@ impl Loadable for Note {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+        if self.id != Self::invalid_id() {
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
+        }
         if self.summary.is_empty() {
             return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
         }
@@ -162,7 +167,7 @@ impl FilterPart for NoteFilter {
 impl Note {
     /// Create a new Note. It will initially have an invalid ID until it is inserted into the database.
     pub fn new(
-        psid: i64,
+        psid: <AllocatedSample as Loadable>::Id,
         date: Date,
         kind: NoteType,
         summary: String,
