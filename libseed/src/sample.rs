@@ -374,22 +374,6 @@ impl Sample {
         builder
     }
 
-    /// Loads all matching samples from the database for the given user
-    pub async fn load_all_user(
-        userid: i64,
-        filter: Option<DynFilterPart>,
-        sort: Option<SortSpecs<SortField>>,
-        db: &Database,
-    ) -> Result<Vec<Sample>> {
-        let mut fbuilder = CompoundFilter::builder(Op::And).push(Filter::UserId(userid));
-        if let Some(f) = filter {
-            fbuilder = fbuilder.push(f);
-        }
-        let newfilter = fbuilder.build();
-        let mut builder = Self::query_builder(Some(newfilter), sort, None);
-        Ok(builder.build_query_as().fetch_all(db.pool()).await?)
-    }
-
     /// Queries the count of all matching samples from the database
     pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
         let mut builder = Self::stats_query_builder(filter);
