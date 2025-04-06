@@ -87,6 +87,9 @@ impl Loadable for User {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
+        if self.exists() {
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id()));
+        }
         if self.username.trim().is_empty() {
             return Err(Error::InvalidStateMissingAttribute("username".to_string()));
         }
@@ -152,7 +155,7 @@ impl Loadable for User {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
-        if self.id == Self::invalid_id() {
+        if !self.exists() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
 
@@ -322,7 +325,7 @@ impl User {
     }
 
     pub async fn generate_verification_request(&self, db: &Database) -> Result<UserVerification> {
-        if !self.id() == Self::invalid_id() {
+        if !self.exists() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
         let mut uv = UserVerification::new(self.clone().into(), None);

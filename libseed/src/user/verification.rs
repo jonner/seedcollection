@@ -159,7 +159,7 @@ impl Loadable for UserVerification {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
-        if self.id != Self::invalid_id() {
+        if self.exists() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
         self.requested = Some(OffsetDateTime::now_utc());
@@ -213,7 +213,7 @@ impl Loadable for UserVerification {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
-        if self.id == Self::invalid_id() {
+        if !self.exists() {
             return Err(Error::InvalidUpdateObjectNotFound);
         }
         if self.requested.is_none() {

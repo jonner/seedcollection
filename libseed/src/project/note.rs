@@ -85,7 +85,7 @@ impl Loadable for Note {
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
-        if self.id != Self::invalid_id() {
+        if self.exists() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
         if self.summary.is_empty() {
@@ -138,6 +138,10 @@ impl Loadable for Note {
     }
 
     async fn update(&self, db: &Database) -> Result<()> {
+        if !self.exists() {
+            return Err(Error::InvalidUpdateObjectNotFound);
+        }
+
         debug!(?self, "Updating note in database");
         sqlx::query(
             r#"UPDATE sc_project_notes
