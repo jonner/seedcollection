@@ -351,6 +351,10 @@ impl Loadable for Taxon {
         self.id = id
     }
 
+    async fn insert(&mut self, _db: &Database) -> Result<Self::Id> {
+        return Err(Error::InvalidOperation("Can't insert new taxon".into()));
+    }
+
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         let mut builder = Taxon::query_builder(Some(Filter::Id(Cmp::Equal, id).into()), None, None);
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)

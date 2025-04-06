@@ -164,6 +164,22 @@ impl Loadable for AllocatedSample {
         self.id = id
     }
 
+    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+        let newval = sqlx::query_as(
+            "INSERT INTO sc_project_samples
+                (projectid, sampleid)
+            VALUES
+                (?, ?)
+            RETURNING *",
+        )
+        .bind(self.projectid)
+        .bind(self.sample.id)
+        .fetch_one(db.pool())
+        .await?;
+        *self = newval;
+        Ok(self.id)
+    }
+
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         let mut builder = Self::query_builder(Some(Filter::Id(id).into()), None, None);
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)

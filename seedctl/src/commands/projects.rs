@@ -8,12 +8,9 @@ use crate::{
 };
 use anyhow::Result;
 use libseed::{
-    core::{
-        database::Database,
-        loadable::{ExternalRef, Loadable},
-        query::filter::and,
-    },
+    core::{database::Database, loadable::Loadable, query::filter::and},
     project::{AllocatedSample, Project, allocation},
+    sample::Sample,
     user::User,
 };
 
@@ -65,9 +62,8 @@ pub(crate) async fn handle_command(
         }
         ProjectCommands::AddSample { project, sample } => {
             let mut project = Project::load(project, db).await?;
-            project
-                .allocate_sample(ExternalRef::Stub(sample), db)
-                .await?;
+            let sample = Sample::load(sample, db).await?;
+            project.allocate_sample(sample, db).await?;
             println!("Added sample to project");
             Ok(())
         }

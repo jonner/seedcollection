@@ -86,6 +86,41 @@ impl Loadable for User {
         self.id = id
     }
 
+    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+        if self.username.trim().is_empty() {
+            return Err(Error::InvalidStateMissingAttribute("username".to_string()));
+        }
+        if self.email.trim().is_empty() {
+            return Err(Error::InvalidStateMissingAttribute("email".to_string()));
+        }
+        debug!(?self, "Inserting user into database");
+        // Don't insert the register_date, the database will set it to the current timestamp
+        let user = sqlx::query_as(
+            r#"INSERT INTO
+                sc_users
+                (
+                    username,
+                    useremail,
+                    pwhash,
+                    userstatus,
+                    userdisplayname,
+                    userprofile
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                RETURNING *"#,
+        )
+        .bind(&self.username)
+        .bind(&self.email)
+        .bind(&self.pwhash)
+        .bind(&self.status)
+        .bind(&self.display_name)
+        .bind(&self.profile)
+        .fetch_one(db.pool())
+        .await?;
+        *self = user;
+        Ok(self.id)
+    }
+
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         Self::query_builder(Some(Filter::Id(id).into()), None, None)
             .build_query_as()
@@ -245,42 +280,6 @@ impl User {
             display_name,
             profile,
         }
-    }
-
-    /// Insert a new row into the database with the values stored in this object
-    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
-        if self.username.trim().is_empty() {
-            return Err(Error::InvalidStateMissingAttribute("username".to_string()));
-        }
-        if self.email.trim().is_empty() {
-            return Err(Error::InvalidStateMissingAttribute("email".to_string()));
-        }
-        debug!(?self, "Inserting user into database");
-        // Don't insert the register_date, the database will set it to the current timestamp
-        let user = sqlx::query_as(
-            r#"INSERT INTO
-                sc_users
-                (
-                    username,
-                    useremail,
-                    pwhash,
-                    userstatus,
-                    userdisplayname,
-                    userprofile
-                )
-                VALUES (?, ?, ?, ?, ?, ?)
-                RETURNING *"#,
-        )
-        .bind(&self.username)
-        .bind(&self.email)
-        .bind(&self.pwhash)
-        .bind(&self.status)
-        .bind(&self.display_name)
-        .bind(&self.profile)
-        .fetch_one(db.pool())
-        .await?;
-        *self = user;
-        Ok(self.id)
     }
 
     pub fn validate_username(username: &str) -> Result<()> {

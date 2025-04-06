@@ -82,6 +82,27 @@ impl Loadable for Note {
         self.id = id
     }
 
+    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+        if self.summary.is_empty() {
+            return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
+        }
+        debug!(?self, "Inserting note into database");
+        let newval = sqlx::query_as(
+            r#"INSERT INTO sc_project_notes
+            (psid, notedate, notetype, notesummary, notedetails)
+            VALUES (?, ?, ?, ?, ?) RETURNING *"#,
+        )
+        .bind(self.psid)
+        .bind(self.date)
+        .bind(self.kind as i64)
+        .bind(&self.summary)
+        .bind(&self.details)
+        .fetch_one(db.pool())
+        .await?;
+        *self = newval;
+        Ok(self.id)
+    }
+
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         Self::query_builder(Some(NoteFilter::Id(id).into()), None, None)
             .build_query_as()
@@ -178,29 +199,6 @@ impl Note {
         }
         tracing::debug!("GENERATED SQL: {}", builder.sql());
         builder
-    }
-
-    /// Insert this note into the database. If successful, the ID of the note
-    /// object will be updated to match the ID of the newly-inserted row.
-    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
-        if self.summary.is_empty() {
-            return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
-        }
-        debug!(?self, "Inserting note into database");
-        let newval = sqlx::query_as(
-            r#"INSERT INTO sc_project_notes
-            (psid, notedate, notetype, notesummary, notedetails)
-            VALUES (?, ?, ?, ?, ?) RETURNING *"#,
-        )
-        .bind(self.psid)
-        .bind(self.date)
-        .bind(self.kind as i64)
-        .bind(&self.summary)
-        .bind(&self.details)
-        .fetch_one(db.pool())
-        .await?;
-        *self = newval;
-        Ok(self.id)
     }
 }
 

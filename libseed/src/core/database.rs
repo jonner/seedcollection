@@ -1,5 +1,6 @@
 use crate::{
     Error, Result,
+    core::loadable::Loadable,
     taxonomy::Taxon,
     user::{User, UserStatus},
 };

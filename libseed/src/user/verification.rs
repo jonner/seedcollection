@@ -97,27 +97,6 @@ impl UserVerification {
         builder
     }
 
-    /// Insert this new user verification request into the database
-    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
-        if self.id != Self::invalid_id() {
-            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
-        }
-        self.requested = Some(OffsetDateTime::now_utc());
-        debug!(?self, "Inserting user verification into database");
-        let uv = sqlx::query_as(
-            r#"INSERT INTO sc_user_verification
-            (userid, uvkey, uvexpiration)
-            VALUES (?, ?, ?) RETURNING *"#,
-        )
-        .bind(self.user.id())
-        .bind(&self.key)
-        .bind(self.expiration)
-        .fetch_one(db.pool())
-        .await?;
-        *self = uv;
-        Ok(self.id)
-    }
-
     /// Search the database for a user verification request with the given key
     pub async fn find(
         userid: i64,
@@ -177,6 +156,26 @@ impl Loadable for UserVerification {
 
     fn set_id(&mut self, id: Self::Id) {
         self.id = id
+    }
+
+    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+        if self.id != Self::invalid_id() {
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
+        }
+        self.requested = Some(OffsetDateTime::now_utc());
+        debug!(?self, "Inserting user verification into database");
+        let uv = sqlx::query_as(
+            r#"INSERT INTO sc_user_verification
+            (userid, uvkey, uvexpiration)
+            VALUES (?, ?, ?) RETURNING *"#,
+        )
+        .bind(self.user.id())
+        .bind(&self.key)
+        .bind(self.expiration)
+        .fetch_one(db.pool())
+        .await?;
+        *self = uv;
+        Ok(self.id)
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {

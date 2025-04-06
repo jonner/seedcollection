@@ -96,6 +96,28 @@ impl Loadable for Source {
         self.id = id
     }
 
+    async fn insert(&mut self, db: &Database) -> Result<Self::Id> {
+        if self.id != -1 {
+            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
+        }
+
+        let newval = sqlx::query_as(
+            r#"INSERT INTO sc_sources
+          (srcname, srcdesc, latitude, longitude, userid)
+          VALUES (?, ?, ?, ?, ?)
+          RETURNING *"#,
+        )
+        .bind(&self.name)
+        .bind(&self.description)
+        .bind(self.latitude)
+        .bind(self.longitude)
+        .bind(self.userid)
+        .fetch_one(db.pool())
+        .await?;
+        *self = newval;
+        Ok(self.id)
+    }
+
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
         Self::query_builder(Some(Filter::Id(id).into()), None, None)
             .build_query_as()
@@ -209,31 +231,6 @@ impl Source {
             .await?
             .try_get("nsources")
             .map_err(|e| e.into())
-    }
-
-    /// Add this source to the database. If this call completes successfully,
-    /// the id of this object will be updated to the ID of the inserted row in the
-    /// database
-    pub async fn insert(&mut self, db: &Database) -> Result<i64> {
-        if self.id != -1 {
-            return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
-        }
-
-        let newval = sqlx::query_as(
-            r#"INSERT INTO sc_sources
-          (srcname, srcdesc, latitude, longitude, userid)
-          VALUES (?, ?, ?, ?, ?)
-          RETURNING *"#,
-        )
-        .bind(&self.name)
-        .bind(&self.description)
-        .bind(self.latitude)
-        .bind(self.longitude)
-        .bind(self.userid)
-        .fetch_one(db.pool())
-        .await?;
-        *self = newval;
-        Ok(self.id)
     }
 
     /// Creates a new source object with the given data. It will initially have
