@@ -25,7 +25,7 @@ pub(crate) async fn handle_command(
 ) -> Result<()> {
     match command {
         ProjectCommands::List { output } => {
-            let projects = Project::load_all(None, db).await?;
+            let projects = Project::load_all(None, None, None, db).await?;
             let str = output::format_seq(projects.iter().map(ProjectRow::new), output.format)?;
             println!("{str}");
             Ok(())

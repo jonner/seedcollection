@@ -133,7 +133,8 @@ async fn main() -> Result<()> {
                     filter = filter.push(taxonomy::Filter::Minnesota(val));
                 }
 
-                let taxa: Vec<Taxon> = Taxon::load_all(Some(filter.build()), None, &db).await?;
+                let taxa: Vec<Taxon> =
+                    Taxon::load_all(Some(filter.build()), None, None, &db).await?;
                 if taxa.is_empty() {
                     return Err(anyhow!("No results found"));
                 }

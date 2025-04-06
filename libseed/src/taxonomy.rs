@@ -3,7 +3,7 @@ use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op},
+    query::{Cmp, CompoundFilter, DynFilterPart, FilterPart, LimitSpec, Op, SortSpecs, ToSql},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::IntoDeserializer};
@@ -338,6 +338,7 @@ pub struct Taxon {
 #[async_trait]
 impl Loadable for Taxon {
     type Id = i64;
+    type Sort = SortField;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -348,8 +349,21 @@ impl Loadable for Taxon {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        let mut builder = Taxon::query_builder(Some(Filter::Id(Cmp::Equal, id).into()), None);
+        let mut builder = Taxon::query_builder(Some(Filter::Id(Cmp::Equal, id).into()), None, None);
         Ok(builder.build_query_as().fetch_one(db.pool()).await?)
+    }
+
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<Self::Sort>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<Self>> {
+        Taxon::query_builder(filter, sort, limit)
+            .build_query_as()
+            .fetch_all(db.pool())
+            .await
+            .map_err(Into::into)
     }
 
     async fn delete_id(_id: &Self::Id, _db: &Database) -> Result<()> {
@@ -358,6 +372,18 @@ impl Loadable for Taxon {
 
     async fn update(&self, _db: &Database) -> Result<()> {
         return Err(Error::InvalidOperation("Cannot update taxon".into()));
+    }
+}
+
+pub enum SortField {
+    TaxonomicSequence,
+}
+
+impl ToSql for SortField {
+    fn to_sql(&self) -> String {
+        match self {
+            SortField::TaxonomicSequence => "phylo_sort_seq".into(),
+        }
     }
 }
 
@@ -382,12 +408,13 @@ impl Taxon {
 
     /// Fetch the heirarchy of child taxa for this taxon
     pub async fn fetch_children(&self, db: &Database) -> Result<Vec<Self>> {
-        let mut builder = Taxon::query_builder(Some(Filter::ParentId(self.id).into()), None);
+        let mut builder = Taxon::query_builder(Some(Filter::ParentId(self.id).into()), None, None);
         Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 
     fn query_builder(
         filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<SortField>>,
         limit: Option<LimitSpec>,
     ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
         let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
@@ -418,30 +445,14 @@ impl Taxon {
             filter.add_to_query(&mut builder);
         }
 
-        builder.push(" GROUP BY T.tsn ORDER BY phylo_sort_seq");
-        if let Some(LimitSpec { count, offset }) = limit {
-            debug!("Limiting query to n={count}, offset={offset:?}");
-            builder.push(" LIMIT ");
-            builder.push_bind(count);
-            if let Some(offset) = offset {
-                builder.push(" OFFSET ");
-                builder.push_bind(offset);
-            }
+        builder
+            .push(" GROUP BY T.tsn")
+            .push(sort.unwrap_or(SortField::TaxonomicSequence.into()).to_sql());
+        if let Some(l) = limit {
+            builder.push(l.to_sql());
         }
         debug!("generated sql: <<{}>>", builder.sql());
         builder
-    }
-
-    /// Load all matching taxa from the database
-    pub async fn load_all(
-        filter: Option<DynFilterPart>,
-        limit: Option<LimitSpec>,
-        db: &Database,
-    ) -> sqlx::Result<Vec<Taxon>> {
-        Taxon::query_builder(filter, limit)
-            .build_query_as()
-            .fetch_all(db.pool())
-            .await
     }
 
     /// Loads germination information from the database for this taxon. After
@@ -519,9 +530,14 @@ mod tests {
     ))]
     async fn fetch_many(pool: Pool<Sqlite>) {
         let db = Database::from(pool);
-        let taxa = Taxon::load_all(Some(Filter::Genus("Elymus".to_string()).into()), None, &db)
-            .await
-            .expect("Unable to load taxon");
+        let taxa = Taxon::load_all(
+            Some(Filter::Genus("Elymus".to_string()).into()),
+            None,
+            None,
+            &db,
+        )
+        .await
+        .expect("Unable to load taxon");
         assert_eq!(taxa.len(), 2);
         assert_eq!(taxa[0].name1, Some("Elymus".to_string()));
         assert_eq!(taxa[0].name2, None);

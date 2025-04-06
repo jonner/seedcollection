@@ -77,7 +77,7 @@ async fn list_projects(
     if let Some(namefilter) = namefilter {
         fbuilder = fbuilder.push(namefilter);
     }
-    let projects = Project::load_all(Some(fbuilder.build()), &state.db).await?;
+    let projects = Project::load_all(Some(fbuilder.build()), None, None, &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -187,7 +187,7 @@ async fn show_project(
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
 
-    let mut projects = Project::load_all(Some(fb.build()), &state.db).await?;
+    let mut projects = Project::load_all(Some(fb.build()), None, None, &state.db).await?;
     let Some(mut project) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
@@ -277,7 +277,7 @@ async fn modify_project(
     let fb = CompoundFilter::builder(Op::And)
         .push(project::Filter::Id(id))
         .push(project::Filter::User(user.id));
-    let projects = Project::load_all(Some(fb.build()), &state.db).await?;
+    let projects = Project::load_all(Some(fb.build()), None, None, &state.db).await?;
     if projects.is_empty() {
         return Ok(StatusCode::NOT_FOUND.into_response());
     };

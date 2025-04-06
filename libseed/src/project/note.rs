@@ -3,7 +3,7 @@ use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::Loadable,
-    query::{DynFilterPart, FilterPart},
+    query::{DynFilterPart, FilterPart, LimitSpec, SortSpecs, ToSql},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -72,6 +72,7 @@ pub struct Note {
 #[async_trait]
 impl Loadable for Note {
     type Id = i64;
+    type Sort = SortField;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -82,11 +83,24 @@ impl Loadable for Note {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::query_builder(Some(NoteFilter::Id(id).into()))
+        Self::query_builder(Some(NoteFilter::Id(id).into()), None, None)
             .build_query_as()
             .fetch_one(db.pool())
             .await
             .map_err(|e| e.into())
+    }
+
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<Self::Sort>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<Note>> {
+        Self::query_builder(filter, sort, limit)
+            .build_query_as()
+            .fetch_all(db.pool())
+            .await
+            .map_err(Into::into)
     }
 
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
@@ -143,7 +157,11 @@ impl Note {
         }
     }
 
-    fn query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn query_builder(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT pnoteid, psid, notedate, notetype, notesummary, notedetails FROM sc_project_notes"#,
         );
@@ -151,17 +169,15 @@ impl Note {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" ORDER BY psid, notedate");
+        builder.push(
+            sort.unwrap_or(vec![SortField::Id, SortField::Date].into())
+                .to_sql(),
+        );
+        if let Some(l) = limit {
+            builder.push(l.to_sql());
+        }
         tracing::debug!("GENERATED SQL: {}", builder.sql());
         builder
-    }
-
-    /// Load all matching notes from the database
-    pub async fn load_all(filter: Option<DynFilterPart>, db: &Database) -> sqlx::Result<Vec<Note>> {
-        Self::query_builder(filter)
-            .build_query_as()
-            .fetch_all(db.pool())
-            .await
     }
 
     /// Insert this note into the database. If successful, the ID of the note
@@ -185,6 +201,20 @@ impl Note {
         .await?;
         *self = newval;
         Ok(self.id)
+    }
+}
+
+pub enum SortField {
+    Id,
+    Date,
+}
+
+impl ToSql for SortField {
+    fn to_sql(&self) -> String {
+        match self {
+            SortField::Id => "psid".into(),
+            SortField::Date => "notedate".into(),
+        }
     }
 }
 
@@ -225,7 +255,7 @@ mod tests {
         assert_eq!(note, loaded);
 
         // fetch all notes for a sample
-        let notes = Note::load_all(Some(NoteFilter::AllocationId(1).into()), &db)
+        let notes = Note::load_all(Some(NoteFilter::AllocationId(1).into()), None, None, &db)
             .await
             .expect("Unable to load notes for sample");
         assert_eq!(notes.len(), 2);

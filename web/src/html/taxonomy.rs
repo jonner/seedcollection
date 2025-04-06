@@ -68,6 +68,7 @@ async fn list_taxa(
     let total_pages = (count + PAGE_SIZE - 1) / PAGE_SIZE;
     let taxa: Vec<Taxon> = Taxon::load_all(
         Some(taxonomy::Filter::Rank(rank).into()),
+        None,
         Some(LimitSpec {
             count: PAGE_SIZE,
             offset: Some(PAGE_SIZE * (pg - 1)),
@@ -257,6 +258,7 @@ async fn filter_taxa(
             /* FIXME: pagination for /search endpoing? */
             Taxon::load_all(
                 Some(filter.build()),
+                None,
                 Some(LimitSpec {
                     count: 200,
                     offset: None,

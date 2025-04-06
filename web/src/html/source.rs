@@ -61,7 +61,7 @@ async fn list_sources(
             .build();
         fbuilder = fbuilder.push(subfilter);
     }
-    let sources = Source::load_all(Some(fbuilder.build()), &state.db).await?;
+    let sources = Source::load_all(Some(fbuilder.build()), None, None, &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),

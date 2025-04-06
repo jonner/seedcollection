@@ -3,7 +3,7 @@ use crate::core::{
     database::Database,
     error::{Error, Result},
     loadable::{ExternalRef, Loadable},
-    query::{DynFilterPart, FilterPart},
+    query::{DynFilterPart, FilterPart, LimitSpec, SortSpecs, ToSql},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use async_trait::async_trait;
@@ -76,6 +76,7 @@ pub struct User {
 #[async_trait]
 impl Loadable for User {
     type Id = i64;
+    type Sort = SortField;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -86,9 +87,22 @@ impl Loadable for User {
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
-        Self::query_builder(Some(Filter::Id(id).into()))
+        Self::query_builder(Some(Filter::Id(id).into()), None, None)
             .build_query_as()
             .fetch_one(db.pool())
+            .await
+            .map_err(|e| e.into())
+    }
+
+    async fn load_all(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<Self::Sort>>,
+        limit: Option<LimitSpec>,
+        db: &Database,
+    ) -> Result<Vec<User>> {
+        Self::query_builder(filter, sort, limit)
+            .build_query_as()
+            .fetch_all(db.pool())
             .await
             .map_err(|e| e.into())
     }
@@ -134,8 +148,24 @@ impl Loadable for User {
     }
 }
 
+pub enum SortField {
+    Username,
+}
+
+impl ToSql for SortField {
+    fn to_sql(&self) -> String {
+        match self {
+            SortField::Username => "username".into(),
+        }
+    }
+}
+
 impl User {
-    fn query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+    fn query_builder(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'static, Sqlite> {
         let mut builder = QueryBuilder::new(
             r#"SELECT
                 userid,
@@ -153,25 +183,23 @@ impl User {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(" ORDER BY username ASC");
+        builder.push(sort.unwrap_or(SortField::Username.into()).to_sql());
+        if let Some(l) = limit {
+            builder.push(l.to_sql());
+        }
         builder
-    }
-
-    /// Fetch all users from the database
-    pub async fn load_all(db: &Database) -> Result<Vec<User>> {
-        Self::query_builder(None)
-            .build_query_as()
-            .fetch_all(db.pool())
-            .await
-            .map_err(|e| e.into())
     }
 
     /// Fetch the user with the given username from the database
     pub async fn load_by_username(username: &str, db: &Database) -> sqlx::Result<Option<User>> {
-        Self::query_builder(Some(Filter::Username(username.to_string()).into()))
-            .build_query_as()
-            .fetch_optional(db.pool())
-            .await
+        Self::query_builder(
+            Some(Filter::Username(username.to_string()).into()),
+            None,
+            None,
+        )
+        .build_query_as()
+        .fetch_optional(db.pool())
+        .await
     }
 
     /// A helper function to hash a password with a randomly generated salt using the Argon2 hasher
@@ -503,7 +531,7 @@ mod tests {
     ))]
     async fn test_user_generate_verification(pool: Pool<Sqlite>) {
         let db = Database::from(pool);
-        let nuvs = UserVerification::load_all(&db)
+        let nuvs = UserVerification::load_all(None, None, None, &db)
             .await
             .expect("Failed to get user verifications from db")
             .len();
@@ -512,7 +540,7 @@ mod tests {
             .generate_verification_request(&db)
             .await
             .expect("Failed to generate verification request");
-        let nuvs_after = UserVerification::load_all(&db)
+        let nuvs_after = UserVerification::load_all(None, None, None, &db)
             .await
             .expect("Failed to get user list")
             .len();
