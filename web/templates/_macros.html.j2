@@ -128,3 +128,43 @@ var marker = L.marker([{{ latitude }}, {{ longitude }}]).addTo(map);
 </script>
 {%- endmacro %}
 
+{% macro pagination(total_pages, current_page, request_uri) %}
+<nav aria-label="page navigation">
+    <ul class="pagination">
+        {% with start = [(current_page-1) - 5, 0]|max, end = [(current_page-1) + 6, total_pages]|min %}
+        {% if start > 0 %}
+        <li class="page-item">
+            <a class="page-link" href="{{ request_uri | append_query_param("page", "1") }}">1</a>
+        </li>
+        {% if start > 1 %}
+        <li class="page-item">
+            <span class="page-link">...</span>
+        </li>
+        {% endif %}
+        {% endif %}
+
+        {% for i in range(end - start) %}
+        {% with p = start + i %}
+        <li clas="page-item">
+        {% if p + 1 == current_page %}
+        <span class="page-link active">{{ p + 1 }}</span>
+        {% else %}
+        <a class="page-link" href="{{ request_uri | append_query_param("page", (p + 1)|string)}}">{{p + 1}}</a>
+        {% endif %}
+        </li>
+        {% endwith %}
+        {% endfor %}
+        {% if end < (total_pages-1) %}
+        <li class="page-item">
+            <span class="page-link">...</span>
+        </li>
+        {% endif %}
+        {% if end < total_pages %}
+        <li class="page-item">
+            <a class="page-link" href="{{ request_uri | append_query_param("page", total_pages|string)}}">{{total_pages}}</a>
+        </li>
+        {% endif %}
+        {% endwith %}
+    </ul>
+</nav>
+{% endmacro %}
