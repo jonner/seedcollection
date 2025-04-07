@@ -4,12 +4,12 @@ use crate::{
     error::Error,
     html::SortOption,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, app_url},
+    util::{FlashMessage, FlashMessageKind, Paginator, app_url},
 };
 use anyhow::anyhow;
 use axum::{
     Form, Router,
-    extract::{Path, Query, State},
+    extract::{OriginalUri, Path, Query, State},
     http::HeaderMap,
     response::IntoResponse,
     routing::get,
@@ -52,6 +52,8 @@ struct SampleListParams {
     sort: Option<SortField>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     dir: Option<SortOrder>,
+    #[serde(default)]
+    page: Option<i32>,
 }
 
 async fn list_samples(
@@ -119,13 +121,21 @@ async fn list_samples(
             selected: matches!(field, SortField::Quantity),
         },
     ];
-    match Sample::load_all(filter, sort, None, &state.db).await {
+    let nsamples = match Sample::count(filter.clone(), &state.db).await {
+        Ok(n) => n,
+        Err(e) => return Error::from(e).into_response(),
+    };
+    let paginator = Paginator::new(nsamples as usize, Some(50), params.page);
+    match Sample::load_all(filter, sort, Some(paginator.limits()), &state.db).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),
             context!(user => user,
                      samples => samples,
                      query => params,
+                     page => paginator.current_page(),
+                     total_pages => paginator.n_pages(),
+                     request_uri => uri.to_string(),
                      options =>  sort_options,
                      filteronly => headers.get("HX-Request").is_some()),
         )
