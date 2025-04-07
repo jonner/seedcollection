@@ -301,7 +301,7 @@ mod tests {
             let mut src = Source::new(name, desc, lat, lon, userid);
             // full data
             let res = src.insert(db).await.expect("failed to insert");
-            let srcloaded = Source::load(res.clone(), db)
+            let srcloaded = Source::load(*res, db)
                 .await
                 .expect("Failed to load inserted object");
             assert_eq!(src, srcloaded);
