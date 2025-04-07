@@ -7,12 +7,14 @@ use crate::core::{
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use password_hash::{PasswordHash, SaltString, rand_core::OsRng};
+use preferences::Preferences;
 use serde::{Deserialize, Serialize};
-use sqlx::{QueryBuilder, Sqlite, prelude::*, sqlite::SqliteRow};
+use sqlx::{QueryBuilder, Sqlite, ValueRef, prelude::*, sqlite::SqliteRow};
 use time::OffsetDateTime;
 use tracing::debug;
 use verification::UserVerification;
 
+pub mod preferences;
 pub mod verification;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize, sqlx::Type)]
@@ -38,38 +40,65 @@ impl FilterPart for Filter {
 
 /// A website user that is stored in the database. Each object in the database is associated with a
 /// particular user.
-#[derive(FromRow, Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct User {
     /// the database ID for this user
-    #[sqlx(rename = "userid")]
     pub id: <Self as Loadable>::Id,
 
     /// the username for this user
     pub username: String,
 
     /// the email address for this user
-    #[sqlx(rename = "useremail")]
     pub email: String,
 
     /// The status of this user
-    #[sqlx(rename = "userstatus")]
     pub status: UserStatus,
 
     /// The date that the user registered their account
-    #[sqlx(rename = "usersince")]
     pub register_date: Option<OffsetDateTime>,
 
     /// A display name for the user
-    #[sqlx(rename = "userdisplayname")]
     pub display_name: Option<String>,
 
     /// Some text describing a bit about the user, written by the user themselves
-    #[sqlx(rename = "userprofile", default)]
     pub profile: Option<String>,
 
     #[serde(skip_serializing)]
     /// a hashed password for use when authenticating a user
     pub pwhash: String,
+
+    #[serde(skip)]
+    prefs: Option<ExternalRef<Preferences>>,
+}
+
+impl FromRow<'_, SqliteRow> for User {
+    fn from_row(row: &'_ SqliteRow) -> std::result::Result<Self, sqlx::Error> {
+        // We're using an outer join to the preferences table, so the prefs
+        // fields might all return NULL values if there was no row in the user
+        // prefs table for this user. In that case, Preferences::from_row()
+        // will happily decode all values from NULL and we'll end up with a
+        // nonsensical prefs object where the id and all other fields will be
+        // 0 (converted from NULL). So don't even try to decode prefs if the id
+        // value is null.
+        let prefs = row
+            .try_get_raw("prefid")
+            .ok()
+            .and_then(|val| match val.is_null() {
+                true => None,
+                false => ExternalRef::from_row(row).ok(),
+            });
+        Ok(User {
+            id: row.try_get("userid")?,
+            username: row.try_get("username")?,
+            email: row.try_get("useremail")?,
+            status: row.try_get("userstatus")?,
+            register_date: row.try_get("usersince")?,
+            display_name: row.try_get("userdisplayname")?,
+            profile: row.try_get("userprofile").unwrap_or_default(),
+            pwhash: row.try_get("pwhash")?,
+            prefs,
+        })
+    }
 }
 
 impl Loadable for User {
@@ -96,7 +125,7 @@ impl Loadable for User {
         }
         debug!(?self, "Inserting user into database");
         // Don't insert the register_date, the database will set it to the current timestamp
-        let user = sqlx::query_as(
+        let user: User = sqlx::query_as(
             r#"INSERT INTO
                 sc_users
                 (
@@ -118,7 +147,8 @@ impl Loadable for User {
         .bind(&self.profile)
         .fetch_one(db.pool())
         .await?;
-        *self = user;
+        self.id = user.id;
+        self.register_date = user.register_date;
         Ok(&self.id)
     }
 
@@ -215,7 +245,11 @@ impl User {
         let fields = select_fields.join(", ");
         let mut builder = QueryBuilder::new("SELECT ");
         builder.push(fields);
-        builder.push(" FROM sc_users");
+        builder.push(
+            " FROM sc_users
+            LEFT JOIN sc_user_prefs
+            USING(userid) ",
+        );
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
@@ -232,21 +266,7 @@ impl User {
         sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
         limit: Option<LimitSpec>,
     ) -> QueryBuilder<'static, Sqlite> {
-        Self::base_query_builder(
-            &vec![
-                "userid",
-                "username",
-                "useremail",
-                "pwhash",
-                "userstatus",
-                "usersince",
-                "userdisplayname",
-                "userprofile",
-            ],
-            filter,
-            sort,
-            limit,
-        )
+        Self::base_query_builder(&vec!["*"], filter, sort, limit)
     }
 
     fn count_query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
@@ -307,6 +327,7 @@ impl User {
             register_date,
             display_name,
             profile,
+            prefs: None,
         }
     }
 
@@ -356,6 +377,45 @@ impl User {
         let mut uv = UserVerification::new(self.clone().into(), None);
         uv.insert(db).await?;
         Ok(uv)
+    }
+
+    async fn ensure_preferences(&mut self, db: &Database) -> Result<(), Error> {
+        if self.prefs.is_none() {
+            debug!("Prefs not yet loaded. attempting to load");
+            let mut vec_prefs = Preferences::load_all(
+                Some(preferences::Filter::Userid(self.id).into()),
+                Some(preferences::SortField::Id.into()),
+                Some(1.into()),
+                db,
+            )
+            .await?;
+            let prefs = match vec_prefs.pop() {
+                Some(p) => p,
+                None => {
+                    let mut p = Preferences::new(self.id, None);
+                    p.insert(db).await?;
+                    p
+                }
+            };
+            self.prefs = Some(prefs.into());
+        };
+        Ok(())
+    }
+
+    pub async fn preferences(&mut self, db: &Database) -> Result<&Preferences> {
+        self.ensure_preferences(db).await?;
+        match &mut self.prefs {
+            Some(extref) => extref.load(db, false).await,
+            None => Err(Error::InvalidUpdateObjectNotFound),
+        }
+    }
+
+    pub async fn preferences_mut(&mut self, db: &Database) -> Result<&mut Preferences> {
+        self.ensure_preferences(db).await?;
+        match &mut self.prefs {
+            Some(extref) => extref.load_mut(db).await,
+            None => Err(Error::InvalidUpdateObjectNotFound),
+        }
     }
 }
 
