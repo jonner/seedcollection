@@ -1,7 +1,7 @@
 {% from "_sample_macros.html.j2" import sample_list %}
+{% from "_macros.html.j2" import icon, filter_sort_widget, pagination %}
 {% if not filteronly %}
 {% extends "root.html.j2" %}
-{% from "_macros.html.j2" import icon, filter_sort_widget %}
 {% block title %}Samples{% endblock %}
 {% block content %}
 {% macro option(value, name, selected) -%}
@@ -9,10 +9,14 @@
 {%- endmacro %}
 <h2><span class="me-2">{{ icon("box-seam") }}</span>Samples <a class="ms-2" href="{{ "/sample/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
-        {{ filter_sort_widget("/sample/list" | app_url, "#sample-table", options, query)}}
-   </div>
+        {{ filter_sort_widget("/sample/list" | app_url, "#sample-plus-pagination", options, query)}}
+    </div>
+    <div id="sample-plus-pagination">
     {{ sample_list(samples, "sample-table") }}
+    {{ pagination(total_pages, page, request_uri)}}
+    </div>
 {% endblock %}
 {% else %}
 {{ sample_list(samples, "sample-table") }}
+{{ pagination(total_pages, page, request_uri)}}
 {% endif %}
