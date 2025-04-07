@@ -51,8 +51,8 @@ mod test_paginator {
     #[test]
     fn test_paginator() {
         let p = Paginator::new(100, Some(20), None);
-        assert_eq!(p.n_pages(), 5);
-        assert_eq!(p.current_page(), 1);
+        assert_eq!(p.npages, 5);
+        assert_eq!(p.page.get(), 1);
         assert_eq!(
             p.limits(),
             LimitSpec {
@@ -63,8 +63,8 @@ mod test_paginator {
 
         // page 0 gets clamped to 1
         let p = Paginator::new(100, Some(20), Some(0));
-        assert_eq!(p.n_pages(), 5);
-        assert_eq!(p.current_page(), 1);
+        assert_eq!(p.npages, 5);
+        assert_eq!(p.page.get(), 1);
         assert_eq!(
             p.limits(),
             LimitSpec {
@@ -74,8 +74,8 @@ mod test_paginator {
         );
 
         let p = Paginator::new(101, Some(20), Some(5));
-        assert_eq!(p.n_pages(), 6);
-        assert_eq!(p.current_page(), 5);
+        assert_eq!(p.npages, 6);
+        assert_eq!(p.page.get(), 5);
         assert_eq!(
             p.limits(),
             LimitSpec {
@@ -86,8 +86,8 @@ mod test_paginator {
 
         // specifying a page beyond the max will clamp to the max
         let p = Paginator::new(101, Some(20), Some(7));
-        assert_eq!(p.n_pages(), 6);
-        assert_eq!(p.current_page(), 6);
+        assert_eq!(p.npages, 6);
+        assert_eq!(p.page.get(), 6);
         assert_eq!(
             p.limits(),
             LimitSpec {
