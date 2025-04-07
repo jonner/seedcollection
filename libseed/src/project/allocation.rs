@@ -202,6 +202,15 @@ impl Loadable for AllocatedSample {
             .map_err(Into::into)
     }
 
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64> {
+        Self::count_query_builder(filter)
+            .build()
+            .fetch_one(db.pool())
+            .await?
+            .try_get("count")
+            .map_err(Into::into)
+    }
+
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query!("DELETE FROM sc_project_samples WHERE psid=?", id)
             .execute(db.pool())
@@ -260,36 +269,62 @@ impl ToSql for SortField {
 }
 
 impl AllocatedSample {
-    fn query_builder(
+    fn base_query_builder(
+        select_fields: &Vec<&str>,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<SortField>>,
         limit: Option<LimitSpec>,
     ) -> QueryBuilder<'static, Sqlite> {
-        let sort = sort.unwrap_or(SortSpec::new(SortField::Taxon, SortOrder::Ascending).into());
-        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new(
-            r#"
-            SELECT PS.psid, PS.projectid,
-            S.*,
-            N.pnoteid, N.notedate, N.notetype, N.notesummary, N.notedetails
-
-            FROM sc_project_samples PS
+        let fields = select_fields.join(", ");
+        let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("SELECT ");
+        builder.push(fields);
+        builder.push(" FROM sc_project_samples PS
             INNER JOIN vsamples S ON PS.sampleid=S.sampleid
             LEFT JOIN ( SELECT * FROM
             (SELECT *, ROW_NUMBER() OVER (PARTITION BY psid ORDER BY DATE(notedate) DESC, pnoteid DESC) AS rownr
             FROM sc_project_notes ORDER BY pnoteid DESC)
-            WHERE rownr = 1) N ON N.psid = PS.psid
-            "#,
-        );
+            WHERE rownr = 1) N ON N.psid = PS.psid");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(sort.to_sql());
+        if let Some(sort) = sort {
+            builder.push(sort.to_sql());
+        }
         if let Some(l) = limit {
             builder.push(l.to_sql());
         }
 
         builder
+    }
+
+    fn query_builder(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<SortField>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'static, Sqlite> {
+        let sort = sort.or(Some(
+            SortSpec::new(SortField::Taxon, SortOrder::Ascending).into(),
+        ));
+        Self::base_query_builder(
+            &vec![
+                "PS.psid",
+                "PS.projectid",
+                "S.*",
+                "N.pnoteid",
+                "N.notedate",
+                "N.notetype",
+                "N.notesummary",
+                "N.notedetails",
+            ],
+            filter,
+            sort,
+            limit,
+        )
+    }
+
+    fn count_query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        Self::base_query_builder(&vec!["COUNT(*) as count"], filter, None, None)
     }
 
     /// Load a single matching [AllocatedSample] from the database. Note that this is
@@ -421,5 +456,35 @@ mod tests {
         assert_eq!(assigned[1].sample.id(), 1);
         assert_eq!(assigned[1].projectid, 2);
         check_sample(&assigned[1], &db).await;
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../../db/fixtures",
+            scripts("users", "sources", "taxa", "assigned-samples")
+        )
+    ))]
+    async fn count_allocations(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let nallocs = AllocatedSample::count(None, &db)
+            .await
+            .expect("Failed to count allocations");
+        assert_eq!(4, nallocs);
+        let nallocs = AllocatedSample::count(Some(Filter::SampleId(1).into()), &db)
+            .await
+            .expect("Failed to count allocations");
+        assert_eq!(2, nallocs);
+        AllocatedSample::delete_id(&4, &db)
+            .await
+            .expect("Failed to delete sample");
+        let nallocs = AllocatedSample::count(None, &db)
+            .await
+            .expect("Failed to count allocations");
+        assert_eq!(3, nallocs);
+        let nallocs = AllocatedSample::count(Some(Filter::SampleId(1).into()), &db)
+            .await
+            .expect("Failed to count allocations");
+        assert_eq!(1, nallocs);
     }
 }

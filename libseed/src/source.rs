@@ -142,6 +142,15 @@ impl Loadable for Source {
             .map_err(|e| e.into())
     }
 
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64> {
+        Self::build_count(filter)
+            .build()
+            .fetch_one(db.pool())
+            .await?
+            .try_get("nsources")
+            .map_err(|e| e.into())
+    }
+
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query(r#"DELETE FROM sc_sources WHERE srcid=?1"#)
             .bind(id)
@@ -225,15 +234,6 @@ impl Source {
             fbuilder = fbuilder.push(f);
         }
         Self::load_all(Some(fbuilder.build()), None, None, db).await
-    }
-
-    pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
-        Self::build_count(filter)
-            .build()
-            .fetch_one(db.pool())
-            .await?
-            .try_get("nsources")
-            .map_err(|e| e.into())
     }
 
     /// Creates a new source object with the given data. It will initially have
@@ -336,5 +336,28 @@ mod tests {
         .await;
         check(&db, "test name".to_string(), None, None, None, 1).await;
         check(&db, "".to_string(), None, None, None, 1).await;
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("users", "sources"))
+    ))]
+    async fn count_sources(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let count = Source::count(None, &db)
+            .await
+            .expect("Failed to count sources");
+        assert_eq!(2, count);
+        let count = Source::count(Some(Filter::UserId(1).into()), &db)
+            .await
+            .expect("Failed to count sources");
+        assert_eq!(2, count);
+        Source::delete_id(&2, &db)
+            .await
+            .expect("Failed to delete source");
+        let count = Source::count(Some(Filter::UserId(1).into()), &db)
+            .await
+            .expect("Failed to count sources");
+        assert_eq!(1, count);
     }
 }

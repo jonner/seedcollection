@@ -7,7 +7,7 @@ use crate::core::{
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{QueryBuilder, Sqlite};
+use sqlx::{QueryBuilder, Row, Sqlite};
 use strum_macros::EnumIter;
 use time::Date;
 use tracing::debug;
@@ -129,6 +129,15 @@ impl Loadable for Note {
             .map_err(Into::into)
     }
 
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64> {
+        Self::count_query_builder(filter)
+            .build()
+            .fetch_one(db.pool())
+            .await?
+            .try_get("count")
+            .map_err(Into::into)
+    }
+
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query!("DELETE FROM sc_project_notes WHERE pnoteid=?", id)
             .execute(db.pool())
@@ -187,14 +196,16 @@ impl Note {
         }
     }
 
-    fn query_builder(
+    fn base_query_builder(
+        select_fields: &Vec<&str>,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
         limit: Option<LimitSpec>,
     ) -> QueryBuilder<'static, Sqlite> {
-        let mut builder = QueryBuilder::new(
-            r#"SELECT pnoteid, psid, notedate, notetype, notesummary, notedetails FROM sc_project_notes"#,
-        );
+        let fields = select_fields.join(", ");
+        let mut builder = QueryBuilder::new("SELECT ");
+        builder.push(fields);
+        builder.push(" FROM sc_project_notes");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
@@ -208,6 +219,30 @@ impl Note {
         }
         tracing::debug!("GENERATED SQL: {}", builder.sql());
         builder
+    }
+
+    fn query_builder(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'static, Sqlite> {
+        Self::base_query_builder(
+            &vec![
+                "pnoteid",
+                "psid",
+                "notedate",
+                "notetype",
+                "notesummary",
+                "notedetails",
+            ],
+            filter,
+            sort,
+            limit,
+        )
+    }
+
+    fn count_query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        Self::base_query_builder(&vec!["COUNT(*) as count"], filter, None, None)
     }
 }
 
@@ -270,5 +305,35 @@ mod tests {
         assert_eq!(notes[0].id, 2);
         assert_eq!(notes[1].id, 1);
         assert!(notes[0].date < notes[1].date);
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../../db/fixtures",
+            scripts("users", "sources", "taxa", "csnotes")
+        )
+    ))]
+    async fn test_note_count(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let nnotes = Note::count(None, &db)
+            .await
+            .expect("Failed to get count of notes");
+        assert_eq!(3, nnotes);
+        let nnotes = Note::count(Some(NoteFilter::AllocationId(1).into()), &db)
+            .await
+            .expect("Failed to get count of notes");
+        assert_eq!(2, nnotes);
+        Note::delete_id(&1, &db)
+            .await
+            .expect("Failed to delete note");
+        let nnotes = Note::count(Some(NoteFilter::AllocationId(1).into()), &db)
+            .await
+            .expect("Failed to get count of notes");
+        assert_eq!(1, nnotes);
+        let nnotes = Note::count(Some(NoteFilter::AllocationId(100).into()), &db)
+            .await
+            .expect("Failed to get count of notes");
+        assert_eq!(0, nnotes);
     }
 }
