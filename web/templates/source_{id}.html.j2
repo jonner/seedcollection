@@ -1,5 +1,5 @@
 {% extends "root.html.j2" %}
-{% from "_macros.html.j2" import icon, breadcrumbs, show_map %}
+{% from "_macros.html.j2" import icon, breadcrumbs, show_map, pagination %}
 {% from "_sample_macros.html.j2" import sample_list %}
 {% block title %}{{ source.name or "Source Details" }} Details{% endblock %}
 {% block head %}
@@ -24,6 +24,7 @@
 <div id="source-location-map" style="height: 320px;"></div>
 {{ show_map(source.latitude, source.longitude, 13, "source-location-map") }}
 {% endif %}
-<h3>{{ samples | count }} Samples from this source</h3>
+<h3>{{ summary.total_items }} samples from this source</h3>
 {{ sample_list(samples, "sample-list") }}
+    {{ pagination(summary.npages, summary.page, request_uri)}}
 {% endblock %}

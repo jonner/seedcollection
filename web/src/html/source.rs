@@ -90,38 +90,45 @@ async fn add_source(
     Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
 }
 
+#[derive(Debug, Deserialize)]
+struct SourceShowParams {
+    page: Option<u32>,
+}
+
 async fn show_source(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
+    uri: OriginalUri,
+    Query(params): Query<SourceShowParams>,
 ) -> Result<impl IntoResponse, Error> {
     let src = Source::load(id, &state.db).await?;
-    let samples = Sample::load_all(
-        Some(
-            and()
-                .push(Filter::SourceId(Cmp::Equal, id))
-                .push(Filter::UserId(user.id))
-                .build(),
-        ),
-        None,
-        None,
-        &state.db,
-    )
-    .await?;
+    let filter = and()
+        .push(Filter::SourceId(Cmp::Equal, id))
+        .push(Filter::UserId(user.id))
+        .build();
+    let paginator = Paginator::new(
+        Sample::count(Some(filter.clone()), &state.db).await? as u32,
+        Some(25),
+        params.page,
+    );
+    let samples = Sample::load_all(Some(filter), None, Some(paginator.limits()), &state.db).await?;
 
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
                  source => src,
+                 summary => paginator,
+                 request_uri => uri.to_string(),
                  samples => samples),
     )
     .into_response())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct SourceParams {
+struct SourceEditParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     name: Option<String>,
     #[serde(deserialize_with = "empty_string_as_none")]
@@ -133,7 +140,7 @@ struct SourceParams {
     modal: Option<i64>,
 }
 
-async fn do_update(id: i64, params: &SourceParams, state: &AppState) -> Result<Source, Error> {
+async fn do_update(id: i64, params: &SourceEditParams, state: &AppState) -> Result<Source, Error> {
     let mut src = Source::load(id, &state.db).await?;
     src.name = params
         .name
@@ -153,7 +160,7 @@ async fn update_source(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
-    Form(params): Form<SourceParams>,
+    Form(params): Form<SourceEditParams>,
 ) -> Result<impl IntoResponse, Error> {
     let src = Source::load(id, &state.db).await?;
     if src.userid != user.id {
@@ -208,7 +215,7 @@ async fn update_source(
 
 async fn do_insert(
     user: &SqliteUser,
-    params: &SourceParams,
+    params: &SourceEditParams,
     state: &AppState,
 ) -> Result<Source, Error> {
     let mut source = Source::new(
@@ -230,10 +237,10 @@ async fn new_source(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Form(params): Form<SourceParams>,
+    Form(params): Form<SourceEditParams>,
 ) -> Result<impl IntoResponse, Error> {
     let message;
-    let mut request: Option<&SourceParams> = None;
+    let mut request: Option<&SourceEditParams> = None;
     let mut headers = HeaderMap::new();
     match do_insert(&user, &params, &state).await {
         Err(e) => {
