@@ -18,13 +18,13 @@ RUN --mount=type=cache,target=/var/cache/apk \
   ca-certificates \
   libgcc \
   openssl
+
+FROM runtime-base
 COPY ./config.yaml.docker /etc/seedweb/config.yaml
 COPY ./certs /etc/seedweb/certs
 COPY ./web/static /usr/share/seedweb/static/
 COPY ./web/vendor-js/node_modules /usr/share/seedweb/static/js/vendor
 COPY ./web/templates /usr/share/seedweb/templates/
-
-FROM runtime-base
 VOLUME /usr/share/seedweb/db
 COPY --from=builder /usr/local/bin/seedweb /usr/local/bin
 EXPOSE 80
