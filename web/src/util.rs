@@ -3,7 +3,7 @@ use axum::http::Uri;
 use libseed::core::query::LimitSpec;
 use minijinja::ErrorKind;
 use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, num::NonZero};
 
 pub(crate) fn app_url(value: &str) -> String {
@@ -12,7 +12,10 @@ pub(crate) fn app_url(value: &str) -> String {
 
 pub const PAGE_SIZE: u32 = 100;
 
+/// A structure that can be used to presents a summary of results in a web page
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Paginator {
+    total_items: u32,
     npages: u32,
     pagesize: u32,
     page: NonZero<u32>,
@@ -23,20 +26,13 @@ impl Paginator {
         let pagesize = pagesize.unwrap_or(PAGE_SIZE);
         let npages = total_items.div_ceil(pagesize);
         Self {
+            total_items,
             npages,
             pagesize,
             page: page
                 .and_then(|p| NonZero::new(p.min(npages)))
                 .unwrap_or(unsafe { NonZero::new_unchecked(1) }),
         }
-    }
-
-    pub fn n_pages(&self) -> u32 {
-        self.npages
-    }
-
-    pub fn current_page(&self) -> u32 {
-        self.page.get()
     }
 
     pub fn limits(&self) -> LimitSpec {

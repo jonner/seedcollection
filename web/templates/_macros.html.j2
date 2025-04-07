@@ -149,7 +149,9 @@ var marker = L.marker([{{ latitude }}, {{ longitude }}]).addTo(map);
         {% if p + 1 == current_page %}
         <span class="page-link active">{{ p + 1 }}</span>
         {% else %}
-        <a class="page-link" href="{{ request_uri | append_query_param("page", (p + 1)|string)}}">{{p + 1}}</a>
+        {% with pagestring = (p + 1)|string %}
+        <a class="page-link" href="{{ request_uri | append_query_param("page", pagestring)}}">{{ pagestring }}</a>
+        {% endwith %}
         {% endif %}
         </li>
         {% endwith %}

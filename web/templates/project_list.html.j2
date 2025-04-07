@@ -1,4 +1,5 @@
-{% from "_project_macros.html.j2" import icon, project_list %}
+{% from "_macros.html.j2" import icon, pagination %}
+{% from "_project_macros.html.j2" import project_list %}
 {% if not filteronly %}
 {% extends "root.html.j2" %}
 {% block title %}Projects{% endblock %}
@@ -21,8 +22,12 @@
                name="filter">
     </form>
     </div>
+    <div class="text-body-tertiary">{{ summary.total_items }} items found </div>
     {{ project_list() }}
+    {{ pagination(summary.npages, summary.page, request_uri)}}
 {% endblock %}
 {% else %}
+    <div class="text-body-tertiary">{{ summary.total_items }} items found </div>
     {{ project_list() }}
+    {{ pagination(summary.npages, summary.page, request_uri)}}
 {% endif %}
