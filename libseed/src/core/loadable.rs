@@ -55,6 +55,9 @@ pub trait Loadable {
     where
         Self: Sized;
 
+    /// query the number of matching objects in the database
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64>;
+
     /// Convenience function to delete the object with the id `self.id()` from
     /// the database
     async fn delete(&mut self, db: &Database) -> Result<()> {

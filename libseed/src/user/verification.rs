@@ -4,7 +4,7 @@ use rand::{
     rngs::OsRng,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, QueryBuilder, Sqlite};
+use sqlx::{FromRow, QueryBuilder, Row, Sqlite};
 use time::{Duration, OffsetDateTime};
 use tracing::debug;
 
@@ -75,17 +75,16 @@ impl UserVerification {
         }
     }
 
-    fn query_builder<'q>(
+    fn base_query_builder<'q>(
+        select_fields: &Vec<&str>,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
         limit: Option<LimitSpec>,
     ) -> QueryBuilder<'q, Sqlite> {
-        let mut builder = QueryBuilder::new(
-            r#"SELECT
-            *
-            FROM
-                sc_user_verification"#,
-        );
+        let fields = select_fields.join(", ");
+        let mut builder = QueryBuilder::new("SELECT ");
+        builder.push(fields);
+        builder.push(" FROM sc_user_verification");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
@@ -95,6 +94,18 @@ impl UserVerification {
             builder.push(l.to_sql());
         }
         builder
+    }
+
+    fn query_builder<'q>(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'q, Sqlite> {
+        Self::base_query_builder(&vec!["*"], filter, sort, limit)
+    }
+
+    fn count_query_builder<'q>(filter: Option<DynFilterPart>) -> QueryBuilder<'q, Sqlite> {
+        Self::base_query_builder(&vec!["COUNT(*) as count"], filter, None, None)
     }
 
     /// Search the database for a user verification request with the given key
@@ -203,6 +214,16 @@ impl Loadable for UserVerification {
             .await
             .map_err(Into::into)
     }
+
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64> {
+        Self::count_query_builder(filter)
+            .build()
+            .fetch_one(db.pool())
+            .await?
+            .try_get("count")
+            .map_err(Into::into)
+    }
+
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query(r#"DELETE FROM sc_user_verification WHERE uvid=?"#)
             .bind(id)
@@ -379,5 +400,33 @@ mod tests {
         assert_eq!(2, uv.id);
         assert_eq!(KEY, uv.key);
         assert!(uv.confirmed);
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../../db/fixtures",
+            scripts("users", "sources", "taxa", "user-verifications")
+        )
+    ))]
+    async fn count_user_verify(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+
+        let count = UserVerification::count(None, &db)
+            .await
+            .expect("Failed to load user verifications");
+        assert_eq!(2, count);
+        let count = UserVerification::count(Some(Filter::Userid(1).into()), &db)
+            .await
+            .expect("Failed to load user verifications");
+        assert_eq!(2, count);
+        UserVerification::delete_id(&2, &db)
+            .await
+            .expect("Failed to delete user verification");
+
+        let count = UserVerification::count(Some(Filter::Userid(1).into()), &db)
+            .await
+            .expect("Failed to load user verifications");
+        assert_eq!(1, count);
     }
 }

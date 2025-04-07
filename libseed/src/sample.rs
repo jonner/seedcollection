@@ -337,6 +337,16 @@ impl Loadable for Sample {
         Ok(builder.build_query_as().fetch_all(db.pool()).await?)
     }
 
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64> {
+        let mut builder = Self::stats_query_builder(filter);
+        builder
+            .build()
+            .fetch_one(db.pool())
+            .await?
+            .try_get("nsamples")
+            .map_err(|e| e.into())
+    }
+
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query("DELETE FROM sc_samples WHERE sampleid=?")
             .bind(id)
@@ -400,17 +410,6 @@ impl Sample {
             f.add_to_query(&mut builder);
         }
         builder
-    }
-
-    /// Queries the count of all matching samples from the database
-    pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
-        let mut builder = Self::stats_query_builder(filter);
-        builder
-            .build()
-            .fetch_one(db.pool())
-            .await?
-            .try_get("nsamples")
-            .map_err(|e| e.into())
     }
 
     /// Queries the count of all matching samples from the database
@@ -586,5 +585,31 @@ mod tests {
         assert_eq!(sample1.user, user);
 
         println!("{sample1:?}");
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../db/fixtures",
+            scripts("users", "sources", "taxa", "samples")
+        )
+    ))]
+    async fn count_samples(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let count = Sample::count(None, &db)
+            .await
+            .expect("Failed to count samples");
+        assert_eq!(4, count);
+        let count = Sample::count(Some(Filter::TaxonId(Cmp::Equal, 40683).into()), &db)
+            .await
+            .expect("Failed to count samples");
+        assert_eq!(3, count);
+        Sample::delete_id(&4, &db)
+            .await
+            .expect("Failed to delete sample");
+        let count = Sample::count(Some(Filter::TaxonId(Cmp::Equal, 40683).into()), &db)
+            .await
+            .expect("Failed to count samples");
+        assert_eq!(2, count);
     }
 }

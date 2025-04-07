@@ -373,6 +373,15 @@ impl Loadable for Taxon {
             .map_err(Into::into)
     }
 
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64> {
+        Self::count_query_builder(filter)
+            .build()
+            .fetch_one(db.pool())
+            .await?
+            .try_get("count")
+            .map_err(Into::into)
+    }
+
     async fn delete_id(_id: &Self::Id, _db: &Database) -> Result<()> {
         Err(Error::InvalidOperation("Cannot delete taxon".to_string()))
     }
@@ -496,16 +505,6 @@ impl Taxon {
 
         builder
     }
-
-    /// Query how many taxa in the database match the given filter
-    pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i32> {
-        Self::count_query_builder(filter)
-            .build()
-            .fetch_one(db.pool())
-            .await?
-            .try_get("count")
-            .map_err(Into::into)
-    }
 }
 
 #[cfg(test)]
@@ -554,5 +553,19 @@ mod tests {
         assert_eq!(taxa[1].name2, Some("canadensis".to_string()));
         assert_eq!(taxa[1].rank, Rank::Species);
         assert!(taxa[1].vernaculars.iter().any(|v| v == "Canada wildrye"));
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("taxa"))
+    ))]
+    async fn count_taxa(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let count = Taxon::count(None, &db).await.expect("Failed to count taxa");
+        assert_eq!(16, count);
+        let count = Taxon::count(Some(Filter::Genus("Elymus".into()).into()), &db)
+            .await
+            .expect("Failed to count taxa");
+        assert_eq!(2, count);
     }
 }

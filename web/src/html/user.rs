@@ -34,8 +34,8 @@ pub(crate) fn router() -> Router<AppState> {
 #[derive(Serialize)]
 struct UserStats {
     samples: SampleStats,
-    nsources: i64,
-    nprojects: i64,
+    nsources: u64,
+    nprojects: u64,
 }
 
 async fn show_profile(

@@ -103,6 +103,15 @@ impl Loadable for Project {
             .map_err(|e| e.into())
     }
 
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64> {
+        Self::build_count(filter)
+            .build()
+            .fetch_one(db.pool())
+            .await?
+            .try_get("nprojects")
+            .map_err(|e| e.into())
+    }
+
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query("DELETE FROM sc_projects WHERE projectid=?")
             .bind(id)
@@ -189,15 +198,16 @@ impl ToSql for SortField {
 }
 
 impl Project {
-    fn query_builder(
+    fn base_query_builder(
+        select_fields: &Vec<&str>,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
         limit: Option<LimitSpec>,
     ) -> QueryBuilder<'static, Sqlite> {
-        let mut builder = QueryBuilder::new(
-            r#"SELECT P.projectid, P.projname, P.projdescription, P.userid, U.username
-            FROM sc_projects P INNER JOIN sc_users U ON U.userid=P.userid"#,
-        );
+        let fields = select_fields.join(", ");
+        let mut builder = QueryBuilder::new("SELECT ");
+        builder.push(fields);
+        builder.push(" FROM sc_projects P INNER JOIN sc_users U ON U.userid=P.userid");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
@@ -209,23 +219,27 @@ impl Project {
         builder
     }
 
-    fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
-        let mut builder = QueryBuilder::new("SELECT COUNT(*) as nprojects FROM sc_projects P");
-        if let Some(f) = filter {
-            builder.push(" WHERE ");
-            f.add_to_query(&mut builder);
-        }
-        builder
+    fn query_builder(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'static, Sqlite> {
+        Self::base_query_builder(
+            &vec![
+                "P.projectid",
+                "P.projname",
+                "P.projdescription",
+                "P.userid",
+                "U.username",
+            ],
+            filter,
+            sort,
+            limit,
+        )
     }
 
-    /// query the number of matching projects in the database
-    pub async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<i64> {
-        Self::build_count(filter)
-            .build()
-            .fetch_one(db.pool())
-            .await?
-            .try_get("nprojects")
-            .map_err(|e| e.into())
+    fn build_count(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        Self::base_query_builder(&vec!["COUNT(*) as nprojects"], filter, None, None)
     }
 
     /// Load all of the samples that are allocated to this project
@@ -285,7 +299,7 @@ impl FromRow<'_, SqliteRow> for ExternalRef<Project> {
 mod tests {
     use crate::{
         core::{database::Database, loadable::Loadable},
-        project::Project,
+        project::{Filter, Project},
         user::User,
     };
     use sqlx::{Pool, Sqlite};
@@ -320,5 +334,33 @@ mod tests {
         .await;
 
         check(&db, "test name".to_string(), None, 1).await;
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../../db/fixtures",
+            scripts("users", "sources", "taxa", "samples", "projects")
+        )
+    ))]
+    async fn count_projects(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let count = Project::count(None, &db)
+            .await
+            .expect("Failed to count projects");
+        assert_eq!(3, count);
+        let count = Project::count(Some(Filter::User(1).into()), &db)
+            .await
+            .expect("Failed to count projects");
+        assert_eq!(2, count);
+        let mut newproject = Project::new("foo".into(), Some("bar".into()), 1);
+        newproject
+            .insert(&db)
+            .await
+            .expect("Failed to insert new project");
+        let count = Project::count(Some(Filter::User(1).into()), &db)
+            .await
+            .expect("Failed to count projects");
+        assert_eq!(3, count);
     }
 }

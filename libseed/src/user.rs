@@ -145,6 +145,15 @@ impl Loadable for User {
             .map_err(|e| e.into())
     }
 
+    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64> {
+        Self::count_query_builder(filter)
+            .build()
+            .fetch_one(db.pool())
+            .await?
+            .try_get("count")
+            .map_err(|e| e.into())
+    }
+
     async fn delete_id(id: &Self::Id, db: &Database) -> Result<()> {
         sqlx::query("DELETE FROM sc_users WHERE userid=?")
             .bind(id)
@@ -199,24 +208,16 @@ impl ToSql for SortField {
 }
 
 impl User {
-    fn query_builder(
+    fn base_query_builder(
+        select_fields: &Vec<&str>,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
         limit: Option<LimitSpec>,
     ) -> QueryBuilder<'static, Sqlite> {
-        let mut builder = QueryBuilder::new(
-            r#"SELECT
-                userid,
-                username,
-                useremail,
-                pwhash,
-                userstatus,
-                usersince,
-                userdisplayname,
-                userprofile
-            FROM
-                sc_users"#,
-        );
+        let fields = select_fields.join(", ");
+        let mut builder = QueryBuilder::new("SELECT ");
+        builder.push(fields);
+        builder.push(" FROM sc_users");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
@@ -226,6 +227,32 @@ impl User {
             builder.push(l.to_sql());
         }
         builder
+    }
+
+    fn query_builder(
+        filter: Option<DynFilterPart>,
+        sort: Option<SortSpecs<<Self as Loadable>::Sort>>,
+        limit: Option<LimitSpec>,
+    ) -> QueryBuilder<'static, Sqlite> {
+        Self::base_query_builder(
+            &vec![
+                "userid",
+                "username",
+                "useremail",
+                "pwhash",
+                "userstatus",
+                "usersince",
+                "userdisplayname",
+                "userprofile",
+            ],
+            filter,
+            sort,
+            limit,
+        )
+    }
+
+    fn count_query_builder(filter: Option<DynFilterPart>) -> QueryBuilder<'static, Sqlite> {
+        Self::base_query_builder(&vec!["COUNT(*) as count"], filter, None, None)
     }
 
     /// Fetch the user with the given username from the database
@@ -551,5 +578,26 @@ mod tests {
             .await
             .expect("Failed to load userverification from db");
         assert_eq!(uv, dbuv);
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../db/fixtures", scripts("users"))
+    ))]
+    async fn count_users(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        let count = User::count(None, &db).await.expect("Failed to count users");
+        assert_eq!(count, 2);
+        let count = User::count(Some(Filter::Username("testuser".into()).into()), &db)
+            .await
+            .expect("Failed to count users");
+        assert_eq!(count, 1);
+        User::delete_id(&1, &db)
+            .await
+            .expect("Failed to delete user");
+        let count = User::count(Some(Filter::Username("testuser".into()).into()), &db)
+            .await
+            .expect("Failed to count users");
+        assert_eq!(count, 0);
     }
 }
