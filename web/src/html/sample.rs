@@ -21,7 +21,7 @@ use libseed::{
         loadable::{ExternalRef, Loadable},
         query::{
             SortOrder, SortSpec, SortSpecs,
-            filter::{Cmp, or},
+            filter::{Cmp, and, or},
         },
     },
     empty_string_as_none,
@@ -60,20 +60,23 @@ async fn list_samples(
     State(state): State<AppState>,
     Query(params): Query<SampleListParams>,
     headers: HeaderMap,
+    uri: OriginalUri,
 ) -> impl IntoResponse {
     debug!("query params: {:?}", params);
 
     let filter = params.filter.as_ref().map(|f| {
         let idprefix: Result<i64, _> = f.parse();
         let mut builder = or()
-            .push(sample::Filter::UserId(user.id))
             .push(sample::taxon_name_like(f))
             .push(sample::Filter::Notes(Cmp::Like, f.clone()))
             .push(sample::Filter::SourceName(Cmp::Like, f.clone()));
         if let Ok(n) = idprefix {
             builder = builder.push(sample::Filter::Id(Cmp::NumericPrefix, n));
         }
-        builder.build()
+        and()
+            .push(sample::Filter::UserId(user.id))
+            .push(builder.build())
+            .build()
     });
 
     let dir = params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending);
