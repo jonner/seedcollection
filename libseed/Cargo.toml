@@ -8,7 +8,6 @@ edition = { workspace = true }
 [dependencies]
 # shared workspace dependencies
 anyhow = { workspace = true }
-async-trait = { workspace = true }
 serde = { workspace = true }
 sqlx = { workspace = true, features = [ "sqlite", "runtime-tokio", "time" ] }
 strum_macros = { workspace = true }

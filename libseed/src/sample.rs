@@ -13,7 +13,6 @@ use crate::{
     taxonomy::{Rank, Taxon},
     user::User,
 };
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::IntoDeserializer};
 use sqlx::{FromRow, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 use std::str::FromStr;
@@ -283,7 +282,6 @@ pub struct Sample {
     pub certainty: Certainty,
 }
 
-#[async_trait]
 impl Loadable for Sample {
     type Id = i64;
     type Sort = SortField;

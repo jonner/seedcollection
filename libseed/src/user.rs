@@ -6,7 +6,6 @@ use crate::core::{
     query::{DynFilterPart, LimitSpec, SortSpecs, ToSql, filter::FilterPart},
 };
 use argon2::{Argon2, PasswordHasher, PasswordVerifier};
-use async_trait::async_trait;
 use password_hash::{PasswordHash, SaltString, rand_core::OsRng};
 use serde::{Deserialize, Serialize};
 use sqlx::{QueryBuilder, Sqlite, prelude::*, sqlite::SqliteRow};
@@ -73,7 +72,6 @@ pub struct User {
     pub pwhash: String,
 }
 
-#[async_trait]
 impl Loadable for User {
     type Id = i64;
     type Sort = SortField;

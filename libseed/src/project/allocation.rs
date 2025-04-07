@@ -17,7 +17,6 @@ use crate::{
     sample::Sample,
     user::User,
 };
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{QueryBuilder, Sqlite, prelude::*, sqlite::SqliteRow};
 
@@ -152,7 +151,6 @@ pub struct AllocatedSample {
     pub notes: Vec<Note>,
 }
 
-#[async_trait]
 impl Loadable for AllocatedSample {
     type Id = i64;
     type Sort = SortField;

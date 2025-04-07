@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use rand::{
     distributions::{Alphanumeric, DistString},
     rngs::OsRng,
@@ -156,7 +155,6 @@ impl UserVerification {
     }
 }
 
-#[async_trait]
 impl Loadable for UserVerification {
     type Id = i64;
     type Sort = SortField;
