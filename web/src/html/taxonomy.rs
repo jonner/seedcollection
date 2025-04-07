@@ -1,7 +1,7 @@
 use crate::{TemplateKey, auth::SqliteUser, error::Error, state::AppState, util::Paginator};
 use axum::{
     Form, Router,
-    extract::{Path, Query, Request, State},
+    extract::{OriginalUri, Path, Query, State},
     response::IntoResponse,
     routing::get,
 };
@@ -59,7 +59,7 @@ async fn list_taxa(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(params): Query<ListParams>,
-    req: Request,
+    uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     let rank = match params.rank {
         Some(r) => r,
@@ -74,7 +74,7 @@ async fn list_taxa(
         &state.db,
     )
     .await?;
-    debug!("req={:?}", req);
+    debug!("uri={:?}", uri);
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -82,7 +82,7 @@ async fn list_taxa(
                  taxa => taxa,
                  page => paginator.current_page(),
                  total_pages => paginator.n_pages(),
-                 request_uri => req.uri().to_string()),
+                 request_uri => uri.to_string()),
     ))
 }
 
