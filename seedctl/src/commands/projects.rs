@@ -77,7 +77,7 @@ pub(crate) async fn handle_command(
         }
         ProjectCommands::Show { id, output } => match Project::load(id, db).await {
             Ok(mut projectinfo) => {
-                projectinfo.load_samples(None, None, db).await?;
+                projectinfo.load_samples(None, None, None, db).await?;
                 let str = match output.full {
                     true => output::format_seq(
                         projectinfo

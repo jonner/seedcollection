@@ -186,8 +186,7 @@ struct ShowProjectQueryParams {
     sort: Option<SortField>,
     dir: Option<SortOrder>,
     filter: Option<String>,
-    _limit: Option<i32>,
-    _offset: Option<i32>,
+    page: Option<u32>,
 }
 
 async fn show_project(
@@ -197,6 +196,7 @@ async fn show_project(
     State(state): State<AppState>,
     query: Result<Query<ShowProjectQueryParams>, QueryRejection>,
     headers: HeaderMap,
+    uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
     let fb = and()
@@ -222,8 +222,20 @@ async fn show_project(
         ),
         _ => None,
     };
+    let paginator = Paginator::new(
+        project
+            .count_samples(sample_filter.clone(), &state.db)
+            .await? as u32,
+        Some(50),
+        params.page,
+    );
     project
-        .load_samples(sample_filter, Some(sort.into()), &state.db)
+        .load_samples(
+            sample_filter,
+            Some(sort.into()),
+            Some(paginator.limits()),
+            &state.db,
+        )
         .await?;
 
     let sort_options = vec![
@@ -266,6 +278,8 @@ async fn show_project(
                  project => project,
                  query => params,
                  options => sort_options,
+                 summary => paginator,
+                 request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
     )
     .into_response())

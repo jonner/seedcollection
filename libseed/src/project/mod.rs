@@ -245,6 +245,7 @@ impl Project {
         &mut self,
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<allocation::SortField>>,
+        limit: Option<LimitSpec>,
         db: &Database,
     ) -> Result<()> {
         let mut fbuilder = and().push(allocation::Filter::ProjectId(self.id));
@@ -253,8 +254,22 @@ impl Project {
         }
 
         self.allocations =
-            AllocatedSample::load_all(Some(fbuilder.build()), sort, None, db).await?;
+            AllocatedSample::load_all(Some(fbuilder.build()), sort, limit, db).await?;
         Ok(())
+    }
+
+    /// Count all of the samples that are allocated to this project
+    pub async fn count_samples(
+        &mut self,
+        filter: Option<DynFilterPart>,
+        db: &Database,
+    ) -> Result<u64> {
+        let mut fbuilder = and().push(allocation::Filter::ProjectId(self.id));
+        if let Some(filter) = filter {
+            fbuilder = fbuilder.push(filter);
+        }
+
+        AllocatedSample::count(Some(fbuilder.build()), db).await
     }
 
     /// Allocate the given sample to this project
