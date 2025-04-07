@@ -10,32 +10,32 @@ pub(crate) fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")
 }
 
-pub const PAGE_SIZE: i32 = 100;
+pub const PAGE_SIZE: u32 = 100;
 
 pub struct Paginator {
-    npages: usize,
-    pagesize: usize,
-    page: NonZero<usize>,
+    npages: u32,
+    pagesize: u32,
+    page: NonZero<u32>,
 }
 
 impl Paginator {
-    pub fn new(total_items: usize, pagesize: Option<i32>, page: Option<i32>) -> Self {
-        let pagesize = pagesize.unwrap_or(PAGE_SIZE) as usize;
+    pub fn new(total_items: u32, pagesize: Option<u32>, page: Option<u32>) -> Self {
+        let pagesize = pagesize.unwrap_or(PAGE_SIZE);
         let npages = total_items.div_ceil(pagesize);
         Self {
             npages,
             pagesize,
             page: page
-                .and_then(|p| NonZero::new((p as usize).min(npages)))
+                .and_then(|p| NonZero::new(p.min(npages)))
                 .unwrap_or(unsafe { NonZero::new_unchecked(1) }),
         }
     }
 
-    pub fn n_pages(&self) -> usize {
+    pub fn n_pages(&self) -> u32 {
         self.npages
     }
 
-    pub fn current_page(&self) -> usize {
+    pub fn current_page(&self) -> u32 {
         self.page.get()
     }
 
