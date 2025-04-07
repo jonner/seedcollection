@@ -3,12 +3,12 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, app_url},
+    util::{FlashMessage, FlashMessageKind, Paginator, app_url},
 };
 use anyhow::{Context, anyhow};
 use axum::{
     Form, Router,
-    extract::{Path, Query, State},
+    extract::{OriginalUri, Path, Query, State},
     http::HeaderMap,
     response::IntoResponse,
     routing::get,
@@ -42,6 +42,7 @@ pub(crate) fn router() -> Router<AppState> {
 #[derive(Deserialize)]
 struct SourceListParams {
     filter: Option<String>,
+    page: Option<u32>,
 }
 
 async fn list_sources(
@@ -50,6 +51,7 @@ async fn list_sources(
     State(state): State<AppState>,
     Query(params): Query<SourceListParams>,
     headers: HeaderMap,
+    uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     let mut fbuilder = and().push(source::Filter::UserId(user.id));
 
@@ -60,12 +62,21 @@ async fn list_sources(
             .build();
         fbuilder = fbuilder.push(subfilter);
     }
-    let sources = Source::load_all(Some(fbuilder.build()), None, None, &state.db).await?;
+    let filter = fbuilder.build();
+    let paginator = Paginator::new(
+        Source::count(Some(filter.clone()), &state.db).await? as u32,
+        Some(25),
+        params.page,
+    );
+    let sources =
+        Source::load_all(Some(filter), None, paginator.limits().into(), &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
                  sources => sources,
+                 summary => paginator,
+                 request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
     )
     .into_response())

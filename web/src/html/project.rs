@@ -3,12 +3,12 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, app_url, format_id_number},
+    util::{FlashMessage, FlashMessageKind, Paginator, app_url, format_id_number},
 };
 use anyhow::anyhow;
 use axum::{
     Form, Router,
-    extract::{Path, Query, State, rejection::QueryRejection},
+    extract::{OriginalUri, Path, Query, State, rejection::QueryRejection},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
@@ -54,6 +54,7 @@ pub(crate) fn router() -> Router<AppState> {
 struct ProjectListParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     filter: Option<String>,
+    page: Option<u32>,
 }
 
 async fn list_projects(
@@ -62,29 +63,42 @@ async fn list_projects(
     State(state): State<AppState>,
     OptionalQuery(params): OptionalQuery<ProjectListParams>,
     headers: HeaderMap,
+    uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     trace!(?params, "Listing projects");
     let mut fbuilder = and().push(project::Filter::User(user.id));
-    let namefilter = params.and_then(|p| {
-        p.filter.map(|filterstring| {
-            debug!(?filterstring, "Got project filter");
-            or().push(project::Filter::Name(Cmp::Like, filterstring.clone()))
-                .push(project::Filter::Description(
-                    Cmp::Like,
-                    filterstring.clone(),
-                ))
-                .build()
-        })
-    });
+    let (namefilter, page) = match params {
+        Some(x) => (
+            x.filter.map(|filterstring| {
+                debug!(?filterstring, "Got project filter");
+                or().push(project::Filter::Name(Cmp::Like, filterstring.clone()))
+                    .push(project::Filter::Description(
+                        Cmp::Like,
+                        filterstring.clone(),
+                    ))
+                    .build()
+            }),
+            x.page,
+        ),
+        None => (None, None),
+    };
     if let Some(namefilter) = namefilter {
         fbuilder = fbuilder.push(namefilter);
     }
-    let projects = Project::load_all(Some(fbuilder.build()), None, None, &state.db).await?;
+    let filter = fbuilder.build();
+    let paginator = Paginator::new(
+        Project::count(Some(filter.clone()), &state.db).await? as u32,
+        Some(25),
+        page,
+    );
+    let projects = Project::load_all(Some(filter), None, None, &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
                  projects => projects,
+                 summary => paginator,
+                 request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
     )
     .into_response())

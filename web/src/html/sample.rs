@@ -125,16 +125,15 @@ async fn list_samples(
         Ok(n) => n,
         Err(e) => return Error::from(e).into_response(),
     };
-    let paginator = Paginator::new(nsamples as u32, Some(50), params.page);
-    match Sample::load_all(filter, sort, Some(paginator.limits()), &state.db).await {
+    let summary = Paginator::new(nsamples as u32, Some(50), params.page);
+    match Sample::load_all(filter, sort, Some(summary.limits()), &state.db).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),
             context!(user => user,
                      samples => samples,
                      query => params,
-                     page => paginator.current_page(),
-                     total_pages => paginator.n_pages(),
+                     summary => summary,
                      request_uri => uri.to_string(),
                      options =>  sort_options,
                      filteronly => headers.get("HX-Request").is_some()),

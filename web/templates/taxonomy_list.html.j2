@@ -13,5 +13,5 @@
         </li>
         {% endfor %}
     </ul>
-    {{ pagination(total_pages, page, request_uri)}}
+    {{ pagination(summary.npages, summary.page, request_uri)}}
 {% endblock %}

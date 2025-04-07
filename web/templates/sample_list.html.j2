@@ -12,11 +12,12 @@
         {{ filter_sort_widget("/sample/list" | app_url, "#sample-plus-pagination", options, query)}}
     </div>
     <div id="sample-plus-pagination">
+    <div class="text-body-tertiary">{{ summary.total_items }} items found </div>
     {{ sample_list(samples, "sample-table") }}
-    {{ pagination(total_pages, page, request_uri)}}
+    {{ pagination(summary.npages, summary.page, request_uri)}}
     </div>
 {% endblock %}
 {% else %}
 {{ sample_list(samples, "sample-table") }}
-{{ pagination(total_pages, page, request_uri)}}
+{{ pagination(summary.npages, summary.page, request_uri)}}
 {% endif %}
