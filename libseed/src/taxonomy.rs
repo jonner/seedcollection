@@ -350,7 +350,7 @@ impl Loadable for Taxon {
     }
 
     async fn insert(&mut self, _db: &Database) -> Result<&Self::Id> {
-        return Err(Error::InvalidOperation("Can't insert new taxon".into()));
+        Err(Error::InvalidOperation("Can't insert new taxon".into()))
     }
 
     async fn load(id: Self::Id, db: &Database) -> Result<Self> {
@@ -385,7 +385,7 @@ impl Loadable for Taxon {
     }
 
     async fn update(&self, _db: &Database) -> Result<()> {
-        return Err(Error::InvalidOperation("Cannot update taxon".into()));
+        Err(Error::InvalidOperation("Cannot update taxon".into()))
     }
 }
 
