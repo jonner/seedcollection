@@ -66,7 +66,7 @@ async fn list_samples(
 ) -> impl IntoResponse {
     debug!("query params: {:?}", params);
 
-    let filter = params.filter.as_ref().map(|f| {
+    let user_filter = params.filter.as_ref().map(|f| {
         let idprefix: Result<i64, _> = f.parse();
         let mut builder = or()
             .push(sample::taxon_name_like(f))
@@ -75,11 +75,13 @@ async fn list_samples(
         if let Ok(n) = idprefix {
             builder = builder.push(sample::Filter::Id(Cmp::NumericPrefix, n));
         }
-        and()
-            .push(sample::Filter::UserId(user.id))
-            .push(builder.build())
-            .build()
+        builder.build()
     });
+    let mut builder = and().push(sample::Filter::UserId(user.id));
+    if let Some(filter) = user_filter {
+        builder = builder.push(filter);
+    }
+    let filter = builder.build();
 
     let dir = params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending);
     let field = params
@@ -121,12 +123,12 @@ async fn list_samples(
             selected: matches!(field, SortField::Quantity),
         },
     ];
-    let nsamples = match Sample::count(filter.clone(), &state.db).await {
+    let nsamples = match Sample::count(Some(filter.clone()), &state.db).await {
         Ok(n) => n,
         Err(e) => return Error::from(e).into_response(),
     };
     let summary = Paginator::new(nsamples as u32, Some(50), params.page);
-    match Sample::load_all(filter, sort, Some(summary.limits()), &state.db).await {
+    match Sample::load_all(Some(filter), sort, Some(summary.limits()), &state.db).await {
         Ok(samples) => RenderHtml(
             key,
             state.tmpl.clone(),
