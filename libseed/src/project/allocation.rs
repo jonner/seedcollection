@@ -218,9 +218,9 @@ impl Loadable for AllocatedSample {
     }
 
     async fn update(&self, _db: &Database) -> Result<()> {
-        return Err(Error::InvalidOperation(
+        Err(Error::InvalidOperation(
             "Cannot update an allocation".into(),
-        ));
+        ))
     }
 }
 
