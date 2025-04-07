@@ -155,6 +155,15 @@ pub struct LimitSpec {
     pub offset: Option<i32>,
 }
 
+impl From<i32> for LimitSpec {
+    fn from(count: i32) -> Self {
+        LimitSpec {
+            count,
+            offset: None,
+        }
+    }
+}
+
 impl ToSql for LimitSpec {
     fn to_sql(&self) -> String {
         format!(
