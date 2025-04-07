@@ -5,7 +5,6 @@ use crate::core::{
     loadable::Loadable,
     query::{DynFilterPart, LimitSpec, SortSpecs, ToSql, filter::FilterPart},
 };
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::{QueryBuilder, Row, Sqlite};
 use strum_macros::EnumIter;
@@ -71,7 +70,6 @@ pub struct Note {
     pub details: Option<String>,
 }
 
-#[async_trait]
 impl Loadable for Note {
     type Id = i64;
     type Sort = SortField;

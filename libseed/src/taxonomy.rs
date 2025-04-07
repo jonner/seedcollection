@@ -8,7 +8,6 @@ use crate::core::{
         filter::{Cmp, FilterPart, and, or},
     },
 };
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize, de::IntoDeserializer};
 use sqlx::{FromRow, Row, error::Error::ColumnDecode, sqlite::SqliteRow};
 use std::str::FromStr;
@@ -338,7 +337,6 @@ pub struct Taxon {
     pub germination: Option<Vec<Germination>>,
 }
 
-#[async_trait]
 impl Loadable for Taxon {
     type Id = i64;
     type Sort = SortField;

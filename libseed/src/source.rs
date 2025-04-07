@@ -11,7 +11,6 @@ use crate::{
     },
     user::User,
 };
-use async_trait::async_trait;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::QueryBuilder;
@@ -86,7 +85,6 @@ pub struct Source {
     pub userid: <User as Loadable>::Id,
 }
 
-#[async_trait]
 impl Loadable for Source {
     type Id = i64;
     type Sort = SortField;

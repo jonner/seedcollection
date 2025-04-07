@@ -13,7 +13,6 @@ use crate::{
     user::User,
 };
 pub use allocation::AllocatedSample;
-use async_trait::async_trait;
 pub use note::{Note, NoteFilter, NoteType};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
@@ -48,7 +47,6 @@ pub struct Project {
     pub userid: <User as Loadable>::Id,
 }
 
-#[async_trait]
 impl Loadable for Project {
     type Id = i64;
     type Sort = SortField;

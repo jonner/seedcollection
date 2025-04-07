@@ -9,7 +9,6 @@ use crate::core::{
     error::{Error, Result},
     query::{DynFilterPart, LimitSpec, SortSpecs, ToSql},
 };
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 /// A trait that the [Loadable::Id] type must implement to be used with Loadable.
@@ -25,8 +24,7 @@ impl Indexable for i64 {
     }
 }
 
-#[async_trait]
-pub trait Loadable {
+pub trait Loadable: Send {
     /// The type of the ID for this object in the database
     type Id: Clone + Send + Indexable + sqlx::Type<sqlx::Sqlite> + PartialEq;
     type Sort: ToSql;
@@ -38,39 +36,50 @@ pub trait Loadable {
     fn set_invalid(&mut self);
 
     /// Insert the object into the Database
-    async fn insert(&mut self, db: &Database) -> Result<&Self::Id>;
+    fn insert(
+        &mut self,
+        db: &Database,
+    ) -> impl std::future::Future<Output = Result<&Self::Id>> + Send;
 
     /// Load the object with the given `id` from the database
-    async fn load(id: Self::Id, db: &Database) -> Result<Self>
+    fn load(id: Self::Id, db: &Database) -> impl std::future::Future<Output = Result<Self>> + Send
     where
         Self: Sized;
 
     /// Load matching objects from the database
-    async fn load_all(
+    fn load_all(
         filter: Option<DynFilterPart>,
         sort: Option<SortSpecs<Self::Sort>>,
         limit: Option<LimitSpec>,
         db: &Database,
-    ) -> Result<Vec<Self>>
+    ) -> impl std::future::Future<Output = Result<Vec<Self>>> + Send
     where
         Self: Sized;
 
     /// query the number of matching objects in the database
-    async fn count(filter: Option<DynFilterPart>, db: &Database) -> Result<u64>;
+    fn count(
+        filter: Option<DynFilterPart>,
+        db: &Database,
+    ) -> impl std::future::Future<Output = Result<u64>> + Send;
 
     /// Convenience function to delete the object with the id `self.id()` from
     /// the database
-    async fn delete(&mut self, db: &Database) -> Result<()> {
-        Self::delete_id(&self.id(), db)
-            .await
-            .inspect(|_| self.set_invalid())
+    fn delete(&mut self, db: &Database) -> impl std::future::Future<Output = Result<()>> + Send {
+        async {
+            Self::delete_id(&self.id(), db)
+                .await
+                .inspect(|_| self.set_invalid())
+        }
     }
 
     /// Delete the object with the id `id` from the database
-    async fn delete_id(id: &Self::Id, db: &Database) -> Result<()>;
+    fn delete_id(
+        id: &Self::Id,
+        db: &Database,
+    ) -> impl std::future::Future<Output = Result<()>> + Send;
 
     /// Update the sample in the database so that it matches this object
-    async fn update(&self, db: &Database) -> Result<()>;
+    fn update(&self, db: &Database) -> impl std::future::Future<Output = Result<()>> + Send;
 
     fn invalid_id() -> Self::Id {
         Self::Id::invalid_value()
