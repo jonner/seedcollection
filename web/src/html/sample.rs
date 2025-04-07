@@ -54,6 +54,8 @@ struct SampleListParams {
     dir: Option<SortOrder>,
     #[serde(default)]
     page: Option<u32>,
+    #[serde(default)]
+    all: bool,
 }
 
 async fn list_samples(
@@ -78,6 +80,9 @@ async fn list_samples(
         builder.build()
     });
     let mut builder = and().push(sample::Filter::UserId(user.id));
+    if !params.all {
+        builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
+    }
     if let Some(filter) = user_filter {
         builder = builder.push(filter);
     }
