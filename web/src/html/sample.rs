@@ -53,7 +53,7 @@ struct SampleListParams {
     #[serde(default, deserialize_with = "empty_string_as_none")]
     dir: Option<SortOrder>,
     #[serde(default)]
-    page: Option<i32>,
+    page: Option<u32>,
 }
 
 async fn list_samples(
@@ -125,7 +125,7 @@ async fn list_samples(
         Ok(n) => n,
         Err(e) => return Error::from(e).into_response(),
     };
-    let paginator = Paginator::new(nsamples as usize, Some(50), params.page);
+    let paginator = Paginator::new(nsamples as u32, Some(50), params.page);
     match Sample::load_all(filter, sort, Some(paginator.limits()), &state.db).await {
         Ok(samples) => RenderHtml(
             key,

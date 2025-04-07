@@ -51,7 +51,7 @@ async fn root(
 #[derive(Deserialize)]
 struct ListParams {
     rank: Option<Rank>,
-    page: Option<i32>,
+    page: Option<u32>,
 }
 
 async fn list_taxa(
@@ -66,7 +66,7 @@ async fn list_taxa(
         None => Rank::Species,
     };
     let count = Taxon::count(Some(taxonomy::Filter::Rank(rank.clone()).into()), &state.db).await?;
-    let paginator = Paginator::new(count as usize, None, params.page);
+    let paginator = Paginator::new(count as u32, None, params.page);
     let taxa: Vec<Taxon> = Taxon::load_all(
         Some(taxonomy::Filter::Rank(rank).into()),
         None,
