@@ -40,11 +40,11 @@ pub enum NoteFilter {
     /// Filter against the ID of the note
     Id(<Note as Loadable>::Id),
 
-    /// Filter against the ID of the associated [Allocation](super::Allocation) object
+    /// Filter against the ID of the associated [AllocatedSample] object
     AllocationId(<AllocatedSample as Loadable>::Id),
 }
 
-/// An object that represents a project-specific note tied to a particular [Allocation](super::Allocation) object
+/// An object that represents a project-specific note tied to a particular [AllocatedSample] object
 #[derive(sqlx::FromRow, Deserialize, Serialize, Debug, PartialEq)]
 pub struct Note {
     /// A unique ID that identifies this note in the database
@@ -80,8 +80,8 @@ impl Loadable for Note {
         self.id
     }
 
-    fn set_id(&mut self, id: Self::Id) {
-        self.id = id
+    fn set_invalid(&mut self) {
+        self.id = Self::invalid_id()
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {

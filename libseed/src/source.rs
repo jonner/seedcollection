@@ -95,8 +95,8 @@ impl Loadable for Source {
         self.id
     }
 
-    fn set_id(&mut self, id: Self::Id) {
-        self.id = id
+    fn set_invalid(&mut self) {
+        self.id = Self::invalid_id()
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
