@@ -57,7 +57,7 @@ pub enum Filter {
     Notes(Cmp, String),
 }
 
-/// Creates a query filter to match an [Allocation] object when the any of the
+/// Creates a query filter to match an [AllocatedSample] object when the any of the
 /// components of the sample's taxon name matches the given `substr`
 pub fn taxon_name_like(substr: &str) -> DynFilterPart {
     or().push(Filter::TaxonName1(Cmp::Like, substr.into()))
@@ -161,8 +161,8 @@ impl Loadable for AllocatedSample {
         self.id
     }
 
-    fn set_id(&mut self, id: Self::Id) {
-        self.id = id
+    fn set_invalid(&mut self) {
+        self.id = Self::invalid_id()
     }
 
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id> {
@@ -292,7 +292,7 @@ impl AllocatedSample {
         builder
     }
 
-    /// Load a single matching [Allocation] from the database. Note that this is
+    /// Load a single matching [AllocatedSample] from the database. Note that this is
     /// only useful when the `filter` that is specified will return a single result. For
     /// example if you're filtering by [Filter::Id]
     pub async fn load_one(filter: Option<DynFilterPart>, db: &Database) -> sqlx::Result<Self> {

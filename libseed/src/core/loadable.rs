@@ -33,8 +33,9 @@ pub trait Loadable {
 
     /// return the ID associated with this particular object
     fn id(&self) -> Self::Id;
+
     /// Set the ID of this particular object to `id`
-    fn set_id(&mut self, id: Self::Id);
+    fn set_invalid(&mut self);
 
     /// Insert the object into the Database
     async fn insert(&mut self, db: &Database) -> Result<&Self::Id>;
@@ -59,7 +60,7 @@ pub trait Loadable {
     async fn delete(&mut self, db: &Database) -> Result<()> {
         Self::delete_id(&self.id(), db)
             .await
-            .inspect(|_| self.set_id(Self::Id::invalid_value()))
+            .inspect(|_| self.set_invalid())
     }
 
     /// Delete the object with the id `id` from the database
