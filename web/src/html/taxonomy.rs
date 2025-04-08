@@ -144,10 +144,10 @@ async fn show_all_children(
                 notes,
                 certainty
             FROM CTE
-            INNER JOIN sc_samples S ON CTE.tsn=S.tsn
-            INNER JOIN sc_sources L on L.srcid=S.srcid
-            INNER JOIN sc_users U on U.userid=S.userid
-            LEFT JOIN mntaxa M on CTE.tsn=M.tsn 
+            INNER JOIN sc_samples S USING(tsn)
+            INNER JOIN sc_sources L USING(srcid)
+            INNER JOIN sc_users U USING(userid)
+            LEFT JOIN mntaxa M USING(tsn)
             WHERE S.userid=?
             ORDER BY seq"#,
     )

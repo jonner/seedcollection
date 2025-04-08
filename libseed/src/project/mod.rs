@@ -205,7 +205,7 @@ impl Project {
         let fields = select_fields.join(", ");
         let mut builder = QueryBuilder::new("SELECT ");
         builder.push(fields);
-        builder.push(" FROM sc_projects P INNER JOIN sc_users U ON U.userid=P.userid");
+        builder.push(" FROM sc_projects P INNER JOIN sc_users U USING(userid)");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);

@@ -199,7 +199,7 @@ impl Source {
         let mut qb = QueryBuilder::new(
             r#"SELECT L.srcid, L.srcname, L.srcdesc, L.latitude, L.longitude,
             L.userid, U.username FROM sc_sources L
-            INNER JOIN sc_users U ON U.userid=L.userid"#,
+            INNER JOIN sc_users U USING(userid)"#,
         );
         if let Some(f) = filter {
             qb.push(" WHERE ");

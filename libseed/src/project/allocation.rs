@@ -277,11 +277,11 @@ impl AllocatedSample {
         let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("SELECT ");
         builder.push(fields);
         builder.push(" FROM sc_project_samples PS
-            INNER JOIN vsamples S ON PS.sampleid=S.sampleid
+            INNER JOIN vsamples S USING(sampleid)
             LEFT JOIN ( SELECT * FROM
             (SELECT *, ROW_NUMBER() OVER (PARTITION BY psid ORDER BY DATE(notedate) DESC, pnoteid DESC) AS rownr
             FROM sc_project_notes ORDER BY pnoteid DESC)
-            WHERE rownr = 1) N ON N.psid = PS.psid");
+            WHERE rownr = 1) N USING(psid)");
         if let Some(f) = filter {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
