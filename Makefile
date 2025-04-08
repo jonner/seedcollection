@@ -13,7 +13,7 @@ SEEDWEB_HTTPS_PORT ?= 8443
 update-container: Containerfile
 	$(CONTAINERCMD) pull rust:alpine alpine:latest
 
-container: update-container Containerfile config.yaml.docker
+container: Containerfile config.yaml.docker
 	$(CONTAINERCMD) build -t seedweb:latest .
 
 run-container: container
