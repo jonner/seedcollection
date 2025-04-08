@@ -6,12 +6,13 @@ use crate::{
     },
     user::User,
 };
+use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 use std::num::NonZero;
 
 const DEFAULT_PAGESIZE: NonZero<u32> = NonZero::new(50).unwrap();
 
-#[derive(sqlx::FromRow, Clone, Debug, PartialEq)]
+#[derive(sqlx::FromRow, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Preferences {
     #[sqlx(rename = "prefid")]
     id: <Self as Loadable>::Id,
