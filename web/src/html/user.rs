@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use crate::{
     TemplateKey,
     auth::SqliteUser,
@@ -9,6 +11,7 @@ use anyhow::anyhow;
 use axum::{
     Form, Router,
     extract::State,
+    http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
 };
@@ -29,6 +32,7 @@ pub(crate) fn router() -> Router<AppState> {
         .route("/me", get(show_profile).put(update_profile))
         .route("/me/edit", get(show_edit_profile))
         .route("/me/reverify", post(resend_verification))
+        .route("/me/prefs", get(show_prefs).put(update_prefs))
 }
 
 #[derive(Serialize)]
@@ -134,4 +138,36 @@ async fn resend_verification(
         state.tmpl.clone(),
         context!(message => message),
     ))
+}
+
+async fn show_prefs(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
+}
+
+#[derive(Deserialize)]
+struct PrefsParams {
+    pagesize: NonZero<u32>,
+}
+
+async fn update_prefs(
+    mut user: SqliteUser,
+    State(state): State<AppState>,
+    TemplateKey(key): TemplateKey,
+    Form(params): Form<PrefsParams>,
+) -> Result<impl IntoResponse, Error> {
+    let prefs = user.preferences_mut(&state.db).await?;
+    prefs.pagesize = params.pagesize;
+    match prefs.update(&state.db).await {
+        Ok(_) => Ok([("HX-Redirect", app_url("/user/me"))].into_response()),
+        Err(e) => Ok((StatusCode::INTERNAL_SERVER_ERROR, RenderHtml(
+            key,
+            state.tmpl.clone(),
+            context!(message => FlashMessage { kind: FlashMessageKind::Error, msg: e.to_string()}),
+        ))
+        .into_response()),
+    }
 }

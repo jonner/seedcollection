@@ -67,8 +67,7 @@ pub struct User {
     /// a hashed password for use when authenticating a user
     pub pwhash: String,
 
-    #[serde(skip)]
-    prefs: Option<ExternalRef<Preferences>>,
+    pub prefs: Option<ExternalRef<Preferences>>,
 }
 
 impl FromRow<'_, SqliteRow> for User {

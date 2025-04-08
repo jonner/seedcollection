@@ -1,0 +1,27 @@
+{% extends "root.html.j2" %}
+{% from "_macros.html.j2" import icon %}
+{% block title %}Edit user preferences{% endblock %}
+{% block content %}
+<h2>{{ self.title() }}</h2>
+<div class="mb-4 text-secondary">There are a few settings that can be customized to change the appearance or behavior of the website</div>
+<form class="mb-3" hx-put hx-target-error="#error-container">
+    <div class="mb-3 ms-3">
+        <div id="error-container"></div>
+    </div>
+    <div class="mb-3 ms-3">
+            <label for="PrefsPagesize" class="form-label">Page size</label>
+            <input id="PrefsPagesize"
+                   type="number"
+                   class="form-control"
+                   min="1"
+                   name="pagesize"
+                   value="{{ user.prefs.pagesize }}">
+            <div class="text-secondary">This setting controls how many items are shown per page whenever there is a list of items to display</div>
+    </div>
+    <div class="mb-3 ms-3">
+        <div class="col-sm-3">
+            <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
