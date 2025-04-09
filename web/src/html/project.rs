@@ -58,7 +58,7 @@ struct ProjectListParams {
 }
 
 async fn list_projects(
-    user: SqliteUser,
+    mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     OptionalQuery(params): OptionalQuery<ProjectListParams>,
@@ -88,7 +88,7 @@ async fn list_projects(
     let filter = fbuilder.build();
     let paginator = Paginator::new(
         Project::count(Some(filter.clone()), &state.db).await? as u32,
-        Some(25),
+        user.preferences(&state.db).await?.pagesize.into(),
         page,
     );
     let projects = Project::load_all(Some(filter), None, None, &state.db).await?;
@@ -190,7 +190,7 @@ struct ShowProjectQueryParams {
 }
 
 async fn show_project(
-    user: SqliteUser,
+    mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
@@ -226,7 +226,7 @@ async fn show_project(
         project
             .count_samples(sample_filter.clone(), &state.db)
             .await? as u32,
-        Some(50),
+        user.preferences(&state.db).await?.pagesize.into(),
         params.page,
     );
     project

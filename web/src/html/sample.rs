@@ -59,13 +59,13 @@ struct SampleListParams {
 }
 
 async fn list_samples(
-    user: SqliteUser,
+    mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(params): Query<SampleListParams>,
     headers: HeaderMap,
     uri: OriginalUri,
-) -> impl IntoResponse {
+) -> Result<impl IntoResponse, Error> {
     debug!("query params: {:?}", params);
 
     let user_filter = params.filter.as_ref().map(|f| {
@@ -128,26 +128,24 @@ async fn list_samples(
             selected: matches!(field, SortField::Quantity),
         },
     ];
-    let nsamples = match Sample::count(Some(filter.clone()), &state.db).await {
-        Ok(n) => n,
-        Err(e) => return Error::from(e).into_response(),
-    };
-    let summary = Paginator::new(nsamples as u32, Some(50), params.page);
-    match Sample::load_all(Some(filter), sort, Some(summary.limits()), &state.db).await {
-        Ok(samples) => RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(user => user,
+    let nsamples = Sample::count(Some(filter.clone()), &state.db).await?;
+    let summary = Paginator::new(
+        nsamples as u32,
+        user.preferences(&state.db).await?.pagesize.into(),
+        params.page,
+    );
+    let samples = Sample::load_all(Some(filter), sort, Some(summary.limits()), &state.db).await?;
+    Ok(RenderHtml(
+        key,
+        state.tmpl.clone(),
+        context!(user => user,
                      samples => samples,
                      query => params,
                      summary => summary,
                      request_uri => uri.to_string(),
                      options =>  sort_options,
                      filteronly => headers.get("HX-Request").is_some()),
-        )
-        .into_response(),
-        Err(e) => Error::from(e).into_response(),
-    }
+    ))
 }
 
 async fn show_sample(
