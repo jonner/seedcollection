@@ -10,21 +10,21 @@ pub(crate) fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")
 }
 
-pub const PAGE_SIZE: u32 = 100;
+pub const PAGE_SIZE: NonZero<u32> = NonZero::new(50).unwrap();
 
 /// A structure that can be used to presents a summary of results in a web page
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Paginator {
     total_items: u32,
     npages: u32,
-    pagesize: u32,
+    pagesize: NonZero<u32>,
     page: NonZero<u32>,
 }
 
 impl Paginator {
-    pub fn new(total_items: u32, pagesize: Option<u32>, page: Option<u32>) -> Self {
+    pub fn new(total_items: u32, pagesize: Option<NonZero<u32>>, page: Option<u32>) -> Self {
         let pagesize = pagesize.unwrap_or(PAGE_SIZE);
-        let npages = total_items.div_ceil(pagesize);
+        let npages = total_items.div_ceil(pagesize.get());
         Self {
             total_items,
             npages,
@@ -37,8 +37,8 @@ impl Paginator {
 
     pub fn limits(&self) -> LimitSpec {
         LimitSpec {
-            count: self.pagesize as i32,
-            offset: Some(((self.page.get() - 1) * self.pagesize) as i32),
+            count: self.pagesize.get() as i32,
+            offset: Some(((self.page.get() - 1) * self.pagesize.get()) as i32),
         }
     }
 }
@@ -50,7 +50,7 @@ mod test_paginator {
 
     #[test]
     fn test_paginator() {
-        let p = Paginator::new(100, Some(20), None);
+        let p = Paginator::new(100, Some(20.try_into().unwrap()), None);
         assert_eq!(p.npages, 5);
         assert_eq!(p.page.get(), 1);
         assert_eq!(
@@ -62,7 +62,7 @@ mod test_paginator {
         );
 
         // page 0 gets clamped to 1
-        let p = Paginator::new(100, Some(20), Some(0));
+        let p = Paginator::new(100, Some(20.try_into().unwrap()), Some(0));
         assert_eq!(p.npages, 5);
         assert_eq!(p.page.get(), 1);
         assert_eq!(
@@ -73,7 +73,7 @@ mod test_paginator {
             }
         );
 
-        let p = Paginator::new(101, Some(20), Some(5));
+        let p = Paginator::new(101, Some(20.try_into().unwrap()), Some(5));
         assert_eq!(p.npages, 6);
         assert_eq!(p.page.get(), 5);
         assert_eq!(
@@ -85,7 +85,7 @@ mod test_paginator {
         );
 
         // specifying a page beyond the max will clamp to the max
-        let p = Paginator::new(101, Some(20), Some(7));
+        let p = Paginator::new(101, Some(20.try_into().unwrap()), Some(7));
         assert_eq!(p.npages, 6);
         assert_eq!(p.page.get(), 6);
         assert_eq!(

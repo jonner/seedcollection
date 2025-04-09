@@ -46,7 +46,7 @@ struct SourceListParams {
 }
 
 async fn list_sources(
-    user: SqliteUser,
+    mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Query(params): Query<SourceListParams>,
@@ -65,7 +65,7 @@ async fn list_sources(
     let filter = fbuilder.build();
     let paginator = Paginator::new(
         Source::count(Some(filter.clone()), &state.db).await? as u32,
-        Some(25),
+        user.preferences(&state.db).await?.pagesize.into(),
         params.page,
     );
     let sources =
@@ -96,7 +96,7 @@ struct SourceShowParams {
 }
 
 async fn show_source(
-    user: SqliteUser,
+    mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -110,7 +110,7 @@ async fn show_source(
         .build();
     let paginator = Paginator::new(
         Sample::count(Some(filter.clone()), &state.db).await? as u32,
-        Some(25),
+        user.preferences(&state.db).await?.pagesize.into(),
         params.page,
     );
     let samples = Sample::load_all(Some(filter), None, Some(paginator.limits()), &state.db).await?;
