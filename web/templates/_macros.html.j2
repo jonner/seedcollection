@@ -140,8 +140,8 @@ var marker = L.marker([{{ latitude }}, {{ longitude }}]).addTo(map);
 
 {% macro pagination(total_pages, current_page, request_uri) %}
 {% if total_pages > 1 %}
-<nav aria-label="page navigation">
-    <ul class="pagination">
+<nav class="my-3" aria-label="page navigation">
+    <ul class="pagination justify-content-center">
         {% with start = [(current_page-1) - 5, 0]|max, end = [(current_page-1) + 6, total_pages]|min %}
         {% if start > 0 %}
         <li class="page-item">

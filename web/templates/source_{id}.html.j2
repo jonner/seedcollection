@@ -26,5 +26,5 @@
 {% endif %}
 <h3>{{ summary.total_items }} samples from this source</h3>
 {{ sample_list(samples, "sample-list") }}
-    {{ pagination(summary.npages, summary.page, request_uri)}}
+{{ pagination(summary.npages, summary.page, request_uri)}}
 {% endblock %}

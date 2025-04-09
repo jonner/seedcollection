@@ -18,6 +18,7 @@
     </div>
 {% endblock %}
 {% else %}
+<div class="text-body-tertiary">{{ summary.total_items }} items found </div>
 {{ sample_list(samples, "sample-table") }}
 {{ pagination(summary.npages, summary.page, request_uri)}}
 {% endif %}
