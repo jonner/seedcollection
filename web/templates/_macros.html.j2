@@ -85,7 +85,7 @@
          hx-boost="true"
          hx-target="{{ target }}"
          hx-get="{{ url }}"
-         hx-trigger="submit, input changed delay:500ms from:input, change changed delay:500ms from:select">
+         hx-trigger="submit, input changed delay:500ms from:input, change changed delay:500ms, change from:#displayallcheck">
     <div class="input-group mb-3">
             <input type="text"
                    class="form-control"
@@ -93,11 +93,12 @@
                    placeholder="Filter list..."
                    value="{{ query.filter or "" }}"
                    name="filter">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">Sort</button>
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">Sort/Filter</button>
             <div class="dropdown-menu dropdown-menu-end">
                 <div class="p-3">
+                <h5>Sort</h5>
                     <div class="mb-3">
-                        <label for="sortselect" class="dropdown-header">Sort by</label>
+                        <label for="sortselect" class="dropdown-header">Sort field</label>
                         <select id="sortselect" class="form-select" name="sort">
                             {% for option in options %}
                             <option value="{{ option.code }}" {% if query.sort == option.code %}selected{% endif %}>{{ option.name }}</option>
@@ -110,6 +111,15 @@
                             <option value="asc" {% if query.filter == "asc" %}selected{% endif %}>{{ "Ascending" }}</option>
                             <option value="desc" {% if query.filter == "desc" %}selected{% endif %}>{{ "Descending" }}</option>
                         </select>
+                    </div>
+                </div>
+                <div class="p-3">
+                <h5>Filter</h5>
+                    <div class="mb-3">
+                        <div clas="form-check">
+                            <input id="displayallcheck" class="form-check-input" type="checkbox" name="all" value="true" {% if query.all %}checked{% endif %}>
+                            <label class="ms-2" for="displayallcheck" class="form-check-label">Show empty samples</label>
+                        </div>
                     </div>
                 </div>
             </div>
