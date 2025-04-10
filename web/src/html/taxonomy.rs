@@ -96,63 +96,20 @@ async fn show_all_children(
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, Error> {
     let samples: Vec<Sample> = sqlx::query_as(
-        r#"WITH RECURSIVE CTE AS (
-            SELECT
-                T.tsn,
-                T.parent_tsn,
-                T.complete_name,
-                T.unit_name1,
-                T.unit_name2,
-                T.unit_name3,
-                T.rank_id,
-                T.phylo_sort_seq,
-                T.tsn as top_parent,
-                T.complete_name as top_parent_name
-            FROM taxonomic_units T
-            WHERE T.tsn=?
+        r#"WITH RECURSIVE children(t) AS (
+            VALUES(?)
             UNION ALL
             SELECT
-                TT.tsn,
-                TT.parent_tsn,
-                TT.complete_name,
-                TT.unit_name1,
-                TT.unit_name2,
-                TT.unit_name3,
-                TT.rank_id,
-                TT.phylo_sort_seq,
-                CTE.top_parent,
-                CTE.top_parent_name
-                FROM taxonomic_units TT, CTE
-                WHERE
-                    TT.parent_tsn = CTE.tsn
+                tsn
+            FROM taxonomic_units, children
+            WHERE parent_tsn = children.t
             )
             SELECT
-                CTE.tsn,
-                CTE.parent_tsn as parentid,
-                CTE.complete_name,
-                CTE.unit_name1,
-                CTE.unit_name2,
-                CTE.unit_name3,
-                CTE.phylo_sort_seq as seq,
-                top_parent,
-                top_parent_name,
-                M.native_status,
-                S.sampleid,
-                S.userid,
-                U.username,
-                L.srcid,
-                L.srcname,
-                quantity,
-                month,
-                year,
-                notes,
-                certainty
-            FROM CTE
-            INNER JOIN sc_samples S USING(tsn)
-            INNER JOIN sc_sources L USING(srcid)
-            INNER JOIN sc_users U USING(userid)
+                V.*,
+                M.native_status
+            FROM vsamples V
             LEFT JOIN mntaxa M USING(tsn)
-            WHERE S.userid=?
+            WHERE V.tsn IN children AND V.userid=?
             ORDER BY seq"#,
     )
     .bind(id)
