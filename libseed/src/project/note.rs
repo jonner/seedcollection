@@ -90,7 +90,7 @@ impl Loadable for Note {
             return Err(Error::InvalidStateMissingAttribute("summary".to_string()));
         }
         debug!(?self, "Inserting note into database");
-        let newval = sqlx::query_as(
+        let newval: Self = sqlx::query_as(
             r#"INSERT INTO sc_project_notes
             (psid, notedate, notetype, notesummary, notedetails)
             VALUES (?, ?, ?, ?, ?) RETURNING *"#,
@@ -102,7 +102,7 @@ impl Loadable for Note {
         .bind(&self.details)
         .fetch_one(db.pool())
         .await?;
-        *self = newval;
+        self.id = newval.id;
         Ok(&self.id)
     }
 

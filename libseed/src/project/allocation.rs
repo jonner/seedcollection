@@ -167,7 +167,7 @@ impl Loadable for AllocatedSample {
         if self.exists() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id()));
         }
-        let newval = sqlx::query_as(
+        let newval: Self = sqlx::query_as(
             "INSERT INTO sc_project_samples
                 (projectid, sampleid)
             VALUES
@@ -178,7 +178,7 @@ impl Loadable for AllocatedSample {
         .bind(self.sample.id)
         .fetch_one(db.pool())
         .await?;
-        *self = newval;
+        self.id = newval.id;
         Ok(&self.id)
     }
 

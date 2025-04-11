@@ -631,9 +631,14 @@ mod tests {
             .expect("Failed to get user list")
             .len();
         assert_eq!(nuvs + 1, nuvs_after);
-        let dbuv = UserVerification::find(user.id, &uv.key, &db)
+        let mut dbuv = UserVerification::find(user.id, &uv.key, &db)
             .await
             .expect("Failed to load userverification from db");
+        // this is only necessary to make the assert below work
+        dbuv.user
+            .load(&db, false)
+            .await
+            .expect("Failed to load user");
         assert_eq!(uv, dbuv);
     }
 

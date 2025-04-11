@@ -298,7 +298,7 @@ impl Loadable for Sample {
         if self.exists() {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id));
         }
-        let newval = sqlx::query_as(
+        let newval: Self = sqlx::query_as(
             "INSERT INTO sc_samples
                 (tsn, userid, srcid, month, year, quantity, notes, certainty)
             VALUES
@@ -315,8 +315,7 @@ impl Loadable for Sample {
         .bind(&self.certainty)
         .fetch_one(db.pool())
         .await?;
-        // FIXME: this will invalidate any of the external refs we had already loaded (e.g. taxon, user, source)
-        *self = newval;
+        self.id = newval.id;
         Ok(&self.id)
     }
 

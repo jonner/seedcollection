@@ -173,7 +173,7 @@ impl Loadable for UserVerification {
         }
         self.requested = Some(OffsetDateTime::now_utc());
         debug!(?self, "Inserting user verification into database");
-        let uv = sqlx::query_as(
+        let newval: Self = sqlx::query_as(
             r#"INSERT INTO sc_user_verification
             (userid, uvkey, uvexpiration)
             VALUES (?, ?, ?) RETURNING *"#,
@@ -183,7 +183,8 @@ impl Loadable for UserVerification {
         .bind(self.expiration)
         .fetch_one(db.pool())
         .await?;
-        *self = uv;
+        self.id = newval.id;
+        self.requested = newval.requested;
         Ok(&self.id)
     }
 

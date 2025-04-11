@@ -62,14 +62,14 @@ impl Loadable for Preferences {
     }
 
     async fn insert(&mut self, db: &crate::Database) -> Result<&Self::Id> {
-        let newval = sqlx::query_as(
+        let newval: Self = sqlx::query_as(
             "INSERT INTO sc_user_prefs (userid, pagesize) VALUES (?, ?) RETURNING *",
         )
         .bind(self.userid)
         .bind(self.pagesize)
         .fetch_one(db.pool())
         .await?;
-        *self = newval;
+        self.id = newval.id;
         Ok(&self.id)
     }
 

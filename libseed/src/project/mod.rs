@@ -64,7 +64,7 @@ impl Loadable for Project {
             return Err(Error::InvalidInsertObjectAlreadyExists(self.id()));
         }
         debug!(?self, "Inserting project into database");
-        let newval = sqlx::query_as(
+        let newval: Self = sqlx::query_as(
             "INSERT INTO sc_projects
                 (projname, projdescription, userid)
             VALUES
@@ -76,7 +76,7 @@ impl Loadable for Project {
         .bind(self.userid)
         .fetch_one(db.pool())
         .await?;
-        *self = newval;
+        self.id = newval.id;
         Ok(&self.id)
     }
 
