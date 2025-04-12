@@ -226,12 +226,20 @@ impl AllocationRow {
     }
 }
 
-fn datestring(m: Option<u8>, y: Option<u32>) -> String {
+fn datestring(m: Option<time::Month>, y: Option<u32>) -> String {
     match (m, y) {
-        (Some(m), Some(y)) => format!("{m}/{y}"),
+        (Some(m), Some(y)) => format!("{}/{y}", u8::from(m)),
         (None, Some(y)) => y.to_string(),
         _ => "Unknown".to_string(),
     }
+}
+
+#[test]
+fn test_datestring() {
+    assert_eq!(
+        "1/2024".to_string(),
+        datestring(time::Month::January.into(), Some(2024))
+    );
 }
 
 #[derive(Tabled, Serialize)]

@@ -273,7 +273,7 @@ pub struct Sample {
     /// The quantity of seeds that exist in this sample
     pub quantity: Option<f64>,
     /// The month that the sample was acquired or collected
-    pub month: Option<u8>,
+    pub month: Option<time::Month>,
     /// The year that the sample was acquired or collected
     pub year: Option<u32>,
     /// Free-form notes describing this seed sample
@@ -308,7 +308,7 @@ impl Loadable for Sample {
         .bind(self.taxon.id())
         .bind(self.user.id())
         .bind(self.source.id())
-        .bind(self.month)
+        .bind(self.month.map(u8::from))
         .bind(self.year)
         .bind(self.quantity)
         .bind(&self.notes)
@@ -367,7 +367,7 @@ impl Loadable for Sample {
         sqlx::query("Update sc_samples SET tsn=?, srcid=?, month=?, year=?, quantity=?, notes=?, certainty=? WHERE sampleid=?")
             .bind(self.taxon.id())
             .bind(self.source.id())
-            .bind(self.month)
+            .bind(self.month.map(u8::from))
             .bind(self.year)
             .bind(self.quantity)
             .bind(&self.notes)
@@ -426,7 +426,7 @@ impl Sample {
         taxonid: <Taxon as Loadable>::Id,
         userid: <User as Loadable>::Id,
         sourceid: <Source as Loadable>::Id,
-        month: Option<u8>,
+        month: Option<time::Month>,
         year: Option<u32>,
         quantity: Option<f64>,
         notes: Option<String>,
@@ -462,7 +462,15 @@ impl FromRow<'_, SqliteRow> for Sample {
             taxon: FromRow::from_row(row)?,
             source: FromRow::from_row(row)?,
             quantity: row.try_get("quantity").unwrap_or(None),
-            month: row.try_get("month").unwrap_or(None),
+            month: row
+                .try_get::<u8, _>("month")
+                .and_then(|val| {
+                    time::Month::try_from(val).map_err(|e| sqlx::Error::ColumnDecode {
+                        index: "month".to_string(),
+                        source: Box::new(e),
+                    })
+                })
+                .ok(),
             year: row.try_get("year").unwrap_or(None),
             notes: row.try_get("notes").unwrap_or(None),
             certainty: row.try_get("certainty").unwrap_or(Certainty::Uncertain),
@@ -498,7 +506,7 @@ mod tests {
             user: <User as Loadable>::Id,
             source: <Source as Loadable>::Id,
             quantity: Option<f64>,
-            month: Option<u8>,
+            month: Option<time::Month>,
             year: Option<u32>,
             notes: Option<String>,
             certainty: Certainty,
@@ -537,7 +545,7 @@ mod tests {
             1,
             1,
             Some(100.0),
-            Some(12),
+            time::Month::December.into(),
             Some(2023),
             Some("these are notes".to_string()),
             Certainty::Certain,
@@ -558,7 +566,7 @@ mod tests {
 
         assert_eq!(sample1.id, 4);
         assert_eq!(sample1.taxon.id(), 40683);
-        assert_eq!(sample1.month, Some(11));
+        assert_eq!(sample1.month, time::Month::November.into());
         assert_eq!(sample1.year, Some(2023));
         assert_eq!(sample1.source.id(), 1);
         assert_eq!(sample1.user.id(), 2);
@@ -568,13 +576,13 @@ mod tests {
         let user = sample1.user.clone();
         println!("{sample1:?}");
 
-        sample1.month = Some(12);
+        sample1.month = time::Month::December.into();
         sample1.update(&db).await.expect("Failed to update sample1");
 
         assert_eq!(sample1.id, 4);
         assert_eq!(sample1.taxon.id(), 40683);
         assert_eq!(sample1.taxon, taxon);
-        assert_eq!(sample1.month, Some(12));
+        assert_eq!(sample1.month, time::Month::December.into());
         assert_eq!(sample1.year, Some(2023));
         assert_eq!(sample1.source.id(), 1);
         assert_eq!(sample1.source, src);

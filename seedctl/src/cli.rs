@@ -244,7 +244,7 @@ pub(crate) enum SampleCommands {
         #[arg(short, long)]
         source: Option<i64>,
         #[arg(short, long)]
-        month: Option<u8>,
+        month: Option<time::Month>,
         #[arg(short, long)]
         year: Option<u32>,
         #[arg(short, long)]
@@ -267,7 +267,7 @@ pub(crate) enum SampleCommands {
         #[arg(long)]
         source: Option<i64>,
         #[arg(short, long)]
-        month: Option<u8>,
+        month: Option<time::Month>,
         #[arg(short, long)]
         year: Option<u16>,
         #[arg(short, long)]

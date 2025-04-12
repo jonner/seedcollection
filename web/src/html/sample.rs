@@ -30,7 +30,9 @@ use libseed::{
     source::Source,
 };
 use minijinja::context;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
+use std::str::FromStr;
+use time::Month;
 use tracing::{debug, error};
 
 pub(crate) fn router() -> Router<AppState> {
@@ -217,14 +219,34 @@ async fn new_sample(
     .into_response())
 }
 
+// A utility function to deserialize an Optional month from either a month name
+// or a month number. Also treats an empty string as None
+pub fn deserialize_month<'de, D>(de: D) -> Result<Option<Month>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt = Option::<String>::deserialize(de)?;
+    match opt.as_deref() {
+        None | Some("") => Ok(None),
+        Some(s) => Month::from_str(s)
+            .map_err(<D as Deserializer>::Error::custom)
+            .or_else(|_| {
+                u8::from_str(s)
+                    .map_err(<D as Deserializer>::Error::custom)
+                    .and_then(|n| Month::try_from(n).map_err(<D as Deserializer>::Error::custom))
+            })
+            .map(Some),
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct SampleParams {
     #[serde(deserialize_with = "empty_string_as_none")]
     taxon: Option<i64>,
     #[serde(deserialize_with = "empty_string_as_none")]
     source: Option<i64>,
-    #[serde(deserialize_with = "empty_string_as_none")]
-    month: Option<u8>,
+    #[serde(deserialize_with = "deserialize_month")]
+    month: Option<Month>,
     #[serde(deserialize_with = "empty_string_as_none")]
     year: Option<u32>,
     #[serde(deserialize_with = "empty_string_as_none")]

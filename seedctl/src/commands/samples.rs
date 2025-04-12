@@ -140,7 +140,7 @@ pub(crate) async fn handle_command(
             {
                 let taxon = TaxonIdPrompt::new("Taxon:", db).prompt()?;
                 let source = SourceIdPrompt::new("Source:", userid, db).prompt()?;
-                let month = inquire::CustomType::<u8>::new("Month:").prompt_skippable()?;
+                let month = month_prompt().prompt_skippable()?;
                 let year = inquire::CustomType::<u32>::new("Year:").prompt_skippable()?;
                 let quantity =
                     inquire::CustomType::<f64>::new("Quantity (grams):").prompt_skippable()?;
@@ -229,7 +229,7 @@ pub(crate) async fn handle_command(
                         .map(|v| v.to_string())
                         .unwrap_or_else(|| "<missing>".into())
                 );
-                if let Some(month) = inquire::CustomType::<u8>::new("Month:").prompt_skippable()? {
+                if let Some(month) = month_prompt().prompt_skippable()? {
                     sample.month = Some(month);
                 }
 
@@ -350,4 +350,11 @@ pub(crate) async fn handle_command(
             Ok(())
         }
     }
+}
+
+fn month_prompt<'p>() -> inquire::CustomType<'p, time::Month> {
+    inquire::CustomType::<time::Month>::new("Month:").with_parser(&|val: &str| {
+        let n: u8 = val.parse().map_err(|_| ())?;
+        time::Month::try_from(n).map_err(|_| ())
+    })
 }
