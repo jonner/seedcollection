@@ -324,7 +324,7 @@ async fn insert_sample(
             )
             .into_response())
         }
-        Ok(sample) => {
+        Ok(mut sample) => {
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
             Ok((
                 [("HX-Redirect", sampleurl)],
@@ -336,7 +336,7 @@ async fn insert_sample(
                         kind: FlashMessageKind::Success,
                         msg: format!(
                             "Added new sample {}: {} to the database",
-                            sample.id, sample.taxon.object()?.complete_name
+                            sample.id, sample.taxon.load(&state.db, false).await?.complete_name
                             ),
                     },
                     ),
