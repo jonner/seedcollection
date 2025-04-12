@@ -31,7 +31,7 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, error};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -245,9 +245,13 @@ async fn do_insert(
     };
 
     let mut sample = Sample::new(
-        params.taxon.ok_or(anyhow!("No taxon provided"))?,
+        params
+            .taxon
+            .ok_or(Error::RequiredParameterMissing("taxon".into()))?,
         user.id,
-        params.source.ok_or(anyhow!("No source provided"))?,
+        params
+            .source
+            .ok_or(Error::RequiredParameterMissing("source".into()))?,
         params.month,
         params.year,
         params.quantity,
@@ -266,17 +270,38 @@ async fn insert_sample(
 ) -> Result<impl IntoResponse, Error> {
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
     match do_insert(&user, &params, &state).await {
-        Err(e) => Ok(RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(sources => sources,
+        Err(e) => {
+            error!(?e, "Failed to insert sample");
+            let message = match e {
+                Error::Libseed(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
+                    if e.kind() == sqlx::error::ErrorKind::ForeignKeyViolation =>
+                {
+                    "The sample references an object that does not exist in the database"
+                        .to_string()
+                }
+                Error::Unauthorized(_) => {
+                    "User is not authorized to create new samples".to_string()
+                }
+                Error::Libseed(libseed::Error::InvalidInsertObjectAlreadyExists(_)) => {
+                    "The sample already exists in the database".to_string()
+                }
+                Error::RequiredParameterMissing(param) => {
+                    format!("The required parameter '{param}' is missing")
+                }
+                _ => "Internal error".to_string(),
+            };
+            Ok(RenderHtml(
+                key,
+                state.tmpl.clone(),
+                context!(sources => sources,
                          message => FlashMessage {
                              kind: FlashMessageKind::Error,
-                             msg: format!("Failed to save sample: {}", e),
+                             msg: format!("Failed to save sample: {message}"),
                          },
                          request => params),
-        )
-        .into_response()),
+            )
+            .into_response())
+        }
         Ok(sample) => {
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
             Ok((

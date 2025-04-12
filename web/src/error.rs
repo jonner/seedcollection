@@ -24,6 +24,8 @@ pub(crate) enum Error {
     Environment(String),
     #[error("New user registration is currently disabled")]
     UserRegistrationDisabled,
+    #[error("Required parameter '{0}' is missing")]
+    RequiredParameterMissing(String),
 }
 
 impl Error {
@@ -47,6 +49,7 @@ impl Error {
             ),
             Error::Environment(_message) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string()),
             Error::UserRegistrationDisabled => (StatusCode::UNAUTHORIZED, self.to_string()),
+            Error::RequiredParameterMissing(param) => (StatusCode::UNPROCESSABLE_ENTITY, format!("Missing parameter '{param}'")),
         }
     }
 }
