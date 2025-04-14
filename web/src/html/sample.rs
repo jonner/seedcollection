@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     html::SortOption,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, Paginator, app_url},
+    util::{AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url},
 };
 use anyhow::anyhow;
 use axum::{
@@ -156,12 +156,7 @@ async fn show_sample(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut sample = Sample::load(id, &state.db).await.map_err(|e| match e {
-        libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
-            Error::NotFound(format!("Sample {id} could not be found"))
-        }
-        _ => e.into(),
-    })?;
+    let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
     sample
         .taxon
         .object_mut()?
@@ -340,12 +335,15 @@ async fn insert_sample(
     }
 }
 
-async fn do_update(id: i64, params: &SampleParams, state: &AppState) -> Result<(), Error> {
+async fn do_update(
+    sample: &mut Sample,
+    params: &SampleParams,
+    state: &AppState,
+) -> Result<(), Error> {
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
     };
-    let mut sample = Sample::load(id, &state.db).await?;
     sample.taxon = ExternalRef::Stub(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
     sample.source = ExternalRef::Stub(
         params
@@ -367,8 +365,9 @@ async fn update_sample(
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, Error> {
+    let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
-    let (request, message, headers) = match do_update(id, &params, &state).await {
+    let (request, message, headers) = match do_update(&mut sample, &params, &state).await {
         Err(e) => (
             Some(params),
             FlashMessage {
@@ -386,8 +385,6 @@ async fn update_sample(
             Some([("HX-Redirect", app_url(&format!("/sample/{id}")))]),
         ),
     };
-
-    let sample = Sample::load(id, &state.db).await?;
 
     Ok((
         headers,
@@ -409,12 +406,7 @@ async fn delete_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut sample = Sample::load(id, &state.db).await?;
-    if sample.user.id() != user.id {
-        return Err(Error::Unauthorized(
-            "No permission to delete sample".to_string(),
-        ));
-    }
+    let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
     match sample.delete(&state.db).await {
         Err(e) => {
             let sources = Source::load_all_user(user.id, None, &state.db).await?;

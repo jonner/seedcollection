@@ -3,7 +3,7 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, Paginator, app_url},
+    util::{AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url},
 };
 use anyhow::{Context, anyhow};
 use axum::{
@@ -103,17 +103,23 @@ async fn show_source(
     uri: OriginalUri,
     Query(params): Query<SourceShowParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let src = Source::load(id, &state.db).await?;
-    let filter = and()
+    let src = Source::load_for_user(id, &user, &state.db).await?;
+    let sample_filter = and()
         .push(Filter::SourceId(Cmp::Equal, id))
         .push(Filter::UserId(user.id))
         .build();
     let paginator = Paginator::new(
-        Sample::count(Some(filter.clone()), &state.db).await? as u32,
+        Sample::count(Some(sample_filter.clone()), &state.db).await? as u32,
         user.preferences(&state.db).await?.pagesize.into(),
         params.page,
     );
-    let samples = Sample::load_all(Some(filter), None, Some(paginator.limits()), &state.db).await?;
+    let samples = Sample::load_all(
+        Some(sample_filter),
+        None,
+        Some(paginator.limits()),
+        &state.db,
+    )
+    .await?;
 
     Ok(RenderHtml(
         key,
@@ -140,8 +146,11 @@ struct SourceEditParams {
     modal: Option<i64>,
 }
 
-async fn do_update(id: i64, params: &SourceEditParams, state: &AppState) -> Result<Source, Error> {
-    let mut src = Source::load(id, &state.db).await?;
+async fn do_update(
+    src: &mut Source,
+    params: &SourceEditParams,
+    state: &AppState,
+) -> Result<(), Error> {
     src.name = params
         .name
         .as_ref()
@@ -152,7 +161,7 @@ async fn do_update(id: i64, params: &SourceEditParams, state: &AppState) -> Resu
     src.longitude = params.longitude;
 
     src.update(&state.db).await?;
-    Ok(src)
+    Ok(())
 }
 
 async fn update_source(
@@ -162,11 +171,8 @@ async fn update_source(
     Path(id): Path<i64>,
     Form(params): Form<SourceEditParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let src = Source::load(id, &state.db).await?;
-    if src.userid != user.id {
-        return Err(Error::Unauthorized("Not yours".to_string()));
-    }
-    let (request, message, headers) = match do_update(id, &params, &state).await {
+    let mut src = Source::load_for_user(id, &user, &state.db).await?;
+    let (request, message, headers) = match do_update(&mut src, &params, &state).await {
         Err(e) => (
             Some(&params),
             FlashMessage {
@@ -196,7 +202,6 @@ async fn update_source(
         &state.db,
     )
     .await?;
-    let src = Source::load(id, &state.db).await?;
 
     Ok((
         headers,
@@ -289,10 +294,7 @@ async fn delete_source(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut src = Source::load(id, &state.db).await?;
-    if src.userid != user.id {
-        return Err(Error::Unauthorized("Not yours".to_string()));
-    }
+    let mut src = Source::load_for_user(id, &user, &state.db).await?;
     src.delete(&state.db).await?;
     Ok([("HX-redirect", app_url("/source/list"))])
 }

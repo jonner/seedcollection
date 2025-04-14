@@ -3,7 +3,9 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, Paginator, app_url, format_id_number},
+    util::{
+        AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url, format_id_number,
+    },
 };
 use anyhow::anyhow;
 use axum::{
@@ -198,16 +200,8 @@ async fn show_project(
     headers: HeaderMap,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
+    let mut project = Project::load_for_user(id, &user, &state.db).await?;
     let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
-    let fb = and()
-        .push(project::Filter::Id(id))
-        .push(project::Filter::User(user.id));
-
-    let mut projects = Project::load_all(Some(fb.build()), None, None, &state.db).await?;
-    let Some(mut project) = projects.pop() else {
-        return Err(Error::NotFound("That project does not exist".to_string()));
-    };
-
     let field = params.sort.as_ref().cloned().unwrap_or(SortField::Taxon);
     let sort = SortSpec::new(
         field.clone(),
@@ -286,18 +280,17 @@ async fn show_project(
 }
 
 async fn do_update(
-    id: <Project as Loadable>::Id,
+    project: &mut Project,
     params: &ProjectParams,
     state: &AppState,
-) -> Result<Project, Error> {
+) -> Result<(), Error> {
     if params.name.is_empty() {
         return Err(anyhow!("No name specified").into());
     }
-    let mut project = Project::load(id, &state.db).await?;
     project.name.clone_from(&params.name);
     project.description.clone_from(&params.description);
     project.update(&state.db).await?;
-    Ok(project)
+    Ok(())
 }
 
 async fn modify_project(
@@ -307,14 +300,8 @@ async fn modify_project(
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let fb = and()
-        .push(project::Filter::Id(id))
-        .push(project::Filter::User(user.id));
-    let projects = Project::load_all(Some(fb.build()), None, None, &state.db).await?;
-    if projects.is_empty() {
-        return Ok(StatusCode::NOT_FOUND.into_response());
-    };
-    let (request, message, headers) = match do_update(id, &params, &state).await {
+    let mut project = Project::load_for_user(id, &user, &state.db).await?;
+    let (request, message, headers) = match do_update(&mut project, &params, &state).await {
         Err(e) => (
             Some(&params),
             FlashMessage {
@@ -332,7 +319,6 @@ async fn modify_project(
             Some([("HX-Redirect", app_url(&format!("/project/{id}")))]),
         ),
     };
-    let project = Project::load(id, &state.db).await?;
     Ok((
         headers,
         RenderHtml(
@@ -353,20 +339,7 @@ async fn delete_project(
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut project = Project::load(id, &state.db)
-        .await
-        .map_err(|_| Error::NotFound("That project does not exist".to_string()))?;
-    if project.userid != user.id {
-        warn!(
-            user.id,
-            ?project,
-            "User tried to delete project they don't own"
-        );
-        return Err(Error::Unauthorized(
-            "No permission to delete this project".to_string(),
-        ));
-    }
-
+    let mut project = Project::load_for_user(id, &user, &state.db).await?;
     let errmsg = match project.delete(&state.db).await {
         Ok(_) => {
             debug!(id, "Successfully deleted project");

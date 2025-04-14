@@ -1,6 +1,13 @@
-use crate::APP_PREFIX;
+use crate::{APP_PREFIX, Error};
 use axum::http::Uri;
-use libseed::core::query::LimitSpec;
+use libseed::{
+    Database,
+    core::{loadable::Loadable, query::LimitSpec},
+    project::Project,
+    sample::Sample,
+    source::Source,
+    user::User,
+};
 use minijinja::ErrorKind;
 use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
 use serde::{Deserialize, Serialize};
@@ -328,4 +335,77 @@ pub(crate) enum FlashMessageKind {
 pub(crate) struct FlashMessage {
     pub kind: FlashMessageKind,
     pub msg: String,
+}
+
+pub trait AccessControlled: Loadable {
+    fn load_for_user(
+        id: <Self as Loadable>::Id,
+        user: &User,
+        db: &Database,
+    ) -> impl Future<Output = Result<Self, Error>>
+    where
+        Self: Sized;
+}
+
+impl AccessControlled for Sample {
+    async fn load_for_user(
+        id: <Self as Loadable>::Id,
+        user: &User,
+        db: &Database,
+    ) -> Result<Self, Error> {
+        let sample = Self::load(id, db).await.map_err(|e| match e {
+            libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
+                Error::NotFound(format!("Unable to find sample '{id}'"))
+            }
+            _ => e.into(),
+        })?;
+        if sample.user.id() != user.id {
+            return Err(Error::Unauthorized(format!(
+                "User does not have permission to access sample '{id}'"
+            )));
+        };
+        Ok(sample)
+    }
+}
+
+impl AccessControlled for Project {
+    async fn load_for_user(
+        id: <Self as Loadable>::Id,
+        user: &User,
+        db: &Database,
+    ) -> Result<Self, Error> {
+        let obj = Self::load(id, db).await.map_err(|e| match e {
+            libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
+                Error::NotFound(format!("Unable to find sample '{id}'"))
+            }
+            _ => e.into(),
+        })?;
+        if obj.userid != user.id {
+            return Err(Error::Unauthorized(format!(
+                "User does not have permission to access project '{id}'"
+            )));
+        };
+        Ok(obj)
+    }
+}
+
+impl AccessControlled for Source {
+    async fn load_for_user(
+        id: <Self as Loadable>::Id,
+        user: &User,
+        db: &Database,
+    ) -> Result<Self, Error> {
+        let obj = Self::load(id, db).await.map_err(|e| match e {
+            libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
+                Error::NotFound(format!("Unable to find source '{id}'"))
+            }
+            _ => e.into(),
+        })?;
+        if obj.userid != user.id {
+            return Err(Error::Unauthorized(format!(
+                "User does not have permission to access source '{id}'"
+            )));
+        };
+        Ok(obj)
+    }
 }
