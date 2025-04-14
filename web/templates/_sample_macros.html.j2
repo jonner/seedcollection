@@ -116,13 +116,34 @@
         <div class="d-flex flex-row-reverse column-gap-3">
             <button type="submit" class="btn btn-primary px-3">{% if sample %}Update{% else %}Add{% endif %}</button>
             {% if sample %}
-            <button type="button"
+                <button type="button"
                     class="btn btn-danger px-3"
-                    hx-delete="{{ ("/sample/" ~ sample.id) | app_url }}"
-                    hx-confirm="Are you sure you want to delete sample {{ sample.id }}?"
-                    hx-target="closest form"
-                    hx-swap="outerHTML"
-                    >Delete</button>
+                    data-bs-toggle="modal"
+                    data-bs-target="delete-confirm-dialog"></button
+                    <div class="modal" tabindex="-1">
+                    <!-- Modal delete confirmation dialog  -->
+                    <div class="modal-dialog" id="delete-confirm-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Modal title</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>Modal body text goes here.</p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button"
+                                class="btn btn-danger px-3"
+                                hx-delete="{{ ("/sample/" ~ sample.id) | app_url }}"
+                                hx-confirm="Are you sure you want to delete sample {{ sample.id }}?"
+                                hx-target="closest form"
+                                hx-swap="outerHTML"
+                                >Delete</button>
+                      </div>
+                    </div>
+                    </div>
+                </div>
             {% endif %}
         </div>
     </div>

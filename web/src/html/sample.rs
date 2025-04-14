@@ -173,18 +173,11 @@ async fn show_sample(
     // needed for edit form
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
 
-    let mut allocations = AllocatedSample::load_all(
+    let allocations = AllocatedSample::load_all(
         Some(allocation::Filter::SampleId(id).into()),
         None,
         None,
         &state.db,
-    )
-    .await?;
-
-    try_join_all(
-        allocations
-            .iter_mut()
-            .map(|alloc| alloc.load_notes(&state.db)),
     )
     .await?;
 
