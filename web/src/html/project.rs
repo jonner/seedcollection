@@ -141,17 +141,7 @@ async fn insert_project(
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     if params.name.is_empty() {
-        return Ok((
-            StatusCode::UNPROCESSABLE_ENTITY,
-            flash_messages(
-                state,
-                &[FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: "No name specified".to_string(),
-                }],
-            ),
-        )
-            .into_response());
+        return Err(Error::RequiredParameterMissing("name".into()));
     }
     match do_insert(user, &params, &state).await {
         Err(e) => {
@@ -302,77 +292,63 @@ async fn do_update(
 
 async fn modify_project(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let (request, message, headers) = match do_update(&mut project, &params, &state).await {
-        Err(e) => (
-            Some(&params),
-            FlashMessage {
+    match do_update(&mut project, &params, &state).await {
+        Err(e) => Ok(flash_messages(
+            state,
+            &[FlashMessage {
                 kind: FlashMessageKind::Error,
                 msg: e.to_string(),
-            },
-            None,
-        ),
-        Ok(_) => (
-            None,
-            FlashMessage {
-                kind: FlashMessageKind::Success,
-                msg: "Successfully updated project".to_string(),
-            },
-            Some([("HX-Redirect", app_url(&format!("/project/{id}")))]),
-        ),
-    };
-    Ok((
-        headers,
-        RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(project => project,
-             message => message,
-             request => request,
+            }],
+        )
+        .into_response()),
+        Ok(_) => Ok((
+            [("HX-Redirect", app_url(&format!("/project/{id}")))],
+            flash_messages(
+                state,
+                &[FlashMessage {
+                    kind: FlashMessageKind::Success,
+                    msg: "Successfully updated project".to_string(),
+                }],
             ),
-        ),
-    )
-        .into_response())
+        )
+            .into_response()),
+    }
 }
 
 async fn delete_project(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let errmsg = match project.delete(&state.db).await {
+    match project.delete(&state.db).await {
         Ok(_) => {
-            debug!(id, "Successfully deleted project");
             return Ok((
                 [("HX-Redirect", app_url("/project/list"))],
-                RenderHtml(key, state.tmpl.clone(), context!(deleted => true, id => id)),
+                flash_messages(
+                    state,
+                    &[FlashMessage {
+                        kind: FlashMessageKind::Success,
+                        msg: format!("Deleted project '{id}'"),
+                    }],
+                ),
             )
                 .into_response());
         }
-        Err(e) => {
-            warn!(?e, "Failed to delete project");
-            e.to_string()
-        }
-    };
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(
-        project => project,
-        message => FlashMessage {
-            kind: FlashMessageKind::Error,
-            msg: format!("Failed to delete project: {errmsg}")
-        },
-        ),
-    )
-    .into_response())
+        Err(e) => Ok(flash_messages(
+            state,
+            &[FlashMessage {
+                kind: FlashMessageKind::Error,
+                msg: format!("Failed to delete project: {e}"),
+            }],
+        )
+        .into_response()),
+    }
 }
 
 async fn add_sample_prep(
