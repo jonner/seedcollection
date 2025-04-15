@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
-use super::{SortOption, flash_message};
+use super::{SortOption, flash_message, flash_messages};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -141,7 +141,15 @@ async fn insert_project(
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     if params.name.is_empty() {
-        return Err(Error::RequiredParameterMissing("name".into()));
+        return Ok((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            flash_message(
+                state,
+                FlashMessageKind::Error,
+                "Parameter 'name' is required".to_string(),
+            ),
+        )
+            .into_response());
     }
     match do_insert(user, &params, &state).await {
         Err(e) => {
@@ -294,7 +302,12 @@ async fn modify_project(
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
     match do_update(&mut project, &params, &state).await {
-        Err(e) => Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response()),
+        Err(e) => Ok((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            flash_message(state, FlashMessageKind::Error, e.to_string()),
+        )
+            .into_response()),
+
         Ok(_) => Ok((
             [("HX-Redirect", app_url(&format!("/project/{id}")))],
             flash_message(
@@ -314,23 +327,23 @@ async fn delete_project(
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
     match project.delete(&state.db).await {
-        Ok(_) => {
-            return Ok((
-                [("HX-Redirect", app_url("/project/list"))],
-                flash_message(
-                    state,
-                    FlashMessageKind::Success,
-                    format!("Deleted project '{id}'"),
-                ),
-            )
-                .into_response());
-        }
-        Err(e) => Ok(flash_message(
-            state,
-            FlashMessageKind::Error,
-            format!("Failed to delete project: {e}"),
+        Ok(_) => Ok((
+            [("HX-Redirect", app_url("/project/list"))],
+            flash_message(
+                state,
+                FlashMessageKind::Success,
+                format!("Deleted project '{id}'"),
+            ),
         )
-        .into_response()),
+            .into_response()),
+        Err(e) => {
+            warn!(?e, "Failed to delete project");
+            Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                flash_message(state, FlashMessageKind::Error, e.to_string()),
+            )
+                .into_response())
+        }
     }
 }
 
@@ -389,7 +402,6 @@ async fn show_add_sample(
 
 async fn add_sample(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
     Form(params): Form<Vec<(String, String)>>,
@@ -480,13 +492,5 @@ async fn add_sample(
         );
     }
 
-    let (project, samples) = add_sample_prep(&user, id, &state).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(project => project,
-                 messages => messages,
-                 samples => samples),
-    )
-    .into_response())
+    Ok(flash_messages(state, &messages).into_response())
 }

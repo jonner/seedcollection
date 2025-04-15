@@ -9,7 +9,7 @@ use crate::{
 use axum::{
     Form, Router,
     extract::{OriginalUri, Path, Query, State},
-    http::HeaderMap,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
 };
@@ -32,7 +32,7 @@ use minijinja::context;
 use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
 use std::str::FromStr;
 use time::Month;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use super::flash_message;
 
@@ -299,12 +299,15 @@ async fn insert_sample(
                 }
                 _ => "Internal error".to_string(),
             };
-            Ok(flash_message(
-                state,
-                FlashMessageKind::Error,
-                format!("Failed to save sample: {message}"),
+            Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                flash_message(
+                    state,
+                    FlashMessageKind::Error,
+                    format!("Failed to save sample: {message}"),
+                ),
             )
-            .into_response())
+                .into_response())
         }
         Ok(mut sample) => {
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
@@ -360,12 +363,23 @@ async fn update_sample(
 ) -> Result<impl IntoResponse, Error> {
     let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
     match do_update(&mut sample, &params, &state).await {
-        Err(e) => Ok(flash_message(
-            state,
-            FlashMessageKind::Error,
-            format!("Failed to save sample: {}", e),
-        )
-        .into_response()),
+        Err(e) => {
+            let (status, message) = match &e {
+                Error::RequiredParameterMissing(_) => {
+                    (StatusCode::UNPROCESSABLE_ENTITY, e.to_string())
+                }
+                _ => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Failed to save sample".into(),
+                ),
+            };
+            warn!("Failed to save sample: {e}");
+            Ok((
+                status,
+                flash_message(state, FlashMessageKind::Error, message),
+            )
+                .into_response())
+        }
         Ok(_) => Ok((
             [("HX-Redirect", app_url(&format!("/sample/{id}")))],
             flash_message(
@@ -385,12 +399,18 @@ async fn delete_sample(
 ) -> Result<impl IntoResponse, Error> {
     let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
     match sample.delete(&state.db).await {
-        Err(e) => Ok(flash_message(
-            state,
-            FlashMessageKind::Error,
-            format!("Error deleting sample: {}", e),
-        )
-        .into_response()),
+        Err(e) => {
+            warn!("Failed to delete sample: {e}");
+            Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                flash_message(
+                    state,
+                    FlashMessageKind::Error,
+                    "Error deleting sample".into(),
+                ),
+            )
+                .into_response())
+        }
         Ok(_) => Ok((
             [("HX-Redirect", app_url("/sample/list"))],
             flash_message(

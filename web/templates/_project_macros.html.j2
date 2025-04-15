@@ -1,17 +1,15 @@
-{% from "_macros.html.j2" import flash_message, icon %}
+{% from "_macros.html.j2" import flash_message, icon, pagination %}
 
 {% macro project_form(id, project=none, message=none, request=none) -%}
+<div id="flash-messages"></div>
 <form 
 {% if project %}
 hx-put="{{ ("/project/" ~ project.id) | app_url }}"
 {% else %}
 hx-post="{{ "/project/new" | app_url }}"
 {% endif %}
-hx-target-error="#message-box"
+hx-swap="none"
  id="{{ id }}">
-    <div id="message-box">
-    {{ flash_message(message) }}
-    </div>
     <div class="row px-3 mb-3">
         <label class="form-label" for="ProjectNameInput">Name</label>
         <input id="ProjectNameInput"
@@ -102,9 +100,15 @@ hx-target-error="#message-box"
 </div>
 {%- endmacro %}
 
-{% macro project_sample_list(project) %}
+{% macro project_sample_list(divid, project, summary, request_uri) %}
 {% from "_macros.html.j2" import icon %}
 {% from "_sample_macros.html.j2" import sample_item %}
+<div id="{{ divid }}"
+    hx-trigger="reload-project-allocations from:body"
+    hx-get
+    hx-swap="outerHTML"
+    hx-target="this">
+<div class="text-body-tertiary">{{ summary.total_items }} items found </div>
 {% for alloc in project.allocations %}
 <div class="project-sample-row {{ loop.cycle("bg-body-tertiary", "") }}">
     {% call sample_item(alloc.sample) %}
@@ -127,8 +131,7 @@ hx-target-error="#message-box"
             <li><button type="button"
                     class="dropdown-item btn-danger"
                     hx-delete="{{ ("/project/" ~ project.id ~ "/sample/" ~ alloc.id) | app_url }}"
-                    hx-target="closest .project-sample-row"
-                    hx-swap="outerHTML"
+                    hx-swap="none"
                     hx-confirm="Are you sure you want to remove this sample from the project?">{{ icon("x") }} Remove from project</button>
             </li>
         </ul>
@@ -137,19 +140,19 @@ hx-target-error="#message-box"
 </div>
 {% else %}
 <div class="alert alert-info">
-    No samples are a part of this project yet. Add one to get started.
+    No matching samples found.
 </div>
 {% endfor %}
+    {{ pagination(summary.npages, summary.page, request_uri)}}
+</div>
 {% endmacro %}
 
 {% macro allocation_note_form(sample, note=none, request=none, message=none) -%}
 {% from "_macros.html.j2" import flash_message %}
-<form hx-{% if note %}put{% else %}post{% endif %}=""
-      hx-target="this"
-      hx-target-error="#message-box">
-    <div id="message-box">
-    {{ flash_message(message) }}
-    </div>
+<div id="flash-messages"></div>
+<form
+{% if note %}hx-put{% else %}hx-post{% endif %}
+hx-swap="none">
     <div class="row">
         <div class="col-sm-6 mb-3">
             <label for="SampleNoteDate" class="form-label">Date</label>
@@ -196,9 +199,7 @@ hx-target-error="#message-box"
 {% if samples %}
 <form id="project-add-form"
     hx-post="{{ ("/project/" ~ project.id ~ "/add") | app_url }}">
-    {% for msg in messages %}
-    {{ flash_message(msg) }}
-    {% endfor %}
+    <div id="flash-messages"></div>
     <div>
         {% for sample in samples %}
         <div class="form-check">

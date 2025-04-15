@@ -33,13 +33,17 @@ pub(crate) fn flash_message(
     kind: FlashMessageKind,
     msg: String,
 ) -> impl IntoResponse {
+    flash_messages(state, &[FlashMessage { kind, msg }]).into_response()
+}
+
+pub(crate) fn flash_messages(
+    state: std::sync::Arc<crate::SharedState>,
+    messages: &[FlashMessage],
+) -> impl IntoResponse {
     RenderHtml(
         "_flash_messages.html.j2",
         state.tmpl.clone(),
-        context!(messages => &[FlashMessage {
-            kind,
-            msg: msg.into(),
-        }]),
+        context!(messages => messages),
     )
 }
 

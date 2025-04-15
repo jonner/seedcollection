@@ -3,7 +3,7 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, app_url},
+    util::{FlashMessageKind, app_url},
 };
 use anyhow::anyhow;
 use axum::{
@@ -225,22 +225,44 @@ async fn show_add_allocation_note(
 async fn remove_allocation(
     user: SqliteUser,
     State(state): State<AppState>,
-    Path((id, psid)): Path<(i64, i64)>,
+    Path((projectid, allocationid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut projects =
-        Project::load_all(Some(project::Filter::Id(id).into()), None, None, &state.db).await?;
+    let mut projects = Project::load_all(
+        Some(project::Filter::Id(projectid).into()),
+        None,
+        None,
+        &state.db,
+    )
+    .await?;
     let Some(c) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
     if c.userid != user.id {
         return Err(Error::NotFound("That project does not exist".to_string()));
     }
-    sqlx::query!(
-        "DELETE FROM sc_project_samples AS PS WHERE PS.psid=? AND PS.projectid IN (SELECT P.projectid FROM sc_projects AS P WHERE P.userid=?)",
-        psid, user.id)
-        .execute(state.db.pool())
-        .await?;
-    Ok(())
+    let mut alloc = match AllocatedSample::load(allocationid, &state.db).await {
+        Ok(a) => a,
+        Err(e) => {
+            tracing::warn!(?e, "Failed to load allocated sample");
+            return Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                flash_message(state, FlashMessageKind::Error, "Internal Error".to_string()),
+            )
+                .into_response());
+        }
+    };
+    match alloc.delete(&state.db).await {
+        Ok(_) => Ok((
+            [("HX-Trigger", "reload-project-allocations")],
+            flash_message(
+                state,
+                FlashMessageKind::Success,
+                format!("Removed sample '{}' from project", alloc.sample.id()),
+            ),
+        )
+            .into_response()),
+        Err(e) => Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response()),
+    }
 }
 
 async fn delete_note(
@@ -304,7 +326,6 @@ async fn show_edit_note(
 
 async fn modify_note(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
     Form(params): Form<NoteParams>,
@@ -320,7 +341,18 @@ async fn modify_note(
             "No permission to delete this note".to_string(),
         ));
     }
-    let project = Project::load(projectid, &state.db).await?;
+
+    if params.summary.is_empty() {
+        return Ok((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            flash_message(
+                state,
+                FlashMessageKind::Error,
+                "Summary cannot be empty".into(),
+            ),
+        )
+            .into_response());
+    }
 
     note.date = params.date;
     note.summary = params.summary;
@@ -328,23 +360,15 @@ async fn modify_note(
     note.details = params.details;
 
     match note.update(&state.db).await {
-        Err(e) => {
-            let note_types: Vec<NoteType> = NoteType::iter().collect();
-            Ok(RenderHtml(
-                key,
-                state.tmpl.clone(),
-                context!(user => user,
-                note => note,
-                note_types => note_types,
-                allocation => allocation,
-                project => project,
-                message => FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: format!("Failed to update note: {e}"),
-                }),
-            )
-            .into_response())
-        }
+        Err(e) => Ok((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            flash_message(
+                state,
+                FlashMessageKind::Error,
+                format!("Failed to update note: {e}"),
+            ),
+        )
+            .into_response()),
         Ok(_res) => {
             let url = app_url(&format!("/project/{projectid}/sample/{allocid}"));
             Ok([("HX-Redirect", url)].into_response())

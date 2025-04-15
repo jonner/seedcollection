@@ -21,7 +21,9 @@
     <script src="/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.js" charset="utf-8"></script>
     {% endblock %}
 </head>
-<body hx-ext="response-targets">
+<body hx-ext="response-targets"
+    hx-select-oob="#flash-messages"
+    hx-target-error="#flash-messages">
     {% block body %}
         {% block header %}
         <nav class="navbar sticky-lg-top {% if environment == "prod" %}bg-success{% else %}text-bg-danger{% endif %} navbar-expand-md px-md-3" data-bs-theme="dark">
