@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
-use super::{SortOption, flash_messages};
+use super::{SortOption, flash_message};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -148,12 +148,10 @@ async fn insert_project(
             warn!("Failed to insert project: {e:?}");
             Ok((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                flash_messages(
+                flash_message(
                     state,
-                    &[FlashMessage {
-                        kind: FlashMessageKind::Error,
-                        msg: "Failed to save project".to_string(),
-                    }],
+                    FlashMessageKind::Error,
+                    "Failed to save project".to_string(),
                 ),
             )
                 .into_response())
@@ -164,15 +162,13 @@ async fn insert_project(
 
             Ok((
                 [("HX-Redirect", projecturl)],
-                flash_messages(
+                flash_message(
                     state,
-                    &[FlashMessage {
-                        kind: FlashMessageKind::Success,
-                        msg: format!(
-                            r#"Added new project {}: {} to the database"#,
-                            project.id, params.name
-                        ),
-                    }],
+                    FlashMessageKind::Success,
+                    format!(
+                        r#"Added new project {}: {} to the database"#,
+                        project.id, params.name
+                    ),
                 ),
             )
                 .into_response())
@@ -298,22 +294,13 @@ async fn modify_project(
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
     match do_update(&mut project, &params, &state).await {
-        Err(e) => Ok(flash_messages(
-            state,
-            &[FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: e.to_string(),
-            }],
-        )
-        .into_response()),
+        Err(e) => Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response()),
         Ok(_) => Ok((
             [("HX-Redirect", app_url(&format!("/project/{id}")))],
-            flash_messages(
+            flash_message(
                 state,
-                &[FlashMessage {
-                    kind: FlashMessageKind::Success,
-                    msg: "Successfully updated project".to_string(),
-                }],
+                FlashMessageKind::Success,
+                "Successfully updated project".to_string(),
             ),
         )
             .into_response()),
@@ -330,22 +317,18 @@ async fn delete_project(
         Ok(_) => {
             return Ok((
                 [("HX-Redirect", app_url("/project/list"))],
-                flash_messages(
+                flash_message(
                     state,
-                    &[FlashMessage {
-                        kind: FlashMessageKind::Success,
-                        msg: format!("Deleted project '{id}'"),
-                    }],
+                    FlashMessageKind::Success,
+                    format!("Deleted project '{id}'"),
                 ),
             )
                 .into_response());
         }
-        Err(e) => Ok(flash_messages(
+        Err(e) => Ok(flash_message(
             state,
-            &[FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: format!("Failed to delete project: {e}"),
-            }],
+            FlashMessageKind::Error,
+            format!("Failed to delete project: {e}"),
         )
         .into_response()),
     }

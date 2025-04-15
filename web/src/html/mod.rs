@@ -1,4 +1,10 @@
-use crate::{TemplateKey, auth::AuthSession, error::Error, state::AppState, util::FlashMessage};
+use crate::{
+    TemplateKey,
+    auth::AuthSession,
+    error::Error,
+    state::AppState,
+    util::{FlashMessage, FlashMessageKind},
+};
 use axum::{
     Router,
     extract::{OriginalUri, Request, State},
@@ -22,14 +28,18 @@ mod taxonomy;
 mod tests;
 mod user;
 
-pub(crate) fn flash_messages(
+pub(crate) fn flash_message(
     state: std::sync::Arc<crate::SharedState>,
-    messages: &[FlashMessage],
+    kind: FlashMessageKind,
+    msg: String,
 ) -> impl IntoResponse {
     RenderHtml(
         "_flash_messages.html.j2",
         state.tmpl.clone(),
-        context!(messages => messages),
+        context!(messages => &[FlashMessage {
+            kind,
+            msg: msg.into(),
+        }]),
     )
 }
 

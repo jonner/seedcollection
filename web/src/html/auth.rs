@@ -2,7 +2,7 @@ use crate::{
     TemplateKey,
     auth::{AuthSession, Credentials},
     error::Error,
-    html::flash_messages,
+    html::flash_message,
     state::AppState,
     util::{FlashMessage, FlashMessageKind, app_url},
 };
@@ -150,13 +150,10 @@ fn login_failure_response<E: std::fmt::Debug>(
 
     (
         StatusCode::UNAUTHORIZED,
-        flash_messages(
+        flash_message(
             state.clone(),
-            &[FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: "Incorrect username or password. Please double-check and try again."
-                    .to_string(),
-            }],
+            FlashMessageKind::Error,
+            "Incorrect username or password. Please double-check and try again.".to_string(),
         )
         .into_response(),
     )

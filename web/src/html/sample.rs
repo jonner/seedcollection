@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     html::SortOption,
     state::AppState,
-    util::{AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url},
+    util::{AccessControlled, FlashMessageKind, Paginator, app_url},
 };
 use axum::{
     Form, Router,
@@ -34,7 +34,7 @@ use std::str::FromStr;
 use time::Month;
 use tracing::{debug, error};
 
-use super::flash_messages;
+use super::flash_message;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -299,12 +299,10 @@ async fn insert_sample(
                 }
                 _ => "Internal error".to_string(),
             };
-            Ok(flash_messages(
+            Ok(flash_message(
                 state,
-                &[FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: format!("Failed to save sample: {message}"),
-                }],
+                FlashMessageKind::Error,
+                format!("Failed to save sample: {message}"),
             )
             .into_response())
         }
@@ -313,15 +311,13 @@ async fn insert_sample(
             let taxon_name = &sample.taxon.load(&state.db, false).await?.complete_name;
             Ok((
                 [("HX-Redirect", sampleurl)],
-                flash_messages(
+                flash_message(
                     state,
-                    &[FlashMessage {
-                        kind: FlashMessageKind::Success,
-                        msg: format!(
-                            "Added new sample {}: {} to the database",
-                            sample.id, taxon_name
-                        ),
-                    }],
+                    FlashMessageKind::Success,
+                    format!(
+                        "Added new sample {}: {} to the database",
+                        sample.id, taxon_name
+                    ),
                 ),
             )
                 .into_response())
@@ -364,22 +360,18 @@ async fn update_sample(
 ) -> Result<impl IntoResponse, Error> {
     let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
     match do_update(&mut sample, &params, &state).await {
-        Err(e) => Ok(flash_messages(
+        Err(e) => Ok(flash_message(
             state,
-            &[FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: format!("Failed to save sample: {}", e),
-            }],
+            FlashMessageKind::Error,
+            format!("Failed to save sample: {}", e),
         )
         .into_response()),
         Ok(_) => Ok((
             [("HX-Redirect", app_url(&format!("/sample/{id}")))],
-            flash_messages(
+            flash_message(
                 state,
-                &[FlashMessage {
-                    kind: FlashMessageKind::Success,
-                    msg: format!("Updated sample {}", id),
-                }],
+                FlashMessageKind::Success,
+                format!("Updated sample {}", id),
             ),
         )
             .into_response()),
@@ -393,22 +385,18 @@ async fn delete_sample(
 ) -> Result<impl IntoResponse, Error> {
     let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
     match sample.delete(&state.db).await {
-        Err(e) => Ok(flash_messages(
+        Err(e) => Ok(flash_message(
             state,
-            &[FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: format!("Error deleting sample: {}", e),
-            }],
+            FlashMessageKind::Error,
+            format!("Error deleting sample: {}", e),
         )
         .into_response()),
         Ok(_) => Ok((
             [("HX-Redirect", app_url("/sample/list"))],
-            flash_messages(
+            flash_message(
                 state,
-                &[FlashMessage {
-                    kind: FlashMessageKind::Success,
-                    msg: format!("Deleted sample {id}"),
-                }],
+                FlashMessageKind::Success,
+                format!("Deleted sample {id}"),
             ),
         )
             .into_response()),

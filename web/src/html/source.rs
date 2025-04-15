@@ -3,7 +3,7 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url},
+    util::{AccessControlled, FlashMessageKind, Paginator, app_url},
 };
 use anyhow::{Context, anyhow};
 use axum::{
@@ -26,7 +26,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 
-use super::flash_messages;
+use super::flash_message;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -174,22 +174,13 @@ async fn update_source(
 ) -> Result<impl IntoResponse, Error> {
     let mut src = Source::load_for_user(id, &user, &state.db).await?;
     match do_update(&mut src, &params, &state).await {
-        Err(e) => Ok(flash_messages(
-            state,
-            &[FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: e.to_string(),
-            }],
-        )
-        .into_response()),
+        Err(e) => Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response()),
         Ok(_) => Ok((
             [("HX-Redirect", app_url(&format!("/source/{id}")))],
-            flash_messages(
+            flash_message(
                 state,
-                &[FlashMessage {
-                    kind: FlashMessageKind::Success,
-                    msg: "Successfully updated source".to_string(),
-                }],
+                FlashMessageKind::Success,
+                "Successfully updated source".to_string(),
             ),
         )
             .into_response()),
@@ -223,14 +214,7 @@ async fn new_source(
 ) -> Result<impl IntoResponse, Error> {
     let mut headers = HeaderMap::new();
     match do_insert(&user, &params, &state).await {
-        Err(e) => Ok(flash_messages(
-            state,
-            &[FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: e.to_string(),
-            }],
-        )
-        .into_response()),
+        Err(e) => Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response()),
         Ok(source) => {
             let url = app_url(&format!("/source/{}", source.id));
             if params.modal.is_some() {
@@ -248,12 +232,10 @@ async fn new_source(
             }
             Ok((
                 headers,
-                flash_messages(
+                flash_message(
                     state,
-                    &[FlashMessage {
-                        kind: FlashMessageKind::Success,
-                        msg: format!("Successfully added source {}", source.id),
-                    }],
+                    FlashMessageKind::Success,
+                    format!("Successfully added source {}", source.id),
                 ),
             )
                 .into_response())
@@ -271,13 +253,6 @@ async fn delete_source(
         .await
         .map(|_| [("HX-redirect", app_url("/source/list"))].into_response())
         .or_else(|e| {
-            Ok(flash_messages(
-                state,
-                &[FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: e.to_string(),
-                }],
-            )
-            .into_response())
+            Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response())
         })
 }

@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use tracing::error;
 
-use super::flash_messages;
+use super::flash_message;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -103,13 +103,7 @@ async fn add_allocation_note(
         Err(e) => {
             return (
                 StatusCode::UNPROCESSABLE_ENTITY,
-                flash_messages(
-                    state,
-                    &[FlashMessage {
-                        kind: FlashMessageKind::Error,
-                        msg: e.to_string(),
-                    }],
-                ),
+                flash_message(state, FlashMessageKind::Error, e.to_string()),
             )
                 .into_response();
         }
@@ -135,14 +129,10 @@ async fn add_allocation_note(
                 sqlx::Error::RowNotFound => {
                     return (
                         StatusCode::NOT_FOUND,
-                        flash_messages(
+                        flash_message(
                             state,
-                            &[FlashMessage {
-                                kind: FlashMessageKind::Error,
-                                msg: format!(
-                                    "Allocation {allocid} not found for project {projectid}"
-                                ),
-                            }],
+                            FlashMessageKind::Error,
+                            format!("Allocation {allocid} not found for project {projectid}"),
                         ),
                     )
                         .into_response();
@@ -150,12 +140,10 @@ async fn add_allocation_note(
                 _ => {
                     return (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        flash_messages(
+                        flash_message(
                             state,
-                            &[FlashMessage {
-                                kind: FlashMessageKind::Error,
-                                msg: "Failed to fetch allocation".to_string(),
-                            }],
+                            FlashMessageKind::Error,
+                            "Failed to fetch allocation".to_string(),
                         ),
                     )
                         .into_response();
@@ -167,12 +155,10 @@ async fn add_allocation_note(
     if params.summary.is_empty() {
         return (
             StatusCode::UNPROCESSABLE_ENTITY,
-            flash_messages(
+            flash_message(
                 state,
-                &[FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: "Summary cannot be empty".to_string(),
-                }],
+                FlashMessageKind::Error,
+                "Summary cannot be empty".to_string(),
             ),
         )
             .into_response();
@@ -195,12 +181,10 @@ async fn add_allocation_note(
 
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                flash_messages(
+                flash_message(
                     state,
-                    &[FlashMessage {
-                        kind: FlashMessageKind::Error,
-                        msg: "Failed to save note".to_string(),
-                    }],
+                    FlashMessageKind::Error,
+                    "Failed to save note".to_string(),
                 ),
             )
                 .into_response()
