@@ -18,12 +18,15 @@
 
 
 {% macro sample_form(sources, sample=none, request=none, message=none) -%}
+<form
 {% if sample %}
-<form hx-put="{{ ("/sample/" ~ sample.id) | app_url }}">
+hx-put="{{ ("/sample/" ~ sample.id) | app_url }}"
 {% else %}
-<form hx-post="{{ "/sample/new" | app_url }}">
+hx-post="{{ "/sample/new" | app_url }}"
 {% endif %}
-{{ flash_message(message) }}
+hx-target="#flash-messages"
+hx-target-error="#flash-messages">
+    <div id="flash-messages"></div>
     <div class="row g-6">
         <div class="mb-3 col-12">
             <label for="SampleTaxonInput" class="form-label">Taxon</label>
@@ -141,8 +144,7 @@
                             <button type="button"
                                     class="btn btn-danger px-3"
                                     hx-delete="{{ ("/sample/" ~ sample.id) | app_url }}"
-                                    hx-target="closest form"
-                                    hx-swap="outerHTML"
+                                    hx-target="#flash-messages"
                                     data-bs-dismiss="modal">Delete</button>
                           </div>
                         </div>

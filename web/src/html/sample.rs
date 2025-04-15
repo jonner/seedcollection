@@ -6,7 +6,6 @@ use crate::{
     state::AppState,
     util::{AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url},
 };
-use anyhow::anyhow;
 use axum::{
     Form, Router,
     extract::{OriginalUri, Path, Query, State},
@@ -34,6 +33,8 @@ use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
 use std::str::FromStr;
 use time::Month;
 use tracing::{debug, error};
+
+use super::flash_messages;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -274,11 +275,9 @@ async fn do_insert(
 
 async fn insert_sample(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let sources = Source::load_all_user(user.id, None, &state.db).await?;
     match do_insert(&user, &params, &state).await {
         Err(e) => {
             error!(?e, "Failed to insert sample");
@@ -300,34 +299,29 @@ async fn insert_sample(
                 }
                 _ => "Internal error".to_string(),
             };
-            Ok(RenderHtml(
-                key,
-                state.tmpl.clone(),
-                context!(sources => sources,
-                         message => FlashMessage {
-                             kind: FlashMessageKind::Error,
-                             msg: format!("Failed to save sample: {message}"),
-                         },
-                         request => params),
+            Ok(flash_messages(
+                state,
+                &[FlashMessage {
+                    kind: FlashMessageKind::Error,
+                    msg: format!("Failed to save sample: {message}"),
+                }],
             )
             .into_response())
         }
         Ok(mut sample) => {
             let sampleurl = app_url(&format!("/sample/{}", sample.id));
+            let taxon_name = &sample.taxon.load(&state.db, false).await?.complete_name;
             Ok((
                 [("HX-Redirect", sampleurl)],
-                RenderHtml(
-                    key,
-                    state.tmpl.clone(),
-                    context!(sources => sources,
-                    message => FlashMessage {
+                flash_messages(
+                    state,
+                    &[FlashMessage {
                         kind: FlashMessageKind::Success,
                         msg: format!(
                             "Added new sample {}: {} to the database",
-                            sample.id, sample.taxon.load(&state.db, false).await?.complete_name
-                            ),
-                    },
-                    ),
+                            sample.id, taxon_name
+                        ),
+                    }],
                 ),
             )
                 .into_response())
@@ -344,11 +338,15 @@ async fn do_update(
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
     };
-    sample.taxon = ExternalRef::Stub(params.taxon.ok_or_else(|| anyhow!("No taxon specified"))?);
+    sample.taxon = ExternalRef::Stub(
+        params
+            .taxon
+            .ok_or(Error::RequiredParameterMissing("taxon".into()))?,
+    );
     sample.source = ExternalRef::Stub(
         params
             .source
-            .ok_or_else(|| anyhow!("No source specified"))?,
+            .ok_or(Error::RequiredParameterMissing("source".into()))?,
     );
     sample.month = params.month;
     sample.year = params.year;
@@ -361,78 +359,56 @@ async fn do_update(
 async fn update_sample(
     user: SqliteUser,
     Path(id): Path<i64>,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
-    let sources = Source::load_all_user(user.id, None, &state.db).await?;
-    let (request, message, headers) = match do_update(&mut sample, &params, &state).await {
-        Err(e) => (
-            Some(params),
-            FlashMessage {
+    match do_update(&mut sample, &params, &state).await {
+        Err(e) => Ok(flash_messages(
+            state,
+            &[FlashMessage {
                 kind: FlashMessageKind::Error,
                 msg: format!("Failed to save sample: {}", e),
-            },
-            None,
-        ),
-        Ok(_) => (
-            None,
-            FlashMessage {
-                kind: FlashMessageKind::Success,
-                msg: format!("Updated sample {}", id),
-            },
-            Some([("HX-Redirect", app_url(&format!("/sample/{id}")))]),
-        ),
-    };
-
-    Ok((
-        headers,
-        RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(sources => sources,
-                     sample => sample,
-                     message => message,
-                     request => request),
-        ),
-    )
-        .into_response())
+            }],
+        )
+        .into_response()),
+        Ok(_) => Ok((
+            [("HX-Redirect", app_url(&format!("/sample/{id}")))],
+            flash_messages(
+                state,
+                &[FlashMessage {
+                    kind: FlashMessageKind::Success,
+                    msg: format!("Updated sample {}", id),
+                }],
+            ),
+        )
+            .into_response()),
+    }
 }
 
 async fn delete_sample(
     user: SqliteUser,
     Path(id): Path<i64>,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
     match sample.delete(&state.db).await {
-        Err(e) => {
-            let sources = Source::load_all_user(user.id, None, &state.db).await?;
-            let sample = Sample::load(id, &state.db).await?;
-            Ok(RenderHtml(
-                key,
-                state.tmpl.clone(),
-                context!(sources => sources,
-                sample => sample,
-                message => FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: format!("Error deleting sample: {}", e),
-                }),
-            )
-            .into_response())
-        }
+        Err(e) => Ok(flash_messages(
+            state,
+            &[FlashMessage {
+                kind: FlashMessageKind::Error,
+                msg: format!("Error deleting sample: {}", e),
+            }],
+        )
+        .into_response()),
         Ok(_) => Ok((
             [("HX-Redirect", app_url("/sample/list"))],
-            RenderHtml(
-                key,
-                state.tmpl.clone(),
-                context!(deleted => true,
-                message => FlashMessage {
+            flash_messages(
+                state,
+                &[FlashMessage {
                     kind: FlashMessageKind::Success,
                     msg: format!("Deleted sample {id}"),
-                }),
+                }],
             ),
         )
             .into_response()),
