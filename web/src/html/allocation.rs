@@ -257,7 +257,7 @@ async fn show_edit_note(
     // make sure this is a note the user can edit
     let note = Note::load(noteid, &state.db).await.map_err(|e| match e {
         libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
-            Error::NotFound(format!("Note {noteid} could not be found"))
+            Error::NotFound(format!("Unable to find note '{noteid}'"))
         }
         _ => e.into(),
     })?;
@@ -267,7 +267,7 @@ async fn show_edit_note(
     }
     if allocation.sample.user.id() != user.id {
         return Err(Error::Unauthorized(
-            "No permission to delete this note".to_string(),
+            "User has no permissions for this note".to_string(),
         ));
     }
     let project = Project::load(projectid, &state.db).await?;
