@@ -1,4 +1,3 @@
-use super::error_alert_response;
 use crate::{
     TemplateKey,
     auth::SqliteUser,
@@ -24,6 +23,8 @@ use minijinja::context;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use tracing::error;
+
+use super::flash_messages;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -100,7 +101,16 @@ async fn add_allocation_note(
     let params = match form {
         Ok(Form(params)) => params,
         Err(e) => {
-            return error_alert_response(&state, StatusCode::UNPROCESSABLE_ENTITY, e.to_string())
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                flash_messages(
+                    state,
+                    &[FlashMessage {
+                        kind: FlashMessageKind::Error,
+                        msg: e.to_string(),
+                    }],
+                ),
+            )
                 .into_response();
         }
     };
@@ -123,32 +133,49 @@ async fn add_allocation_note(
             error!("Failed to fetch allocation: {}", e);
             match e {
                 sqlx::Error::RowNotFound => {
-                    return error_alert_response(
-                        &state,
+                    return (
                         StatusCode::NOT_FOUND,
-                        format!("Allocation {allocid} not found for project {projectid}"),
+                        flash_messages(
+                            state,
+                            &[FlashMessage {
+                                kind: FlashMessageKind::Error,
+                                msg: format!(
+                                    "Allocation {allocid} not found for project {projectid}"
+                                ),
+                            }],
+                        ),
                     )
-                    .into_response();
+                        .into_response();
                 }
                 _ => {
-                    return error_alert_response(
-                        &state,
+                    return (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to fetch allocation".to_string(),
+                        flash_messages(
+                            state,
+                            &[FlashMessage {
+                                kind: FlashMessageKind::Error,
+                                msg: "Failed to fetch allocation".to_string(),
+                            }],
+                        ),
                     )
-                    .into_response();
+                        .into_response();
                 }
             };
         }
     };
 
     if params.summary.is_empty() {
-        return error_alert_response(
-            &state,
+        return (
             StatusCode::UNPROCESSABLE_ENTITY,
-            "Summary cannot be empty".to_string(),
+            flash_messages(
+                state,
+                &[FlashMessage {
+                    kind: FlashMessageKind::Error,
+                    msg: "Summary cannot be empty".to_string(),
+                }],
+            ),
         )
-        .into_response();
+            .into_response();
     }
 
     let mut note = Note::new(
@@ -165,12 +192,18 @@ async fn add_allocation_note(
         }
         Err(e) => {
             error!("Failed to save note: {}", e);
-            error_alert_response(
-                &state,
+
+            (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to save note".to_string(),
+                flash_messages(
+                    state,
+                    &[FlashMessage {
+                        kind: FlashMessageKind::Error,
+                        msg: "Failed to save note".to_string(),
+                    }],
+                ),
             )
-            .into_response()
+                .into_response()
         }
     }
 }

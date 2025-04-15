@@ -1,8 +1,8 @@
-use super::error_alert_response;
 use crate::{
     TemplateKey,
     auth::{AuthSession, Credentials},
     error::Error,
+    html::flash_messages,
     state::AppState,
     util::{FlashMessage, FlashMessageKind, app_url},
 };
@@ -147,10 +147,18 @@ fn login_failure_response<E: std::fmt::Debug>(
     err: Option<E>,
 ) -> impl IntoResponse {
     error!("{context}: {err:?}");
-    error_alert_response(
-        state,
+
+    (
         StatusCode::UNAUTHORIZED,
-        "Incorrect username or password. Please double-check and try again.".to_string(),
+        flash_messages(
+            state.clone(),
+            &[FlashMessage {
+                kind: FlashMessageKind::Error,
+                msg: "Incorrect username or password. Please double-check and try again."
+                    .to_string(),
+            }],
+        )
+        .into_response(),
     )
 }
 

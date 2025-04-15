@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
-use super::{SortOption, error_alert_response};
+use super::{SortOption, flash_messages};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -141,22 +141,32 @@ async fn insert_project(
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     if params.name.is_empty() {
-        return Ok(error_alert_response(
-            &state,
+        return Ok((
             StatusCode::UNPROCESSABLE_ENTITY,
-            "No name specified".to_string(),
+            flash_messages(
+                state,
+                &[FlashMessage {
+                    kind: FlashMessageKind::Error,
+                    msg: "No name specified".to_string(),
+                }],
+            ),
         )
-        .into_response());
+            .into_response());
     }
     match do_insert(user, &params, &state).await {
         Err(e) => {
             warn!("Failed to insert project: {e:?}");
-            Ok(error_alert_response(
-                &state,
+            Ok((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to save project".to_string(),
+                flash_messages(
+                    state,
+                    &[FlashMessage {
+                        kind: FlashMessageKind::Error,
+                        msg: "Failed to save project".to_string(),
+                    }],
+                ),
             )
-            .into_response())
+                .into_response())
         }
         Ok(project) => {
             debug!(project.id, "successfully inserted project");
@@ -164,18 +174,15 @@ async fn insert_project(
 
             Ok((
                 [("HX-Redirect", projecturl)],
-                RenderHtml(
-                    "_ALERT.html.j2",
-                    state.tmpl.clone(),
-                    context!( message =>
-                    FlashMessage {
+                flash_messages(
+                    state,
+                    &[FlashMessage {
                         kind: FlashMessageKind::Success,
                         msg: format!(
                             r#"Added new project {}: {} to the database"#,
                             project.id, params.name
-                            )
-                    },
-                    ),
+                        ),
+                    }],
                 ),
             )
                 .into_response())
