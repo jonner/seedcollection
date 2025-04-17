@@ -258,20 +258,6 @@ async fn show_project(
     .into_response())
 }
 
-async fn do_update(
-    project: &mut Project,
-    params: &ProjectParams,
-    state: &AppState,
-) -> Result<(), Error> {
-    project.name.clone_from(&params.name);
-    project.description.clone_from(&params.description);
-    project.update(&state.db).await.map_err(|e| match e {
-        libseed::Error::InvalidStateMissingAttribute(attr) => Error::RequiredParameterMissing(attr),
-        _ => e.into(),
-    })?;
-    Ok(())
-}
-
 async fn modify_project(
     user: SqliteUser,
     Path(id): Path<<Project as Loadable>::Id>,
@@ -279,7 +265,14 @@ async fn modify_project(
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    do_update(&mut project, &params, &state).await?;
+
+    project.name.clone_from(&params.name);
+    project.description.clone_from(&params.description);
+    project.update(&state.db).await.map_err(|e| match e {
+        libseed::Error::InvalidStateMissingAttribute(attr) => Error::RequiredParameterMissing(attr),
+        _ => e.into(),
+    })?;
+
     Ok((
         [("HX-Redirect", app_url(&format!("/project/{id}")))],
         flash_message(
