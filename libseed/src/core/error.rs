@@ -60,6 +60,9 @@ pub enum Error {
 
     #[error(transparent)]
     UserVerification(#[from] VerificationError),
+
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
 }
 
 /// A convenience type alias for a [Result] with [Error] as its error type
