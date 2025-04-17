@@ -3,12 +3,15 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{AccessControlled, FlashMessageKind, Paginator, app_url},
+    util::{
+        AccessControlled, FlashMessageKind, Paginator, app_url,
+        extract::{Form, Query},
+    },
 };
 use anyhow::{Context, anyhow};
 use axum::{
-    Form, Router,
-    extract::{OriginalUri, Path, Query, State},
+    Router,
+    extract::{OriginalUri, Path, State},
     http::HeaderMap,
     response::IntoResponse,
     routing::get,

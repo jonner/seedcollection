@@ -4,13 +4,15 @@ use crate::{
     error::Error,
     state::AppState,
     util::{
-        AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url, format_id_number,
+        AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url,
+        extract::{Form, Query},
+        format_id_number,
     },
 };
 use anyhow::anyhow;
 use axum::{
-    Form, Router,
-    extract::{OriginalUri, Path, Query, State, rejection::QueryRejection},
+    Router,
+    extract::{OriginalUri, Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
@@ -198,12 +200,11 @@ async fn show_project(
     TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
-    query: Result<Query<ShowProjectQueryParams>, QueryRejection>,
+    Query(params): Query<ShowProjectQueryParams>,
     headers: HeaderMap,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
     let field = params.sort.as_ref().cloned().unwrap_or(SortField::Taxon);
     let sort = SortSpec::new(
         field.clone(),

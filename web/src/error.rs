@@ -1,5 +1,5 @@
 use axum::{
-    extract::rejection::QueryRejection,
+    extract::rejection::{FormRejection, QueryRejection},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -19,7 +19,9 @@ pub(crate) enum Error {
     #[error("Resource Not Found: {0}")]
     NotFound(String),
     #[error("The provided query string was rejected: {0}")]
-    UnprocessableEntityQueryRejection(#[source] QueryRejection),
+    QueryExtractorRejection(#[source] QueryRejection),
+    #[error("The submitted form was rejected: {0}")]
+    FormExtractorRejection(#[source] FormRejection),
     #[error("The environment is not set up correctly: {0}")]
     Environment(String),
     #[error("New user registration is currently disabled")]
@@ -43,9 +45,13 @@ impl Error {
             Error::Libseed(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Library error".to_string()),
             Error::Unauthorized(message) => (StatusCode::UNAUTHORIZED, message.clone()),
             Error::NotFound(message) => (StatusCode::NOT_FOUND, message.clone()),
-            Error::UnprocessableEntityQueryRejection(_) => (
+            Error::QueryExtractorRejection(_) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "The query string was not in the expected format. The request could not be processed.".to_string(),
+            ),
+            Error::FormExtractorRejection(rejection) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                format!("The form was not in the expected format: {rejection}"),
             ),
             Error::Environment(_message) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string()),
             Error::UserRegistrationDisabled => (StatusCode::UNAUTHORIZED, self.to_string()),

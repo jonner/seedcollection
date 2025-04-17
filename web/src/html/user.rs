@@ -5,11 +5,11 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, app_url},
+    util::{FlashMessage, FlashMessageKind, app_url, extract::Form},
 };
 use anyhow::anyhow;
 use axum::{
-    Form, Router,
+    Router,
     extract::State,
     http::StatusCode,
     response::IntoResponse,

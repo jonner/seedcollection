@@ -4,11 +4,14 @@ use crate::{
     error::Error,
     html::flash_message,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, app_url},
+    util::{
+        FlashMessage, FlashMessageKind, app_url,
+        extract::{Form, Query},
+    },
 };
 use axum::{
-    Form, Router,
-    extract::{Path, Query, State},
+    Router,
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
     routing::{get, post},

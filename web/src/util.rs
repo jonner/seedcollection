@@ -409,3 +409,44 @@ impl AccessControlled for Source {
         Ok(obj)
     }
 }
+
+pub(crate) mod extract {
+    use axum::{
+        extract::{
+            FromRequest, FromRequestParts, Request,
+            rejection::{FormRejection, QueryRejection},
+        },
+        http::request::Parts,
+    };
+
+    pub(crate) struct Form<T>(pub T);
+    impl<S, T> FromRequest<S> for Form<T>
+    where
+        axum::Form<T>: FromRequest<S, Rejection = FormRejection>,
+        S: Sync,
+    {
+        type Rejection = crate::Error;
+
+        async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+            match axum::Form::<T>::from_request(req, state).await {
+                Ok(value) => Ok(Self(value.0)),
+                Err(rejection) => Err(crate::Error::FormExtractorRejection(rejection)),
+            }
+        }
+    }
+
+    pub(crate) struct Query<T>(pub T);
+    impl<S, T> FromRequestParts<S> for Query<T>
+    where
+        axum::extract::Query<T>: FromRequestParts<S, Rejection = QueryRejection>,
+        S: Sync,
+    {
+        type Rejection = crate::Error;
+        async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+            match axum::extract::Query::<T>::from_request_parts(parts, state).await {
+                Ok(value) => Ok(Self(value.0)),
+                Err(rejection) => Err(crate::Error::QueryExtractorRejection(rejection)),
+            }
+        }
+    }
+}

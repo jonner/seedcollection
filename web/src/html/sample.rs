@@ -4,11 +4,14 @@ use crate::{
     error::Error,
     html::SortOption,
     state::AppState,
-    util::{AccessControlled, FlashMessageKind, Paginator, app_url},
+    util::{
+        AccessControlled, FlashMessageKind, Paginator, app_url,
+        extract::{Form, Query},
+    },
 };
 use axum::{
-    Form, Router,
-    extract::{OriginalUri, Path, Query, State},
+    Router,
+    extract::{OriginalUri, Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,

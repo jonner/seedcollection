@@ -3,12 +3,12 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessageKind, app_url},
+    util::{FlashMessageKind, app_url, extract::Form},
 };
 use anyhow::anyhow;
 use axum::{
-    Form, Router,
-    extract::{Path, State, rejection::FormRejection},
+    Router,
+    extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get},
@@ -96,19 +96,8 @@ async fn add_allocation_note(
     user: SqliteUser,
     State(state): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
-    form: Result<Form<NoteParams>, FormRejection>,
+    Form(params): Form<NoteParams>,
 ) -> impl IntoResponse {
-    let params = match form {
-        Ok(Form(params)) => params,
-        Err(e) => {
-            return (
-                StatusCode::UNPROCESSABLE_ENTITY,
-                flash_message(state, FlashMessageKind::Error, e.to_string()),
-            )
-                .into_response();
-        }
-    };
-
     // just querying to make sure that this is our sample
     let _alloc = match AllocatedSample::load_one(
         Some(

@@ -1,7 +1,16 @@
-use crate::{TemplateKey, auth::SqliteUser, error::Error, state::AppState, util::Paginator};
+use crate::{
+    TemplateKey,
+    auth::SqliteUser,
+    error::Error,
+    state::AppState,
+    util::{
+        Paginator,
+        extract::{Form, Query},
+    },
+};
 use axum::{
-    Form, Router,
-    extract::{OriginalUri, Path, Query, State},
+    Router,
+    extract::{OriginalUri, Path, State},
     response::IntoResponse,
     routing::get,
 };
