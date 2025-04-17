@@ -430,7 +430,7 @@ async fn error_mapper(
             // section of the page and look weird.
             (
                 status_code,
-                flash_message(state, util::FlashMessageKind::Error, client_error),
+                flash_message(state, util::FlashMessage::Error(client_error)),
             )
                 .into_response()
         } else {

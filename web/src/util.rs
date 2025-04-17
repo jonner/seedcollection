@@ -324,17 +324,12 @@ fn test_markdown_ids() {
 }
 
 #[derive(Serialize)]
-pub(crate) enum FlashMessageKind {
-    Success,
-    Warning,
-    Info,
-    Error,
-}
-
-#[derive(Serialize)]
-pub(crate) struct FlashMessage {
-    pub kind: FlashMessageKind,
-    pub msg: String,
+#[serde(tag = "kind", content = "msg")]
+pub(crate) enum FlashMessage {
+    Success(String),
+    Warning(String),
+    Info(String),
+    Error(String),
 }
 
 pub trait AccessControlled: Loadable {

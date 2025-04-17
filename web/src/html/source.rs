@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     state::AppState,
     util::{
-        AccessControlled, FlashMessageKind, Paginator, app_url,
+        AccessControlled, FlashMessage, Paginator, app_url,
         extract::{Form, Query},
     },
 };
@@ -181,8 +181,7 @@ async fn update_source(
         [("HX-Redirect", app_url(&format!("/source/{id}")))],
         flash_message(
             state,
-            FlashMessageKind::Success,
-            "Successfully updated source".to_string(),
+            FlashMessage::Success("Successfully updated source".to_string()),
         ),
     )
         .into_response())
@@ -234,8 +233,7 @@ async fn new_source(
         headers,
         flash_message(
             state,
-            FlashMessageKind::Success,
-            format!("Successfully added source {}", source.id),
+            FlashMessage::Success(format!("Successfully added source {}", source.id)),
         ),
     )
         .into_response())

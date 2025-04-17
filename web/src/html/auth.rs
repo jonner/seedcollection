@@ -5,7 +5,7 @@ use crate::{
     html::flash_message,
     state::AppState,
     util::{
-        FlashMessage, FlashMessageKind, app_url,
+        FlashMessage, app_url,
         extract::{Form, Query},
     },
 };
@@ -49,27 +49,19 @@ impl RegisterParams {
         let mut flash_messages: Vec<FlashMessage> = Vec::default();
         const PASSWORD_MIN_LENGTH: u16 = 8;
         if let Err(e) = User::validate_username(&self.username) {
-            flash_messages.push(FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: e.to_string(),
-            })
+            flash_messages.push(FlashMessage::Error(e.to_string()))
         }
         if self.email.is_empty() {
-            flash_messages.push(FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: "Email address is not valid".to_string(),
-            })
+            flash_messages.push(FlashMessage::Error(
+                "Email address is not valid".to_string(),
+            ))
         }
         if self.password.len() < PASSWORD_MIN_LENGTH as usize {
-            flash_messages.push(FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: format!("Password must be at least {PASSWORD_MIN_LENGTH} characters long"),
-            })
+            flash_messages.push(FlashMessage::Error(format!(
+                "Password must be at least {PASSWORD_MIN_LENGTH} characters long"
+            )))
         } else if self.password != self.passwordconfirm {
-            flash_messages.push(FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: "Passwords don't match".to_string(),
-            })
+            flash_messages.push(FlashMessage::Error("Passwords don't match".to_string()))
         }
         match flash_messages.is_empty() {
             true => Ok(()),
@@ -155,8 +147,9 @@ fn login_failure_response<E: std::fmt::Debug>(
         StatusCode::UNAUTHORIZED,
         flash_message(
             state.clone(),
-            FlashMessageKind::Error,
-            "Incorrect username or password. Please double-check and try again.".to_string(),
+            FlashMessage::Error(
+                "Incorrect username or password. Please double-check and try again.".to_string(),
+            ),
         )
         .into_response(),
     )
@@ -206,24 +199,17 @@ fn verification_error_message(err: VerificationError) -> FlashMessage {
     let profile_url = app_url("/user/me");
 
     match err {
-        VerificationError::Expired => FlashMessage {
-            kind: FlashMessageKind::Error,
-            msg: format!(
-                "This verification code has expired. Please visit your <a href='{profile_url}'>user profile</a> to request a new verification code to be emailed to you."
-            ),
-        },
-        VerificationError::AlreadyVerified => FlashMessage {
-            kind: FlashMessageKind::Info,
-            msg: "This email address has already been verified.".into(),
-        },
+        VerificationError::Expired => FlashMessage::Error(format!(
+            "This verification code has expired. Please visit your <a href='{profile_url}'>user profile</a> to request a new verification code to be emailed to you."
+        )),
+        VerificationError::AlreadyVerified => {
+            FlashMessage::Info("This email address has already been verified.".into())
+        }
         VerificationError::InternalError(_)
         | VerificationError::MultipleKeysFound
-        | VerificationError::KeyNotFound => FlashMessage {
-            kind: FlashMessageKind::Warning,
-            msg: format!(
-                "The verification code you provided could not be found. Check your verification email and make sure that the link you clicked was not corrupted in some way. Visit your <a href='{profile_url}'>user profile</a> to request a new verification code to be emailed to you. "
-            ),
-        },
+        | VerificationError::KeyNotFound => FlashMessage::Warning(format!(
+            "The verification code you provided could not be found. Check your verification email and make sure that the link you clicked was not corrupted in some way. Visit your <a href='{profile_url}'>user profile</a> to request a new verification code to be emailed to you. "
+        )),
     }
 }
 
@@ -235,12 +221,11 @@ async fn show_verification(
 ) -> Result<impl IntoResponse, Error> {
     let message = UserVerification::find(userid, &vkey, &state.db)
         .await
-        .map_or_else(verification_error_message, |_uv| FlashMessage {
-            kind: FlashMessageKind::Warning,
-            msg: "Verification of your email address is required in order to perform
-            some actions on this website. Click below to verify your email
-            address."
-                .into(),
+        .map_or_else(verification_error_message, |_uv| {
+            FlashMessage::Warning(
+                "Verification of your email address is required in order to perform some actions on this website. Click below to verify your email address."
+                    .into(),
+            )
         });
     Ok(RenderHtml(
         key,
@@ -257,14 +242,8 @@ async fn verify_user(
     let res = UserVerification::find(userid, &vkey, &state.db).await;
     let message = match res {
         Ok(mut uv) => match uv.verify(&state.db).await {
-            Ok(_) => FlashMessage {
-                kind: FlashMessageKind::Success,
-                msg: "You have successfully verified your account".into(),
-            },
-            Err(_e) => FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: "Failed to verify user".into(),
-            },
+            Ok(_) => FlashMessage::Success("You have successfully verified your account".into()),
+            Err(_e) => FlashMessage::Error("Failed to verify user".into()),
         },
         Err(e) => verification_error_message(e),
     };

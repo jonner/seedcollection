@@ -5,7 +5,7 @@ use crate::{
     html::SortOption,
     state::AppState,
     util::{
-        AccessControlled, FlashMessageKind, Paginator, app_url,
+        AccessControlled, FlashMessage, Paginator, app_url,
         extract::{Form, Query},
     },
 };
@@ -288,11 +288,10 @@ async fn insert_sample(
         [("HX-Redirect", sampleurl)],
         flash_message(
             state,
-            FlashMessageKind::Success,
-            format!(
+            FlashMessage::Success(format!(
                 "Added new sample {}: {} to the database",
                 sample.id, taxon_name
-            ),
+            )),
         ),
     )
         .into_response())
@@ -337,8 +336,7 @@ async fn update_sample(
         [("HX-Redirect", app_url(&format!("/sample/{id}")))],
         flash_message(
             state,
-            FlashMessageKind::Success,
-            format!("Updated sample {}", id),
+            FlashMessage::Success(format!("Updated sample {}", id)),
         ),
     )
         .into_response())
@@ -353,11 +351,7 @@ async fn delete_sample(
     sample.delete(&state.db).await?;
     Ok((
         [("HX-Redirect", app_url("/sample/list"))],
-        flash_message(
-            state,
-            FlashMessageKind::Success,
-            format!("Deleted sample {id}"),
-        ),
+        flash_message(state, FlashMessage::Success(format!("Deleted sample {id}"))),
     )
         .into_response())
 }

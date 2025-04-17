@@ -4,7 +4,7 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessageKind, app_url, extract::Form},
+    util::{FlashMessage, app_url, extract::Form},
 };
 use anyhow::anyhow;
 use axum::{
@@ -184,8 +184,10 @@ async fn remove_allocation(
         [("HX-Trigger", "reload-project-allocations")],
         flash_message(
             state,
-            FlashMessageKind::Success,
-            format!("Removed sample '{}' from project", alloc.sample.id()),
+            FlashMessage::Success(format!(
+                "Removed sample '{}' from project",
+                alloc.sample.id()
+            )),
         ),
     ))
 }

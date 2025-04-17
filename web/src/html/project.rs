@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     state::AppState,
     util::{
-        AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url,
+        AccessControlled, FlashMessage, Paginator, app_url,
         extract::{Form, Query},
         format_id_number,
     },
@@ -153,11 +153,10 @@ async fn insert_project(
         [("HX-Redirect", projecturl)],
         flash_message(
             state,
-            FlashMessageKind::Success,
-            format!(
+            FlashMessage::Success(format!(
                 r#"Added new project {}: {} to the database"#,
                 project.id, params.name
-            ),
+            )),
         ),
     )
         .into_response())
@@ -277,8 +276,7 @@ async fn modify_project(
         [("HX-Redirect", app_url(&format!("/project/{id}")))],
         flash_message(
             state,
-            FlashMessageKind::Success,
-            "Successfully updated project".to_string(),
+            FlashMessage::Success("Successfully updated project".to_string()),
         ),
     )
         .into_response())
@@ -295,8 +293,7 @@ async fn delete_project(
         [("HX-Redirect", app_url("/project/list"))],
         flash_message(
             state,
-            FlashMessageKind::Success,
-            format!("Deleted project '{id}'"),
+            FlashMessage::Success(format!("Deleted project '{id}'")),
         ),
     )
         .into_response())
@@ -388,26 +385,20 @@ async fn add_sample(
             Err(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
                 if e.is_unique_violation() =>
             {
-                messages.push(FlashMessage {
-                    kind: FlashMessageKind::Warning,
-                    msg: format!(
-                        "Sample {} is already a member of this project",
-                        format_id_number(id, Some("S"), None),
-                    ),
-                })
+                messages.push(FlashMessage::Warning(format!(
+                    "Sample {} is already a member of this project",
+                    format_id_number(id, Some("S"), None),
+                )))
             }
             Err(libseed::Error::Unauthorized(message)) => tracing::error!(
                 "Tried to add sample {id} to project {} without permission: {message}",
                 project.id()
             ),
             Err(e) => {
-                messages.push(FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: format!(
-                        "Failed to add sample {}: Database error",
-                        format_id_number(id, Some("S"), None),
-                    ),
-                });
+                messages.push(FlashMessage::Error(format!(
+                    "Failed to add sample {}: Database error",
+                    format_id_number(id, Some("S"), None),
+                )));
                 tracing::error!("Failed to add a sample to the project: {e}");
             }
         }
@@ -419,18 +410,14 @@ async fn add_sample(
             user.id()
         );
         let n_dropped = toadd.len() - n_inserted;
-        messages.push(FlashMessage {
-                kind: FlashMessageKind::Warning,
-                msg: format!("{n_dropped} samples could not be added to the project. The samples may not exist or you may not have permissions to add them to this project.",),
-            });
+        messages.push(FlashMessage::Warning (
+               format!("{n_dropped} samples could not be added to the project. The samples may not exist or you may not have permissions to add them to this project.",),
+            ));
     }
     if n_inserted > 0 {
         messages.insert(
             0,
-            FlashMessage {
-                kind: FlashMessageKind::Success,
-                msg: format!("Added {n_inserted} samples to this project"),
-            },
+            FlashMessage::Success(format!("Added {n_inserted} samples to this project")),
         );
 
         Ok((
@@ -441,10 +428,7 @@ async fn add_sample(
     } else {
         messages.insert(
             0,
-            FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: "No samples were added to this project".to_string(),
-            },
+            FlashMessage::Error("No samples were added to this project".to_string()),
         );
         Ok((
             StatusCode::UNPROCESSABLE_ENTITY,
