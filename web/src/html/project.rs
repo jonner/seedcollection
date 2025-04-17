@@ -374,7 +374,7 @@ async fn add_sample(
     for id in &toadd {
         fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
     }
-    fb = fb.push(sample::Filter::UserId(user.id));
+    fb = and().push(fb.build()).push(sample::Filter::UserId(user.id));
     let valid_samples = Sample::load_all(Some(fb.build()), None, None, &state.db).await?;
 
     let mut n_inserted = 0;
