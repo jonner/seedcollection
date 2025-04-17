@@ -12,7 +12,7 @@ use crate::{
 use axum::{
     Router,
     extract::{OriginalUri, Path, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::IntoResponse,
     routing::get,
 };
@@ -369,11 +369,7 @@ async fn add_sample(
             _ => None,
         })
         .collect();
-    let project = Project::load(id, &state.db).await?;
-    if project.userid != user.id {
-        // FIXME: maybe display a proper error message?
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    }
+    let mut project = Project::load_for_user(id, &user, &state.db).await?;
     let mut fb = or();
     for id in &toadd {
         fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
@@ -381,25 +377,6 @@ async fn add_sample(
     fb = fb.push(sample::Filter::UserId(user.id));
     let valid_samples = Sample::load_all(Some(fb.build()), None, None, &state.db).await?;
 
-    let valid_ids = valid_samples
-        .iter()
-        .map(|s| s.id())
-        .collect::<HashSet<<Sample as Loadable>::Id>>();
-    let invalid = &toadd - &valid_ids;
-    if !invalid.is_empty() {
-        warn!("Some samples dropped, possibly because they were not owned by user {user:?}");
-        let strval = invalid
-            .iter()
-            .map(|id| format_id_number(*id, Some("S"), None))
-            .collect::<Vec<String>>()
-            .join(", ");
-        messages.push(FlashMessage {
-            kind: FlashMessageKind::Warning,
-            msg: format!("Some samples could not be added to the project. The following samples may not exist or you may not have permissions to add them top this project: {strval}.",),
-        })
-    }
-
-    let mut project = Project::load(id, &state.db).await?;
     let mut n_inserted = 0;
     for sample in valid_samples {
         let id = sample.id;
@@ -416,6 +393,10 @@ async fn add_sample(
                     ),
                 })
             }
+            Err(libseed::Error::Unauthorized(message)) => tracing::error!(
+                "Tried to add sample {id} to project {} without permission: {message}",
+                project.id()
+            ),
             Err(e) => {
                 messages.push(FlashMessage {
                     kind: FlashMessageKind::Error,
@@ -429,6 +410,14 @@ async fn add_sample(
         }
     }
 
+    if n_inserted < toadd.len() {
+        warn!("Some samples dropped, possibly because they were not owned by user {user:?}");
+        let n_dropped = toadd.len() - n_inserted;
+        messages.push(FlashMessage {
+                kind: FlashMessageKind::Warning,
+                msg: format!("{n_dropped} samples could not be added to the project. The samples may not exist or you may not have permissions to add them to this project.",),
+            });
+    }
     if n_inserted > 0 {
         messages.insert(
             0,
