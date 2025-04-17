@@ -93,7 +93,8 @@ async fn list_projects(
         user.preferences(&state.db).await?.pagesize.into(),
         page,
     );
-    let projects = Project::load_all(Some(filter), None, None, &state.db).await?;
+    let projects =
+        Project::load_all(Some(filter), None, Some(paginator.limits()), &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
