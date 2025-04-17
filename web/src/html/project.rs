@@ -263,12 +263,12 @@ async fn do_update(
     params: &ProjectParams,
     state: &AppState,
 ) -> Result<(), Error> {
-    if params.name.is_empty() {
-        return Err(Error::RequiredParameterMissing("name".into()));
-    }
     project.name.clone_from(&params.name);
     project.description.clone_from(&params.description);
-    project.update(&state.db).await?;
+    project.update(&state.db).await.map_err(|e| match e {
+        libseed::Error::InvalidStateMissingAttribute(attr) => Error::RequiredParameterMissing(attr),
+        _ => e.into(),
+    })?;
     Ok(())
 }
 
