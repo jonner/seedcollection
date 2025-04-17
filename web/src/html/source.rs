@@ -176,18 +176,16 @@ async fn update_source(
     Form(params): Form<SourceEditParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut src = Source::load_for_user(id, &user, &state.db).await?;
-    match do_update(&mut src, &params, &state).await {
-        Err(e) => Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response()),
-        Ok(_) => Ok((
-            [("HX-Redirect", app_url(&format!("/source/{id}")))],
-            flash_message(
-                state,
-                FlashMessageKind::Success,
-                "Successfully updated source".to_string(),
-            ),
-        )
-            .into_response()),
-    }
+    do_update(&mut src, &params, &state).await?;
+    Ok((
+        [("HX-Redirect", app_url(&format!("/source/{id}")))],
+        flash_message(
+            state,
+            FlashMessageKind::Success,
+            "Successfully updated source".to_string(),
+        ),
+    )
+        .into_response())
 }
 
 async fn do_insert(
@@ -216,34 +214,31 @@ async fn new_source(
     Form(params): Form<SourceEditParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut headers = HeaderMap::new();
-    match do_insert(&user, &params, &state).await {
-        Err(e) => Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response()),
-        Ok(source) => {
-            let url = app_url(&format!("/source/{}", source.id));
-            if params.modal.is_some() {
-                headers.append(
-                    "HX-Trigger",
-                    "reload-sources"
-                        .parse()
-                        .with_context(|| "Failed to parse header")?,
-                );
-            } else {
-                headers.append(
-                    "HX-redirect",
-                    url.parse().with_context(|| "Failed to parse header")?,
-                );
-            }
-            Ok((
-                headers,
-                flash_message(
-                    state,
-                    FlashMessageKind::Success,
-                    format!("Successfully added source {}", source.id),
-                ),
-            )
-                .into_response())
-        }
+    let source = do_insert(&user, &params, &state).await?;
+
+    let url = app_url(&format!("/source/{}", source.id));
+    if params.modal.is_some() {
+        headers.append(
+            "HX-Trigger",
+            "reload-sources"
+                .parse()
+                .with_context(|| "Failed to parse header")?,
+        );
+    } else {
+        headers.append(
+            "HX-redirect",
+            url.parse().with_context(|| "Failed to parse header")?,
+        );
     }
+    Ok((
+        headers,
+        flash_message(
+            state,
+            FlashMessageKind::Success,
+            format!("Successfully added source {}", source.id),
+        ),
+    )
+        .into_response())
 }
 
 async fn delete_source(
@@ -255,7 +250,5 @@ async fn delete_source(
     src.delete(&state.db)
         .await
         .map(|_| [("HX-redirect", app_url("/source/list"))].into_response())
-        .or_else(|e| {
-            Ok(flash_message(state, FlashMessageKind::Error, e.to_string()).into_response())
-        })
+        .map_err(Into::into)
 }

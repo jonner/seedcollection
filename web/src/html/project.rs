@@ -9,7 +9,6 @@ use crate::{
         format_id_number,
     },
 };
-use anyhow::anyhow;
 use axum::{
     Router,
     extract::{OriginalUri, Path, State},
@@ -144,47 +143,24 @@ async fn insert_project(
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     if params.name.is_empty() {
-        return Ok((
-            StatusCode::UNPROCESSABLE_ENTITY,
-            flash_message(
-                state,
-                FlashMessageKind::Error,
-                "Parameter 'name' is required".to_string(),
-            ),
-        )
-            .into_response());
+        return Err(Error::RequiredParameterMissing("name".into()));
     }
-    match do_insert(user, &params, &state).await {
-        Err(e) => {
-            warn!("Failed to insert project: {e:?}");
-            Ok((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                flash_message(
-                    state,
-                    FlashMessageKind::Error,
-                    "Failed to save project".to_string(),
-                ),
-            )
-                .into_response())
-        }
-        Ok(project) => {
-            debug!(project.id, "successfully inserted project");
-            let projecturl = app_url(&format!("/project/{}", project.id));
+    let project = do_insert(user, &params, &state).await?;
+    debug!(project.id, "successfully inserted project");
+    let projecturl = app_url(&format!("/project/{}", project.id));
 
-            Ok((
-                [("HX-Redirect", projecturl)],
-                flash_message(
-                    state,
-                    FlashMessageKind::Success,
-                    format!(
-                        r#"Added new project {}: {} to the database"#,
-                        project.id, params.name
-                    ),
-                ),
-            )
-                .into_response())
-        }
-    }
+    Ok((
+        [("HX-Redirect", projecturl)],
+        flash_message(
+            state,
+            FlashMessageKind::Success,
+            format!(
+                r#"Added new project {}: {} to the database"#,
+                project.id, params.name
+            ),
+        ),
+    )
+        .into_response())
 }
 
 #[derive(Deserialize, Serialize)]
@@ -288,7 +264,7 @@ async fn do_update(
     state: &AppState,
 ) -> Result<(), Error> {
     if params.name.is_empty() {
-        return Err(anyhow!("No name specified").into());
+        return Err(Error::RequiredParameterMissing("name".into()));
     }
     project.name.clone_from(&params.name);
     project.description.clone_from(&params.description);
@@ -303,23 +279,16 @@ async fn modify_project(
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    match do_update(&mut project, &params, &state).await {
-        Err(e) => Ok((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            flash_message(state, FlashMessageKind::Error, e.to_string()),
-        )
-            .into_response()),
-
-        Ok(_) => Ok((
-            [("HX-Redirect", app_url(&format!("/project/{id}")))],
-            flash_message(
-                state,
-                FlashMessageKind::Success,
-                "Successfully updated project".to_string(),
-            ),
-        )
-            .into_response()),
-    }
+    do_update(&mut project, &params, &state).await?;
+    Ok((
+        [("HX-Redirect", app_url(&format!("/project/{id}")))],
+        flash_message(
+            state,
+            FlashMessageKind::Success,
+            "Successfully updated project".to_string(),
+        ),
+    )
+        .into_response())
 }
 
 async fn delete_project(
@@ -328,25 +297,16 @@ async fn delete_project(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    match project.delete(&state.db).await {
-        Ok(_) => Ok((
-            [("HX-Redirect", app_url("/project/list"))],
-            flash_message(
-                state,
-                FlashMessageKind::Success,
-                format!("Deleted project '{id}'"),
-            ),
-        )
-            .into_response()),
-        Err(e) => {
-            warn!(?e, "Failed to delete project");
-            Ok((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                flash_message(state, FlashMessageKind::Error, e.to_string()),
-            )
-                .into_response())
-        }
-    }
+    project.delete(&state.db).await?;
+    Ok((
+        [("HX-Redirect", app_url("/project/list"))],
+        flash_message(
+            state,
+            FlashMessageKind::Success,
+            format!("Deleted project '{id}'"),
+        ),
+    )
+        .into_response())
 }
 
 async fn add_sample_prep(
