@@ -414,7 +414,10 @@ async fn add_sample(
     }
 
     if n_inserted < toadd.len() {
-        warn!("Some samples dropped, possibly because they were not owned by user {user:?}");
+        warn!(
+            "Some samples dropped, possibly because they were not owned by user {}",
+            user.id()
+        );
         let n_dropped = toadd.len() - n_inserted;
         messages.push(FlashMessage {
                 kind: FlashMessageKind::Warning,
