@@ -12,7 +12,7 @@ use crate::{
 use axum::{
     Router,
     extract::{OriginalUri, Path, State},
-    http::HeaderMap,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
 };
@@ -343,14 +343,17 @@ async fn show_add_sample(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse, Error> {
     let (project, samples) = add_sample_prep(&user, id, &state).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 project => project,
-                 samples => samples),
+            project => project,
+            samples => samples,
+            refresh_samples => headers.get("hx-request").is_some()
+        ),
     )
     .into_response())
 }
@@ -426,6 +429,12 @@ async fn add_sample(
                 msg: format!("Added {n_inserted} samples to this project"),
             },
         );
+
+        Ok((
+            [("HX-Trigger", "reload-samples")],
+            flash_messages(state, &messages),
+        )
+            .into_response())
     } else {
         messages.insert(
             0,
@@ -434,7 +443,10 @@ async fn add_sample(
                 msg: "No samples were added to this project".to_string(),
             },
         );
+        Ok((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            flash_messages(state, &messages),
+        )
+            .into_response())
     }
-
-    Ok(flash_messages(state, &messages).into_response())
 }
