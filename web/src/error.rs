@@ -33,29 +33,30 @@ pub(crate) enum Error {
 impl Error {
     pub(crate) fn to_client_status(&self) -> (StatusCode, String) {
         match self {
-            Error::Database(_) => (
+            Error::Libseed(libseed::Error::DatabaseError(_)) | Error::Database(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Database error".to_string(),
             ),
-            Error::Other(_) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Unknown error".to_string(),
-            ),
-            // FIXME: make this more specific
-            Error::Libseed(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Library error".to_string()),
             Error::Unauthorized(message) => (StatusCode::UNAUTHORIZED, message.clone()),
             Error::NotFound(message) => (StatusCode::NOT_FOUND, message.clone()),
-            Error::QueryExtractorRejection(_) => (
+            Error::QueryExtractorRejection(rejection) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
-                "The query string was not in the expected format. The request could not be processed.".to_string(),
+                format!("The query string could not be processed: {rejection}"),
             ),
             Error::FormExtractorRejection(rejection) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
-                format!("The form was not in the expected format: {rejection}"),
+                format!("The form could not be processed: {rejection}"),
             ),
-            Error::Environment(_message) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string()),
+            // FIXME: handle more specific libseed errors?
+            Error::Libseed(_) | Error::Other(_) | Error::Environment(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal error".to_string(),
+            ),
             Error::UserRegistrationDisabled => (StatusCode::UNAUTHORIZED, self.to_string()),
-            Error::RequiredParameterMissing(param) => (StatusCode::UNPROCESSABLE_ENTITY, format!("Missing parameter '{param}'")),
+            Error::RequiredParameterMissing(param) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                format!("Missing parameter '{param}'"),
+            ),
         }
     }
 }
