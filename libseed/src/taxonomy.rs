@@ -448,8 +448,8 @@ impl Taxon {
                 SELECT *
                 FROM vernaculars
                 WHERE ( language="English" OR language="unspecified" )
-            ) V on V.tsn=T.tsn
-            LEFT JOIN mntaxa M on T.tsn=M.tsn 
+            ) V USING(tsn)
+            LEFT JOIN mntaxa M USING(tsn) 
             WHERE name_usage="accepted" AND kingdom_id="#,
         );
         builder.push_bind(KINGDOM_PLANTAE);
@@ -490,9 +490,15 @@ impl Taxon {
         filter: Option<DynFilterPart>,
     ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
         let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
-            r#"SELECT COUNT(tsn) as count
+            r#"WITH rows AS (SELECT COUNT(tsn) as count
             FROM taxonomic_units T
-      WHERE name_usage="accepted" AND kingdom_id="#,
+            LEFT JOIN (
+                SELECT *
+                FROM vernaculars
+                WHERE ( language="English" OR language="unspecified" )
+            ) V USING(tsn)
+            LEFT JOIN mntaxa M USING(tsn)
+            WHERE name_usage="accepted" AND kingdom_id="#,
         );
         builder.push_bind(KINGDOM_PLANTAE);
 
@@ -500,7 +506,7 @@ impl Taxon {
             builder.push(" AND ");
             filter.add_to_query(&mut builder);
         }
-
+        builder.push(" GROUP BY T.tsn) SELECT COUNT(*) as count FROM rows");
         builder
     }
 }
