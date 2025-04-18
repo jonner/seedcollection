@@ -276,7 +276,7 @@ impl FilterPart for Filter {
 }
 
 /// Generate a filter that selects a taxon if any name component matches the string `s`
-pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
+pub fn quickfind(taxon: &str) -> Option<DynFilterPart> {
     match taxon.is_empty() {
         true => None,
         false => {

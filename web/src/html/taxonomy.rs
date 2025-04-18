@@ -182,7 +182,7 @@ async fn datalist(
     State(state): State<AppState>,
     Query(DatalistParams { taxon }): Query<DatalistParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let taxa = filter_taxa(taxon, None, None, &state.db).await?;
+    let taxa = filter_taxa(&taxon, None, None, &state.db).await?;
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
 
@@ -203,12 +203,12 @@ async fn search(
         minnesota,
     }): Query<SearchParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let taxa = filter_taxa(taxon, rank, minnesota, &state.db).await?;
+    let taxa = filter_taxa(&taxon, rank, minnesota, &state.db).await?;
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
 
 async fn filter_taxa(
-    taxon: String,
+    taxon: &str,
     rank: Option<Rank>,
     minnesota: Option<bool>,
     db: &Database,

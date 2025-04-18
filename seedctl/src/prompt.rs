@@ -69,7 +69,7 @@ impl Autocomplete for TaxonCompleter {
         let mut taxa = Ok(vec![]);
         if input.len() > 2 {
             taxa = futures::executor::block_on(Taxon::load_all(
-                quickfind(input.to_string()),
+                quickfind(input),
                 None,
                 None,
                 &self.db,
