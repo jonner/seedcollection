@@ -192,8 +192,7 @@ async fn show_sample(
                  sample => sample,
                  sources => sources,
                  projects => projects),
-    )
-    .into_response())
+    ))
 }
 
 async fn new_sample(
@@ -207,8 +206,7 @@ async fn new_sample(
         state.tmpl.clone(),
         context!(user => user,
                  sources => sources),
-    )
-    .into_response())
+    ))
 }
 
 // A utility function to deserialize an Optional month from either a month name
@@ -248,16 +246,15 @@ struct SampleParams {
     uncertain: Option<bool>,
 }
 
-async fn do_insert(
-    user: &SqliteUser,
-    params: &SampleParams,
-    state: &AppState,
-) -> Result<Sample, Error> {
+async fn insert_sample(
+    user: SqliteUser,
+    State(state): State<AppState>,
+    Form(params): Form<SampleParams>,
+) -> Result<impl IntoResponse, Error> {
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
     };
-
     let mut sample = Sample::new(
         params
             .taxon
@@ -273,15 +270,7 @@ async fn do_insert(
         certainty,
     );
     sample.insert(&state.db).await?;
-    Ok(sample)
-}
 
-async fn insert_sample(
-    user: SqliteUser,
-    State(state): State<AppState>,
-    Form(params): Form<SampleParams>,
-) -> Result<impl IntoResponse, Error> {
-    let mut sample = do_insert(&user, &params, &state).await?;
     let sampleurl = app_url(&format!("/sample/{}", sample.id));
     let taxon_name = &sample.taxon.load(&state.db, false).await?.complete_name;
     Ok((
@@ -297,11 +286,14 @@ async fn insert_sample(
         .into_response())
 }
 
-async fn do_update(
-    sample: &mut Sample,
-    params: &SampleParams,
-    state: &AppState,
-) -> Result<(), Error> {
+async fn update_sample(
+    user: SqliteUser,
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+    Form(params): Form<SampleParams>,
+) -> Result<impl IntoResponse, Error> {
+    let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
+
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
         _ => Certainty::Certain,
@@ -321,25 +313,14 @@ async fn do_update(
     sample.quantity = params.quantity;
     sample.notes = params.notes.as_ref().cloned();
     sample.certainty = certainty;
-    sample.update(&state.db).await.map_err(|e| e.into())
-}
-
-async fn update_sample(
-    user: SqliteUser,
-    Path(id): Path<i64>,
-    State(state): State<AppState>,
-    Form(params): Form<SampleParams>,
-) -> Result<impl IntoResponse, Error> {
-    let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
-    do_update(&mut sample, &params, &state).await?;
+    sample.update(&state.db).await?;
     Ok((
         [("HX-Redirect", app_url(&format!("/sample/{id}")))],
         flash_message(
             state,
             FlashMessage::Success(format!("Updated sample {}", id)),
         ),
-    )
-        .into_response())
+    ))
 }
 
 async fn delete_sample(
@@ -352,6 +333,5 @@ async fn delete_sample(
     Ok((
         [("HX-Redirect", app_url("/sample/list"))],
         flash_message(state, FlashMessage::Success(format!("Deleted sample {id}"))),
-    )
-        .into_response())
+    ))
 }
