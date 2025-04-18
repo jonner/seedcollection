@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, Serialize)]
+/// A 'newtype' object that wraps [User] in order to implement the
+/// [AuthUser] trait. It is intended to be used interchangeably
+/// with the underlying object type
 pub(crate) struct SqliteUser(User);
 
 impl From<SqliteUser> for User {
@@ -49,20 +52,24 @@ impl AuthUser for SqliteUser {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+/// Form fields that are submitted in order to log into the web application
 pub(crate) struct Credentials {
     pub(crate) username: String,
     pub(crate) password: String,
+    /// An optional uri to redirect the user to after a successful login.
     #[serde(deserialize_with = "empty_string_as_none")]
     pub(crate) next: Option<String>,
 }
 
 #[derive(Clone)]
+/// An authentication backend that uses an sqlite database to authenticate users
 pub(crate) struct SqliteAuthBackend {
     db: Database,
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum AuthError {
+/// Potential errors that can occur when authenticating with the web application
+pub(crate) enum AuthError {
     #[error(transparent)]
     Libseed(#[from] libseed::Error),
     #[error(transparent)]
@@ -105,6 +112,7 @@ impl SqliteAuthBackend {
     }
 }
 
+/// An authentication session
 pub(crate) type AuthSession = axum_login::AuthSession<SqliteAuthBackend>;
 
 impl<S> FromRequestParts<S> for SqliteUser
