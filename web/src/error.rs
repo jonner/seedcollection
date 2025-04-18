@@ -75,8 +75,14 @@ impl Error {
             ),
             Error::RegistrationValidation(r) => (
                 StatusCode::UNPROCESSABLE_ENTITY,
-                // FIXME: format this more nicely
-                format!("Could not register user: {}", r.issues.join(", ")),
+                format!(
+                    "Could not register user:\n{}",
+                    r.issues
+                        .iter()
+                        .map(|s| format!(" - {s}"))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                ),
             ),
         }
     }
