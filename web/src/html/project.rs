@@ -330,6 +330,10 @@ async fn add_sample(
     Path(id): Path<<Project as Loadable>::Id>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, Error> {
+    let mut project = Project::load_for_user(id, &user, &state.db).await?;
+    if params.is_empty() {
+        return Err(Error::RequiredParameterMissing("samples".into()));
+    }
     let toadd: HashSet<<Sample as Loadable>::Id> = params
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
@@ -337,7 +341,6 @@ async fn add_sample(
             _ => None,
         })
         .collect();
-    let mut project = Project::load_for_user(id, &user, &state.db).await?;
     let mut fb = or();
     for id in &toadd {
         fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
