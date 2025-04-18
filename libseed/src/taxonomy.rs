@@ -17,7 +17,7 @@ use tracing::debug;
 pub(crate) const KINGDOM_PLANTAE: i64 = 3;
 
 /// The taxonomic rank of a taxon
-#[derive(Debug, Clone, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq)]
 pub enum Rank {
     Unknown = 0,
     Kingdom = 10,
@@ -242,7 +242,7 @@ impl FilterPart for Filter {
                 _ => builder.push("T.tsn").push(cmp).push_bind(*n),
             },
             Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(*n),
-            Self::Rank(rank) => builder.push("T.rank_id=").push_bind(rank.clone() as i64),
+            Self::Rank(rank) => builder.push("T.rank_id=").push_bind(*rank as i64),
             Self::Genus(s) | Self::Name1(s) => builder
                 .push("T.unit_name1")
                 .push(Cmp::Like)

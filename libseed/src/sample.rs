@@ -186,10 +186,7 @@ impl FilterPart for Filter {
             }
             Self::Quantity(cmp, n) => _ = builder.push("quantity").push(cmp).push_bind(*n),
             Self::TaxonRank(cmp, rank) => {
-                _ = builder
-                    .push("rank")
-                    .push(cmp)
-                    .push_bind(rank.clone() as i64)
+                _ = builder.push("rank").push(cmp).push_bind(*rank as i64)
             }
         };
     }

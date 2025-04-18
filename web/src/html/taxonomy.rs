@@ -74,7 +74,7 @@ async fn list_taxa(
         Some(r) => r,
         None => Rank::Species,
     };
-    let count = Taxon::count(Some(taxonomy::Filter::Rank(rank.clone()).into()), &state.db).await?;
+    let count = Taxon::count(Some(taxonomy::Filter::Rank(rank).into()), &state.db).await?;
     let summary = Paginator::new(
         count as u32,
         user.preferences(&state.db).await?.pagesize.into(),

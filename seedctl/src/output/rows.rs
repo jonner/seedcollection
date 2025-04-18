@@ -333,7 +333,7 @@ impl TaxonRow {
     pub(crate) fn new(taxon: &Taxon) -> Self {
         Self {
             id: taxon.id,
-            rank: taxon.rank.clone(),
+            rank: taxon.rank,
             name: taxon.complete_name.clone(),
             common_names: taxon.vernaculars.clone(),
             mn_status: taxon.native_status.clone(),
@@ -398,7 +398,7 @@ impl TaxonRowDetails {
 
         Ok(Self {
             id: taxon.id,
-            rank: taxon.rank.clone(),
+            rank: taxon.rank,
             name: taxon.complete_name.clone(),
             common_names: taxon.vernaculars.clone(),
             mn_status: taxon.native_status.clone(),
