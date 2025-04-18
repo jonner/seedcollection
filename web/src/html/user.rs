@@ -11,7 +11,6 @@ use anyhow::anyhow;
 use axum::{
     Router,
     extract::State,
-    http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
 };
@@ -150,21 +149,10 @@ struct PrefsParams {
 async fn update_prefs(
     mut user: SqliteUser,
     State(state): State<AppState>,
-    TemplateKey(key): TemplateKey,
     Form(params): Form<PrefsParams>,
 ) -> Result<impl IntoResponse, Error> {
     let prefs = user.preferences_mut(&state.db).await?;
     prefs.pagesize = params.pagesize;
-    match prefs.update(&state.db).await {
-        Ok(_) => Ok([("HX-Redirect", app_url("/user/me"))].into_response()),
-        Err(e) => Ok((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            RenderHtml(
-                key,
-                state.tmpl.clone(),
-                context!(message => FlashMessage::Error(e.to_string())),
-            ),
-        )
-            .into_response()),
-    }
+    prefs.update(&state.db).await?;
+    Ok([("HX-Redirect", app_url("/user/me"))].into_response())
 }
