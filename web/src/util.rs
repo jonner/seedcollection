@@ -414,6 +414,8 @@ pub(crate) mod extract {
         http::request::Parts,
     };
 
+    /// A customized [axum::Form] extractor that converts the default rejection into an
+    /// error that can be handled and returned to the user in a consistent manner
     pub(crate) struct Form<T>(pub T);
     impl<S, T> FromRequest<S> for Form<T>
     where
@@ -430,6 +432,8 @@ pub(crate) mod extract {
         }
     }
 
+    /// A customized [axum::extract::Query] extractor that converts the default rejection into an
+    /// error that can be handled and returned to the user in a consistent manner
     pub(crate) struct Query<T>(pub T);
     impl<S, T> FromRequestParts<S> for Query<T>
     where
