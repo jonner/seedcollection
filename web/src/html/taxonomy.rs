@@ -17,10 +17,9 @@ use axum::{
 use axum_template::RenderHtml;
 use libseed::{
     core::{
-        database::Database,
         loadable::Loadable,
         query::{
-            LimitSpec,
+            DynFilterPart, LimitSpec,
             filter::{Cmp, and},
         },
     },
@@ -182,7 +181,18 @@ async fn datalist(
     State(state): State<AppState>,
     Query(DatalistParams { taxon }): Query<DatalistParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let taxa = filter_taxa(&taxon, None, None, &state.db).await?;
+    let filter = filter_taxa(&taxon, None, None);
+    let taxa = Taxon::load_all(
+        filter,
+        None,
+        Some(LimitSpec {
+            // for the datalist, just provide a hard upper limit
+            count: 100,
+            offset: None,
+        }),
+        &state.db,
+    )
+    .await?;
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
 
@@ -197,47 +207,28 @@ struct SearchParams {
 async fn search(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Query(SearchParams {
-        taxon,
-        rank,
-        minnesota,
-    }): Query<SearchParams>,
+    Query(params): Query<SearchParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let taxa = filter_taxa(&taxon, rank, minnesota, &state.db).await?;
+    let filter = filter_taxa(&params.taxon, params.rank, params.minnesota);
+    let taxa = Taxon::load_all(filter, None, None, &state.db).await?;
     Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
 }
 
-async fn filter_taxa(
-    taxon: &str,
-    rank: Option<Rank>,
-    minnesota: Option<bool>,
-    db: &Database,
-) -> Result<Vec<Taxon>, Error> {
+fn filter_taxa(taxon: &str, rank: Option<Rank>, minnesota: Option<bool>) -> Option<DynFilterPart> {
     match taxon.is_empty() {
-        true => Ok(Vec::new()),
+        true => None,
         false => {
-            let mut filter = and();
+            let mut filterbuilder = and();
             if let Some(quickfilter) = libseed::taxonomy::quickfind(taxon) {
-                filter = filter.push(quickfilter);
+                filterbuilder = filterbuilder.push(quickfilter);
             }
             if let Some(rank) = rank {
-                filter = filter.push(taxonomy::Filter::Rank(rank));
+                filterbuilder = filterbuilder.push(taxonomy::Filter::Rank(rank));
             }
             if Some(true) == minnesota {
-                filter = filter.push(taxonomy::Filter::Minnesota(true));
+                filterbuilder = filterbuilder.push(taxonomy::Filter::Minnesota(true));
             }
-            /* FIXME: pagination for /search endpoing? */
-            Taxon::load_all(
-                Some(filter.build()),
-                None,
-                Some(LimitSpec {
-                    count: 200,
-                    offset: None,
-                }),
-                db,
-            )
-            .await
-            .map_err(Into::into)
+            Some(filterbuilder.build())
         }
     }
 }
