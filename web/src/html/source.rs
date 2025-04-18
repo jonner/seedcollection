@@ -3,12 +3,15 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url},
+    util::{
+        AccessControlled, FlashMessage, Paginator, app_url,
+        extract::{Form, Query},
+    },
 };
 use anyhow::{Context, anyhow};
 use axum::{
-    Form, Router,
-    extract::{OriginalUri, Path, Query, State},
+    Router,
+    extract::{OriginalUri, Path, State},
     http::HeaderMap,
     response::IntoResponse,
     routing::get,
@@ -25,6 +28,8 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Serialize};
+
+use super::flash_message;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -78,8 +83,7 @@ async fn list_sources(
                  summary => paginator,
                  request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
-    )
-    .into_response())
+    ))
 }
 
 async fn add_source(
@@ -87,7 +91,7 @@ async fn add_source(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
 }
 
 #[derive(Debug, Deserialize)]
@@ -129,8 +133,7 @@ async fn show_source(
                  summary => paginator,
                  request_uri => uri.to_string(),
                  samples => samples),
-    )
-    .into_response())
+    ))
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -146,11 +149,14 @@ struct SourceEditParams {
     modal: Option<i64>,
 }
 
-async fn do_update(
-    src: &mut Source,
-    params: &SourceEditParams,
-    state: &AppState,
-) -> Result<(), Error> {
+async fn update_source(
+    user: SqliteUser,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(params): Form<SourceEditParams>,
+) -> Result<impl IntoResponse, Error> {
+    let mut src = Source::load_for_user(id, &user, &state.db).await?;
+
     src.name = params
         .name
         .as_ref()
@@ -159,70 +165,23 @@ async fn do_update(
     src.description = params.description.as_ref().cloned();
     src.latitude = params.latitude;
     src.longitude = params.longitude;
-
     src.update(&state.db).await?;
-    Ok(())
-}
-
-async fn update_source(
-    user: SqliteUser,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-    Form(params): Form<SourceEditParams>,
-) -> Result<impl IntoResponse, Error> {
-    let mut src = Source::load_for_user(id, &user, &state.db).await?;
-    let (request, message, headers) = match do_update(&mut src, &params, &state).await {
-        Err(e) => (
-            Some(&params),
-            FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: e.to_string(),
-            },
-            None,
-        ),
-        Ok(_) => (
-            None,
-            FlashMessage {
-                kind: FlashMessageKind::Success,
-                msg: "Successfully updated source".to_string(),
-            },
-            Some([("HX-Redirect", app_url(&format!("/source/{id}")))]),
-        ),
-    };
-    let samples = Sample::load_all(
-        Some(
-            and()
-                .push(Filter::SourceId(Cmp::Equal, id))
-                .push(Filter::UserId(user.id))
-                .build(),
-        ),
-        None,
-        None,
-        &state.db,
-    )
-    .await?;
 
     Ok((
-        headers,
-        RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(source => src,
-             message => message,
-             request => request,
-             samples => samples
-            ),
-        )
-        .into_response(),
+        [("HX-Redirect", app_url(&format!("/source/{id}")))],
+        flash_message(
+            state,
+            FlashMessage::Success("Successfully updated source".to_string()),
+        ),
     ))
 }
 
-async fn do_insert(
-    user: &SqliteUser,
-    params: &SourceEditParams,
-    state: &AppState,
-) -> Result<Source, Error> {
+async fn new_source(
+    user: SqliteUser,
+    State(state): State<AppState>,
+    Form(params): Form<SourceEditParams>,
+) -> Result<impl IntoResponse, Error> {
+    let mut headers = HeaderMap::new();
     let mut source = Source::new(
         params
             .name
@@ -235,58 +194,28 @@ async fn do_insert(
         user.id,
     );
     source.insert(&state.db).await?;
-    Ok(source)
-}
 
-async fn new_source(
-    user: SqliteUser,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-    Form(params): Form<SourceEditParams>,
-) -> Result<impl IntoResponse, Error> {
-    let message;
-    let mut request: Option<&SourceEditParams> = None;
-    let mut headers = HeaderMap::new();
-    match do_insert(&user, &params, &state).await {
-        Err(e) => {
-            message = Some(FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: e.to_string(),
-            });
-            request = Some(&params)
-        }
-        Ok(source) => {
-            let url = app_url(&format!("/source/{}", source.id));
-            message = Some(FlashMessage {
-                kind: FlashMessageKind::Success,
-                msg: format!("Successfully added source {}", source.id),
-            });
-            if params.modal.is_some() {
-                headers.append(
-                    "HX-Trigger",
-                    "reload-sources"
-                        .parse()
-                        .with_context(|| "Failed to parse header")?,
-                );
-            } else {
-                headers.append(
-                    "HX-redirect",
-                    url.parse().with_context(|| "Failed to parse header")?,
-                );
-            }
-        }
-    };
+    let url = app_url(&format!("/source/{}", source.id));
+    if params.modal.is_some() {
+        headers.append(
+            "HX-Trigger",
+            "reload-sources"
+                .parse()
+                .with_context(|| "Failed to parse header")?,
+        );
+    } else {
+        headers.append(
+            "HX-redirect",
+            url.parse().with_context(|| "Failed to parse header")?,
+        );
+    }
     Ok((
         headers,
-        RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(message => message,
-            request => request,
-            ),
+        flash_message(
+            state,
+            FlashMessage::Success(format!("Successfully added source {}", source.id)),
         ),
-    )
-        .into_response())
+    ))
 }
 
 async fn delete_source(
@@ -295,6 +224,8 @@ async fn delete_source(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let mut src = Source::load_for_user(id, &user, &state.db).await?;
-    src.delete(&state.db).await?;
-    Ok([("HX-redirect", app_url("/source/list"))])
+    src.delete(&state.db)
+        .await
+        .map(|_| [("HX-redirect", app_url("/source/list"))])
+        .map_err(Into::into)
 }

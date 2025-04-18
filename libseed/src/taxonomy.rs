@@ -17,7 +17,7 @@ use tracing::debug;
 pub(crate) const KINGDOM_PLANTAE: i64 = 3;
 
 /// The taxonomic rank of a taxon
-#[derive(Debug, Clone, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq)]
 pub enum Rank {
     Unknown = 0,
     Kingdom = 10,
@@ -242,7 +242,7 @@ impl FilterPart for Filter {
                 _ => builder.push("T.tsn").push(cmp).push_bind(*n),
             },
             Self::ParentId(n) => builder.push("T.parent_tsn=").push_bind(*n),
-            Self::Rank(rank) => builder.push("T.rank_id=").push_bind(rank.clone() as i64),
+            Self::Rank(rank) => builder.push("T.rank_id=").push_bind(*rank as i64),
             Self::Genus(s) | Self::Name1(s) => builder
                 .push("T.unit_name1")
                 .push(Cmp::Like)
@@ -276,7 +276,7 @@ impl FilterPart for Filter {
 }
 
 /// Generate a filter that selects a taxon if any name component matches the string `s`
-pub fn quickfind(taxon: String) -> Option<DynFilterPart> {
+pub fn quickfind(taxon: &str) -> Option<DynFilterPart> {
     match taxon.is_empty() {
         true => None,
         false => {
@@ -448,8 +448,8 @@ impl Taxon {
                 SELECT *
                 FROM vernaculars
                 WHERE ( language="English" OR language="unspecified" )
-            ) V on V.tsn=T.tsn
-            LEFT JOIN mntaxa M on T.tsn=M.tsn 
+            ) V USING(tsn)
+            LEFT JOIN mntaxa M USING(tsn) 
             WHERE name_usage="accepted" AND kingdom_id="#,
         );
         builder.push_bind(KINGDOM_PLANTAE);
@@ -490,9 +490,15 @@ impl Taxon {
         filter: Option<DynFilterPart>,
     ) -> sqlx::QueryBuilder<'static, sqlx::Sqlite> {
         let mut builder: sqlx::QueryBuilder<sqlx::Sqlite> = sqlx::QueryBuilder::new(
-            r#"SELECT COUNT(tsn) as count
+            r#"WITH rows AS (SELECT COUNT(tsn) as count
             FROM taxonomic_units T
-      WHERE name_usage="accepted" AND kingdom_id="#,
+            LEFT JOIN (
+                SELECT *
+                FROM vernaculars
+                WHERE ( language="English" OR language="unspecified" )
+            ) V USING(tsn)
+            LEFT JOIN mntaxa M USING(tsn)
+            WHERE name_usage="accepted" AND kingdom_id="#,
         );
         builder.push_bind(KINGDOM_PLANTAE);
 
@@ -500,7 +506,7 @@ impl Taxon {
             builder.push(" AND ");
             filter.add_to_query(&mut builder);
         }
-
+        builder.push(" GROUP BY T.tsn) SELECT COUNT(*) as count FROM rows");
         builder
     }
 }

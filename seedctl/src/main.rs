@@ -125,7 +125,7 @@ async fn main() -> Result<()> {
                     filter = filter.push(taxonomy::Filter::Species(species));
                 }
                 if let Some(s) = any {
-                    if let Some(f) = quickfind(s) {
+                    if let Some(f) = quickfind(&s) {
                         filter = filter.push(f);
                     }
                 }

@@ -278,6 +278,11 @@ impl Project {
         sample: Sample,
         db: &Database,
     ) -> Result<<AllocatedSample as Loadable>::Id> {
+        if sample.user.id() != self.userid {
+            return Err(Error::Unauthorized(
+                "Sample and project have different owners".into(),
+            ));
+        }
         let mut allocation = AllocatedSample {
             id: AllocatedSample::invalid_id(),
             sample,

@@ -4,14 +4,14 @@ use crate::{
     error::Error,
     state::AppState,
     util::{
-        AccessControlled, FlashMessage, FlashMessageKind, Paginator, app_url, format_id_number,
+        AccessControlled, FlashMessage, Paginator, app_url,
+        extract::{Form, Query},
     },
 };
-use anyhow::anyhow;
 use axum::{
-    Form, Router,
-    extract::{OriginalUri, Path, Query, State, rejection::QueryRejection},
-    http::{HeaderMap, StatusCode},
+    Router,
+    extract::{OriginalUri, Path, State},
+    http::HeaderMap,
     response::IntoResponse,
     routing::get,
 };
@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
-use super::{SortOption, error_alert_response};
+use super::{SortOption, flash_message};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -93,7 +93,8 @@ async fn list_projects(
         user.preferences(&state.db).await?.pagesize.into(),
         page,
     );
-    let projects = Project::load_all(Some(filter), None, None, &state.db).await?;
+    let projects =
+        Project::load_all(Some(filter), None, Some(paginator.limits()), &state.db).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -102,8 +103,7 @@ async fn list_projects(
                  summary => paginator,
                  request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
-    )
-    .into_response())
+    ))
 }
 
 async fn show_new_project(
@@ -111,7 +111,7 @@ async fn show_new_project(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -121,66 +121,34 @@ struct ProjectParams {
     description: Option<String>,
 }
 
-async fn do_insert(
-    user: SqliteUser,
-    params: &ProjectParams,
-    state: &AppState,
-) -> Result<Project, Error> {
-    let mut project = Project::new(
-        params.name.clone(),
-        params.description.as_ref().cloned(),
-        user.id,
-    );
-    project.insert(&state.db).await?;
-    Ok(project)
-}
-
 async fn insert_project(
     user: SqliteUser,
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     if params.name.is_empty() {
-        return Ok(error_alert_response(
-            &state,
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "No name specified".to_string(),
-        )
-        .into_response());
+        return Err(Error::RequiredParameterMissing("name".into()));
     }
-    match do_insert(user, &params, &state).await {
-        Err(e) => {
-            warn!("Failed to insert project: {e:?}");
-            Ok(error_alert_response(
-                &state,
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to save project".to_string(),
-            )
-            .into_response())
-        }
-        Ok(project) => {
-            debug!(project.id, "successfully inserted project");
-            let projecturl = app_url(&format!("/project/{}", project.id));
+    let mut project = Project::new(
+        params.name.clone(),
+        params.description.as_ref().cloned(),
+        user.id,
+    );
+    project.insert(&state.db).await?;
 
-            Ok((
-                [("HX-Redirect", projecturl)],
-                RenderHtml(
-                    "_ALERT.html.j2",
-                    state.tmpl.clone(),
-                    context!( message =>
-                    FlashMessage {
-                        kind: FlashMessageKind::Success,
-                        msg: format!(
-                            r#"Added new project {}: {} to the database"#,
-                            project.id, params.name
-                            )
-                    },
-                    ),
-                ),
-            )
-                .into_response())
-        }
-    }
+    debug!(project.id, "successfully inserted project");
+    let projecturl = app_url(&format!("/project/{}", project.id));
+
+    Ok((
+        [("HX-Redirect", projecturl)],
+        flash_message(
+            state,
+            FlashMessage::Success(format!(
+                r#"Added new project {}: {} to the database"#,
+                project.id, params.name
+            )),
+        ),
+    ))
 }
 
 #[derive(Deserialize, Serialize)]
@@ -196,12 +164,11 @@ async fn show_project(
     TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
-    query: Result<Query<ShowProjectQueryParams>, QueryRejection>,
+    Query(params): Query<ShowProjectQueryParams>,
     headers: HeaderMap,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let Query(params) = query.map_err(Error::UnprocessableEntityQueryRejection)?;
     let field = params.sort.as_ref().cloned().unwrap_or(SortField::Taxon);
     let sort = SortSpec::new(
         field.clone(),
@@ -275,106 +242,57 @@ async fn show_project(
                  summary => paginator,
                  request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
-    )
-    .into_response())
-}
-
-async fn do_update(
-    project: &mut Project,
-    params: &ProjectParams,
-    state: &AppState,
-) -> Result<(), Error> {
-    if params.name.is_empty() {
-        return Err(anyhow!("No name specified").into());
-    }
-    project.name.clone_from(&params.name);
-    project.description.clone_from(&params.description);
-    project.update(&state.db).await?;
-    Ok(())
+    ))
 }
 
 async fn modify_project(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
     Form(params): Form<ProjectParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let (request, message, headers) = match do_update(&mut project, &params, &state).await {
-        Err(e) => (
-            Some(&params),
-            FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: e.to_string(),
-            },
-            None,
-        ),
-        Ok(_) => (
-            None,
-            FlashMessage {
-                kind: FlashMessageKind::Success,
-                msg: "Successfully updated project".to_string(),
-            },
-            Some([("HX-Redirect", app_url(&format!("/project/{id}")))]),
-        ),
-    };
+
+    project.name.clone_from(&params.name);
+    project.description.clone_from(&params.description);
+    project.update(&state.db).await.map_err(|e| match e {
+        libseed::Error::InvalidStateMissingAttribute(attr) => Error::RequiredParameterMissing(attr),
+        _ => e.into(),
+    })?;
+
     Ok((
-        headers,
-        RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(project => project,
-             message => message,
-             request => request,
-            ),
+        [("HX-Redirect", app_url(&format!("/project/{id}")))],
+        flash_message(
+            state,
+            FlashMessage::Success("Successfully updated project".to_string()),
         ),
-    )
-        .into_response())
+    ))
 }
 
 async fn delete_project(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let errmsg = match project.delete(&state.db).await {
-        Ok(_) => {
-            debug!(id, "Successfully deleted project");
-            return Ok((
-                [("HX-Redirect", app_url("/project/list"))],
-                RenderHtml(key, state.tmpl.clone(), context!(deleted => true, id => id)),
-            )
-                .into_response());
-        }
-        Err(e) => {
-            warn!(?e, "Failed to delete project");
-            e.to_string()
-        }
-    };
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(
-        project => project,
-        message => FlashMessage {
-            kind: FlashMessageKind::Error,
-            msg: format!("Failed to delete project: {errmsg}")
-        },
+    project.delete(&state.db).await?;
+    Ok((
+        [("HX-Redirect", app_url("/project/list"))],
+        flash_message(
+            state,
+            FlashMessage::Success(format!("Deleted project '{id}'")),
         ),
-    )
-    .into_response())
+    ))
 }
 
-async fn add_sample_prep(
-    user: &SqliteUser,
-    id: <Project as Loadable>::Id,
-    state: &AppState,
-) -> Result<(Project, Vec<Sample>), Error> {
+async fn show_add_sample(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Path(id): Path<<Project as Loadable>::Id>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, Error> {
     let project = Project::load(id, &state.db).await?;
-
     let ids_in_project = sqlx::query!(
         "SELECT PS.sampleid from sc_project_samples PS WHERE PS.projectid=?",
         id
@@ -382,13 +300,6 @@ async fn add_sample_prep(
     .fetch_all(state.db.pool())
     .await?;
     let ids = ids_in_project.iter().map(|row| row.sampleid).collect();
-
-    /* FIXME: make this more efficient by changeing it to filter by
-     *  'WHERE NOT IN (SELECT ids from...)'
-     * instead of
-     * [ query ids first ], then
-     *  'WHERE NOT IN (1, 2, 3, 4, 5...)'
-     */
     let samples = Sample::load_all(
         Some(
             and()
@@ -401,34 +312,24 @@ async fn add_sample_prep(
         &state.db,
     )
     .await?;
-    Ok((project, samples))
-}
 
-async fn show_add_sample(
-    user: SqliteUser,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-    Path(id): Path<<Project as Loadable>::Id>,
-) -> Result<impl IntoResponse, Error> {
-    let (project, samples) = add_sample_prep(&user, id, &state).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
-                 project => project,
-                 samples => samples),
-    )
-    .into_response())
+            project => project,
+            samples => samples,
+            refresh_samples => headers.get("hx-request").is_some()
+        ),
+    ))
 }
 
 async fn add_sample(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut messages = Vec::new();
     let toadd: HashSet<<Sample as Loadable>::Id> = params
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
@@ -436,91 +337,39 @@ async fn add_sample(
             _ => None,
         })
         .collect();
-    let project = Project::load(id, &state.db).await?;
-    if project.userid != user.id {
-        // FIXME: maybe display a proper error message?
-        return Ok(StatusCode::UNAUTHORIZED.into_response());
-    }
+    let mut project = Project::load_for_user(id, &user, &state.db).await?;
     let mut fb = or();
     for id in &toadd {
         fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
     }
-    fb = fb.push(sample::Filter::UserId(user.id));
+    fb = and().push(fb.build()).push(sample::Filter::UserId(user.id));
     let valid_samples = Sample::load_all(Some(fb.build()), None, None, &state.db).await?;
 
-    let valid_ids = valid_samples
-        .iter()
-        .map(|s| s.id())
-        .collect::<HashSet<<Sample as Loadable>::Id>>();
-    let invalid = &toadd - &valid_ids;
-    if !invalid.is_empty() {
-        warn!("Some samples dropped, possibly because they were not owned by user {user:?}");
-        let strval = invalid
-            .iter()
-            .map(|id| format_id_number(*id, Some("S"), None))
-            .collect::<Vec<String>>()
-            .join(", ");
-        messages.push(FlashMessage {
-            kind: FlashMessageKind::Warning,
-            msg: format!("Some samples could not be added to the project. The following samples may not exist or you may not have permissions to add them top this project: {strval}.",),
-        })
-    }
-
-    let mut project = Project::load(id, &state.db).await?;
     let mut n_inserted = 0;
     for sample in valid_samples {
         let id = sample.id;
         match project.allocate_sample(sample, &state.db).await {
             Ok(_) => n_inserted += 1,
-            Err(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
-                if e.is_unique_violation() =>
-            {
-                messages.push(FlashMessage {
-                    kind: FlashMessageKind::Warning,
-                    msg: format!(
-                        "Sample {} is already a member of this project",
-                        format_id_number(id, Some("S"), None),
-                    ),
-                })
-            }
-            Err(e) => {
-                messages.push(FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: format!(
-                        "Failed to add sample {}: Database error",
-                        format_id_number(id, Some("S"), None),
-                    ),
-                });
-                tracing::error!("Failed to add a sample to the project: {e}");
-            }
+            Err(e) => warn!("Failed to add sample {id} to the project: {e}"),
         }
     }
 
-    if n_inserted > 0 {
-        messages.insert(
-            0,
-            FlashMessage {
-                kind: FlashMessageKind::Success,
-                msg: format!("Added {n_inserted} samples to this project"),
-            },
-        );
+    let n_dropped = toadd.len() - n_inserted;
+    if n_inserted == 0 {
+        Err(Error::OperationFailed(
+            "No samples added to this project".to_string(),
+        ))
     } else {
-        messages.insert(
-            0,
-            FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: "No samples were added to this project".to_string(),
-            },
-        );
+        let message: FlashMessage = if n_dropped > 0 {
+            FlashMessage::Warning(format!(
+                "Added {n_inserted} sample(s) to the project. Failed to add {n_dropped} sample(s) due to errors."
+            ))
+        } else {
+            FlashMessage::Success(format!("Added {n_inserted} samples to this project"))
+        };
+        Ok((
+            [("HX-Trigger", "reload-samples")],
+            flash_message(state, message),
+        ))
     }
-
-    let (project, samples) = add_sample_prep(&user, id, &state).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(project => project,
-                 messages => messages,
-                 samples => samples),
-    )
-    .into_response())
 }

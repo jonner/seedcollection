@@ -18,6 +18,7 @@ use axum_login::{
 use axum_server::tls_rustls::RustlsConfig;
 use axum_template::{RenderHtml, engine::Engine};
 use clap::Parser;
+use html::flash_message;
 use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
 use minijinja::{Environment, context};
 use serde::Deserialize;
@@ -419,30 +420,39 @@ async fn error_mapper(
 ) -> Response {
     let is_htmx = headers.get("HX-Request").is_some();
     let response = next.run(request).await;
-    if is_htmx {
-        // don't print out a fancy error page for HTMX since it will just get inserted inside a
-        // section of the page and look weird.
-        return response;
-    }
 
     let server_error = response.extensions().get::<Arc<Error>>();
     let client_status = server_error.map(|se| se.as_ref().to_client_status());
 
-    let error_response = client_status.as_ref().map(|(status_code, client_error)| {
-        (
-            *status_code,
-            RenderHtml(
-                "_ERROR.html.j2",
-                state.tmpl.clone(),
-                context!(status_code => status_code.as_u16(),
-                status_reason => status_code.canonical_reason(),
-                client_error => client_error,
-                user => auth.user,
-                request_id => headers.get("x-request-id").map(|h| h.to_str().unwrap_or("")),
+    let error_response = client_status.map(|(status_code, client_error)| {
+        if is_htmx {
+            // don't print out a fancy error page for HTMX since it will just get inserted inside a
+            // section of the page and look weird.
+            (
+                status_code,
+                [
+                    ("HX-Retarget", "#flash-messages"),
+                    ("HX-Reswap", "innerHTML"),
+                ],
+                flash_message(state, util::FlashMessage::Error(client_error)),
+            )
+                .into_response()
+        } else {
+            (
+                status_code,
+                RenderHtml(
+                    "_ERROR.html.j2",
+                    state.tmpl.clone(),
+                    context!(status_code => status_code.as_u16(),
+                    status_reason => status_code.canonical_reason(),
+                    client_error => client_error,
+                    user => auth.user,
+                    request_id => headers.get("x-request-id").map(|h| h.to_str().unwrap_or("")),
+                    ),
                 ),
-            ),
-        )
-            .into_response()
+            )
+                .into_response()
+        }
     });
 
     error_response.unwrap_or(response)

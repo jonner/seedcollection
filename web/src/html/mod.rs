@@ -1,10 +1,4 @@
-use crate::{
-    TemplateKey,
-    auth::AuthSession,
-    error::Error,
-    state::AppState,
-    util::{FlashMessage, FlashMessageKind},
-};
+use crate::{TemplateKey, auth::AuthSession, error::Error, state::AppState, util::FlashMessage};
 use axum::{
     Router,
     extract::{OriginalUri, Request, State},
@@ -18,7 +12,7 @@ use minijinja::context;
 use serde::Serialize;
 
 mod allocation;
-mod auth;
+pub(crate) mod auth;
 mod info;
 mod project;
 mod sample;
@@ -28,21 +22,14 @@ mod taxonomy;
 mod tests;
 mod user;
 
-pub(crate) fn error_alert_response(
-    state: &AppState,
-    status: StatusCode,
-    message: String,
+pub(crate) fn flash_message(
+    state: std::sync::Arc<crate::SharedState>,
+    msg: FlashMessage,
 ) -> impl IntoResponse {
-    (
-        status,
-        RenderHtml(
-            "_ALERT.html.j2",
-            state.tmpl.clone(),
-            context!(message => FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: message,
-            }),
-        ),
+    RenderHtml(
+        "_flash_messages.html.j2",
+        state.tmpl.clone(),
+        context!(messages => &[msg]),
     )
 }
 

@@ -1,13 +1,15 @@
 {% from "_macros.html.j2" import flash_message %}
 
 {% macro source_form(id, source=none, message=none, request=none, modal=false) -%}
-<div id="delete-error-display"></div>
+<div id="flash-messages"></div>
+<form
 {% if source %}
-<form hx-put="{{ ("/source/" ~ source.id) | app_url }}" id="{{ id }}">
+hx-put="{{ ("/source/" ~ source.id) | app_url }}" id="{{ id }}"
 {% else %}
-<form hx-post="{{ "/source/new" | app_url }}" id="{{ id }}">
+hx-post="{{ "/source/new" | app_url }}" id="{{ id }}"
 {% endif %}
-    {{ flash_message(message) }}
+hx-swap="none"
+>
     <div class="row g-6 mb-3">
         <div class="col-12">
             <label class="form-label" for="SourceNameInput">Name</label>

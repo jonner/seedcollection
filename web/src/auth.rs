@@ -61,11 +61,19 @@ pub(crate) struct SqliteAuthBackend {
     db: Database,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum AuthError {
+    #[error(transparent)]
+    Libseed(#[from] libseed::Error),
+    #[error(transparent)]
+    Database(#[from] sqlx::Error),
+}
+
 #[async_trait]
 impl AuthnBackend for SqliteAuthBackend {
     type User = SqliteUser;
     type Credentials = Credentials;
-    type Error = Error;
+    type Error = AuthError;
 
     async fn authenticate(
         &self,

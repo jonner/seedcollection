@@ -70,7 +70,7 @@
     {% if message %}
     <div role="alert" class="mb-3 alert alert-dismissible fade show
         alert-{% if message.kind == "Error" %}danger{% elif message.kind == "Warning" %}warning{% elif message.kind == "Info" %}info{% elif message.kind == "Success" %}success{% endif %}">
-        {{ message.msg }}
+        {{ message.msg | markdown }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endif %}
@@ -118,7 +118,7 @@
                     <div class="mb-3">
                         <div clas="form-check">
                             <input id="displayallcheck" class="form-check-input" type="checkbox" name="all" value="true" {% if query.all %}checked{% endif %}>
-                            <label class="ms-2" for="displayallcheck" class="form-check-label">Show empty samples</label>
+                            <label class="ms-2 form-check-label" for="displayallcheck">Show empty samples</label>
                         </div>
                     </div>
                 </div>

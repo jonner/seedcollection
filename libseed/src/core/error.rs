@@ -19,7 +19,7 @@ pub enum VerificationError {
 #[non_exhaustive]
 pub enum Error {
     // authentication-related errors
-    #[error("authentication error: couldn't hash password")]
+    #[error("authentication error: password hash error: {0}")]
     AuthHashFailure(#[from] password_hash::Error),
 
     #[error("invalid username: too short")]
@@ -60,6 +60,9 @@ pub enum Error {
 
     #[error(transparent)]
     UserVerification(#[from] VerificationError),
+
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
 }
 
 /// A convenience type alias for a [Result] with [Error] as its error type

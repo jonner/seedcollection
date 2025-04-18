@@ -4,9 +4,9 @@
 {% block content %}
 <h2>{{ self.title() }}</h2>
 <div class="mb-4 text-secondary">There are a few settings that can be customized to change the appearance or behavior of the website</div>
-<form class="mb-3" hx-put hx-target-error="#error-container">
+<form class="mb-3" hx-put hx-swap="none">
     <div class="mb-3 ms-3">
-        <div id="error-container"></div>
+        <div id="flash-messages"></div>
     </div>
     <div class="mb-3 ms-3">
             <label for="PrefsPagesize" class="form-label">Page size</label>

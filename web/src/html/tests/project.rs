@@ -66,7 +66,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
         .call(req)
         .await
         .expect("Failed to execute request");
-    assert_eq!(response.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     // try to post a new project malformed form data
     let req = Request::builder()

@@ -5,13 +5,12 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, app_url},
+    util::{FlashMessage, app_url, extract::Form},
 };
 use anyhow::anyhow;
 use axum::{
-    Form, Router,
+    Router,
     extract::State,
-    http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
 };
@@ -120,16 +119,10 @@ async fn resend_verification(
 ) -> Result<impl IntoResponse, Error> {
     let uv = user.generate_verification_request(&state.db).await?;
     let message = match state.send_verification(uv).await {
-        Ok(_) => FlashMessage {
-            kind: FlashMessageKind::Success,
-            msg: "Sent verification email".to_string(),
-        },
+        Ok(_) => FlashMessage::Success("Sent verification email".to_string()),
         Err(e) => {
             warn!("Failed to send verification email: {e:?}");
-            FlashMessage {
-                kind: FlashMessageKind::Error,
-                msg: "Failed to send verification email".to_string(),
-            }
+            FlashMessage::Error("Failed to send verification email".to_string())
         }
     };
 
@@ -156,18 +149,10 @@ struct PrefsParams {
 async fn update_prefs(
     mut user: SqliteUser,
     State(state): State<AppState>,
-    TemplateKey(key): TemplateKey,
     Form(params): Form<PrefsParams>,
 ) -> Result<impl IntoResponse, Error> {
     let prefs = user.preferences_mut(&state.db).await?;
     prefs.pagesize = params.pagesize;
-    match prefs.update(&state.db).await {
-        Ok(_) => Ok([("HX-Redirect", app_url("/user/me"))].into_response()),
-        Err(e) => Ok((StatusCode::INTERNAL_SERVER_ERROR, RenderHtml(
-            key,
-            state.tmpl.clone(),
-            context!(message => FlashMessage { kind: FlashMessageKind::Error, msg: e.to_string()}),
-        ))
-        .into_response()),
-    }
+    prefs.update(&state.db).await?;
+    Ok([("HX-Redirect", app_url("/user/me"))].into_response())
 }

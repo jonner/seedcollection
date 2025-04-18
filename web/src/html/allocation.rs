@@ -1,16 +1,15 @@
-use super::error_alert_response;
+use super::flash_message;
 use crate::{
     TemplateKey,
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, FlashMessageKind, app_url},
+    util::{FlashMessage, app_url, extract::Form},
 };
 use anyhow::anyhow;
 use axum::{
-    Form, Router,
-    extract::{Path, State, rejection::FormRejection},
-    http::StatusCode,
+    Router,
+    extract::{Path, State},
     response::IntoResponse,
     routing::{delete, get},
 };
@@ -23,7 +22,6 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
-use tracing::error;
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -78,8 +76,7 @@ async fn show_allocation(
         context!(user => user,
                  project => project,
                  allocation => allocation),
-    )
-    .into_response())
+    ))
 }
 
 #[derive(Deserialize, Serialize)]
@@ -95,18 +92,10 @@ async fn add_allocation_note(
     user: SqliteUser,
     State(state): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
-    form: Result<Form<NoteParams>, FormRejection>,
-) -> impl IntoResponse {
-    let params = match form {
-        Ok(Form(params)) => params,
-        Err(e) => {
-            return error_alert_response(&state, StatusCode::UNPROCESSABLE_ENTITY, e.to_string())
-                .into_response();
-        }
-    };
-
+    Form(params): Form<NoteParams>,
+) -> Result<impl IntoResponse, Error> {
     // just querying to make sure that this is our sample
-    let _alloc = match AllocatedSample::load_one(
+    let _alloc = AllocatedSample::load_one(
         Some(
             and()
                 .push(allocation::Filter::Id(allocid))
@@ -117,38 +106,15 @@ async fn add_allocation_note(
         &state.db,
     )
     .await
-    {
-        Ok(alloc) => alloc,
-        Err(e) => {
-            error!("Failed to fetch allocation: {}", e);
-            match e {
-                sqlx::Error::RowNotFound => {
-                    return error_alert_response(
-                        &state,
-                        StatusCode::NOT_FOUND,
-                        format!("Allocation {allocid} not found for project {projectid}"),
-                    )
-                    .into_response();
-                }
-                _ => {
-                    return error_alert_response(
-                        &state,
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "Failed to fetch allocation".to_string(),
-                    )
-                    .into_response();
-                }
-            };
-        }
-    };
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => Error::NotFound(format!(
+            "Allocation {allocid} not found for project {projectid}"
+        )),
+        _ => e.into(),
+    })?;
 
     if params.summary.is_empty() {
-        return error_alert_response(
-            &state,
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "Summary cannot be empty".to_string(),
-        )
-        .into_response();
+        return Err(Error::RequiredParameterMissing("summary".into()));
     }
 
     let mut note = Note::new(
@@ -158,21 +124,9 @@ async fn add_allocation_note(
         params.summary.clone(),
         params.details.as_ref().cloned(),
     );
-    match note.insert(&state.db).await {
-        Ok(_) => {
-            let url = app_url(&format!("/project/{}/sample/{}", projectid, allocid));
-            [("HX-Redirect", url)].into_response()
-        }
-        Err(e) => {
-            error!("Failed to save note: {}", e);
-            error_alert_response(
-                &state,
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to save note".to_string(),
-            )
-            .into_response()
-        }
-    }
+    note.insert(&state.db).await?;
+    let url = app_url(&format!("/project/{}/sample/{}", projectid, allocid));
+    Ok([("HX-Redirect", url)])
 }
 
 async fn show_add_allocation_note(
@@ -201,29 +155,39 @@ async fn show_add_allocation_note(
                  note_types => note_types,
                  project => project,
                  allocation => allocation),
-    )
-    .into_response())
+    ))
 }
 
 async fn remove_allocation(
     user: SqliteUser,
     State(state): State<AppState>,
-    Path((id, psid)): Path<(i64, i64)>,
+    Path((projectid, allocationid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut projects =
-        Project::load_all(Some(project::Filter::Id(id).into()), None, None, &state.db).await?;
+    let mut projects = Project::load_all(
+        Some(project::Filter::Id(projectid).into()),
+        None,
+        None,
+        &state.db,
+    )
+    .await?;
     let Some(c) = projects.pop() else {
         return Err(Error::NotFound("That project does not exist".to_string()));
     };
     if c.userid != user.id {
         return Err(Error::NotFound("That project does not exist".to_string()));
     }
-    sqlx::query!(
-        "DELETE FROM sc_project_samples AS PS WHERE PS.psid=? AND PS.projectid IN (SELECT P.projectid FROM sc_projects AS P WHERE P.userid=?)",
-        psid, user.id)
-        .execute(state.db.pool())
-        .await?;
-    Ok(())
+    let mut alloc = AllocatedSample::load(allocationid, &state.db).await?;
+    alloc.delete(&state.db).await?;
+    Ok((
+        [("HX-Trigger", "reload-project-allocations")],
+        flash_message(
+            state,
+            FlashMessage::Success(format!(
+                "Removed sample '{}' from project",
+                alloc.sample.id()
+            )),
+        ),
+    ))
 }
 
 async fn delete_note(
@@ -281,13 +245,11 @@ async fn show_edit_note(
                  note_types => note_types,
                  project => project,
                  allocation => allocation),
-    )
-    .into_response())
+    ))
 }
 
 async fn modify_note(
     user: SqliteUser,
-    TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
     Form(params): Form<NoteParams>,
@@ -303,34 +265,19 @@ async fn modify_note(
             "No permission to delete this note".to_string(),
         ));
     }
-    let project = Project::load(projectid, &state.db).await?;
+
+    if params.summary.is_empty() {
+        return Err(Error::RequiredParameterMissing("summary".into()));
+    }
 
     note.date = params.date;
     note.summary = params.summary;
     note.kind = params.notetype;
     note.details = params.details;
 
-    match note.update(&state.db).await {
-        Err(e) => {
-            let note_types: Vec<NoteType> = NoteType::iter().collect();
-            Ok(RenderHtml(
-                key,
-                state.tmpl.clone(),
-                context!(user => user,
-                note => note,
-                note_types => note_types,
-                allocation => allocation,
-                project => project,
-                message => FlashMessage {
-                    kind: FlashMessageKind::Error,
-                    msg: format!("Failed to update note: {e}"),
-                }),
-            )
-            .into_response())
-        }
-        Ok(_res) => {
-            let url = app_url(&format!("/project/{projectid}/sample/{allocid}"));
-            Ok([("HX-Redirect", url)].into_response())
-        }
-    }
+    note.update(&state.db).await?;
+    Ok([(
+        "HX-Redirect",
+        app_url(&format!("/project/{projectid}/sample/{allocid}")),
+    )])
 }

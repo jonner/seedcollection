@@ -115,7 +115,7 @@ impl SharedState {
                 .map_err(anyhow::Error::from)
                 .map(|_| ()),
         }
-        .with_context(|| "Failed to send email")
+        .with_context(|| "Failed to send verification email")
         .map_err(|e| e.into())
     }
 
