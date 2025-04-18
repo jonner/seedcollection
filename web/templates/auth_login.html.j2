@@ -1,4 +1,3 @@
-{% from "_auth_macros.html.j2" import login_form %}
 {% extends "root.html.j2" %}
 {% block title %}Log in{% endblock %}
 {% block content %}
@@ -8,7 +7,34 @@
 {% if user %}
 <div class="alert alert-warning">Already logged in as {{ user.username }}</div>
 {% else %}
-        {{ login_form() }}
+<form hx-post="{{ "/auth/login" | app_url }}"
+      hx-target-error="#message-box"
+      id="login-user">
+    <div id="flash-messages">
+    </div>
+    <div class="row px-3 mb-3">
+        <label class="form-label" for="UsernameInput">Username</label>
+        <input id="UsernameInput"
+               class="form-control"
+               type="text"
+               name="username"
+               value="{{ username or "" }}">
+    </div>
+    <div class="row px-3 mb-3">
+        <label class="form-label" for="PasswordInput">Password</label>
+        <input id="PasswordInput"
+               class="form-control"
+               type="password"
+               name="password">
+    </div>
+    <input type="hidden" name="next" value="{{ next or "" }}" />
+    <div class="row px-3 mb-3">
+        <button type="submit" class="btn btn-primary">Log in</button>
+    </div>
+</form>
+<div>
+Don't have an account yet? <a href="register">Register here</a>
+</div>
 {% endif %}
     </div>
 </div>

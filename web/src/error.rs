@@ -6,6 +6,8 @@ use axum::{
 use std::sync::Arc;
 use tracing::warn;
 
+use crate::auth::SqliteAuthBackend;
+
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum Error {
     #[error(transparent)]
@@ -30,6 +32,12 @@ pub(crate) enum Error {
     RequiredParameterMissing(String),
     #[error("Operation failed: {0}")]
     OperationFailed(String),
+    #[error(transparent)]
+    Auth(#[from] axum_login::Error<SqliteAuthBackend>),
+    #[error("User {0} not found")]
+    UserNotFound(String),
+    #[error("User {0} not found")]
+    RegistrationValidation(#[from] crate::html::auth::RegistrationValidationError),
 }
 
 impl Error {
@@ -60,6 +68,16 @@ impl Error {
                 format!("Missing parameter '{param}'"),
             ),
             Error::OperationFailed(message) => (StatusCode::UNPROCESSABLE_ENTITY, message.clone()),
+            Error::Auth(_) | Error::UserNotFound(_) => (
+                StatusCode::UNAUTHORIZED,
+                "Failed to log in. Please double-check username and password and try again."
+                    .to_string(),
+            ),
+            Error::RegistrationValidation(r) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                // FIXME: format this more nicely
+                format!("Could not register user: {}", r.issues.join(", ")),
+            ),
         }
     }
 }

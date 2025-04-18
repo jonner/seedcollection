@@ -12,7 +12,7 @@ use minijinja::context;
 use serde::Serialize;
 
 mod allocation;
-mod auth;
+pub(crate) mod auth;
 mod info;
 mod project;
 mod sample;

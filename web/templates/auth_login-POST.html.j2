@@ -1,6 +1,0 @@
-{% from "_auth_macros.html.j2" import login_form %}
-{% if user %}
-<div class="alert alert-warning">Already logged in as {{ user.username }}</div>
-{% else %}
-{{ login_form(username, message) }}
-{% endif %}

@@ -19,7 +19,7 @@ pub enum VerificationError {
 #[non_exhaustive]
 pub enum Error {
     // authentication-related errors
-    #[error("authentication error: couldn't hash password")]
+    #[error("authentication error: password hash error: {0}")]
     AuthHashFailure(#[from] password_hash::Error),
 
     #[error("invalid username: too short")]
