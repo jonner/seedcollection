@@ -28,6 +28,8 @@ pub(crate) enum Error {
     UserRegistrationDisabled,
     #[error("Required parameter '{0}' is missing")]
     RequiredParameterMissing(String),
+    #[error("Operation failed: {0}")]
+    OperationFailed(String),
 }
 
 impl Error {
@@ -57,6 +59,7 @@ impl Error {
                 StatusCode::UNPROCESSABLE_ENTITY,
                 format!("Missing parameter '{param}'"),
             ),
+            Error::OperationFailed(message) => (StatusCode::UNPROCESSABLE_ENTITY, message.clone()),
         }
     }
 }

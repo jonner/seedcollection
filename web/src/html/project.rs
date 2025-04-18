@@ -6,13 +6,12 @@ use crate::{
     util::{
         AccessControlled, FlashMessage, Paginator, app_url,
         extract::{Form, Query},
-        format_id_number,
     },
 };
 use axum::{
     Router,
     extract::{OriginalUri, Path, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::IntoResponse,
     routing::get,
 };
@@ -38,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
-use super::{SortOption, flash_message, flash_messages};
+use super::{SortOption, flash_message};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -361,7 +360,6 @@ async fn add_sample(
     Path(id): Path<<Project as Loadable>::Id>,
     Form(params): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut messages = Vec::new();
     let toadd: HashSet<<Sample as Loadable>::Id> = params
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
@@ -382,57 +380,30 @@ async fn add_sample(
         let id = sample.id;
         match project.allocate_sample(sample, &state.db).await {
             Ok(_) => n_inserted += 1,
-            Err(libseed::Error::DatabaseError(sqlx::Error::Database(e)))
-                if e.is_unique_violation() =>
-            {
-                messages.push(FlashMessage::Warning(format!(
-                    "Sample {} is already a member of this project",
-                    format_id_number(id, Some("S"), None),
-                )))
-            }
-            Err(libseed::Error::Unauthorized(message)) => tracing::error!(
-                "Tried to add sample {id} to project {} without permission: {message}",
-                project.id()
-            ),
-            Err(e) => {
-                messages.push(FlashMessage::Error(format!(
-                    "Failed to add sample {}: Database error",
-                    format_id_number(id, Some("S"), None),
-                )));
-                tracing::error!("Failed to add a sample to the project: {e}");
-            }
+            Err(e) => warn!("Failed to add sample {id} to the project: {e}"),
         }
     }
 
-    if n_inserted < toadd.len() {
-        warn!(
-            "Some samples dropped, possibly because they were not owned by user {}",
-            user.id()
-        );
-        let n_dropped = toadd.len() - n_inserted;
-        messages.push(FlashMessage::Warning (
-               format!("{n_dropped} samples could not be added to the project. The samples may not exist or you may not have permissions to add them to this project.",),
-            ));
-    }
-    if n_inserted > 0 {
-        messages.insert(
-            0,
-            FlashMessage::Success(format!("Added {n_inserted} samples to this project")),
-        );
-
+    let n_dropped = toadd.len() - n_inserted;
+    if n_inserted == 0 {
+        Err(Error::OperationFailed(
+            "No samples added to this project".to_string(),
+        ))
+    } else if n_dropped > 0 {
         Ok((
             [("HX-Trigger", "reload-samples")],
-            flash_messages(state, &messages),
+            flash_message(state, FlashMessage::Warning(format!(
+            "Added {n_inserted} sample(s) to the project. Failed to add {n_dropped} sample(s) due to errors."
+        ))),
         )
             .into_response())
     } else {
-        messages.insert(
-            0,
-            FlashMessage::Error("No samples were added to this project".to_string()),
-        );
         Ok((
-            StatusCode::UNPROCESSABLE_ENTITY,
-            flash_messages(state, &messages),
+            [("HX-Trigger", "reload-samples")],
+            flash_message(
+                state,
+                FlashMessage::Success(format!("Added {n_inserted} samples to this project")),
+            ),
         )
             .into_response())
     }

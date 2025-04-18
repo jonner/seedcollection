@@ -430,6 +430,10 @@ async fn error_mapper(
             // section of the page and look weird.
             (
                 status_code,
+                [
+                    ("HX-Retarget", "#flash-messages"),
+                    ("HX-Reswap", "innerHTML"),
+                ],
                 flash_message(state, util::FlashMessage::Error(client_error)),
             )
                 .into_response()

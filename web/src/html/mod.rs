@@ -26,17 +26,10 @@ pub(crate) fn flash_message(
     state: std::sync::Arc<crate::SharedState>,
     msg: FlashMessage,
 ) -> impl IntoResponse {
-    flash_messages(state, &[msg]).into_response()
-}
-
-pub(crate) fn flash_messages(
-    state: std::sync::Arc<crate::SharedState>,
-    messages: &[FlashMessage],
-) -> impl IntoResponse {
     RenderHtml(
         "_flash_messages.html.j2",
         state.tmpl.clone(),
-        context!(messages => messages),
+        context!(messages => &[msg]),
     )
 }
 
