@@ -103,8 +103,7 @@ async fn list_projects(
                  summary => paginator,
                  request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
-    )
-    .into_response())
+    ))
 }
 
 async fn show_new_project(
@@ -112,7 +111,7 @@ async fn show_new_project(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)).into_response())
+    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -120,20 +119,6 @@ struct ProjectParams {
     name: String,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     description: Option<String>,
-}
-
-async fn do_insert(
-    user: SqliteUser,
-    params: &ProjectParams,
-    state: &AppState,
-) -> Result<Project, Error> {
-    let mut project = Project::new(
-        params.name.clone(),
-        params.description.as_ref().cloned(),
-        user.id,
-    );
-    project.insert(&state.db).await?;
-    Ok(project)
 }
 
 async fn insert_project(
@@ -144,7 +129,13 @@ async fn insert_project(
     if params.name.is_empty() {
         return Err(Error::RequiredParameterMissing("name".into()));
     }
-    let project = do_insert(user, &params, &state).await?;
+    let mut project = Project::new(
+        params.name.clone(),
+        params.description.as_ref().cloned(),
+        user.id,
+    );
+    project.insert(&state.db).await?;
+
     debug!(project.id, "successfully inserted project");
     let projecturl = app_url(&format!("/project/{}", project.id));
 
@@ -157,8 +148,7 @@ async fn insert_project(
                 project.id, params.name
             )),
         ),
-    )
-        .into_response())
+    ))
 }
 
 #[derive(Deserialize, Serialize)]
@@ -252,8 +242,7 @@ async fn show_project(
                  summary => paginator,
                  request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
-    )
-    .into_response())
+    ))
 }
 
 async fn modify_project(
@@ -277,8 +266,7 @@ async fn modify_project(
             state,
             FlashMessage::Success("Successfully updated project".to_string()),
         ),
-    )
-        .into_response())
+    ))
 }
 
 async fn delete_project(
@@ -294,17 +282,17 @@ async fn delete_project(
             state,
             FlashMessage::Success(format!("Deleted project '{id}'")),
         ),
-    )
-        .into_response())
+    ))
 }
 
-async fn add_sample_prep(
-    user: &SqliteUser,
-    id: <Project as Loadable>::Id,
-    state: &AppState,
-) -> Result<(Project, Vec<Sample>), Error> {
+async fn show_add_sample(
+    user: SqliteUser,
+    TemplateKey(key): TemplateKey,
+    State(state): State<AppState>,
+    Path(id): Path<<Project as Loadable>::Id>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, Error> {
     let project = Project::load(id, &state.db).await?;
-
     let ids_in_project = sqlx::query!(
         "SELECT PS.sampleid from sc_project_samples PS WHERE PS.projectid=?",
         id
@@ -312,13 +300,6 @@ async fn add_sample_prep(
     .fetch_all(state.db.pool())
     .await?;
     let ids = ids_in_project.iter().map(|row| row.sampleid).collect();
-
-    /* FIXME: make this more efficient by changeing it to filter by
-     *  'WHERE NOT IN (SELECT ids from...)'
-     * instead of
-     * [ query ids first ], then
-     *  'WHERE NOT IN (1, 2, 3, 4, 5...)'
-     */
     let samples = Sample::load_all(
         Some(
             and()
@@ -331,17 +312,7 @@ async fn add_sample_prep(
         &state.db,
     )
     .await?;
-    Ok((project, samples))
-}
 
-async fn show_add_sample(
-    user: SqliteUser,
-    TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
-    Path(id): Path<<Project as Loadable>::Id>,
-    headers: HeaderMap,
-) -> Result<impl IntoResponse, Error> {
-    let (project, samples) = add_sample_prep(&user, id, &state).await?;
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -350,8 +321,7 @@ async fn show_add_sample(
             samples => samples,
             refresh_samples => headers.get("hx-request").is_some()
         ),
-    )
-    .into_response())
+    ))
 }
 
 async fn add_sample(
@@ -389,22 +359,17 @@ async fn add_sample(
         Err(Error::OperationFailed(
             "No samples added to this project".to_string(),
         ))
-    } else if n_dropped > 0 {
-        Ok((
-            [("HX-Trigger", "reload-samples")],
-            flash_message(state, FlashMessage::Warning(format!(
-            "Added {n_inserted} sample(s) to the project. Failed to add {n_dropped} sample(s) due to errors."
-        ))),
-        )
-            .into_response())
     } else {
+        let message: FlashMessage = if n_dropped > 0 {
+            FlashMessage::Warning(format!(
+                "Added {n_inserted} sample(s) to the project. Failed to add {n_dropped} sample(s) due to errors."
+            ))
+        } else {
+            FlashMessage::Success(format!("Added {n_inserted} samples to this project"))
+        };
         Ok((
             [("HX-Trigger", "reload-samples")],
-            flash_message(
-                state,
-                FlashMessage::Success(format!("Added {n_inserted} samples to this project")),
-            ),
-        )
-            .into_response())
+            flash_message(state, message),
+        ))
     }
 }
