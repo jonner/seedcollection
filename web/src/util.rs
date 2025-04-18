@@ -17,11 +17,11 @@ pub(crate) fn app_url(value: &str) -> String {
     [APP_PREFIX, value.trim_start_matches('/')].join("")
 }
 
-pub const PAGE_SIZE: NonZero<u32> = NonZero::new(50).unwrap();
+const DEFAULT_PAGE_SIZE: NonZero<u32> = NonZero::new(50).unwrap();
 
 /// A structure that can be used to presents a summary of results in a web page
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Paginator {
+pub(crate) struct Paginator {
     total_items: u32,
     npages: u32,
     pagesize: NonZero<u32>,
@@ -30,7 +30,7 @@ pub struct Paginator {
 
 impl Paginator {
     pub fn new(total_items: u32, pagesize: Option<NonZero<u32>>, page: Option<u32>) -> Self {
-        let pagesize = pagesize.unwrap_or(PAGE_SIZE);
+        let pagesize = pagesize.unwrap_or(DEFAULT_PAGE_SIZE);
         let npages = total_items.div_ceil(pagesize.get());
         Self {
             total_items,
@@ -332,7 +332,7 @@ pub(crate) enum FlashMessage {
     Error(String),
 }
 
-pub trait AccessControlled: Loadable {
+pub(crate) trait AccessControlled: Loadable {
     fn load_for_user(
         id: <Self as Loadable>::Id,
         user: &User,
