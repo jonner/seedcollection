@@ -76,8 +76,7 @@ async fn show_allocation(
         context!(user => user,
                  project => project,
                  allocation => allocation),
-    )
-    .into_response())
+    ))
 }
 
 #[derive(Deserialize, Serialize)]
@@ -156,8 +155,7 @@ async fn show_add_allocation_note(
                  note_types => note_types,
                  project => project,
                  allocation => allocation),
-    )
-    .into_response())
+    ))
 }
 
 async fn remove_allocation(
@@ -247,8 +245,7 @@ async fn show_edit_note(
                  note_types => note_types,
                  project => project,
                  allocation => allocation),
-    )
-    .into_response())
+    ))
 }
 
 async fn modify_note(

@@ -169,8 +169,7 @@ async fn show_taxon(
                  parents => hierarchy,
                  children => children,
                  samples => samples),
-    )
-    .into_response())
+    ))
 }
 
 #[derive(Deserialize)]
