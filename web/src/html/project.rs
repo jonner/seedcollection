@@ -285,12 +285,18 @@ async fn delete_project(
     ))
 }
 
+#[derive(Debug, Deserialize)]
+struct AddSampleParams {
+    #[serde(default)]
+    all: bool,
+}
 async fn show_add_sample(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
     headers: HeaderMap,
+    Query(params): Query<AddSampleParams>,
 ) -> Result<impl IntoResponse, Error> {
     let project = Project::load(id, &state.db).await?;
     let ids_in_project = sqlx::query!(
@@ -300,18 +306,13 @@ async fn show_add_sample(
     .fetch_all(state.db.pool())
     .await?;
     let ids = ids_in_project.iter().map(|row| row.sampleid).collect();
-    let samples = Sample::load_all(
-        Some(
-            and()
-                .push(sample::Filter::IdNotIn(ids))
-                .push(sample::Filter::UserId(user.id))
-                .build(),
-        ),
-        None,
-        None,
-        &state.db,
-    )
-    .await?;
+    let mut builder = and()
+        .push(sample::Filter::IdNotIn(ids))
+        .push(sample::Filter::UserId(user.id));
+    if !params.all {
+        builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
+    }
+    let samples = Sample::load_all(Some(builder.build()), None, None, &state.db).await?;
 
     Ok(RenderHtml(
         key,
