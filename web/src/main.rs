@@ -33,7 +33,7 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
 use tower_sessions_sqlx_store::SqliteStore;
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 use tracing_subscriber::filter::EnvFilter;
 use uuid::Uuid;
 
@@ -96,6 +96,11 @@ pub(crate) struct Cli {
         help = "The path to a configuration directory. This directory should contain at minimum a 'config.yaml' file which defines a set of runtime environments."
     )]
     pub(crate) configdir: Option<PathBuf>,
+    #[arg(
+        long,
+        help = "The path to a data directory. This directory should the data files (html templates, static files, etc) needed to run the web application."
+    )]
+    pub(crate) datadir: Option<PathBuf>,
     #[arg(
         long,
         required_unless_present("list_envs"),
@@ -299,16 +304,18 @@ fn config_dir() -> Result<PathBuf> {
     if testdir.exists() {
         return Ok(testdir.to_path_buf());
     }
+    debug!("config dir {testdir:?} doesn't exist. trying fallback");
 
     // on unix, fall back to  systemwide config dir
     #[cfg(unix)]
     {
-        Ok(PathBuf::from("/etc/seedweb"))
+        let fallback = PathBuf::from("/etc/seedweb");
+        if fallback.exists() {
+            return Ok(fallback);
+        }
+        warn!("config dir {fallback:?} doesn't exist")
     }
-    #[cfg(not(unix))]
-    {
-        Err(anyhow!("Couldn't determine config directory"))
-    }
+    Err(anyhow!("Couldn't determine config directory"))
 }
 
 fn data_dir() -> Result<PathBuf> {
@@ -320,15 +327,17 @@ fn data_dir() -> Result<PathBuf> {
     if testdir.exists() {
         return Ok(testdir.to_path_buf());
     }
+    debug!("data dir {testdir:?} doesn't exist. trying fallback");
     // on unix, fall back to system data dir
     #[cfg(unix)]
     {
-        Ok(PathBuf::from("/usr/share/seedweb"))
+        let fallback = PathBuf::from("/usr/share/seedweb");
+        if fallback.exists() {
+            return Ok(fallback);
+        }
+        warn!("data dir {fallback:?} doesn't exist")
     }
-    #[cfg(not(unix))]
-    {
-        Err(anyhow!("Couldn't determine data directory"))
-    }
+    Err(anyhow!("Couldn't determine data directory"))
 }
 
 #[tokio::main]
@@ -343,7 +352,10 @@ async fn main() -> Result<()> {
         None => config_dir()?,
     };
     debug!(?configdir, "Configuration directory");
-    let datadir = data_dir()?;
+    let datadir = match args.datadir {
+        Some(dir) => dir,
+        None => data_dir()?,
+    };
     debug!(?datadir, "Data directory");
 
     let configfile = configdir.join("config.yaml");
