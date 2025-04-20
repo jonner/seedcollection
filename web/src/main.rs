@@ -113,6 +113,8 @@ pub(crate) struct Cli {
         help = "shows all valid values for the --env option"
     )]
     pub(crate) list_envs: bool,
+    #[arg(long, help = "Only serve the app unencrypted with http")]
+    pub(crate) nohttps: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -389,27 +391,35 @@ async fn main() -> Result<()> {
         https: listen.https_port,
     };
 
-    tokio::spawn(redirect_http_to_https(listen.host.clone(), ports));
-
-    let certdir = configdir.join("certs");
-    let tlsconfig =
-        RustlsConfig::from_pem_file(certdir.join("server.crt"), certdir.join("server.key"))
-            .await
-            .with_context(
-                || "Unable to load TLS key and certificate. See certs/README for more info",
-            )?;
-
     let app = app(Arc::new(SharedState::new(envarg, env, datadir).await?)).await?;
-
     let handle = axum_server::Handle::new();
     #[cfg(unix)]
     tokio::spawn(shutdown_on_sigterm(handle.clone()));
-    let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
-    info!("Listening on https://{}", addr);
-    axum_server::bind_rustls(addr, tlsconfig)
-        .handle(handle)
-        .serve(app.into_make_service())
-        .await?;
+
+    if args.nohttps {
+        let addr: SocketAddr = format!("{}:{}", listen.host, ports.http).parse().unwrap();
+        axum_server::bind(addr)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await?;
+    } else {
+        tokio::spawn(redirect_http_to_https(listen.host.clone(), ports));
+
+        let certdir = configdir.join("certs");
+        let tlsconfig =
+            RustlsConfig::from_pem_file(certdir.join("server.crt"), certdir.join("server.key"))
+                .await
+                .with_context(
+                    || "Unable to load TLS key and certificate. See certs/README for more info",
+                )?;
+
+        let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
+        info!("Listening on https://{}", addr);
+        axum_server::bind_rustls(addr, tlsconfig)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await?;
+    }
     Ok(())
 }
 
