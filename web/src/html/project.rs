@@ -172,7 +172,7 @@ async fn show_project(
     let field = params.sort.as_ref().cloned().unwrap_or(SortField::Taxon);
     let sort = SortSpec::new(
         field.clone(),
-        params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending),
+        params.dir.as_ref().cloned().unwrap_or_default(),
     );
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
@@ -335,7 +335,7 @@ async fn show_add_sample(
                     .as_ref()
                     .cloned()
                     .unwrap_or(sample::SortField::TaxonSequence),
-                order: params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending),
+                order: params.dir.as_ref().cloned().unwrap_or_default(),
             }
             .into(),
         ),

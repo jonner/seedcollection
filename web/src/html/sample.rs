@@ -94,7 +94,7 @@ async fn list_samples(
     }
     let filter = builder.build();
 
-    let dir = params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending);
+    let dir = params.dir.as_ref().cloned().unwrap_or_default();
     let field = params
         .sort
         .as_ref()
