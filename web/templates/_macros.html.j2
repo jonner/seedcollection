@@ -79,8 +79,6 @@
 
 {% macro filter_sort_widget(url, target, options, query) -%}
     <form
-         method="GET"
-         action="{{ url }}"
          hx-push-url="true"
          hx-boost="true"
          hx-target="{{ target }}"

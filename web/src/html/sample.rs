@@ -101,39 +101,7 @@ async fn list_samples(
         .cloned()
         .unwrap_or(SortField::TaxonSequence);
     let sort = Some(SortSpecs(vec![SortSpec::new(field.clone(), dir)]));
-
-    let sort_options = vec![
-        SortOption {
-            code: SortField::TaxonSequence,
-            name: "Taxonomic Order".into(),
-            selected: matches!(field, SortField::TaxonSequence),
-        },
-        SortOption {
-            code: SortField::TaxonName,
-            name: "Taxon name".into(),
-            selected: matches!(field, SortField::TaxonName),
-        },
-        SortOption {
-            code: SortField::Id,
-            name: "Sample Id".into(),
-            selected: matches!(field, SortField::Id),
-        },
-        SortOption {
-            code: SortField::SourceName,
-            name: "Seed Source".into(),
-            selected: matches!(field, SortField::SourceName),
-        },
-        SortOption {
-            code: SortField::CollectionDate,
-            name: "Date Collected".into(),
-            selected: matches!(field, SortField::CollectionDate),
-        },
-        SortOption {
-            code: SortField::Quantity,
-            name: "Quantity".into(),
-            selected: matches!(field, SortField::Quantity),
-        },
-    ];
+    let sort_options = sample_sort_options(field);
     let nsamples = Sample::count(Some(filter.clone()), &state.db).await?;
     let summary = Paginator::new(
         nsamples as u32,
@@ -152,6 +120,42 @@ async fn list_samples(
                      options =>  sort_options,
                      filteronly => headers.get("HX-Request").is_some()),
     ))
+}
+
+pub(crate) fn sample_sort_options(selected: SortField) -> Vec<SortOption<SortField>> {
+    let sort_options = vec![
+        SortOption {
+            code: SortField::TaxonSequence,
+            name: "Taxonomic Order".into(),
+            selected: matches!(selected, SortField::TaxonSequence),
+        },
+        SortOption {
+            code: SortField::TaxonName,
+            name: "Taxon name".into(),
+            selected: matches!(selected, SortField::TaxonName),
+        },
+        SortOption {
+            code: SortField::Id,
+            name: "Sample Id".into(),
+            selected: matches!(selected, SortField::Id),
+        },
+        SortOption {
+            code: SortField::SourceName,
+            name: "Seed Source".into(),
+            selected: matches!(selected, SortField::SourceName),
+        },
+        SortOption {
+            code: SortField::CollectionDate,
+            name: "Date Collected".into(),
+            selected: matches!(selected, SortField::CollectionDate),
+        },
+        SortOption {
+            code: SortField::Quantity,
+            name: "Quantity".into(),
+            selected: matches!(selected, SortField::Quantity),
+        },
+    ];
+    sort_options
 }
 
 async fn show_sample(

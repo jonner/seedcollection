@@ -227,7 +227,7 @@ impl Loadable for AllocatedSample {
 
 // FIXME: Can we combine SortField and Filter somehow???
 /// A Type to specify a field that will be used to sort the query
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum SortField {
     /// Sort results according to taxonomic order

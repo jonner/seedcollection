@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tracing::{debug, trace, warn};
 
-use super::{SortOption, flash_message};
+use super::{SortOption, flash_message, sample::sample_sort_options};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -285,8 +285,14 @@ async fn delete_project(
     ))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct AddSampleParams {
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    filter: Option<String>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    sort: Option<sample::SortField>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    dir: Option<SortOrder>,
     #[serde(default)]
     all: bool,
 }
@@ -306,21 +312,54 @@ async fn show_add_sample(
     .fetch_all(state.db.pool())
     .await?;
     let ids = ids_in_project.iter().map(|row| row.sampleid).collect();
-    let mut builder = and()
+    let mut filterbuilder = and()
         .push(sample::Filter::IdNotIn(ids))
         .push(sample::Filter::UserId(user.id));
     if !params.all {
-        builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
+        filterbuilder = filterbuilder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
     }
-    let samples = Sample::load_all(Some(builder.build()), None, None, &state.db).await?;
+    if let Some(filterstring) = &params.filter {
+        let search_filter = or()
+            .push(sample::taxon_name_like(filterstring))
+            .push(sample::Filter::Notes(Cmp::Like, filterstring.clone()))
+            .push(sample::Filter::SourceName(Cmp::Like, filterstring.clone()))
+            .build();
+        filterbuilder = filterbuilder.push(search_filter);
+    }
+    let samples = Sample::load_all(
+        Some(filterbuilder.build()),
+        Some(
+            SortSpec {
+                field: params
+                    .sort
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or(sample::SortField::TaxonSequence),
+                order: params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending),
+            }
+            .into(),
+        ),
+        None,
+        &state.db,
+    )
+    .await?;
 
+    let sort_options = sample_sort_options(
+        params
+            .sort
+            .as_ref()
+            .cloned()
+            .unwrap_or(sample::SortField::TaxonSequence),
+    );
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
             project => project,
             samples => samples,
-            refresh_samples => headers.get("hx-request").is_some()
+            refresh_samples => headers.get("hx-request").is_some(),
+            sort_options => sort_options,
+            query => params,
         ),
     ))
 }
