@@ -33,7 +33,7 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
 use tower_sessions_sqlx_store::SqliteStore;
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 use tracing_subscriber::filter::EnvFilter;
 use uuid::Uuid;
 
@@ -98,6 +98,11 @@ pub(crate) struct Cli {
     pub(crate) configdir: Option<PathBuf>,
     #[arg(
         long,
+        help = "The path to a data directory. This directory should the data files (html templates, static files, etc) needed to run the web application."
+    )]
+    pub(crate) datadir: Option<PathBuf>,
+    #[arg(
+        long,
         required_unless_present("list_envs"),
         help = "The name of the runtime environment to execute. This should be the name of an environment defined in 'config.yaml'"
     )]
@@ -108,6 +113,8 @@ pub(crate) struct Cli {
         help = "shows all valid values for the --env option"
     )]
     pub(crate) list_envs: bool,
+    #[arg(long, help = "Only serve the app unencrypted with http")]
+    pub(crate) nohttps: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -299,16 +306,18 @@ fn config_dir() -> Result<PathBuf> {
     if testdir.exists() {
         return Ok(testdir.to_path_buf());
     }
+    debug!("config dir {testdir:?} doesn't exist. trying fallback");
 
     // on unix, fall back to  systemwide config dir
     #[cfg(unix)]
     {
-        Ok(PathBuf::from("/etc/seedweb"))
+        let fallback = PathBuf::from("/etc/seedweb");
+        if fallback.exists() {
+            return Ok(fallback);
+        }
+        warn!("config dir {fallback:?} doesn't exist")
     }
-    #[cfg(not(unix))]
-    {
-        Err(anyhow!("Couldn't determine config directory"))
-    }
+    Err(anyhow!("Couldn't determine config directory"))
 }
 
 fn data_dir() -> Result<PathBuf> {
@@ -320,15 +329,17 @@ fn data_dir() -> Result<PathBuf> {
     if testdir.exists() {
         return Ok(testdir.to_path_buf());
     }
+    debug!("data dir {testdir:?} doesn't exist. trying fallback");
     // on unix, fall back to system data dir
     #[cfg(unix)]
     {
-        Ok(PathBuf::from("/usr/share/seedweb"))
+        let fallback = PathBuf::from("/usr/share/seedweb");
+        if fallback.exists() {
+            return Ok(fallback);
+        }
+        warn!("data dir {fallback:?} doesn't exist")
     }
-    #[cfg(not(unix))]
-    {
-        Err(anyhow!("Couldn't determine data directory"))
-    }
+    Err(anyhow!("Couldn't determine data directory"))
 }
 
 #[tokio::main]
@@ -343,7 +354,10 @@ async fn main() -> Result<()> {
         None => config_dir()?,
     };
     debug!(?configdir, "Configuration directory");
-    let datadir = data_dir()?;
+    let datadir = match args.datadir {
+        Some(dir) => dir,
+        None => data_dir()?,
+    };
     debug!(?datadir, "Data directory");
 
     let configfile = configdir.join("config.yaml");
@@ -377,27 +391,35 @@ async fn main() -> Result<()> {
         https: listen.https_port,
     };
 
-    tokio::spawn(redirect_http_to_https(listen.host.clone(), ports));
-
-    let certdir = configdir.join("certs");
-    let tlsconfig =
-        RustlsConfig::from_pem_file(certdir.join("server.crt"), certdir.join("server.key"))
-            .await
-            .with_context(
-                || "Unable to load TLS key and certificate. See certs/README for more info",
-            )?;
-
     let app = app(Arc::new(SharedState::new(envarg, env, datadir).await?)).await?;
-
     let handle = axum_server::Handle::new();
     #[cfg(unix)]
     tokio::spawn(shutdown_on_sigterm(handle.clone()));
-    let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
-    info!("Listening on https://{}", addr);
-    axum_server::bind_rustls(addr, tlsconfig)
-        .handle(handle)
-        .serve(app.into_make_service())
-        .await?;
+
+    if args.nohttps {
+        let addr: SocketAddr = format!("{}:{}", listen.host, ports.http).parse().unwrap();
+        axum_server::bind(addr)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await?;
+    } else {
+        tokio::spawn(redirect_http_to_https(listen.host.clone(), ports));
+
+        let certdir = configdir.join("certs");
+        let tlsconfig =
+            RustlsConfig::from_pem_file(certdir.join("server.crt"), certdir.join("server.key"))
+                .await
+                .with_context(
+                    || "Unable to load TLS key and certificate. See certs/README for more info",
+                )?;
+
+        let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
+        info!("Listening on https://{}", addr);
+        axum_server::bind_rustls(addr, tlsconfig)
+            .handle(handle)
+            .serve(app.into_make_service())
+            .await?;
+    }
     Ok(())
 }
 
