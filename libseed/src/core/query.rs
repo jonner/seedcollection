@@ -5,6 +5,7 @@ use serde::{
     de::{IntoDeserializer, value},
 };
 use std::{ops::Deref, str::FromStr, sync::Arc};
+use strum_macros::EnumIter;
 
 pub mod filter {
     use super::DynFilterPart;
@@ -177,13 +178,22 @@ impl ToSql for LimitSpec {
 }
 
 /// A type for specifying the sort order of an SQL query
-#[derive(Deserialize, Serialize, Clone, Debug, Default)]
+#[derive(Deserialize, Serialize, Clone, Copy, Debug, Default, EnumIter, PartialEq)]
 pub enum SortOrder {
     #[serde(rename = "asc")]
     #[default]
     Ascending,
     #[serde(rename = "desc")]
     Descending,
+}
+
+impl std::fmt::Display for SortOrder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SortOrder::Ascending => write!(f, "Ascending"),
+            SortOrder::Descending => write!(f, "Descending"),
+        }
+    }
 }
 
 impl FromStr for SortOrder {

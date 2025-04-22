@@ -9,7 +9,7 @@
 {%- endmacro %}
 <h2><span class="me-2">{{ icon("box-seam") }}</span>Samples <a class="ms-2" href="{{ "/sample/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
-        {{ filter_sort_widget("/sample/list" | app_url, "#sample-plus-pagination", options, query)}}
+        {{ filter_sort_widget("/sample/list" | app_url, "#sample-plus-pagination", filter_spec)}}
     </div>
     <div id="sample-plus-pagination">
     <div class="text-body-tertiary">{{ summary.total_items }} items found </div>

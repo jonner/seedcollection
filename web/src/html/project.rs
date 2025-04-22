@@ -38,7 +38,11 @@ use std::collections::HashSet;
 use strum::IntoEnumIterator;
 use tracing::{debug, trace, warn};
 
-use super::{SortOption, flash_message, sample::sample_sort_options};
+use super::{
+    FilterSortOption, FilterSortSpec, flash_message,
+    sample::{SampleFilterParams, sample_filter_spec},
+    sort_dirs,
+};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -172,7 +176,7 @@ async fn show_project(
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
     let field = params.sort.get_or_insert(SortField::Taxon);
     let dir = params.dir.get_or_insert_default();
-    let sort = SortSpec::new(field.clone(), dir.clone());
+    let sort = SortSpec::new(field.clone(), *dir);
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
             or().push(taxon_name_like(fragment))
@@ -198,21 +202,25 @@ async fn show_project(
         )
         .await?;
 
-    let sort_options = SortField::iter()
-        .map(|opt| SortOption {
-            code: opt.clone(),
-            name: opt.to_string(),
-            selected: &opt == field,
-        })
-        .collect::<Vec<_>>();
+    let filter_spec: FilterSortSpec<SortField> = FilterSortSpec {
+        filter: params.filter.unwrap_or_default(),
+        sort_fields: SortField::iter()
+            .map(|opt| FilterSortOption {
+                value: opt.clone(),
+                name: opt.to_string(),
+                selected: &opt == field,
+            })
+            .collect::<Vec<_>>(),
+        sort_dirs: sort_dirs(params.dir.unwrap_or_default()),
+        additional_filters: vec![],
+    };
 
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
                  project => project,
-                 query => params,
-                 options => sort_options,
+                 filter_spec => filter_spec,
                  summary => paginator,
                  request_uri => uri.to_string(),
                  filteronly => headers.get("HX-Request").is_some()),
@@ -261,14 +269,8 @@ async fn delete_project(
 
 #[derive(Debug, Deserialize, Serialize)]
 struct AddSampleParams {
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    filter: Option<String>,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    sort: Option<sample::SortField>,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    dir: Option<SortOrder>,
-    #[serde(default)]
-    all: bool,
+    #[serde(flatten)]
+    filter: SampleFilterParams,
 }
 async fn show_add_sample(
     user: SqliteUser,
@@ -289,10 +291,10 @@ async fn show_add_sample(
     let mut filterbuilder = and()
         .push(sample::Filter::IdNotIn(ids))
         .push(sample::Filter::UserId(user.id));
-    if !params.all {
+    if !params.filter.all {
         filterbuilder = filterbuilder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
     }
-    if let Some(filterstring) = &params.filter {
+    if let Some(filterstring) = &params.filter.filter {
         let search_filter = or()
             .push(sample::taxon_name_like(filterstring))
             .push(sample::Filter::Notes(Cmp::Like, filterstring.clone()))
@@ -300,15 +302,18 @@ async fn show_add_sample(
             .build();
         filterbuilder = filterbuilder.push(search_filter);
     }
-    let sort = params.sort.get_or_insert(sample::SortField::TaxonSequence);
-    let dir = params.dir.get_or_insert(SortOrder::Ascending);
+    let sort = params
+        .filter
+        .sort
+        .get_or_insert(sample::SortField::TaxonSequence);
+    let dir = params.filter.dir.get_or_insert(SortOrder::Ascending);
 
     let samples = Sample::load_all(
         Some(filterbuilder.build()),
         Some(
             SortSpec {
                 field: sort.clone(),
-                order: dir.clone(),
+                order: *dir,
             }
             .into(),
         ),
@@ -317,13 +322,6 @@ async fn show_add_sample(
     )
     .await?;
 
-    let sort_options = sample_sort_options(
-        params
-            .sort
-            .as_ref()
-            .cloned()
-            .unwrap_or(sample::SortField::TaxonSequence),
-    );
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -331,7 +329,7 @@ async fn show_add_sample(
             project => project,
             samples => samples,
             refresh_samples => headers.get("hx-request").is_some(),
-            sort_options => sort_options,
+            filter_spec => sample_filter_spec(&params.filter),
             query => params,
         ),
     ))

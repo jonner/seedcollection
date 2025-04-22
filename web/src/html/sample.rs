@@ -2,7 +2,7 @@ use crate::{
     TemplateKey,
     auth::SqliteUser,
     error::Error,
-    html::SortOption,
+    html::FilterSortOption,
     state::AppState,
     util::{
         AccessControlled, FlashMessage, Paginator, app_url,
@@ -33,12 +33,13 @@ use libseed::{
 };
 use minijinja::context;
 use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
+use serde_with::{DisplayFromStr, serde_as};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 use time::Month;
 use tracing::debug;
 
-use super::flash_message;
+use super::{FilterSortSpec, flash_message, sort_dirs};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -53,29 +54,43 @@ pub(crate) fn router() -> Router<AppState> {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct SampleListParams {
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    filter: Option<String>,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    sort: Option<SortField>,
-    #[serde(default, deserialize_with = "empty_string_as_none")]
-    dir: Option<SortOrder>,
+    #[serde(flatten)]
+    filter: SampleFilterParams,
     #[serde(default)]
     page: Option<u32>,
+}
+
+#[serde_as]
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct SampleFilterParams {
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    pub(crate) filter: Option<String>,
+
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    pub(crate) sort: Option<SortField>,
+
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    pub(crate) dir: Option<SortOrder>,
+
     #[serde(default)]
-    all: bool,
+    // workaround for https://github.com/serde-rs/serde/issues/1183
+    // the field is deserialize correctly when it's deserialized directly, but
+    // not when it's a flattened struct within another struct.
+    #[serde_as(as = "DisplayFromStr")]
+    pub(crate) all: bool,
 }
 
 async fn list_samples(
     mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    Query(params): Query<SampleListParams>,
+    Query(mut params): Query<SampleListParams>,
     headers: HeaderMap,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     debug!("query params: {:?}", params);
 
-    let user_filter = params.filter.as_ref().map(|f| {
+    let user_filter = params.filter.filter.as_ref().map(|f| {
         let idprefix: Result<i64, _> = f.parse();
         let mut builder = or()
             .push(sample::taxon_name_like(f))
@@ -87,7 +102,7 @@ async fn list_samples(
         builder.build()
     });
     let mut builder = and().push(sample::Filter::UserId(user.id));
-    if !params.all {
+    if !params.filter.all {
         builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
     }
     if let Some(filter) = user_filter {
@@ -95,14 +110,9 @@ async fn list_samples(
     }
     let filter = builder.build();
 
-    let dir = params.dir.as_ref().cloned().unwrap_or_default();
-    let field = params
-        .sort
-        .as_ref()
-        .cloned()
-        .unwrap_or(SortField::TaxonSequence);
-    let sort = Some(SortSpecs(vec![SortSpec::new(field.clone(), dir)]));
-    let sort_options = sample_sort_options(field);
+    let dir = params.filter.dir.get_or_insert_default();
+    let field = params.filter.sort.get_or_insert(SortField::TaxonSequence);
+    let sort = Some(SortSpecs(vec![SortSpec::new(field.clone(), *dir)]));
     let nsamples = Sample::count(Some(filter.clone()), &state.db).await?;
     let summary = Paginator::new(
         nsamples as u32,
@@ -115,22 +125,33 @@ async fn list_samples(
         state.tmpl.clone(),
         context!(user => user,
                      samples => samples,
-                     query => params,
+                     filter_spec => sample_filter_spec(&params.filter),
                      summary => summary,
                      request_uri => uri.to_string(),
-                     options =>  sort_options,
                      filteronly => headers.get("HX-Request").is_some()),
     ))
 }
 
-pub(crate) fn sample_sort_options(selected: SortField) -> Vec<SortOption<SortField>> {
-    SortField::iter()
-        .map(|field| SortOption {
-            code: field.clone(),
+pub(crate) fn sample_filter_spec(params: &SampleFilterParams) -> FilterSortSpec<SortField> {
+    let sort_fields = SortField::iter()
+        .map(|field| FilterSortOption {
+            value: field.clone(),
             name: field.to_string(),
-            selected: field == selected,
+            selected: Some(field) == params.sort,
         })
-        .collect()
+        .collect();
+    let sort_dirs = sort_dirs(params.dir.unwrap_or_default());
+    let additional_filters = vec![FilterSortOption {
+        name: "Show empty samples".into(),
+        value: "all".into(),
+        selected: params.all,
+    }];
+    FilterSortSpec {
+        filter: params.filter.as_ref().cloned().unwrap_or_default(),
+        sort_fields,
+        sort_dirs,
+        additional_filters,
+    }
 }
 
 async fn show_sample(

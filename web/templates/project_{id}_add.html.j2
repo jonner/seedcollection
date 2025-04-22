@@ -38,7 +38,7 @@
 {"name": "Add Samples", "active": true }]) }}
 <h2>{{ self.title() }}</h2>
 <p>Choose samples to add to the project <i>{{ project.name }}</i></p>
-{{ filter_sort_widget(("/project/" ~ project.id ~ "/add") | app_url, "#sample-list", sort_options, query)}}
+{{ filter_sort_widget(("/project/" ~ project.id ~ "/add") | app_url, "#sample-list", filter_spec)}}
 <div id="flash-messages" class="sticky-top"></div>
 {% if samples %}
 <form id="project-add-form"

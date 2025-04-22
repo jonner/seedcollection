@@ -8,6 +8,7 @@ use axum::{
     routing::get,
 };
 use axum_template::RenderHtml;
+use libseed::core::query::SortOrder;
 use minijinja::context;
 use serde::Serialize;
 
@@ -84,10 +85,29 @@ async fn root(
     ))
 }
 
+#[derive(Serialize)]
+pub(crate) struct FilterSortSpec<T: Serialize> {
+    filter: String,
+    sort_fields: Vec<FilterSortOption<T>>,
+    sort_dirs: Vec<FilterSortOption<SortOrder>>,
+    additional_filters: Vec<FilterSortOption<String>>,
+}
+
 /// A utility type for specifying an option for sorting
 #[derive(Serialize)]
-struct SortOption<T: Serialize> {
+pub(crate) struct FilterSortOption<T: Serialize> {
     name: String,
-    code: T,
+    value: T,
     selected: bool,
+}
+
+/// A utility function for creating the sort order options
+pub(crate) fn sort_dirs(selected: SortOrder) -> Vec<FilterSortOption<SortOrder>> {
+    <SortOrder as strum::IntoEnumIterator>::iter()
+        .map(|val| FilterSortOption {
+            name: val.to_string(),
+            value: val,
+            selected: val == selected,
+        })
+        .collect()
 }

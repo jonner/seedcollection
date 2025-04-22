@@ -14,7 +14,7 @@
     <h2>{{ self.title() }} <a href="{{ ("/project/" ~ project.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
     {{ project.description | markdown }}
     <h3>Samples in this project <a class="ms-2" href="{{ ("/project/" ~ project.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
-    {{ filter_sort_widget(("/project/" ~ project.id) | app_url, "#project-sample-list", options, query) }}
+    {{ filter_sort_widget(("/project/" ~ project.id) | app_url, "#project-sample-list", filter_spec) }}
     <div id="flash-messages"></div>
         {{ project_sample_list("project-sample-list", project, summary, request_uri) }}
 {% endblock %}
