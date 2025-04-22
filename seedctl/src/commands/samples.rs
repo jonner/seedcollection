@@ -74,7 +74,7 @@ pub(crate) async fn handle_command(
                             acc
                         })
                         .iter()
-                        .map(|field| SortSpec::new(field.clone(), order.clone()))
+                        .map(|field| SortSpec::new(field.clone(), order))
                         .collect(),
                 )
             });
