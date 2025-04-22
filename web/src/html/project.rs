@@ -35,6 +35,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use strum::IntoEnumIterator;
 use tracing::{debug, trace, warn};
 
 use super::{SortOption, flash_message, sample::sample_sort_options};
@@ -164,16 +165,14 @@ async fn show_project(
     TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
-    Query(params): Query<ShowProjectQueryParams>,
+    Query(mut params): Query<ShowProjectQueryParams>,
     headers: HeaderMap,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let field = params.sort.as_ref().cloned().unwrap_or(SortField::Taxon);
-    let sort = SortSpec::new(
-        field.clone(),
-        params.dir.as_ref().cloned().unwrap_or_default(),
-    );
+    let field = params.sort.get_or_insert(SortField::Taxon);
+    let dir = params.dir.get_or_insert_default();
+    let sort = SortSpec::new(field.clone(), dir.clone());
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
             or().push(taxon_name_like(fragment))
@@ -199,38 +198,13 @@ async fn show_project(
         )
         .await?;
 
-    let sort_options = vec![
-        SortOption {
-            code: SortField::Taxon,
-            name: "Taxonomic Order".into(),
-            selected: matches!(field, SortField::Taxon),
-        },
-        SortOption {
-            code: SortField::SampleId,
-            name: "Sample Id".into(),
-            selected: matches!(field, SortField::SampleId),
-        },
-        SortOption {
-            code: SortField::CollectionDate,
-            name: "Date Collected".into(),
-            selected: matches!(field, SortField::CollectionDate),
-        },
-        SortOption {
-            code: SortField::Source,
-            name: "Seed Source".into(),
-            selected: matches!(field, SortField::Source),
-        },
-        SortOption {
-            code: SortField::Quantity,
-            name: "Quantity".into(),
-            selected: matches!(field, SortField::Quantity),
-        },
-        SortOption {
-            code: SortField::Activity,
-            name: "Latest Activity".into(),
-            selected: matches!(field, SortField::Activity),
-        },
-    ];
+    let sort_options = SortField::iter()
+        .map(|opt| SortOption {
+            code: opt.clone(),
+            name: opt.to_string(),
+            selected: &opt == field,
+        })
+        .collect::<Vec<_>>();
 
     Ok(RenderHtml(
         key,

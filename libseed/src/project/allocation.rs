@@ -19,6 +19,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{QueryBuilder, Sqlite, prelude::*, sqlite::SqliteRow};
+use strum_macros::EnumIter;
 
 // FIXME: Can we combine SortField and Filter somehow???
 /// A type to specify a field that can be used to filter allocation objects when
@@ -227,7 +228,7 @@ impl Loadable for AllocatedSample {
 
 // FIXME: Can we combine SortField and Filter somehow???
 /// A Type to specify a field that will be used to sort the query
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, EnumIter, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum SortField {
     /// Sort results according to taxonomic order
@@ -251,6 +252,19 @@ pub enum SortField {
     /// Sort results by the source name of the sample
     #[serde(rename = "src")]
     Source,
+}
+
+impl std::fmt::Display for SortField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SortField::Taxon => write!(f, "Taxonomic Order"),
+            SortField::SampleId => write!(f, "Sample Id"),
+            SortField::CollectionDate => write!(f, "Date Collected"),
+            SortField::Activity => write!(f, "Latest Activity"),
+            SortField::Quantity => write!(f, "Quantity"),
+            SortField::Source => write!(f, "Seed Source"),
+        }
+    }
 }
 
 impl ToSql for SortField {
