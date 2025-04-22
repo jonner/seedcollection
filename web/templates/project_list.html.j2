@@ -1,4 +1,4 @@
-{% from "_macros.html.j2" import icon, pagination %}
+{% from "_macros.html.j2" import icon, pagination, filter_sort_widget %}
 {% from "_project_macros.html.j2" import project_list %}
 {% if not filteronly %}
 {% extends "root.html.j2" %}
@@ -6,25 +6,14 @@
 {% block content %}
 <h2><span class="me-2">{{ icon("collection") }}</span>Projects <a class="ms-2" href="{{ "/project/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
-    <form 
-         method="GET"
-         action="{{ "/project/list" | app_url }}"
-         hx-push-url="true"
-         hx-boost="true"
-         hx-swap="outerHTML"
-         hx-target="#project-list"
-         hx-get="{{ "/project/list" | app_url }}"
-         hx-trigger="submit, input changed delay:500ms from:input">
-        <input type="text"
-               class="form-control"
-               autofocus
-               placeholder="Filter list..."
-               name="filter">
-    </form>
+        {{ filter_sort_widget("/project/list" | app_url, "#project-plus-pagination", filter_spec)}}
     </div>
+    <div id="flash-messages"></div>
+    <div id="project-plus-pagination">
     <div class="text-body-tertiary">{{ summary.total_items }} items found </div>
     {{ project_list() }}
     {{ pagination(summary.npages, summary.page, request_uri)}}
+    </div>
 {% endblock %}
 {% else %}
     <div class="text-body-tertiary">{{ summary.total_items }} items found </div>

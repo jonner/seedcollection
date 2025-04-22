@@ -14,8 +14,10 @@ use crate::{
 };
 pub use allocation::AllocatedSample;
 pub use note::{Note, NoteFilter, NoteType};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::IntoDeserializer};
 use sqlx::{FromRow, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
+use std::str::FromStr;
+use strum_macros::EnumIter;
 use tracing::debug;
 
 pub mod allocation;
@@ -179,6 +181,8 @@ impl FilterPart for Filter {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, EnumIter, PartialEq)]
+#[serde(rename_all = "lowercase")]
 pub enum SortField {
     Id,
     Name,
@@ -192,6 +196,25 @@ impl ToSql for SortField {
             SortField::Name => "P.projname".into(),
             SortField::UserId => "P.userid".into(),
         }
+    }
+}
+
+impl std::fmt::Display for SortField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SortField::Id => write!(f, "Project Id"),
+            SortField::Name => write!(f, "Project Name"),
+            SortField::UserId => write!(f, "User Id"),
+        }
+    }
+}
+
+impl FromStr for SortField {
+    type Err = serde::de::value::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let deserializer = s.into_deserializer();
+        Deserialize::deserialize(deserializer)
     }
 }
 

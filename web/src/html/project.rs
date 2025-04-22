@@ -15,7 +15,6 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use axum_extra::extract::OptionalQuery;
 use axum_template::RenderHtml;
 use libseed::{
     core::{
@@ -28,7 +27,7 @@ use libseed::{
     empty_string_as_none,
     project::{
         self, Project,
-        allocation::{self, SortField, taxon_name_like},
+        allocation::{self, taxon_name_like},
     },
     sample::{self, Sample},
 };
@@ -43,6 +42,16 @@ use super::{
     sample::{SampleFilterParams, sample_filter_spec},
     sort_dirs,
 };
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct ProjectFilterParams {
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    filter: Option<String>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    sort: Option<project::SortField>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    dir: Option<SortOrder>,
+}
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -59,8 +68,10 @@ pub(crate) fn router() -> Router<AppState> {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct ProjectListParams {
-    #[serde(deserialize_with = "empty_string_as_none")]
-    filter: Option<String>,
+    #[serde(flatten)]
+    filter: ProjectFilterParams,
+
+    #[serde(default)]
     page: Option<u32>,
 }
 
@@ -68,38 +79,60 @@ async fn list_projects(
     mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
-    OptionalQuery(params): OptionalQuery<ProjectListParams>,
+    Query(mut params): Query<ProjectListParams>,
     headers: HeaderMap,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     trace!(?params, "Listing projects");
     let mut fbuilder = and().push(project::Filter::User(user.id));
-    let (namefilter, page) = match params {
-        Some(x) => (
-            x.filter.map(|filterstring| {
-                debug!(?filterstring, "Got project filter");
-                or().push(project::Filter::Name(Cmp::Like, filterstring.clone()))
-                    .push(project::Filter::Description(
-                        Cmp::Like,
-                        filterstring.clone(),
-                    ))
-                    .build()
-            }),
-            x.page,
-        ),
-        None => (None, None),
-    };
+    let namefilter = params.filter.filter.as_ref().map(|filterstring| {
+        debug!(?filterstring, "Got project filter");
+        or().push(project::Filter::Name(Cmp::Like, filterstring.clone()))
+            .push(project::Filter::Description(
+                Cmp::Like,
+                filterstring.clone(),
+            ))
+            .build()
+    });
     if let Some(namefilter) = namefilter {
         fbuilder = fbuilder.push(namefilter);
     }
     let filter = fbuilder.build();
+
+    let sortspec = SortSpec {
+        field: *params.filter.sort.get_or_insert(project::SortField::Name),
+        order: *params.filter.dir.get_or_insert_default(),
+    };
+
     let paginator = Paginator::new(
         Project::count(Some(filter.clone()), &state.db).await? as u32,
         user.preferences(&state.db).await?.pagesize.into(),
-        page,
+        params.page,
     );
-    let projects =
-        Project::load_all(Some(filter), None, Some(paginator.limits()), &state.db).await?;
+    let projects = Project::load_all(
+        Some(filter),
+        Some(sortspec.into()),
+        Some(paginator.limits()),
+        &state.db,
+    )
+    .await?;
+
+    let filter_spec = FilterSortSpec {
+        filter: params.filter.filter.unwrap_or_default(),
+        sort_fields: project::SortField::iter()
+            .filter_map(|field| match field {
+                project::SortField::UserId => None,
+                _ => Some(FilterSortOption {
+                    name: field.to_string(),
+                    value: field,
+                    selected: params.filter.sort == Some(field),
+                }),
+            })
+            .collect(),
+        sort_dirs: sort_dirs(params.filter.dir.unwrap_or_default()),
+        additional_filters: vec![],
+    };
+
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
@@ -107,6 +140,7 @@ async fn list_projects(
                  projects => projects,
                  summary => paginator,
                  request_uri => uri.to_string(),
+                 filter_spec => filter_spec,
                  filteronly => headers.get("HX-Request").is_some()),
     ))
 }
@@ -158,7 +192,7 @@ async fn insert_project(
 
 #[derive(Deserialize, Serialize)]
 struct ShowProjectQueryParams {
-    sort: Option<SortField>,
+    sort: Option<allocation::SortField>,
     dir: Option<SortOrder>,
     filter: Option<String>,
     page: Option<u32>,
@@ -174,7 +208,7 @@ async fn show_project(
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let field = params.sort.get_or_insert(SortField::Taxon);
+    let field = params.sort.get_or_insert(allocation::SortField::Taxon);
     let dir = params.dir.get_or_insert_default();
     let sort = SortSpec::new(field.clone(), *dir);
     let sample_filter = match params.filter {
@@ -202,9 +236,9 @@ async fn show_project(
         )
         .await?;
 
-    let filter_spec: FilterSortSpec<SortField> = FilterSortSpec {
+    let filter_spec: FilterSortSpec<allocation::SortField> = FilterSortSpec {
         filter: params.filter.unwrap_or_default(),
-        sort_fields: SortField::iter()
+        sort_fields: allocation::SortField::iter()
             .map(|opt| FilterSortOption {
                 value: opt.clone(),
                 name: opt.to_string(),
