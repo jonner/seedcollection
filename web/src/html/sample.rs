@@ -16,7 +16,6 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use axum_template::RenderHtml;
 use futures::future::try_join_all;
 use libseed::{
     core::{
@@ -120,9 +119,8 @@ async fn list_samples(
         params.page,
     );
     let samples = Sample::load_all(Some(filter), sort, Some(summary.limits()), &state.db).await?;
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                      samples => samples,
                      filter_spec => sample_filter_spec(&params.filter),
@@ -185,9 +183,8 @@ async fn show_sample(
     }))
     .await?;
 
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  sample => sample,
                  sources => sources,
@@ -201,9 +198,8 @@ async fn new_sample(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let sources = Source::load_all_user(user.id, None, &state.db).await?;
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  sources => sources),
     ))

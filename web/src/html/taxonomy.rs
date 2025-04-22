@@ -14,7 +14,6 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::{
         loadable::Loadable,
@@ -49,11 +48,7 @@ async fn root(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let ranks: Vec<Rank> = Rank::iter().collect();
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => user, ranks => ranks),
-    ))
+    Ok(state.render_template(key, context!(user => user, ranks => ranks)))
 }
 
 #[derive(Deserialize)]
@@ -87,9 +82,8 @@ async fn list_taxa(
     )
     .await?;
     debug!("uri={:?}", uri);
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  taxa => taxa,
                  summary => summary,
@@ -124,9 +118,8 @@ async fn show_all_children(
     .bind(user.id)
     .fetch_all(state.db.pool())
     .await?;
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  samples => samples),
     ))
@@ -160,9 +153,8 @@ async fn show_taxon(
     .await?;
     taxon.load_germination_info(&state.db).await?;
 
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  taxon => taxon,
                  parents => hierarchy,
@@ -193,7 +185,7 @@ async fn datalist(
         &state.db,
     )
     .await?;
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
+    Ok(state.render_template(key, context!(taxa => taxa)))
 }
 
 #[derive(Deserialize)]
@@ -211,7 +203,7 @@ async fn search(
 ) -> Result<impl IntoResponse, Error> {
     let filter = filter_taxa(&params.taxon, params.rank, params.minnesota);
     let taxa = Taxon::load_all(filter, None, None, &state.db).await?;
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
+    Ok(state.render_template(key, context!(taxa => taxa)))
 }
 
 fn filter_taxa(taxon: &str, rank: Option<Rank>, minnesota: Option<bool>) -> Option<DynFilterPart> {
@@ -238,11 +230,7 @@ async fn editgerm(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let codes = Germination::load_all(&state.db).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(codes => codes),
-    ))
+    Ok(state.render_template(key, context!(codes => codes)))
 }
 
 #[derive(Deserialize)]

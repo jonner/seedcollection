@@ -16,7 +16,6 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::{
         loadable::Loadable,
@@ -75,9 +74,8 @@ async fn list_sources(
     );
     let sources =
         Source::load_all(Some(filter), None, paginator.limits().into(), &state.db).await?;
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  sources => sources,
                  summary => paginator,
@@ -91,7 +89,7 @@ async fn add_source(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
+    Ok(state.render_template(key, context!(user => user)))
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,9 +123,8 @@ async fn show_source(
     )
     .await?;
 
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  source => src,
                  summary => paginator,

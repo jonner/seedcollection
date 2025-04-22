@@ -13,7 +13,6 @@ use axum::{
     response::IntoResponse,
     routing::{delete, get},
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::{loadable::Loadable, query::filter::and},
     empty_string_as_none,
@@ -70,9 +69,8 @@ async fn show_allocation(
         .load_germination_info(&state.db)
         .await?;
     let project = Project::load(allocation.projectid, &state.db).await?;
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  project => project,
                  allocation => allocation),
@@ -148,9 +146,8 @@ async fn show_add_allocation_note(
     .await?;
     let project = Project::load(projectid, &state.db).await?;
     let note_types: Vec<NoteType> = NoteType::iter().collect();
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  note_types => note_types,
                  project => project,
@@ -237,9 +234,8 @@ async fn show_edit_note(
     let project = Project::load(projectid, &state.db).await?;
 
     let note_types: Vec<NoteType> = NoteType::iter().collect();
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  note => note,
                  note_types => note_types,

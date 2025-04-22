@@ -13,7 +13,6 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-use axum_template::RenderHtml;
 use libseed::core::query::SortOrder;
 use minijinja::context;
 use serde::Serialize;
@@ -33,11 +32,7 @@ pub(crate) fn flash_message(
     state: std::sync::Arc<crate::SharedState>,
     msg: FlashMessage,
 ) -> impl IntoResponse {
-    RenderHtml(
-        "_flash_messages.html.j2",
-        state.tmpl.clone(),
-        context!(messages => &[msg]),
-    )
+    state.render_template("_flash_messages.html.j2", context!(messages => &[msg]))
 }
 
 async fn login_required(
@@ -86,9 +81,8 @@ async fn login_required(
         } else {
             (
                 StatusCode::UNAUTHORIZED,
-                RenderHtml(
+                state.render_template(
                     "auth_login.html.j2",
-                    state.tmpl.clone(),
                     context!(
                     next => uri.to_string(),
                     ),
@@ -119,11 +113,7 @@ async fn root(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     tracing::info!("root");
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => auth.user),
-    ))
+    Ok(state.render_template(key, context!(user => auth.user)))
 }
 
 #[derive(Serialize)]

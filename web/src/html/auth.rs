@@ -15,7 +15,6 @@ use axum::{
     response::{IntoResponse, Redirect},
     routing::{get, post},
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::{error::VerificationError, loadable::Loadable},
     user::{User, UserStatus, verification::UserVerification},
@@ -104,7 +103,7 @@ async fn show_register(
     if !state.config.user_registration_enabled {
         return Err(Error::UserRegistrationDisabled);
     }
-    Ok(RenderHtml(key, state.tmpl.clone(), ()))
+    Ok(state.render_template(key, ()))
 }
 
 #[derive(Debug, Deserialize)]
@@ -118,11 +117,7 @@ async fn show_login(
     State(state): State<AppState>,
     Query(NextUrl { next }): Query<NextUrl>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => auth.user, next => next),
-    ))
+    Ok(state.render_template(key, context!(user => auth.user, next => next)))
 }
 
 async fn do_login(
@@ -184,11 +179,7 @@ async fn show_verification(
                     .into(),
             )
         });
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(message => message, user => auth.user),
-    ))
+    Ok(state.render_template(key, context!(message => message, user => auth.user)))
 }
 
 async fn verify_user(
@@ -205,9 +196,5 @@ async fn verify_user(
         Err(e) => verification_error_message(e),
     };
 
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(message => message),
-    ))
+    Ok(state.render_template(key, context!(message => message)))
 }

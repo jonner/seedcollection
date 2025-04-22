@@ -16,7 +16,7 @@ use axum_login::{
     tower_sessions::{Expiry, SessionManagerLayer},
 };
 use axum_server::tls_rustls::RustlsConfig;
-use axum_template::{RenderHtml, engine::Engine};
+use axum_template::engine::Engine;
 use clap::Parser;
 use html::flash_message;
 use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
@@ -462,9 +462,8 @@ async fn error_mapper(
         } else {
             (
                 status_code,
-                RenderHtml(
+                state.render_template(
                     "_ERROR.html.j2",
-                    state.tmpl.clone(),
                     context!(status_code => status_code.as_u16(),
                     status_reason => status_code.canonical_reason(),
                     client_error => client_error,

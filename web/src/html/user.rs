@@ -14,7 +14,6 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::loadable::Loadable,
     project::{self, Project},
@@ -56,9 +55,8 @@ async fn show_profile(
         .into_iter()
         .filter(|src| src.latitude.is_some() && src.longitude.is_some())
         .collect();
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user, userstats => stats, sources => sources),
     ))
 }
@@ -68,7 +66,7 @@ async fn show_edit_profile(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
+    Ok(state.render_template(key, context!(user => user)))
 }
 
 #[derive(Deserialize)]
@@ -126,11 +124,7 @@ async fn resend_verification(
         }
     };
 
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(message => message),
-    ))
+    Ok(state.render_template(key, context!(message => message)))
 }
 
 async fn show_prefs(
@@ -138,7 +132,7 @@ async fn show_prefs(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
+    Ok(state.render_template(key, context!(user => user)))
 }
 
 #[derive(Deserialize)]

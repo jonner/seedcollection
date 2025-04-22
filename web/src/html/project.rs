@@ -15,7 +15,6 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::{
         loadable::Loadable,
@@ -133,9 +132,8 @@ async fn list_projects(
         additional_filters: vec![],
     };
 
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  projects => projects,
                  summary => paginator,
@@ -150,7 +148,7 @@ async fn show_new_project(
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
+    Ok(state.render_template(key, context!(user => user)))
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -249,9 +247,8 @@ async fn show_project(
         additional_filters: vec![],
     };
 
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  project => project,
                  filter_spec => filter_spec,
@@ -356,9 +353,8 @@ async fn show_add_sample(
     )
     .await?;
 
-    Ok(RenderHtml(
+    Ok(state.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
             project => project,
             samples => samples,
