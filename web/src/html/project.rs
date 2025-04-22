@@ -302,7 +302,7 @@ async fn show_add_sample(
     State(state): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
     headers: HeaderMap,
-    Query(params): Query<AddSampleParams>,
+    Query(mut params): Query<AddSampleParams>,
 ) -> Result<impl IntoResponse, Error> {
     let project = Project::load(id, &state.db).await?;
     let ids_in_project = sqlx::query!(
@@ -326,16 +326,15 @@ async fn show_add_sample(
             .build();
         filterbuilder = filterbuilder.push(search_filter);
     }
+    let sort = params.sort.get_or_insert(sample::SortField::TaxonSequence);
+    let dir = params.dir.get_or_insert(SortOrder::Ascending);
+
     let samples = Sample::load_all(
         Some(filterbuilder.build()),
         Some(
             SortSpec {
-                field: params
-                    .sort
-                    .as_ref()
-                    .cloned()
-                    .unwrap_or(sample::SortField::TaxonSequence),
-                order: params.dir.as_ref().cloned().unwrap_or_default(),
+                field: sort.clone(),
+                order: dir.clone(),
             }
             .into(),
         ),
