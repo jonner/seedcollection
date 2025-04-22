@@ -1,6 +1,6 @@
 {% macro show_samples(samples) %}
     {% for sample in samples %}
-    <div class="form-check">
+    <div class="form-check {% if sample.quantity == 0.0 %}opacity-50{% endif %}">
         <input class="form-check-input"
                type="checkbox"
                name="sample"
