@@ -13,9 +13,7 @@
             {% if sample.year %}
             ({{ sample.year }})
             {% endif %}
-            {% if sample.notes %}
-            - {{ sample.notes | markdown }}
-            {% endif %}
+            {% if sample.notes %} - {{ sample.notes }}{% endif %}
             </span>
         </label>
     </div>
