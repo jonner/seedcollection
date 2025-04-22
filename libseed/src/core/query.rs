@@ -177,9 +177,10 @@ impl ToSql for LimitSpec {
 }
 
 /// A type for specifying the sort order of an SQL query
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, Default)]
 pub enum SortOrder {
     #[serde(rename = "asc")]
+    #[default]
     Ascending,
     #[serde(rename = "desc")]
     Descending,
@@ -266,7 +267,7 @@ impl<T: ToSql> From<T> for SortSpecs<T> {
     fn from(value: T) -> Self {
         SortSpecs(vec![SortSpec {
             field: value,
-            order: SortOrder::Ascending,
+            order: SortOrder::default(),
         }])
     }
 }
@@ -276,7 +277,7 @@ impl<T: ToSql> From<Vec<T>> for SortSpecs<T> {
         Self(
             value
                 .into_iter()
-                .map(|field| SortSpec::new(field, SortOrder::Ascending))
+                .map(|field| SortSpec::new(field, SortOrder::default()))
                 .collect(),
         )
     }

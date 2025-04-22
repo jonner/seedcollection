@@ -1,6 +1,6 @@
 {% macro show_samples(samples) %}
     {% for sample in samples %}
-    <div class="form-check">
+    <div class="form-check {% if sample.quantity == 0.0 %}opacity-50{% endif %}">
         <input class="form-check-input"
                type="checkbox"
                name="sample"
@@ -13,9 +13,7 @@
             {% if sample.year %}
             ({{ sample.year }})
             {% endif %}
-            {% if sample.notes %}
-            - {{ sample.notes | markdown }}
-            {% endif %}
+            {% if sample.notes %} - {{ sample.notes }}{% endif %}
             </span>
         </label>
     </div>
@@ -30,7 +28,7 @@
 {% else %}
 
 {% extends "root.html.j2" %}
-{% from "_macros.html.j2" import icon, breadcrumbs %}
+{% from "_macros.html.j2" import icon, breadcrumbs, filter_sort_widget %}
 {% block title %}Add Samples to Project{% endblock %}
 {% block content %}
 {{ breadcrumbs([
@@ -40,12 +38,13 @@
 {"name": "Add Samples", "active": true }]) }}
 <h2>{{ self.title() }}</h2>
 <p>Choose samples to add to the project <i>{{ project.name }}</i></p>
+{{ filter_sort_widget(("/project/" ~ project.id ~ "/add") | app_url, "#sample-list", sort_options, query)}}
 <div id="flash-messages" class="sticky-top"></div>
 {% if samples %}
 <form id="project-add-form"
     hx-post="{{ ("/project/" ~ project.id ~ "/add") | app_url }}"
     hx-swap="none">
-    <div
+    <div id="sample-list"
     hx-trigger="reload-samples from:body"
     hx-get
     hx-swap="innerHTML"

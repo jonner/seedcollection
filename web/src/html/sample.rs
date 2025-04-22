@@ -34,6 +34,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
 use std::str::FromStr;
+use strum::IntoEnumIterator;
 use time::Month;
 use tracing::debug;
 
@@ -94,46 +95,14 @@ async fn list_samples(
     }
     let filter = builder.build();
 
-    let dir = params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending);
+    let dir = params.dir.as_ref().cloned().unwrap_or_default();
     let field = params
         .sort
         .as_ref()
         .cloned()
         .unwrap_or(SortField::TaxonSequence);
     let sort = Some(SortSpecs(vec![SortSpec::new(field.clone(), dir)]));
-
-    let sort_options = vec![
-        SortOption {
-            code: SortField::TaxonSequence,
-            name: "Taxonomic Order".into(),
-            selected: matches!(field, SortField::TaxonSequence),
-        },
-        SortOption {
-            code: SortField::TaxonName,
-            name: "Taxon name".into(),
-            selected: matches!(field, SortField::TaxonName),
-        },
-        SortOption {
-            code: SortField::Id,
-            name: "Sample Id".into(),
-            selected: matches!(field, SortField::Id),
-        },
-        SortOption {
-            code: SortField::SourceName,
-            name: "Seed Source".into(),
-            selected: matches!(field, SortField::SourceName),
-        },
-        SortOption {
-            code: SortField::CollectionDate,
-            name: "Date Collected".into(),
-            selected: matches!(field, SortField::CollectionDate),
-        },
-        SortOption {
-            code: SortField::Quantity,
-            name: "Quantity".into(),
-            selected: matches!(field, SortField::Quantity),
-        },
-    ];
+    let sort_options = sample_sort_options(field);
     let nsamples = Sample::count(Some(filter.clone()), &state.db).await?;
     let summary = Paginator::new(
         nsamples as u32,
@@ -152,6 +121,16 @@ async fn list_samples(
                      options =>  sort_options,
                      filteronly => headers.get("HX-Request").is_some()),
     ))
+}
+
+pub(crate) fn sample_sort_options(selected: SortField) -> Vec<SortOption<SortField>> {
+    SortField::iter()
+        .map(|field| SortOption {
+            code: field.clone(),
+            name: field.to_string(),
+            selected: field == selected,
+        })
+        .collect()
 }
 
 async fn show_sample(

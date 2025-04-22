@@ -35,9 +35,10 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use strum::IntoEnumIterator;
 use tracing::{debug, trace, warn};
 
-use super::{SortOption, flash_message};
+use super::{SortOption, flash_message, sample::sample_sort_options};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -164,16 +165,14 @@ async fn show_project(
     TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
     State(state): State<AppState>,
-    Query(params): Query<ShowProjectQueryParams>,
+    Query(mut params): Query<ShowProjectQueryParams>,
     headers: HeaderMap,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    let field = params.sort.as_ref().cloned().unwrap_or(SortField::Taxon);
-    let sort = SortSpec::new(
-        field.clone(),
-        params.dir.as_ref().cloned().unwrap_or(SortOrder::Ascending),
-    );
+    let field = params.sort.get_or_insert(SortField::Taxon);
+    let dir = params.dir.get_or_insert_default();
+    let sort = SortSpec::new(field.clone(), dir.clone());
     let sample_filter = match params.filter {
         Some(ref fragment) if !fragment.trim().is_empty() => Some(
             or().push(taxon_name_like(fragment))
@@ -199,38 +198,13 @@ async fn show_project(
         )
         .await?;
 
-    let sort_options = vec![
-        SortOption {
-            code: SortField::Taxon,
-            name: "Taxonomic Order".into(),
-            selected: matches!(field, SortField::Taxon),
-        },
-        SortOption {
-            code: SortField::SampleId,
-            name: "Sample Id".into(),
-            selected: matches!(field, SortField::SampleId),
-        },
-        SortOption {
-            code: SortField::CollectionDate,
-            name: "Date Collected".into(),
-            selected: matches!(field, SortField::CollectionDate),
-        },
-        SortOption {
-            code: SortField::Source,
-            name: "Seed Source".into(),
-            selected: matches!(field, SortField::Source),
-        },
-        SortOption {
-            code: SortField::Quantity,
-            name: "Quantity".into(),
-            selected: matches!(field, SortField::Quantity),
-        },
-        SortOption {
-            code: SortField::Activity,
-            name: "Latest Activity".into(),
-            selected: matches!(field, SortField::Activity),
-        },
-    ];
+    let sort_options = SortField::iter()
+        .map(|opt| SortOption {
+            code: opt.clone(),
+            name: opt.to_string(),
+            selected: &opt == field,
+        })
+        .collect::<Vec<_>>();
 
     Ok(RenderHtml(
         key,
@@ -285,12 +259,24 @@ async fn delete_project(
     ))
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct AddSampleParams {
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    filter: Option<String>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    sort: Option<sample::SortField>,
+    #[serde(default, deserialize_with = "empty_string_as_none")]
+    dir: Option<SortOrder>,
+    #[serde(default)]
+    all: bool,
+}
 async fn show_add_sample(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
     State(state): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
     headers: HeaderMap,
+    Query(mut params): Query<AddSampleParams>,
 ) -> Result<impl IntoResponse, Error> {
     let project = Project::load(id, &state.db).await?;
     let ids_in_project = sqlx::query!(
@@ -300,26 +286,53 @@ async fn show_add_sample(
     .fetch_all(state.db.pool())
     .await?;
     let ids = ids_in_project.iter().map(|row| row.sampleid).collect();
+    let mut filterbuilder = and()
+        .push(sample::Filter::IdNotIn(ids))
+        .push(sample::Filter::UserId(user.id));
+    if !params.all {
+        filterbuilder = filterbuilder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
+    }
+    if let Some(filterstring) = &params.filter {
+        let search_filter = or()
+            .push(sample::taxon_name_like(filterstring))
+            .push(sample::Filter::Notes(Cmp::Like, filterstring.clone()))
+            .push(sample::Filter::SourceName(Cmp::Like, filterstring.clone()))
+            .build();
+        filterbuilder = filterbuilder.push(search_filter);
+    }
+    let sort = params.sort.get_or_insert(sample::SortField::TaxonSequence);
+    let dir = params.dir.get_or_insert(SortOrder::Ascending);
+
     let samples = Sample::load_all(
+        Some(filterbuilder.build()),
         Some(
-            and()
-                .push(sample::Filter::IdNotIn(ids))
-                .push(sample::Filter::UserId(user.id))
-                .build(),
+            SortSpec {
+                field: sort.clone(),
+                order: dir.clone(),
+            }
+            .into(),
         ),
-        None,
         None,
         &state.db,
     )
     .await?;
 
+    let sort_options = sample_sort_options(
+        params
+            .sort
+            .as_ref()
+            .cloned()
+            .unwrap_or(sample::SortField::TaxonSequence),
+    );
     Ok(RenderHtml(
         key,
         state.tmpl.clone(),
         context!(user => user,
             project => project,
             samples => samples,
-            refresh_samples => headers.get("hx-request").is_some()
+            refresh_samples => headers.get("hx-request").is_some(),
+            sort_options => sort_options,
+            query => params,
         ),
     ))
 }
