@@ -43,19 +43,19 @@ struct UserStats {
 async fn show_profile(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let stats = UserStats {
-        samples: Sample::stats(Some(sample::Filter::UserId(user.id).into()), &state.db).await?,
-        nprojects: Project::count(Some(project::Filter::User(user.id).into()), &state.db).await?,
-        nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &state.db).await?,
+        samples: Sample::stats(Some(sample::Filter::UserId(user.id).into()), &app.db).await?,
+        nprojects: Project::count(Some(project::Filter::User(user.id).into()), &app.db).await?,
+        nsources: Source::count(Some(source::Filter::UserId(user.id).into()), &app.db).await?,
     };
-    let sources: Vec<Source> = Source::load_all_user(user.id, None, &state.db)
+    let sources: Vec<Source> = Source::load_all_user(user.id, None, &app.db)
         .await?
         .into_iter()
         .filter(|src| src.latitude.is_some() && src.longitude.is_some())
         .collect();
-    Ok(state.render_template(
+    Ok(app.render_template(
         key,
         context!(user => user, userstats => stats, sources => sources),
     ))
@@ -64,9 +64,9 @@ async fn show_profile(
 async fn show_edit_profile(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(state.render_template(key, context!(user => user)))
+    Ok(app.render_template(key, context!(user => user)))
 }
 
 #[derive(Deserialize)]
@@ -78,7 +78,7 @@ struct ProfileParams {
 
 async fn update_profile(
     mut user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Form(params): Form<ProfileParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut need_reverify = false;
@@ -99,11 +99,10 @@ async fn update_profile(
         "" => None,
         s => Some(s.to_string()),
     };
-    user.update(&state.db).await?;
+    user.update(&app.db).await?;
 
     if need_reverify {
-        state
-            .send_verification(user.generate_verification_request(&state.db).await?)
+        app.send_verification(user.generate_verification_request(&app.db).await?)
             .await?;
     }
 
@@ -113,10 +112,10 @@ async fn update_profile(
 async fn resend_verification(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let uv = user.generate_verification_request(&state.db).await?;
-    let message = match state.send_verification(uv).await {
+    let uv = user.generate_verification_request(&app.db).await?;
+    let message = match app.send_verification(uv).await {
         Ok(_) => FlashMessage::Success("Sent verification email".to_string()),
         Err(e) => {
             warn!("Failed to send verification email: {e:?}");
@@ -124,15 +123,15 @@ async fn resend_verification(
         }
     };
 
-    Ok(state.render_template(key, context!(message => message)))
+    Ok(app.render_template(key, context!(message => message)))
 }
 
 async fn show_prefs(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(state.render_template(key, context!(user => user)))
+    Ok(app.render_template(key, context!(user => user)))
 }
 
 #[derive(Deserialize)]
@@ -142,11 +141,11 @@ struct PrefsParams {
 
 async fn update_prefs(
     mut user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Form(params): Form<PrefsParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let prefs = user.preferences_mut(&state.db).await?;
+    let prefs = user.preferences_mut(&app.db).await?;
     prefs.pagesize = params.pagesize;
-    prefs.update(&state.db).await?;
+    prefs.update(&app.db).await?;
     Ok([("HX-Redirect", app_url("/user/me"))].into_response())
 }

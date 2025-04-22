@@ -82,7 +82,7 @@ pub(crate) struct SampleFilterParams {
 async fn list_samples(
     mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Query(mut params): Query<SampleListParams>,
     headers: HeaderMap,
     uri: OriginalUri,
@@ -112,14 +112,14 @@ async fn list_samples(
     let dir = params.filter.dir.get_or_insert_default();
     let field = params.filter.sort.get_or_insert(SortField::TaxonSequence);
     let sort = Some(SortSpecs(vec![SortSpec::new(field.clone(), *dir)]));
-    let nsamples = Sample::count(Some(filter.clone()), &state.db).await?;
+    let nsamples = Sample::count(Some(filter.clone()), &app.db).await?;
     let summary = Paginator::new(
         nsamples as u32,
-        user.preferences(&state.db).await?.pagesize.into(),
+        user.preferences(&app.db).await?.pagesize.into(),
         params.page,
     );
-    let samples = Sample::load_all(Some(filter), sort, Some(summary.limits()), &state.db).await?;
-    Ok(state.render_template(
+    let samples = Sample::load_all(Some(filter), sort, Some(summary.limits()), &app.db).await?;
+    Ok(app.render_template(
         key,
         context!(user => user,
                      samples => samples,
@@ -155,35 +155,35 @@ pub(crate) fn sample_filter_spec(params: &SampleFilterParams) -> FilterSortSpec<
 async fn show_sample(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
+    let mut sample = Sample::load_for_user(id, &user, &app.db).await?;
     sample
         .taxon
         .object_mut()?
-        .load_germination_info(&state.db)
+        .load_germination_info(&app.db)
         .await?;
     // make sure the source is fully loaded
-    sample.source.load(&state.db, true).await?;
+    sample.source.load(&app.db, true).await?;
 
     // needed for edit form
-    let sources = Source::load_all_user(user.id, None, &state.db).await?;
+    let sources = Source::load_all_user(user.id, None, &app.db).await?;
 
     let allocations = AllocatedSample::load_all(
         Some(allocation::Filter::SampleId(id).into()),
         None,
         None,
-        &state.db,
+        &app.db,
     )
     .await?;
 
     let projects = try_join_all(allocations.iter().map(async |alloc| -> libseed::Result<_> {
-        Ok((Project::load(alloc.projectid, &state.db).await?, alloc))
+        Ok((Project::load(alloc.projectid, &app.db).await?, alloc))
     }))
     .await?;
 
-    Ok(state.render_template(
+    Ok(app.render_template(
         key,
         context!(user => user,
                  sample => sample,
@@ -195,10 +195,10 @@ async fn show_sample(
 async fn new_sample(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let sources = Source::load_all_user(user.id, None, &state.db).await?;
-    Ok(state.render_template(
+    let sources = Source::load_all_user(user.id, None, &app.db).await?;
+    Ok(app.render_template(
         key,
         context!(user => user,
                  sources => sources),
@@ -244,7 +244,7 @@ struct SampleParams {
 
 async fn insert_sample(
     user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, Error> {
     let certainty = match params.uncertain {
@@ -265,14 +265,14 @@ async fn insert_sample(
         params.notes.clone(),
         certainty,
     );
-    sample.insert(&state.db).await?;
+    sample.insert(&app.db).await?;
 
     let sampleurl = app_url(&format!("/sample/{}", sample.id));
-    let taxon_name = &sample.taxon.load(&state.db, false).await?.complete_name;
+    let taxon_name = &sample.taxon.load(&app.db, false).await?.complete_name;
     Ok((
         [("HX-Redirect", sampleurl)],
         flash_message(
-            state,
+            app,
             FlashMessage::Success(format!(
                 "Added new sample {}: {} to the database",
                 sample.id, taxon_name
@@ -285,10 +285,10 @@ async fn insert_sample(
 async fn update_sample(
     user: SqliteUser,
     Path(id): Path<i64>,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Form(params): Form<SampleParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
+    let mut sample = Sample::load_for_user(id, &user, &app.db).await?;
 
     let certainty = match params.uncertain {
         Some(true) => Certainty::Uncertain,
@@ -309,25 +309,22 @@ async fn update_sample(
     sample.quantity = params.quantity;
     sample.notes = params.notes.as_ref().cloned();
     sample.certainty = certainty;
-    sample.update(&state.db).await?;
+    sample.update(&app.db).await?;
     Ok((
         [("HX-Redirect", app_url(&format!("/sample/{id}")))],
-        flash_message(
-            state,
-            FlashMessage::Success(format!("Updated sample {}", id)),
-        ),
+        flash_message(app, FlashMessage::Success(format!("Updated sample {}", id))),
     ))
 }
 
 async fn delete_sample(
     user: SqliteUser,
     Path(id): Path<i64>,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut sample = Sample::load_for_user(id, &user, &state.db).await?;
-    sample.delete(&state.db).await?;
+    let mut sample = Sample::load_for_user(id, &user, &app.db).await?;
+    sample.delete(&app.db).await?;
     Ok((
         [("HX-Redirect", app_url("/sample/list"))],
-        flash_message(state, FlashMessage::Success(format!("Deleted sample {id}"))),
+        flash_message(app, FlashMessage::Success(format!("Deleted sample {id}"))),
     ))
 }

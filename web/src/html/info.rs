@@ -10,10 +10,10 @@ pub(crate) fn router() -> Router<AppState> {
 async fn germination(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let germination = Germination::load_all(&state.db).await?;
-    Ok(state.render_template(
+    let germination = Germination::load_all(&app.db).await?;
+    Ok(app.render_template(
         key,
         context!(user => user,
                  germination => germination),

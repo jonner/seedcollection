@@ -52,7 +52,7 @@ struct SourceListParams {
 async fn list_sources(
     mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Query(params): Query<SourceListParams>,
     headers: HeaderMap,
     uri: OriginalUri,
@@ -68,13 +68,12 @@ async fn list_sources(
     }
     let filter = fbuilder.build();
     let paginator = Paginator::new(
-        Source::count(Some(filter.clone()), &state.db).await? as u32,
-        user.preferences(&state.db).await?.pagesize.into(),
+        Source::count(Some(filter.clone()), &app.db).await? as u32,
+        user.preferences(&app.db).await?.pagesize.into(),
         params.page,
     );
-    let sources =
-        Source::load_all(Some(filter), None, paginator.limits().into(), &state.db).await?;
-    Ok(state.render_template(
+    let sources = Source::load_all(Some(filter), None, paginator.limits().into(), &app.db).await?;
+    Ok(app.render_template(
         key,
         context!(user => user,
                  sources => sources,
@@ -100,30 +99,25 @@ struct SourceShowParams {
 async fn show_source(
     mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path(id): Path<i64>,
     uri: OriginalUri,
     Query(params): Query<SourceShowParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let src = Source::load_for_user(id, &user, &state.db).await?;
+    let src = Source::load_for_user(id, &user, &app.db).await?;
     let sample_filter = and()
         .push(Filter::SourceId(Cmp::Equal, id))
         .push(Filter::UserId(user.id))
         .build();
     let paginator = Paginator::new(
-        Sample::count(Some(sample_filter.clone()), &state.db).await? as u32,
-        user.preferences(&state.db).await?.pagesize.into(),
+        Sample::count(Some(sample_filter.clone()), &app.db).await? as u32,
+        user.preferences(&app.db).await?.pagesize.into(),
         params.page,
     );
-    let samples = Sample::load_all(
-        Some(sample_filter),
-        None,
-        Some(paginator.limits()),
-        &state.db,
-    )
-    .await?;
+    let samples =
+        Sample::load_all(Some(sample_filter), None, Some(paginator.limits()), &app.db).await?;
 
-    Ok(state.render_template(
+    Ok(app.render_template(
         key,
         context!(user => user,
                  source => src,
@@ -148,11 +142,11 @@ struct SourceEditParams {
 
 async fn update_source(
     user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path(id): Path<i64>,
     Form(params): Form<SourceEditParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut src = Source::load_for_user(id, &user, &state.db).await?;
+    let mut src = Source::load_for_user(id, &user, &app.db).await?;
 
     src.name = params
         .name
@@ -162,12 +156,12 @@ async fn update_source(
     src.description = params.description.as_ref().cloned();
     src.latitude = params.latitude;
     src.longitude = params.longitude;
-    src.update(&state.db).await?;
+    src.update(&app.db).await?;
 
     Ok((
         [("HX-Redirect", app_url(&format!("/source/{id}")))],
         flash_message(
-            state,
+            app,
             FlashMessage::Success("Successfully updated source".to_string()),
         ),
     ))
@@ -175,7 +169,7 @@ async fn update_source(
 
 async fn new_source(
     user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Form(params): Form<SourceEditParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut headers = HeaderMap::new();
@@ -190,7 +184,7 @@ async fn new_source(
         params.longitude,
         user.id,
     );
-    source.insert(&state.db).await?;
+    source.insert(&app.db).await?;
 
     let url = app_url(&format!("/source/{}", source.id));
     if params.modal.is_some() {
@@ -209,7 +203,7 @@ async fn new_source(
     Ok((
         headers,
         flash_message(
-            state,
+            app,
             FlashMessage::Success(format!("Successfully added source {}", source.id)),
         ),
     ))
@@ -218,10 +212,10 @@ async fn new_source(
 async fn delete_source(
     user: SqliteUser,
     Path(id): Path<i64>,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut src = Source::load_for_user(id, &user, &state.db).await?;
-    src.delete(&state.db)
+    let mut src = Source::load_for_user(id, &user, &app.db).await?;
+    src.delete(&app.db)
         .await
         .map(|_| [("HX-redirect", app_url("/source/list"))])
         .map_err(Into::into)

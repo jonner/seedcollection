@@ -434,7 +434,7 @@ async fn shutdown_on_sigterm(handle: axum_server::Handle) {
 }
 
 async fn error_mapper(
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     auth: AuthSession,
     headers: HeaderMap,
     request: axum::extract::Request,
@@ -456,13 +456,13 @@ async fn error_mapper(
                     ("HX-Retarget", "#flash-messages"),
                     ("HX-Reswap", "innerHTML"),
                 ],
-                flash_message(state, util::FlashMessage::Error(client_error)),
+                flash_message(app, util::FlashMessage::Error(client_error)),
             )
                 .into_response()
         } else {
             (
                 status_code,
-                state.render_template(
+                app.render_template(
                     "_ERROR.html.j2",
                     context!(status_code => status_code.as_u16(),
                     status_reason => status_code.canonical_reason(),

@@ -36,7 +36,7 @@ pub(crate) fn flash_message(
 }
 
 async fn login_required(
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     auth: AuthSession,
     OriginalUri(uri): OriginalUri,
     headers: HeaderMap,
@@ -71,7 +71,7 @@ async fn login_required(
                     ("HX-Reswap", "innerHTML"),
                 ],
                 flash_message(
-                    state,
+                    app,
                     FlashMessage::Error(format!(
                         "This action requires an authenticated user. Please [log in]({login_url})"
                     )),
@@ -81,7 +81,7 @@ async fn login_required(
         } else {
             (
                 StatusCode::UNAUTHORIZED,
-                state.render_template(
+                app.render_template(
                     "auth_login.html.j2",
                     context!(
                     next => uri.to_string(),
@@ -93,7 +93,7 @@ async fn login_required(
     }
 }
 
-pub(crate) fn router(state: AppState) -> Router<AppState> {
+pub(crate) fn router(app: AppState) -> Router<AppState> {
     Router::new()
         .nest("/info/", info::router())
         .nest("/project/", project::router())
@@ -102,7 +102,7 @@ pub(crate) fn router(state: AppState) -> Router<AppState> {
         .nest("/taxonomy/", taxonomy::router())
         .nest("/user/", user::router())
         /* Anything above here is only available to logged-in users */
-        .route_layer(middleware::from_fn_with_state(state, login_required))
+        .route_layer(middleware::from_fn_with_state(app, login_required))
         .route("/", get(root))
         .nest("/auth/", auth::router())
 }
@@ -110,10 +110,10 @@ pub(crate) fn router(state: AppState) -> Router<AppState> {
 async fn root(
     auth: AuthSession,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     tracing::info!("root");
-    Ok(state.render_template(key, context!(user => auth.user)))
+    Ok(app.render_template(key, context!(user => auth.user)))
 }
 
 #[derive(Serialize)]

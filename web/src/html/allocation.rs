@@ -39,7 +39,7 @@ pub(crate) fn router() -> Router<AppState> {
 async fn show_allocation(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
     // make sure that this is our sample
@@ -51,7 +51,7 @@ async fn show_allocation(
                 .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
-        &state.db,
+        &app.db,
     )
     .await
     .map_err(|e| match e {
@@ -61,15 +61,15 @@ async fn show_allocation(
         _ => e.into(),
     })?;
 
-    allocation.load_notes(&state.db).await?;
+    allocation.load_notes(&app.db).await?;
     allocation
         .sample
         .taxon
         .object_mut()?
-        .load_germination_info(&state.db)
+        .load_germination_info(&app.db)
         .await?;
-    let project = Project::load(allocation.projectid, &state.db).await?;
-    Ok(state.render_template(
+    let project = Project::load(allocation.projectid, &app.db).await?;
+    Ok(app.render_template(
         key,
         context!(user => user,
                  project => project,
@@ -88,7 +88,7 @@ struct NoteParams {
 
 async fn add_allocation_note(
     user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, Error> {
@@ -101,7 +101,7 @@ async fn add_allocation_note(
                 .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
-        &state.db,
+        &app.db,
     )
     .await
     .map_err(|e| match e {
@@ -122,7 +122,7 @@ async fn add_allocation_note(
         params.summary.clone(),
         params.details.as_ref().cloned(),
     );
-    note.insert(&state.db).await?;
+    note.insert(&app.db).await?;
     let url = app_url(&format!("/project/{}/sample/{}", projectid, allocid));
     Ok([("HX-Redirect", url)])
 }
@@ -130,7 +130,7 @@ async fn add_allocation_note(
 async fn show_add_allocation_note(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((projectid, allocid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
     let allocation = AllocatedSample::load_one(
@@ -141,12 +141,12 @@ async fn show_add_allocation_note(
                 .push(allocation::Filter::ProjectId(projectid))
                 .build(),
         ),
-        &state.db,
+        &app.db,
     )
     .await?;
-    let project = Project::load(projectid, &state.db).await?;
+    let project = Project::load(projectid, &app.db).await?;
     let note_types: Vec<NoteType> = NoteType::iter().collect();
-    Ok(state.render_template(
+    Ok(app.render_template(
         key,
         context!(user => user,
                  note_types => note_types,
@@ -157,14 +157,14 @@ async fn show_add_allocation_note(
 
 async fn remove_allocation(
     user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((projectid, allocationid)): Path<(i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
     let mut projects = Project::load_all(
         Some(project::Filter::Id(projectid).into()),
         None,
         None,
-        &state.db,
+        &app.db,
     )
     .await?;
     let Some(c) = projects.pop() else {
@@ -173,12 +173,12 @@ async fn remove_allocation(
     if c.userid != user.id {
         return Err(Error::NotFound("That project does not exist".to_string()));
     }
-    let mut alloc = AllocatedSample::load(allocationid, &state.db).await?;
-    alloc.delete(&state.db).await?;
+    let mut alloc = AllocatedSample::load(allocationid, &app.db).await?;
+    alloc.delete(&app.db).await?;
     Ok((
         [("HX-Trigger", "reload-project-allocations")],
         flash_message(
-            state,
+            app,
             FlashMessage::Success(format!(
                 "Removed sample '{}' from project",
                 alloc.sample.id()
@@ -190,12 +190,12 @@ async fn remove_allocation(
 async fn delete_note(
     user: SqliteUser,
     TemplateKey(_key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
     // make sure this is a note the user can delete
-    let mut note = Note::load(noteid, &state.db).await?;
-    let allocation = AllocatedSample::load(note.psid, &state.db).await?;
+    let mut note = Note::load(noteid, &app.db).await?;
+    let allocation = AllocatedSample::load(note.psid, &app.db).await?;
     if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -205,24 +205,24 @@ async fn delete_note(
         ));
     }
 
-    note.delete(&state.db).await?;
+    note.delete(&app.db).await?;
     Ok(())
 }
 
 async fn show_edit_note(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
 ) -> Result<impl IntoResponse, Error> {
     // make sure this is a note the user can edit
-    let note = Note::load(noteid, &state.db).await.map_err(|e| match e {
+    let note = Note::load(noteid, &app.db).await.map_err(|e| match e {
         libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
             Error::NotFound(format!("Unable to find note '{noteid}'"))
         }
         _ => e.into(),
     })?;
-    let allocation = AllocatedSample::load(note.psid, &state.db).await?;
+    let allocation = AllocatedSample::load(note.psid, &app.db).await?;
     if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -231,10 +231,10 @@ async fn show_edit_note(
             "User has no permissions for this note".to_string(),
         ));
     }
-    let project = Project::load(projectid, &state.db).await?;
+    let project = Project::load(projectid, &app.db).await?;
 
     let note_types: Vec<NoteType> = NoteType::iter().collect();
-    Ok(state.render_template(
+    Ok(app.render_template(
         key,
         context!(user => user,
                  note => note,
@@ -246,13 +246,13 @@ async fn show_edit_note(
 
 async fn modify_note(
     user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((projectid, allocid, noteid)): Path<(i64, i64, i64)>,
     Form(params): Form<NoteParams>,
 ) -> Result<impl IntoResponse, Error> {
     // make sure this is a note the user can edit
-    let mut note = Note::load(noteid, &state.db).await?;
-    let allocation = AllocatedSample::load(note.psid, &state.db).await?;
+    let mut note = Note::load(noteid, &app.db).await?;
+    let allocation = AllocatedSample::load(note.psid, &app.db).await?;
     if note.psid != allocid || allocation.projectid != projectid {
         return Err(Into::into(anyhow!("Bad request")));
     }
@@ -271,7 +271,7 @@ async fn modify_note(
     note.kind = params.notetype;
     note.details = params.details;
 
-    note.update(&state.db).await?;
+    note.update(&app.db).await?;
     Ok([(
         "HX-Redirect",
         app_url(&format!("/project/{projectid}/sample/{allocid}")),
