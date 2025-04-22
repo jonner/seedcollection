@@ -1,8 +1,14 @@
-use crate::{TemplateKey, auth::AuthSession, error::Error, state::AppState, util::FlashMessage};
+use crate::{
+    TemplateKey,
+    auth::AuthSession,
+    error::Error,
+    state::AppState,
+    util::{FlashMessage, app_url},
+};
 use axum::{
     Router,
     extract::{OriginalUri, Request, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::get,
@@ -38,23 +44,58 @@ async fn login_required(
     State(state): State<AppState>,
     auth: AuthSession,
     OriginalUri(uri): OriginalUri,
+    headers: HeaderMap,
     request: Request,
     next_layer: Next,
 ) -> Response {
     if auth.user.is_some() {
         next_layer.run(request).await
     } else {
-        (
-            StatusCode::UNAUTHORIZED,
-            RenderHtml(
-                "auth_login.html.j2",
-                state.tmpl.clone(),
-                context!(
-                next => uri.to_string(),
+        // FIXME: this might not be the correct url to redirect to after login.
+        // For example, if the request was a htmx sub-request, the `uri` variable will
+        // point to this subquery and this is not the page that the user is currently
+        // viewing in the browser, so redirecting to that subquery page might not behave
+        // as expected.
+        let next_params = serde_urlencoded::to_string([(
+            "next",
+            uri.path_and_query()
+                .map(|pq| pq.as_str())
+                .unwrap_or_default(),
+        )])
+        .unwrap_or_default();
+        let mut login_url = app_url("/auth/login");
+        if !next_params.is_empty() {
+            login_url.push('?');
+            login_url.push_str(&next_params);
+        }
+        if headers.get("HX-Request").is_some() {
+            (
+                StatusCode::UNAUTHORIZED,
+                [
+                    ("HX-Retarget", "#flash-messages"),
+                    ("HX-Reswap", "innerHTML"),
+                ],
+                flash_message(
+                    state,
+                    FlashMessage::Error(format!(
+                        "This action requires an authenticated user. Please [log in]({login_url})"
+                    )),
                 ),
-            ),
-        )
-            .into_response()
+            )
+                .into_response()
+        } else {
+            (
+                StatusCode::UNAUTHORIZED,
+                RenderHtml(
+                    "auth_login.html.j2",
+                    state.tmpl.clone(),
+                    context!(
+                    next => uri.to_string(),
+                    ),
+                ),
+            )
+                .into_response()
+        }
     }
 }
 
