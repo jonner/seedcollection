@@ -1,4 +1,3 @@
-use super::flash_message;
 use crate::{
     TemplateKey,
     auth::SqliteUser,
@@ -177,13 +176,10 @@ async fn remove_allocation(
     alloc.delete(&app.db).await?;
     Ok((
         [("HX-Trigger", "reload-project-allocations")],
-        flash_message(
-            app,
-            FlashMessage::Success(format!(
-                "Removed sample '{}' from project",
-                alloc.sample.id()
-            )),
-        ),
+        app.render_flash_message(FlashMessage::Success(format!(
+            "Removed sample '{}' from project",
+            alloc.sample.id()
+        ))),
     ))
 }
 

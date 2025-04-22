@@ -37,7 +37,7 @@ use strum::IntoEnumIterator;
 use tracing::{debug, trace, warn};
 
 use super::{
-    FilterSortOption, FilterSortSpec, flash_message,
+    FilterSortOption, FilterSortSpec,
     sample::{SampleFilterParams, sample_filter_spec},
     sort_dirs,
 };
@@ -178,13 +178,10 @@ async fn insert_project(
 
     Ok((
         [("HX-Redirect", projecturl)],
-        flash_message(
-            app,
-            FlashMessage::Success(format!(
-                r#"Added new project {}: {} to the database"#,
-                project.id, params.name
-            )),
-        ),
+        app.render_flash_message(FlashMessage::Success(format!(
+            r#"Added new project {}: {} to the database"#,
+            project.id, params.name
+        ))),
     ))
 }
 
@@ -275,10 +272,9 @@ async fn modify_project(
 
     Ok((
         [("HX-Redirect", app_url(&format!("/project/{id}")))],
-        flash_message(
-            app,
-            FlashMessage::Success("Successfully updated project".to_string()),
-        ),
+        app.render_flash_message(FlashMessage::Success(
+            "Successfully updated project".to_string(),
+        )),
     ))
 }
 
@@ -291,10 +287,7 @@ async fn delete_project(
     project.delete(&app.db).await?;
     Ok((
         [("HX-Redirect", app_url("/project/list"))],
-        flash_message(
-            app,
-            FlashMessage::Success(format!("Deleted project '{id}'")),
-        ),
+        app.render_flash_message(FlashMessage::Success(format!("Deleted project '{id}'"))),
     ))
 }
 
@@ -413,7 +406,7 @@ async fn add_sample(
         };
         Ok((
             [("HX-Trigger", "reload-samples")],
-            flash_message(app, message),
+            app.render_flash_message(message),
         ))
     }
 }

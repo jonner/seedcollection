@@ -28,8 +28,6 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Serialize};
 
-use super::flash_message;
-
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
         .route("/new", get(add_source).post(new_source))
@@ -160,10 +158,9 @@ async fn update_source(
 
     Ok((
         [("HX-Redirect", app_url(&format!("/source/{id}")))],
-        flash_message(
-            app,
-            FlashMessage::Success("Successfully updated source".to_string()),
-        ),
+        app.render_flash_message(FlashMessage::Success(
+            "Successfully updated source".to_string(),
+        )),
     ))
 }
 
@@ -202,10 +199,10 @@ async fn new_source(
     }
     Ok((
         headers,
-        flash_message(
-            app,
-            FlashMessage::Success(format!("Successfully added source {}", source.id)),
-        ),
+        app.render_flash_message(FlashMessage::Success(format!(
+            "Successfully added source {}",
+            source.id
+        ))),
     ))
 }
 

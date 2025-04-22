@@ -28,13 +28,6 @@ mod taxonomy;
 mod tests;
 mod user;
 
-pub(crate) fn flash_message(
-    state: std::sync::Arc<crate::SharedState>,
-    msg: FlashMessage,
-) -> impl IntoResponse {
-    state.render_template("_flash_messages.html.j2", context!(messages => &[msg]))
-}
-
 async fn login_required(
     State(app): State<AppState>,
     auth: AuthSession,
@@ -70,12 +63,9 @@ async fn login_required(
                     ("HX-Retarget", "#flash-messages"),
                     ("HX-Reswap", "innerHTML"),
                 ],
-                flash_message(
-                    app,
-                    FlashMessage::Error(format!(
-                        "This action requires an authenticated user. Please [log in]({login_url})"
-                    )),
-                ),
+                app.render_flash_message(FlashMessage::Error(format!(
+                    "This action requires an authenticated user. Please [log in]({login_url})"
+                ))),
             )
                 .into_response()
         } else {

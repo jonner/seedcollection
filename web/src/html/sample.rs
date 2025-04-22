@@ -38,7 +38,7 @@ use strum::IntoEnumIterator;
 use time::Month;
 use tracing::debug;
 
-use super::{FilterSortSpec, flash_message, sort_dirs};
+use super::{FilterSortSpec, sort_dirs};
 
 pub(crate) fn router() -> Router<AppState> {
     Router::new()
@@ -271,13 +271,10 @@ async fn insert_sample(
     let taxon_name = &sample.taxon.load(&app.db, false).await?.complete_name;
     Ok((
         [("HX-Redirect", sampleurl)],
-        flash_message(
-            app,
-            FlashMessage::Success(format!(
-                "Added new sample {}: {} to the database",
-                sample.id, taxon_name
-            )),
-        ),
+        app.render_flash_message(FlashMessage::Success(format!(
+            "Added new sample {}: {} to the database",
+            sample.id, taxon_name
+        ))),
     )
         .into_response())
 }
@@ -312,7 +309,7 @@ async fn update_sample(
     sample.update(&app.db).await?;
     Ok((
         [("HX-Redirect", app_url(&format!("/sample/{id}")))],
-        flash_message(app, FlashMessage::Success(format!("Updated sample {}", id))),
+        app.render_flash_message(FlashMessage::Success(format!("Updated sample {}", id))),
     ))
 }
 
@@ -325,6 +322,6 @@ async fn delete_sample(
     sample.delete(&app.db).await?;
     Ok((
         [("HX-Redirect", app_url("/sample/list"))],
-        flash_message(app, FlashMessage::Success(format!("Deleted sample {id}"))),
+        app.render_flash_message(FlashMessage::Success(format!("Deleted sample {id}"))),
     ))
 }

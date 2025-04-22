@@ -18,7 +18,6 @@ use axum_login::{
 use axum_server::tls_rustls::RustlsConfig;
 use axum_template::engine::Engine;
 use clap::Parser;
-use html::flash_message;
 use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
 use minijinja::{Environment, context};
 use serde::Deserialize;
@@ -456,7 +455,7 @@ async fn error_mapper(
                     ("HX-Retarget", "#flash-messages"),
                     ("HX-Reswap", "innerHTML"),
                 ],
-                flash_message(app, util::FlashMessage::Error(client_error)),
+                app.render_flash_message(util::FlashMessage::Error(client_error)),
             )
                 .into_response()
         } else {
