@@ -34,6 +34,7 @@ use libseed::{
 use minijinja::context;
 use serde::{Deserialize, Deserializer, Serialize, de::Error as _};
 use std::str::FromStr;
+use strum::IntoEnumIterator;
 use time::Month;
 use tracing::debug;
 
@@ -123,39 +124,13 @@ async fn list_samples(
 }
 
 pub(crate) fn sample_sort_options(selected: SortField) -> Vec<SortOption<SortField>> {
-    let sort_options = vec![
-        SortOption {
-            code: SortField::TaxonSequence,
-            name: "Taxonomic Order".into(),
-            selected: matches!(selected, SortField::TaxonSequence),
-        },
-        SortOption {
-            code: SortField::TaxonName,
-            name: "Taxon name".into(),
-            selected: matches!(selected, SortField::TaxonName),
-        },
-        SortOption {
-            code: SortField::Id,
-            name: "Sample Id".into(),
-            selected: matches!(selected, SortField::Id),
-        },
-        SortOption {
-            code: SortField::SourceName,
-            name: "Seed Source".into(),
-            selected: matches!(selected, SortField::SourceName),
-        },
-        SortOption {
-            code: SortField::CollectionDate,
-            name: "Date Collected".into(),
-            selected: matches!(selected, SortField::CollectionDate),
-        },
-        SortOption {
-            code: SortField::Quantity,
-            name: "Quantity".into(),
-            selected: matches!(selected, SortField::Quantity),
-        },
-    ];
-    sort_options
+    SortField::iter()
+        .map(|field| SortOption {
+            code: field.clone(),
+            name: field.to_string(),
+            selected: field == selected,
+        })
+        .collect()
 }
 
 async fn show_sample(

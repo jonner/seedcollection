@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize, de::IntoDeserializer};
 use sqlx::{FromRow, QueryBuilder, Row, Sqlite, sqlite::SqliteRow};
 use std::str::FromStr;
 use strum_macros::Display;
+use strum_macros::EnumIter;
 
 /// A representation of the certainty of identification for a sample
 #[derive(Clone, Deserialize, Serialize, Debug, sqlx::Type, PartialEq, Display)]
@@ -194,7 +195,7 @@ impl FilterPart for Filter {
 
 // FIXME: can we combine this with `Filter`?
 /// A type that provides fields that can be used to sort results of a database query for Samples
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, EnumIter, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum SortField {
     /// Sort by the Sample's ID
@@ -219,6 +220,20 @@ pub enum SortField {
 
     /// Sort by the quantity of the sample
     Quantity,
+}
+
+impl std::fmt::Display for SortField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SortField::Id => write!(f, "Sample Id"),
+            SortField::TaxonName => write!(f, "Taxon name"),
+            SortField::TaxonSequence => write!(f, "Taxonomic Order"),
+            SortField::SourceId => write!(f, "Seed Source Id"),
+            SortField::SourceName => write!(f, "Seed Source"),
+            SortField::CollectionDate => write!(f, "Date Collected"),
+            SortField::Quantity => write!(f, "Quantity"),
+        }
+    }
 }
 
 impl FromStr for SortField {
