@@ -23,7 +23,8 @@
 </head>
 <body hx-ext="response-targets"
     hx-select-oob="#flash-messages"
-    hx-target-error="#flash-messages">
+    hx-target-error="#flash-messages"
+    class="d-flex flex-column vh-100 {% if environment != "prod" %}dev{% endif %}">
     {% block body %}
         {% block header %}
         <nav id="main-navbar" class="navbar navbar-expand-md px-md-3" data-bs-theme="dark" >
@@ -76,13 +77,12 @@
         </nav>
         {% endblock %}
     {% endblock %}
-    <div id="sc-content" class="container-xxl px-md-3 mt-3 mb-5">
+    <div id="sc-content" class="container-xxl flex-grow-1 my-4">
     {% block content %}
     {% endblock %}
     </div>
     <footer id="sc-footer"
-            class="px-md-3 text-body-tertiary bg-body-tertiary sticky-lg-bottom border-top"
-            style="margin-top: 10rem">
+            class="px-md-3 text-body-tertiary bg-body-tertiary border-top">
     {% block footer %}
     <div class="container-xxl d-flex gap-3">
         <div class="flex-expand-1 me-auto">
