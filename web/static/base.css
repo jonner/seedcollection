@@ -1,3 +1,13 @@
+body.dev {
+    background: repeating-linear-gradient(45deg, hsl(0,0%,100%), hsl(0,0%,100%) 20px, hsl(0,0%,98%) 20px, hsl(0,0%,98%) 40px)
+}
+
+body #main-navbar {
+    background-color: rgb(25,135,84)
+}
+body.dev #main-navbar {
+     background: repeating-linear-gradient(45deg, hsl(354,70%,54%), hsl(354,70%,54%) 20px, hsl(354,70%,45%) 20px, hsl(354,70%,45%) 40px)
+}
 dt {
     margin-top: 0.5em;
     font-weight: bold;

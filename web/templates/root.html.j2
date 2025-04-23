@@ -26,7 +26,7 @@
     hx-target-error="#flash-messages">
     {% block body %}
         {% block header %}
-        <nav class="navbar sticky-lg-top {% if environment == "prod" %}bg-success{% else %}text-bg-danger{% endif %} navbar-expand-md px-md-3" data-bs-theme="dark">
+        <nav id="main-navbar" class="navbar navbar-expand-md px-md-3" data-bs-theme="dark" >
             <div class="container-xxl">
             <a class="navbar-brand" href="{{ "/" | app_url }}">{{ icon("flower2", "body") }} SeedCollection</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
