@@ -48,11 +48,12 @@
     hx-trigger="reload-samples from:body"
     hx-get
     hx-swap="innerHTML"
+    class="mb-3"
     >
       {{ show_samples(samples) }}
     </div>
-    <div class="row mb-3 sticky-bottom">
-        <button type="submit" class="btn btn-primary">Add</button>
+    <div class="row sticky-bottom p-3">
+        <button type="submit" class="btn btn-primary">Add samples</button>
     </div>
 </form>
 {% else %}
