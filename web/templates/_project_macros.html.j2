@@ -100,15 +100,9 @@ hx-swap="none"
 </div>
 {%- endmacro %}
 
-{% macro project_sample_list(divid, project, summary, request_uri) %}
+{% macro project_sample_list(project) %}
 {% from "_macros.html.j2" import icon %}
 {% from "_sample_macros.html.j2" import sample_item %}
-<div id="{{ divid }}"
-    hx-trigger="reload-project-allocations from:body"
-    hx-get
-    hx-swap="outerHTML"
-    hx-target="this">
-<div class="text-body-tertiary">{{ summary.total_items }} items found </div>
 {% for alloc in project.allocations %}
 <div class="project-sample-row {{ loop.cycle("bg-body-tertiary", "") }}">
     {% call sample_item(alloc.sample) %}
@@ -143,8 +137,6 @@ hx-swap="none"
     No matching samples found.
 </div>
 {% endfor %}
-    {{ pagination(summary.npages, summary.page, request_uri)}}
-</div>
 {% endmacro %}
 
 {% macro allocation_note_form(sample, note=none, request=none, message=none) -%}
