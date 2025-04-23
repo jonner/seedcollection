@@ -83,7 +83,7 @@
          hx-boost="true"
          hx-target="{{ target }}"
          hx-get="{{ url }}"
-         hx-trigger="submit, input changed delay:500ms from:input, change changed delay:500ms, change from:input[type=checkbox]">
+         hx-trigger="submit, input changed delay:500ms from:input, change changed delay:500ms, change from:.additional-filter">
     <div class="input-group mb-3">
             <input type="text"
                    class="form-control"
@@ -118,7 +118,7 @@
                     <div class="mb-3">
                         <div clas="form-check">
                             {% for option in filter_spec.additional_filters %}
-                            <input id="checkbox-{{option.value}}" class="form-check-input" type="checkbox" name="{{ option.value }}" value="true" {% if option.selected %}checked{% endif %}>
+                            <input id="checkbox-{{option.value}}" class="form-check-input additional-filter" type="checkbox" name="{{ option.value }}" value="true" {% if option.selected %}checked{% endif %}>
                             <label class="ms-2 form-check-label" for="checkbox-{{option.value}}">{{ option.name }}</label>
                             {% endfor %}
                         </div>
