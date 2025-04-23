@@ -11,7 +11,7 @@ use crate::{
 use axum::{
     Router,
     extract::{OriginalUri, Path, State},
-    http::HeaderMap,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
 };
@@ -362,13 +362,15 @@ async fn add_sample(
     user: SqliteUser,
     State(app): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
-    Form(params): Form<Vec<(String, String)>>,
+    Form(samples): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &app.db).await?;
-    if params.is_empty() {
-        return Err(Error::RequiredParameterMissing("samples".into()));
+    if samples.is_empty() {
+        // If the user submitted a request without choosing any samples, there's
+        // no need to report an error. Just Do nothing and move on.
+        return Ok(StatusCode::OK.into_response());
     }
-    let toadd: HashSet<<Sample as Loadable>::Id> = params
+    let toadd: HashSet<<Sample as Loadable>::Id> = samples
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
             "sample" => value.parse::<<Sample as Loadable>::Id>().ok(),
@@ -407,6 +409,7 @@ async fn add_sample(
         Ok((
             [("HX-Trigger", "reload-samples")],
             app.render_flash_message(message),
-        ))
+        )
+            .into_response())
     }
 }
