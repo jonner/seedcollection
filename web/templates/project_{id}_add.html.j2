@@ -39,7 +39,6 @@
 <h2>{{ self.title() }}</h2>
 <p>Choose samples to add to the project <i>{{ project.name }}</i></p>
 {{ filter_sort_widget(("/project/" ~ project.id ~ "/add") | app_url, "#sample-list", filter_spec)}}
-<div id="flash-messages" class="sticky-top"></div>
 {% if samples %}
 <form id="project-add-form"
     hx-post="{{ ("/project/" ~ project.id ~ "/add") | app_url }}"
@@ -53,6 +52,7 @@
       {{ show_samples(samples) }}
     </div>
     <div class="row sticky-bottom p-3">
+        <div id="flash-messages" class="sticky-top"></div>
         <button type="submit" class="btn btn-primary">Add samples</button>
     </div>
 </form>
