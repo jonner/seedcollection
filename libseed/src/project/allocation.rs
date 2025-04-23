@@ -271,11 +271,11 @@ impl ToSql for SortField {
     fn to_sql(&self) -> String {
         match self {
             SortField::Taxon => "seq",
-            SortField::SampleId => "S.sampleid",
-            SortField::CollectionDate => "CONCAT(S.year, S.month)",
-            SortField::Activity => "N.notedate",
-            SortField::Quantity => "S.quantity",
-            SortField::Source => " S.srcname",
+            SortField::SampleId => "sampleid",
+            SortField::CollectionDate => "CONCAT(year, month)",
+            SortField::Activity => "notedate",
+            SortField::Quantity => "quantity",
+            SortField::Source => "srcname",
         }
         .into()
     }
