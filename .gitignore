@@ -13,3 +13,4 @@
 /db/itis/seedcollection.sqlite.orig
 /db/itis/seedcollection.sqlite.stamp
 /db/itis/ReadmeSqlite.txt
+/web/vendor-js/node_modules

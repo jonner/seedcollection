@@ -15,4 +15,13 @@ database will be located in `./db/itis/seedcollection.sqlite`. This database can
 then be used with `seedctl` or `seedweb`.
 
 ## Running the application
-In order to run the web application in a docker or podman container, simply run `make run-container`
+In order to run the web application, several javascript packages need to be
+installed. To do this, do the following:
+
+```
+  $ cd web/vendor-js
+  $ yarn
+```
+
+In order to run the web application in a docker or podman container, simply run
+`make run-container`
