@@ -1,23 +1,23 @@
 {% macro show_samples(samples) %}
-    {% for sample in samples %}
-    <div class="form-check {% if sample.quantity == 0.0 %}opacity-50{% endif %}">
+{% from "_macros.html.j2" import icon, breadcrumbs, filter_sort_widget %}
+{% for sample in samples %}
+<div class="{{ loop.cycle("bg-body-tertiary", "") }} p-2">
+    <div class="flex-grow-1 flex-row flex-wrap{% if sample.quantity == 0%} opacity-50{% endif %}">
         <input class="form-check-input"
                type="checkbox"
                name="sample"
                value="{{sample.id}}"
                id="sample-{{sample.id}}">
-        <label class="form-check-label" for="sample-{{sample.id}}">
-            <span class="font-monospace">{{ sample.id | idfmt("S") }}</span>: <b>{{ sample.taxon.complete_name }}</b>
-            <span class="text-body-tertiary">
-            from {{ sample.source.name }}
-            {% if sample.year %}
-            ({{ sample.year }})
-            {% endif %}
-            {% if sample.notes %} - {{ sample.notes }}{% endif %}
-            </span>
+        <label class="form-check-label ms-2" for="sample-{{sample.id}}">
+        <span class="fw-bold">{{ sample.taxon.complete_name }}{% if sample.certainty == "Uncertain" %} (?){% endif %}</span>
+        {% if sample.quantity %}<span class="text-body-tertiary ms-3">{{ sample.quantity }}g</span>{% endif %}
+        <span class="text-body-tertiary ms-3">{{ icon("geo-alt") }} {{ sample.source.name | truncate(length=30) }}</span>
+        {% if sample.year %}<span class="text-body-tertiary ms-3">{{ icon("calendar3") }} {{ sample.year }}</span>{% endif %}
+        {% if sample.notes %}<span class="text-body-tertiary fst-italic ms-3">{{ icon("journal-text") }} {{ sample.notes | truncate(length=30) }}</span>{% endif %}
         </label>
     </div>
-    {% endfor %}
+</div>
+{% endfor %}
 {% endmacro %}
 
 
