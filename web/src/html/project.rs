@@ -152,7 +152,7 @@ async fn show_new_project(
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct ProjectParams {
+struct ProjectDefinitionParams {
     name: String,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     description: Option<String>,
@@ -161,7 +161,7 @@ struct ProjectParams {
 async fn insert_project(
     user: SqliteUser,
     State(app): State<AppState>,
-    Form(params): Form<ProjectParams>,
+    Form(params): Form<ProjectDefinitionParams>,
 ) -> Result<impl IntoResponse, Error> {
     if params.name.is_empty() {
         return Err(Error::RequiredParameterMissing("name".into()));
@@ -259,7 +259,7 @@ async fn modify_project(
     user: SqliteUser,
     Path(id): Path<<Project as Loadable>::Id>,
     State(app): State<AppState>,
-    Form(params): Form<ProjectParams>,
+    Form(params): Form<ProjectDefinitionParams>,
 ) -> Result<impl IntoResponse, Error> {
     let mut project = Project::load_for_user(id, &user, &app.db).await?;
 
