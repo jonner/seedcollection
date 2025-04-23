@@ -1,12 +1,19 @@
-use crate::{EnvConfig, error::Error, template_engine, util::app_url};
+use crate::{
+    EnvConfig,
+    error::Error,
+    template_engine,
+    util::{FlashMessage, app_url},
+};
 use anyhow::{Context, Result};
-use axum_template::{TemplateEngine, engine::Engine};
+use axum::response::IntoResponse;
+use axum_template::{RenderHtml, TemplateEngine, engine::Engine};
 use lettre::{
     AsyncFileTransport, AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
     message::{Mailbox, header::ContentType},
 };
 use libseed::{core::database::Database, user::verification::UserVerification};
 use minijinja::context;
+use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
 use tracing::{debug, trace};
 
@@ -117,6 +124,21 @@ impl SharedState {
         }
         .with_context(|| "Failed to send verification email")
         .map_err(|e| e.into())
+    }
+
+    pub fn render_template<'a, K, S>(
+        self: Arc<Self>,
+        template_key: K,
+        data: S,
+    ) -> RenderHtml<K, Engine<minijinja::Environment<'a>>, S>
+    where
+        S: Serialize,
+    {
+        RenderHtml(template_key, self.tmpl.clone(), data)
+    }
+
+    pub(crate) fn render_flash_message(self: Arc<Self>, msg: FlashMessage) -> impl IntoResponse {
+        self.render_template("_flash_messages.html.j2", context!(messages => &[msg]))
     }
 
     #[cfg(test)]

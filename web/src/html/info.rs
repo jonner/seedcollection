@@ -1,6 +1,5 @@
 use crate::{TemplateKey, auth::SqliteUser, error::Error, state::AppState};
 use axum::{Router, extract::State, response::IntoResponse, routing::get};
-use axum_template::RenderHtml;
 use libseed::taxonomy::Germination;
 use minijinja::context;
 
@@ -11,12 +10,11 @@ pub(crate) fn router() -> Router<AppState> {
 async fn germination(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let germination = Germination::load_all(&state.db).await?;
-    Ok(RenderHtml(
+    let germination = Germination::load_all(&app.db).await?;
+    Ok(app.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  germination => germination),
     ))

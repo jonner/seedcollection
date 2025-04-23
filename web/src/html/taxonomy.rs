@@ -14,7 +14,6 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::{
         loadable::Loadable,
@@ -46,14 +45,10 @@ pub(crate) fn router() -> Router<AppState> {
 async fn root(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let ranks: Vec<Rank> = Rank::iter().collect();
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => user, ranks => ranks),
-    ))
+    Ok(app.render_template(key, context!(user => user, ranks => ranks)))
 }
 
 #[derive(Deserialize)]
@@ -65,7 +60,7 @@ struct ListParams {
 async fn list_taxa(
     mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Query(params): Query<ListParams>,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
@@ -73,23 +68,22 @@ async fn list_taxa(
         Some(r) => r,
         None => Rank::Species,
     };
-    let count = Taxon::count(Some(taxonomy::Filter::Rank(rank).into()), &state.db).await?;
+    let count = Taxon::count(Some(taxonomy::Filter::Rank(rank).into()), &app.db).await?;
     let summary = Paginator::new(
         count as u32,
-        user.preferences(&state.db).await?.pagesize.into(),
+        user.preferences(&app.db).await?.pagesize.into(),
         params.page,
     );
     let taxa: Vec<Taxon> = Taxon::load_all(
         Some(taxonomy::Filter::Rank(rank).into()),
         None,
         Some(summary.limits()),
-        &state.db,
+        &app.db,
     )
     .await?;
     debug!("uri={:?}", uri);
-    Ok(RenderHtml(
+    Ok(app.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  taxa => taxa,
                  summary => summary,
@@ -100,7 +94,7 @@ async fn list_taxa(
 async fn show_all_children(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, Error> {
     let samples: Vec<Sample> = sqlx::query_as(
@@ -122,11 +116,10 @@ async fn show_all_children(
     )
     .bind(id)
     .bind(user.id)
-    .fetch_all(state.db.pool())
+    .fetch_all(app.db.pool())
     .await?;
-    Ok(RenderHtml(
+    Ok(app.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  samples => samples),
     ))
@@ -135,17 +128,17 @@ async fn show_all_children(
 async fn show_taxon(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut taxon = Taxon::load(id, &state.db).await.map_err(|e| match e {
+    let mut taxon = Taxon::load(id, &app.db).await.map_err(|e| match e {
         libseed::Error::DatabaseError(sqlx::Error::RowNotFound) => {
             Error::NotFound(format!("Taxon '{id}' was not found in the database"))
         }
         _ => e.into(),
     })?;
-    let hierarchy = taxon.fetch_hierarchy(&state.db).await?;
-    let children = taxon.fetch_children(&state.db).await?;
+    let hierarchy = taxon.fetch_hierarchy(&app.db).await?;
+    let children = taxon.fetch_children(&app.db).await?;
     let samples = Sample::load_all(
         Some(
             and()
@@ -155,14 +148,13 @@ async fn show_taxon(
         ),
         None,
         None,
-        &state.db,
+        &app.db,
     )
     .await?;
-    taxon.load_germination_info(&state.db).await?;
+    taxon.load_germination_info(&app.db).await?;
 
-    Ok(RenderHtml(
+    Ok(app.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  taxon => taxon,
                  parents => hierarchy,
@@ -178,7 +170,7 @@ struct DatalistParams {
 
 async fn datalist(
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Query(DatalistParams { taxon }): Query<DatalistParams>,
 ) -> Result<impl IntoResponse, Error> {
     let filter = filter_taxa(&taxon, None, None);
@@ -190,10 +182,10 @@ async fn datalist(
             count: 100,
             offset: None,
         }),
-        &state.db,
+        &app.db,
     )
     .await?;
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
+    Ok(app.render_template(key, context!(taxa => taxa)))
 }
 
 #[derive(Deserialize)]
@@ -206,12 +198,12 @@ struct SearchParams {
 
 async fn search(
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Query(params): Query<SearchParams>,
 ) -> Result<impl IntoResponse, Error> {
     let filter = filter_taxa(&params.taxon, params.rank, params.minnesota);
-    let taxa = Taxon::load_all(filter, None, None, &state.db).await?;
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(taxa => taxa)))
+    let taxa = Taxon::load_all(filter, None, None, &app.db).await?;
+    Ok(app.render_template(key, context!(taxa => taxa)))
 }
 
 fn filter_taxa(taxon: &str, rank: Option<Rank>, minnesota: Option<bool>) -> Option<DynFilterPart> {
@@ -235,14 +227,10 @@ fn filter_taxa(taxon: &str, rank: Option<Rank>, minnesota: Option<bool>) -> Opti
 
 async fn editgerm(
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let codes = Germination::load_all(&state.db).await?;
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(codes => codes),
-    ))
+    let codes = Germination::load_all(&app.db).await?;
+    Ok(app.render_template(key, context!(codes => codes)))
 }
 
 #[derive(Deserialize)]
@@ -252,7 +240,7 @@ struct AddGermParams {
 }
 
 async fn addgerm(
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Form(params): Form<AddGermParams>,
 ) -> Result<impl IntoResponse, Error> {
     let newid = sqlx::query!(
@@ -260,7 +248,7 @@ async fn addgerm(
         params.taxon,
         params.germid
     )
-    .execute(state.db.pool())
+    .execute(app.db.pool())
     .await?
     .last_insert_rowid();
     Ok(format!("<div>Inserted row {newid}</div>"))

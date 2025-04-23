@@ -11,11 +11,10 @@ use crate::{
 use axum::{
     Router,
     extract::{OriginalUri, Path, State},
-    http::HeaderMap,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::get,
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::{
         loadable::Loadable,
@@ -38,7 +37,7 @@ use strum::IntoEnumIterator;
 use tracing::{debug, trace, warn};
 
 use super::{
-    FilterSortOption, FilterSortSpec, flash_message,
+    FilterSortOption, FilterSortSpec,
     sample::{SampleFilterParams, sample_filter_spec},
     sort_dirs,
 };
@@ -78,7 +77,7 @@ struct ProjectListParams {
 async fn list_projects(
     mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Query(mut params): Query<ProjectListParams>,
     headers: HeaderMap,
     uri: OriginalUri,
@@ -105,15 +104,15 @@ async fn list_projects(
     };
 
     let paginator = Paginator::new(
-        Project::count(Some(filter.clone()), &state.db).await? as u32,
-        user.preferences(&state.db).await?.pagesize.into(),
+        Project::count(Some(filter.clone()), &app.db).await? as u32,
+        user.preferences(&app.db).await?.pagesize.into(),
         params.page,
     );
     let projects = Project::load_all(
         Some(filter),
         Some(sortspec.into()),
         Some(paginator.limits()),
-        &state.db,
+        &app.db,
     )
     .await?;
 
@@ -133,9 +132,8 @@ async fn list_projects(
         additional_filters: vec![],
     };
 
-    Ok(RenderHtml(
+    Ok(app.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  projects => projects,
                  summary => paginator,
@@ -148,13 +146,13 @@ async fn list_projects(
 async fn show_new_project(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(key, state.tmpl.clone(), context!(user => user)))
+    Ok(app.render_template(key, context!(user => user)))
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct ProjectParams {
+struct ProjectDefinitionParams {
     name: String,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     description: Option<String>,
@@ -162,8 +160,8 @@ struct ProjectParams {
 
 async fn insert_project(
     user: SqliteUser,
-    State(state): State<AppState>,
-    Form(params): Form<ProjectParams>,
+    State(app): State<AppState>,
+    Form(params): Form<ProjectDefinitionParams>,
 ) -> Result<impl IntoResponse, Error> {
     if params.name.is_empty() {
         return Err(Error::RequiredParameterMissing("name".into()));
@@ -173,20 +171,17 @@ async fn insert_project(
         params.description.as_ref().cloned(),
         user.id,
     );
-    project.insert(&state.db).await?;
+    project.insert(&app.db).await?;
 
     debug!(project.id, "successfully inserted project");
     let projecturl = app_url(&format!("/project/{}", project.id));
 
     Ok((
         [("HX-Redirect", projecturl)],
-        flash_message(
-            state,
-            FlashMessage::Success(format!(
-                r#"Added new project {}: {} to the database"#,
-                project.id, params.name
-            )),
-        ),
+        app.render_flash_message(FlashMessage::Success(format!(
+            r#"Added new project {}: {} to the database"#,
+            project.id, params.name
+        ))),
     ))
 }
 
@@ -202,12 +197,12 @@ async fn show_project(
     mut user: SqliteUser,
     TemplateKey(key): TemplateKey,
     Path(id): Path<<Project as Loadable>::Id>,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Query(mut params): Query<ShowProjectQueryParams>,
     headers: HeaderMap,
     uri: OriginalUri,
 ) -> Result<impl IntoResponse, Error> {
-    let mut project = Project::load_for_user(id, &user, &state.db).await?;
+    let mut project = Project::load_for_user(id, &user, &app.db).await?;
     let field = params.sort.get_or_insert(allocation::SortField::Taxon);
     let dir = params.dir.get_or_insert_default();
     let sort = SortSpec::new(field.clone(), *dir);
@@ -222,9 +217,9 @@ async fn show_project(
     };
     let paginator = Paginator::new(
         project
-            .count_samples(sample_filter.clone(), &state.db)
+            .count_samples(sample_filter.clone(), &app.db)
             .await? as u32,
-        user.preferences(&state.db).await?.pagesize.into(),
+        user.preferences(&app.db).await?.pagesize.into(),
         params.page,
     );
     project
@@ -232,7 +227,7 @@ async fn show_project(
             sample_filter,
             Some(sort.into()),
             Some(paginator.limits()),
-            &state.db,
+            &app.db,
         )
         .await?;
 
@@ -249,9 +244,8 @@ async fn show_project(
         additional_filters: vec![],
     };
 
-    Ok(RenderHtml(
+    Ok(app.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
                  project => project,
                  filter_spec => filter_spec,
@@ -264,40 +258,36 @@ async fn show_project(
 async fn modify_project(
     user: SqliteUser,
     Path(id): Path<<Project as Loadable>::Id>,
-    State(state): State<AppState>,
-    Form(params): Form<ProjectParams>,
+    State(app): State<AppState>,
+    Form(params): Form<ProjectDefinitionParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut project = Project::load_for_user(id, &user, &state.db).await?;
+    let mut project = Project::load_for_user(id, &user, &app.db).await?;
 
     project.name.clone_from(&params.name);
     project.description.clone_from(&params.description);
-    project.update(&state.db).await.map_err(|e| match e {
+    project.update(&app.db).await.map_err(|e| match e {
         libseed::Error::InvalidStateMissingAttribute(attr) => Error::RequiredParameterMissing(attr),
         _ => e.into(),
     })?;
 
     Ok((
         [("HX-Redirect", app_url(&format!("/project/{id}")))],
-        flash_message(
-            state,
-            FlashMessage::Success("Successfully updated project".to_string()),
-        ),
+        app.render_flash_message(FlashMessage::Success(
+            "Successfully updated project".to_string(),
+        )),
     ))
 }
 
 async fn delete_project(
     user: SqliteUser,
     Path(id): Path<<Project as Loadable>::Id>,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    project.delete(&state.db).await?;
+    let mut project = Project::load_for_user(id, &user, &app.db).await?;
+    project.delete(&app.db).await?;
     Ok((
         [("HX-Redirect", app_url("/project/list"))],
-        flash_message(
-            state,
-            FlashMessage::Success(format!("Deleted project '{id}'")),
-        ),
+        app.render_flash_message(FlashMessage::Success(format!("Deleted project '{id}'"))),
     ))
 }
 
@@ -309,17 +299,17 @@ struct AddSampleParams {
 async fn show_add_sample(
     user: SqliteUser,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
     headers: HeaderMap,
     Query(mut params): Query<AddSampleParams>,
 ) -> Result<impl IntoResponse, Error> {
-    let project = Project::load(id, &state.db).await?;
+    let project = Project::load(id, &app.db).await?;
     let ids_in_project = sqlx::query!(
         "SELECT PS.sampleid from sc_project_samples PS WHERE PS.projectid=?",
         id
     )
-    .fetch_all(state.db.pool())
+    .fetch_all(app.db.pool())
     .await?;
     let ids = ids_in_project.iter().map(|row| row.sampleid).collect();
     let mut filterbuilder = and()
@@ -352,13 +342,12 @@ async fn show_add_sample(
             .into(),
         ),
         None,
-        &state.db,
+        &app.db,
     )
     .await?;
 
-    Ok(RenderHtml(
+    Ok(app.render_template(
         key,
-        state.tmpl.clone(),
         context!(user => user,
             project => project,
             samples => samples,
@@ -371,15 +360,17 @@ async fn show_add_sample(
 
 async fn add_sample(
     user: SqliteUser,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path(id): Path<<Project as Loadable>::Id>,
-    Form(params): Form<Vec<(String, String)>>,
+    Form(samples): Form<Vec<(String, String)>>,
 ) -> Result<impl IntoResponse, Error> {
-    let mut project = Project::load_for_user(id, &user, &state.db).await?;
-    if params.is_empty() {
-        return Err(Error::RequiredParameterMissing("samples".into()));
+    let mut project = Project::load_for_user(id, &user, &app.db).await?;
+    if samples.is_empty() {
+        // If the user submitted a request without choosing any samples, there's
+        // no need to report an error. Just Do nothing and move on.
+        return Ok(StatusCode::OK.into_response());
     }
-    let toadd: HashSet<<Sample as Loadable>::Id> = params
+    let toadd: HashSet<<Sample as Loadable>::Id> = samples
         .iter()
         .filter_map(|(name, value)| match name.as_str() {
             "sample" => value.parse::<<Sample as Loadable>::Id>().ok(),
@@ -391,12 +382,12 @@ async fn add_sample(
         fb = fb.push(sample::Filter::Id(Cmp::Equal, *id));
     }
     fb = and().push(fb.build()).push(sample::Filter::UserId(user.id));
-    let valid_samples = Sample::load_all(Some(fb.build()), None, None, &state.db).await?;
+    let valid_samples = Sample::load_all(Some(fb.build()), None, None, &app.db).await?;
 
     let mut n_inserted = 0;
     for sample in valid_samples {
         let id = sample.id;
-        match project.allocate_sample(sample, &state.db).await {
+        match project.allocate_sample(sample, &app.db).await {
             Ok(_) => n_inserted += 1,
             Err(e) => warn!("Failed to add sample {id} to the project: {e}"),
         }
@@ -417,7 +408,8 @@ async fn add_sample(
         };
         Ok((
             [("HX-Trigger", "reload-samples")],
-            flash_message(state, message),
-        ))
+            app.render_flash_message(message),
+        )
+            .into_response())
     }
 }

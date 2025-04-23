@@ -16,9 +16,8 @@ use axum_login::{
     tower_sessions::{Expiry, SessionManagerLayer},
 };
 use axum_server::tls_rustls::RustlsConfig;
-use axum_template::{RenderHtml, engine::Engine};
+use axum_template::engine::Engine;
 use clap::Parser;
-use html::flash_message;
 use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
 use minijinja::{Environment, context};
 use serde::Deserialize;
@@ -434,7 +433,7 @@ async fn shutdown_on_sigterm(handle: axum_server::Handle) {
 }
 
 async fn error_mapper(
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     auth: AuthSession,
     headers: HeaderMap,
     request: axum::extract::Request,
@@ -456,15 +455,14 @@ async fn error_mapper(
                     ("HX-Retarget", "#flash-messages"),
                     ("HX-Reswap", "innerHTML"),
                 ],
-                flash_message(state, util::FlashMessage::Error(client_error)),
+                app.render_flash_message(util::FlashMessage::Error(client_error)),
             )
                 .into_response()
         } else {
             (
                 status_code,
-                RenderHtml(
+                app.render_template(
                     "_ERROR.html.j2",
-                    state.tmpl.clone(),
                     context!(status_code => status_code.as_u16(),
                     status_reason => status_code.canonical_reason(),
                     client_error => client_error,

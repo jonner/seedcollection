@@ -15,7 +15,6 @@ use axum::{
     response::{IntoResponse, Redirect},
     routing::{get, post},
 };
-use axum_template::RenderHtml;
 use libseed::{
     core::{error::VerificationError, loadable::Loadable},
     user::{User, UserStatus, verification::UserVerification},
@@ -74,10 +73,10 @@ impl RegisterParams {
 }
 
 async fn register_user(
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Form(params): Form<RegisterParams>,
 ) -> Result<impl IntoResponse, Error> {
-    if !state.config.user_registration_enabled {
+    if !app.config.user_registration_enabled {
         return Err(Error::UserRegistrationDisabled);
     }
     params.validate()?;
@@ -91,20 +90,20 @@ async fn register_user(
         None,
         None,
     );
-    user.insert(&state.db).await?;
-    let uv = user.generate_verification_request(&state.db).await?;
-    state.send_verification(uv).await?;
+    user.insert(&app.db).await?;
+    let uv = user.generate_verification_request(&app.db).await?;
+    app.send_verification(uv).await?;
     Ok([("HX-redirect", app_url("/auth/login"))])
 }
 
 async fn show_register(
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    if !state.config.user_registration_enabled {
+    if !app.config.user_registration_enabled {
         return Err(Error::UserRegistrationDisabled);
     }
-    Ok(RenderHtml(key, state.tmpl.clone(), ()))
+    Ok(app.render_template(key, ()))
 }
 
 #[derive(Debug, Deserialize)]
@@ -115,14 +114,10 @@ pub(crate) struct NextUrl {
 async fn show_login(
     TemplateKey(key): TemplateKey,
     auth: AuthSession,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Query(NextUrl { next }): Query<NextUrl>,
 ) -> Result<impl IntoResponse, Error> {
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(user => auth.user, next => next),
-    ))
+    Ok(app.render_template(key, context!(user => auth.user, next => next)))
 }
 
 async fn do_login(
@@ -173,10 +168,10 @@ fn verification_error_message(err: VerificationError) -> FlashMessage {
 async fn show_verification(
     auth: AuthSession,
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((userid, vkey)): Path<(i64, String)>,
 ) -> Result<impl IntoResponse, Error> {
-    let message = UserVerification::find(userid, &vkey, &state.db)
+    let message = UserVerification::find(userid, &vkey, &app.db)
         .await
         .map_or_else(verification_error_message, |_uv| {
             FlashMessage::Warning(
@@ -184,30 +179,22 @@ async fn show_verification(
                     .into(),
             )
         });
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(message => message, user => auth.user),
-    ))
+    Ok(app.render_template(key, context!(message => message, user => auth.user)))
 }
 
 async fn verify_user(
     TemplateKey(key): TemplateKey,
-    State(state): State<AppState>,
+    State(app): State<AppState>,
     Path((userid, vkey)): Path<(i64, String)>,
 ) -> Result<impl IntoResponse, Error> {
-    let res = UserVerification::find(userid, &vkey, &state.db).await;
+    let res = UserVerification::find(userid, &vkey, &app.db).await;
     let message = match res {
-        Ok(mut uv) => match uv.verify(&state.db).await {
+        Ok(mut uv) => match uv.verify(&app.db).await {
             Ok(_) => FlashMessage::Success("You have successfully verified your account".into()),
             Err(_e) => FlashMessage::Error("Failed to verify user".into()),
         },
         Err(e) => verification_error_message(e),
     };
 
-    Ok(RenderHtml(
-        key,
-        state.tmpl.clone(),
-        context!(message => message),
-    ))
+    Ok(app.render_template(key, context!(message => message)))
 }

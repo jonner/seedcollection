@@ -16,9 +16,20 @@
     <h3>Samples in this project <a class="ms-2" href="{{ ("/project/" ~ project.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
     {{ filter_sort_widget(("/project/" ~ project.id) | app_url, "#project-sample-list", filter_spec) }}
     <div id="flash-messages"></div>
-        {{ project_sample_list("project-sample-list", project, summary, request_uri) }}
+    <div
+        hx-trigger="reload-project-allocations from:body"
+        hx-get
+        hx-swap="innerHTML"
+        hx-target="#project-sample-list">
+    <div id="project-sample-list">
+    <div class="text-body-tertiary">{{ summary.total_items }} items found </div>
+    {{ project_sample_list(project) }}
+    {{ pagination(summary.npages, summary.page, request_uri)}}
+    </div>
 {% endblock %}
 {% else %}
-{{ project_sample_list("project-sample-list", project, summary, request_uri) }}
+<div class="text-body-tertiary">{{ summary.total_items }} items found </div>
+{{ project_sample_list(project) }}
+{{ pagination(summary.npages, summary.page, request_uri)}}
 {% endif %}
 
