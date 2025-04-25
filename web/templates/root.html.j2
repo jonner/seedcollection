@@ -23,7 +23,8 @@
 </head>
 <body hx-ext="response-targets"
     hx-select-oob="#flash-messages"
-    hx-target-error="#flash-messages">
+    hx-target-error="#flash-messages"
+    {% if environment != "prod" %}class="dev"{% endif %}>
     {% block body %}
         {% block header %}
         <nav id="main-navbar" class="navbar navbar-expand-md px-md-3" data-bs-theme="dark" >
