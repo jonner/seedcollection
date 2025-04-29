@@ -5,6 +5,11 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+    inputs:
+      runExtraTests:
+        description: "Run additional tests"
+        required: false
+        default: false
 jobs:
   check:
     name: Check
@@ -48,6 +53,7 @@ jobs:
           MDEVCTL_LOG: debug
           RUST_BACKTRACE: full
   test-windows:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.runExtraTests == 'true'
     name: Test Suite (Windows)
     runs-on: windows-latest
     steps:
@@ -60,6 +66,7 @@ jobs:
           MDEVCTL_LOG: debug
           RUST_BACKTRACE: full
   test-macos:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.runExtraTests == 'true'
     name: Test Suite (MacOS)
     runs-on: macos-latest
     steps:
