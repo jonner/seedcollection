@@ -15,18 +15,6 @@ jobs:
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - run: cargo check
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
-        env:
-          MDEVCTL_LOG: debug
-          RUST_BACKTRACE: full
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
@@ -47,3 +35,39 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - run: rustup component add clippy
       - run: cargo clippy -- -D warnings
+  test-linux:
+    name: Test Suite (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+        env:
+          MDEVCTL_LOG: debug
+          RUST_BACKTRACE: full
+  test-windows:
+    name: Test Suite (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+        env:
+          MDEVCTL_LOG: debug
+          RUST_BACKTRACE: full
+  test-macos:
+    name: Test Suite (MacOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+        env:
+          MDEVCTL_LOG: debug
+          RUST_BACKTRACE: full
