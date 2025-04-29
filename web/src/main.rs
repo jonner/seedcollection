@@ -499,7 +499,7 @@ async fn redirect_http_to_https(addr: String, ports: Ports) {
         match make_https(host, uri, ports) {
             Ok(uri) => Ok(Redirect::permanent(&uri.to_string())),
             Err(error) => {
-                tracing::warn!(%error, "failed to convert URI to HTTPS");
+                warn!(%error, "failed to convert URI to HTTPS");
                 Err(StatusCode::BAD_REQUEST)
             }
         }
