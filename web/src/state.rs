@@ -1,5 +1,5 @@
 use crate::{
-    EnvConfig,
+    config::{EnvConfig, MailTransport},
     error::Error,
     template_engine,
     util::{FlashMessage, app_url},
@@ -35,12 +35,12 @@ impl SharedState {
             "Sanity checking the mail transport",
         );
         match env.mail_transport {
-            crate::MailTransport::File(_) => Ok(()),
-            crate::MailTransport::LocalSmtp => {
+            crate::config::MailTransport::File(_) => Ok(()),
+            crate::config::MailTransport::LocalSmtp => {
                 let t = AsyncSmtpTransport::<Tokio1Executor>::unencrypted_localhost();
                 t.test_connection().await.map(|_| ())
             }
-            crate::MailTransport::Smtp(ref cfg) => {
+            crate::config::MailTransport::Smtp(ref cfg) => {
                 let t = cfg.build()?;
                 t.test_connection().await.map(|_| ())
             }
@@ -103,19 +103,19 @@ impl SharedState {
     pub async fn send_verification(&self, mut uv: UserVerification) -> Result<(), Error> {
         let email = self.create_verification_email(&mut uv).await?;
         match self.config.mail_transport {
-            crate::MailTransport::File(ref path) => AsyncFileTransport::<Tokio1Executor>::new(path)
+            MailTransport::File(ref path) => AsyncFileTransport::<Tokio1Executor>::new(path)
                 .send(email)
                 .await
                 .map_err(anyhow::Error::from)
                 .map(|_| ()),
-            crate::MailTransport::LocalSmtp => {
+            MailTransport::LocalSmtp => {
                 AsyncSmtpTransport::<Tokio1Executor>::unencrypted_localhost()
                     .send(email)
                     .await
                     .map_err(anyhow::Error::from)
                     .map(|_| ())
             }
-            crate::MailTransport::Smtp(ref cfg) => cfg
+            MailTransport::Smtp(ref cfg) => cfg
                 .build()?
                 .send(email)
                 .await
@@ -143,19 +143,21 @@ impl SharedState {
 
     #[cfg(test)]
     pub(crate) fn test(pool: sqlx::Pool<sqlx::Sqlite>) -> Self {
+        use crate::config::ListenConfig;
+
         let template = template_engine("test", "./templates");
         debug!("Creating test shared app state");
         Self {
             db: Database::from(pool),
             tmpl: template,
             config: EnvConfig {
-                listen: crate::ListenConfig {
+                listen: ListenConfig {
                     host: "127.0.0.1".to_string(),
                     http_port: 8080,
                     https_port: 8443,
                 },
                 database: "test-database.sqlite".to_string(),
-                mail_transport: crate::MailTransport::File("/tmp/".to_string()),
+                mail_transport: MailTransport::File("/tmp/".to_string()),
                 user_registration_enabled: false,
             },
             datadir: ".".into(),
