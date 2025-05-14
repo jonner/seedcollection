@@ -18,9 +18,7 @@ use axum_login::{
 use axum_server::tls_rustls::RustlsConfig;
 use axum_template::engine::Engine;
 use clap::Parser;
-use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
 use minijinja::{Environment, context};
-use serde::Deserialize;
 use state::{AppState, SharedState};
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use time::Duration;
@@ -37,6 +35,7 @@ use tracing_subscriber::filter::EnvFilter;
 use uuid::Uuid;
 
 mod auth;
+mod config;
 mod error;
 mod html;
 mod state;
@@ -114,111 +113,6 @@ pub(crate) struct Cli {
     pub(crate) list_envs: bool,
     #[arg(long, help = "Only serve the app unencrypted with http")]
     pub(crate) nohttps: bool,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct Ports {
-    http: u16,
-    https: u16,
-}
-
-#[derive(Deserialize, PartialEq)]
-struct RemoteSmtpCredentials {
-    username: String,
-    #[serde(default)]
-    passwordfile: String,
-    #[serde(skip)]
-    password: String,
-}
-
-impl std::fmt::Debug for RemoteSmtpCredentials {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RemoteSmtpCredentials")
-            .field("username", &self.username)
-            .field("passwordfile", &self.passwordfile)
-            .finish()
-    }
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-struct RemoteSmtpConfig {
-    url: String,
-    credentials: Option<RemoteSmtpCredentials>,
-    port: Option<u16>,
-    timeout: Option<u64>,
-}
-
-impl RemoteSmtpConfig {
-    fn build(&self) -> Result<AsyncSmtpTransport<Tokio1Executor>> {
-        let mut builder = AsyncSmtpTransport::<Tokio1Executor>::from_url(&self.url)?;
-        if let Some(ref creds) = self.credentials {
-            builder = builder.credentials(Credentials::new(
-                creds.username.clone(),
-                creds.password.clone(),
-            ));
-        }
-        if let Some(port) = self.port {
-            builder = builder.port(port);
-        }
-        if let Some(timeout) = self.timeout {
-            builder = builder.timeout(Some(std::time::Duration::new(timeout, 0)));
-        }
-
-        Ok(builder.build())
-    }
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-enum MailTransport {
-    File(String),
-    LocalSmtp,
-    Smtp(RemoteSmtpConfig),
-}
-
-#[derive(Debug, Deserialize, PartialEq, Clone)]
-struct ListenConfig {
-    host: String,
-    http_port: u16,
-    https_port: u16,
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-struct EnvConfig {
-    listen: ListenConfig,
-    database: String,
-    mail_transport: MailTransport,
-    #[serde(default)]
-    user_registration_enabled: bool,
-}
-
-impl EnvConfig {
-    fn init(&mut self) -> Result<()> {
-        if let MailTransport::Smtp(ref mut cfg) = self.mail_transport {
-            if let Some(ref mut creds) = cfg.credentials {
-                // 'passwordfile' entry in environment config takes priority
-                if !creds.passwordfile.is_empty() {
-                    debug!(
-                        "Looking up SMTP password from file '{}'",
-                        creds.passwordfile
-                    );
-                    creds.password =
-                        std::fs::read_to_string(&creds.passwordfile).with_context(|| {
-                            format!(
-                                "Failed to read smtp password from file '{}'",
-                                creds.passwordfile
-                            )
-                        })?;
-                } else {
-                    debug!("Looking up SMTP password from environment variable");
-                    // If not found, look it up from environment variable
-                    creds.password = std::env::var("SEEDWEB_SMTP_PASSWORD").with_context(
-                        || "Failed to get SMTP password from env variable SEEDWEB_SMTP_PASSWORD",
-                    )?;
-                }
-            }
-        }
-        Ok(())
-    }
 }
 
 #[derive(Clone, Default)]
@@ -363,7 +257,7 @@ async fn main() -> Result<()> {
     let configyaml = tokio::fs::read_to_string(&configfile)
         .await
         .with_context(|| format!("Couldn't read configuration file {:?}", &configfile))?;
-    let mut configs: HashMap<String, EnvConfig> = serde_yaml::from_str(&configyaml)?;
+    let mut configs: HashMap<String, config::EnvConfig> = serde_yaml::from_str(&configyaml)?;
 
     if args.list_envs {
         for key in configs.keys() {
@@ -385,7 +279,7 @@ async fn main() -> Result<()> {
     info!(envarg, ?env);
     let listen = env.listen.clone();
 
-    let ports = Ports {
+    let ports = config::Ports {
         http: listen.http_port,
         https: listen.https_port,
     };
@@ -478,8 +372,8 @@ async fn error_mapper(
     error_response.unwrap_or(response)
 }
 
-async fn redirect_http_to_https(addr: String, ports: Ports) {
-    fn make_https(host: String, uri: Uri, ports: Ports) -> Result<Uri, BoxError> {
+async fn redirect_http_to_https(addr: String, ports: config::Ports) {
+    fn make_https(host: String, uri: Uri, ports: config::Ports) -> Result<Uri, BoxError> {
         let mut parts = uri.into_parts();
 
         parts.scheme = Some(axum::http::uri::Scheme::HTTPS);
@@ -532,116 +426,64 @@ async fn test_app(pool: sqlx::Pool<sqlx::Sqlite>) -> Result<Router> {
     app(state).await
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_parse_config() {
-        let yaml = r#"dev:
-  database: dev-database.sqlite
-  asset_root: "/path/to/assets"
-  mail_transport: !File
-    "/tmp/"
-  listen: !ListenConfig &LISTEN
-    host: "0.0.0.0"
-    http_port: 8080
-    https_port: 8443
-prod:
-  database: prod-database.sqlite
-  mail_transport: !LocalSmtp
-  asset_root: "/path/to/assets2"
-  listen: *LISTEN"#;
-        let configs: HashMap<String, EnvConfig> =
-            serde_yaml::from_str(yaml).expect("Failed to parse yaml");
-        assert_eq!(configs.len(), 2);
-        assert_eq!(
-            configs["dev"],
-            EnvConfig {
-                database: "dev-database.sqlite".to_string(),
-                mail_transport: MailTransport::File("/tmp/".to_string()),
-                listen: ListenConfig {
-                    host: "0.0.0.0".to_string(),
-                    http_port: 8080,
-                    https_port: 8443,
-                },
-                user_registration_enabled: false
-            }
-        );
-        assert_eq!(
-            configs["prod"],
-            EnvConfig {
-                database: "prod-database.sqlite".to_string(),
-                mail_transport: MailTransport::LocalSmtp,
-                listen: ListenConfig {
-                    host: "0.0.0.0".to_string(),
-                    http_port: 8080,
-                    https_port: 8443,
-                },
-                user_registration_enabled: false
-            }
-        );
+#[test]
+fn test_template_key() {
+    struct Case {
+        path: String,
+        method: Method,
+        expected: &'static str,
     }
-
-    #[test]
-    fn test_template_key() {
-        struct Case {
-            path: String,
-            method: Method,
-            expected: &'static str,
-        }
-        let cases = [
-            Case {
-                path: "".to_owned(),
-                method: Method::GET,
-                expected: "_INDEX.html.j2",
-            },
-            Case {
-                path: "/".to_owned(),
-                method: Method::GET,
-                expected: "_INDEX.html.j2",
-            },
-            Case {
-                path: APP_PREFIX.to_owned(),
-                method: Method::GET,
-                expected: "_INDEX.html.j2",
-            },
-            Case {
-                path: APP_PREFIX.to_owned() + "/foo",
-                method: Method::GET,
-                expected: "foo.html.j2",
-            },
-            Case {
-                path: APP_PREFIX.to_owned() + "foo",
-                method: Method::GET,
-                expected: "foo.html.j2",
-            },
-            Case {
-                path: APP_PREFIX.to_owned() + "foo/bar",
-                method: Method::GET,
-                expected: "foo_bar.html.j2",
-            },
-            Case {
-                path: APP_PREFIX.to_owned() + "foo/bar",
-                method: Method::PUT,
-                expected: "foo_bar-PUT.html.j2",
-            },
-            Case {
-                path: APP_PREFIX.to_owned() + "foo/{bar}",
-                method: Method::GET,
-                expected: "foo_{bar}.html.j2",
-            },
-            Case {
-                path: APP_PREFIX.to_owned() + "foo/{bar}",
-                method: Method::PUT,
-                expected: "foo_{bar}-PUT.html.j2",
-            },
-        ];
-        for case in cases {
-            assert_eq!(
-                path_to_template_key(&case.path, &case.method),
-                case.expected
-            );
-        }
+    let cases = [
+        Case {
+            path: "".to_owned(),
+            method: Method::GET,
+            expected: "_INDEX.html.j2",
+        },
+        Case {
+            path: "/".to_owned(),
+            method: Method::GET,
+            expected: "_INDEX.html.j2",
+        },
+        Case {
+            path: APP_PREFIX.to_owned(),
+            method: Method::GET,
+            expected: "_INDEX.html.j2",
+        },
+        Case {
+            path: APP_PREFIX.to_owned() + "/foo",
+            method: Method::GET,
+            expected: "foo.html.j2",
+        },
+        Case {
+            path: APP_PREFIX.to_owned() + "foo",
+            method: Method::GET,
+            expected: "foo.html.j2",
+        },
+        Case {
+            path: APP_PREFIX.to_owned() + "foo/bar",
+            method: Method::GET,
+            expected: "foo_bar.html.j2",
+        },
+        Case {
+            path: APP_PREFIX.to_owned() + "foo/bar",
+            method: Method::PUT,
+            expected: "foo_bar-PUT.html.j2",
+        },
+        Case {
+            path: APP_PREFIX.to_owned() + "foo/{bar}",
+            method: Method::GET,
+            expected: "foo_{bar}.html.j2",
+        },
+        Case {
+            path: APP_PREFIX.to_owned() + "foo/{bar}",
+            method: Method::PUT,
+            expected: "foo_{bar}-PUT.html.j2",
+        },
+    ];
+    for case in cases {
+        assert_eq!(
+            path_to_template_key(&case.path, &case.method),
+            case.expected
+        );
     }
 }

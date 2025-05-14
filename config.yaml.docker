@@ -2,7 +2,7 @@ dev:
   database: /usr/share/seedweb/db/seedcollection.sqlite.dev
   mail_transport: !File "/tmp/"
   asset_root: "/usr/share/seedweb"
-  listen: !ListenConfig &DEFAULT_LISTEN
+  listen: &DEFAULT_LISTEN
     host: "0.0.0.0"
     http_port: 80
     https_port: 443
