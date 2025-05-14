@@ -86,6 +86,7 @@ pub struct EnvConfig {
     pub(crate) mail_transport: MailTransport,
     #[serde(default)]
     pub(crate) user_registration_enabled: bool,
+    pub(crate) public_base_url: String,
 }
 
 impl EnvConfig {
@@ -134,11 +135,13 @@ mod test {
     host: "0.0.0.0"
     http_port: 8080
     https_port: 8443
+  public_base_url: "http://dev.server.com"
 test:
   database: prod-database.sqlite
   mail_transport: !LocalSmtp
   asset_root: "/path/to/assets2"
   listen: *LISTEN
+  public_base_url: "http://test.server.com"
 prod:
   database: prod-database.sqlite
   mail_transport: !Smtp
@@ -148,6 +151,7 @@ prod:
       passwordfile: "/path/to/passwordfile"
     port: 25
     timeout: 61
+  public_base_url: "https://prod.server.com"
   asset_root: "/path/to/assets2"
   listen: *LISTEN"#;
         let configs: HashMap<String, EnvConfig> =
@@ -163,7 +167,8 @@ prod:
                     http_port: 8080,
                     https_port: 8443,
                 },
-                user_registration_enabled: false
+                user_registration_enabled: false,
+                public_base_url: "http://dev.server.com".into(),
             }
         );
         assert_eq!(
@@ -176,7 +181,8 @@ prod:
                     http_port: 8080,
                     https_port: 8443,
                 },
-                user_registration_enabled: false
+                user_registration_enabled: false,
+                public_base_url: "http://test.server.com".into(),
             }
         );
         assert_eq!(
@@ -198,7 +204,8 @@ prod:
                     http_port: 8080,
                     https_port: 8443,
                 },
-                user_registration_enabled: false
+                user_registration_enabled: false,
+                public_base_url: "https://prod.server.com".into(),
             }
         );
     }

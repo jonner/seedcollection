@@ -22,6 +22,11 @@ dev:
     https_port: 8443
   # Whether or not this application will allow users to register new accounts
   user_registration_enabled: true
+  # Set this to the canonical public url for your web application. This will
+  # be the url used to construct urls that are sent via email to users (e.g. 'click
+  # this link to verify your account'). Make sure that your application is actually
+  # reachable at this URL
+  public_base_url: "https://dev.seedcollection.test.com"
 prod:
   database: seedcollection.sqlite.prod
   mail_transport: !Smtp
@@ -38,3 +43,4 @@ prod:
   asset_root: "/path/to/assets"
   listen: *DEFAULT_LISTEN
   user_registration_enabled: true
+  public_base_url: "https://seedcollection.test.com"
