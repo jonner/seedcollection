@@ -2,7 +2,7 @@ dev:
   database: seedcollection.sqlite
   mail_transport: !LocalSmtp
   asset_root: "/path/to/assets"
-  listen: !ListenConfig &DEFAULT_LISTEN
+  listen: &DEFAULT_LISTEN
     host: "0.0.0.0"
     http_port: 8080
     https_port: 8443
