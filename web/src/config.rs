@@ -62,10 +62,20 @@ pub(crate) enum MailTransport {
     Smtp(RemoteSmtpConfig),
 }
 
+fn default_http_port() -> u16 {
+    80
+}
+
+fn default_https_port() -> u16 {
+    443
+}
+
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 pub(crate) struct ListenConfig {
     pub(crate) host: String,
+    #[serde(default = "default_http_port")]
     pub(crate) http_port: u16,
+    #[serde(default = "default_https_port")]
     pub(crate) https_port: u16,
 }
 
@@ -191,5 +201,20 @@ prod:
                 user_registration_enabled: false
             }
         );
+    }
+
+    #[test]
+    fn test_default_ports() {
+        let yaml = r#"dev:
+  database: dev-database.sqlite
+  asset_root: "/path/to/assets"
+  mail_transport: !File "/tmp/"
+  listen:
+    host: "0.0.0.0"
+  public_base_url: "http://dev.server.com""#;
+        let configs: HashMap<String, EnvConfig> =
+            serde_yaml::from_str(yaml).expect("Failed to parse yaml");
+        assert_eq!(configs["dev"].listen.http_port, 80);
+        assert_eq!(configs["dev"].listen.https_port, 443);
     }
 }
