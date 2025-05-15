@@ -61,6 +61,6 @@ INIT_DB ?= $(SEEDWEB_DATABASE_DIR)/seedcollection.sqlite
 INIT_DB_ARGS ?= --download
 prepare-db: ./db/itis/minnesota-itis-input-modified.csv
 	cargo run -p seedctl -- admin -d $(INIT_DB) database init $(INIT_DB_ARGS)
-	python ./db/itis/match-species.py --updatedb -d $^ $(INIT_DB)
+	cargo run -p dbutil -- -d $(INIT_DB) match-species --updatedb $<
 
 .PHONY: check-sqlx-env prepare-db container run-container
