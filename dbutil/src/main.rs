@@ -293,31 +293,26 @@ fn combine_status(old_status: NativeStatus, new_status: NativeStatus) -> NativeS
     NativeStatus::Introduced
 }
 
-fn add_taxa(taxa: &mut HashMap<i32, NativeStatus>, tsn: i32, new_status: NativeStatus) {
-    taxa.entry(tsn)
-        .and_modify(|old_status| *old_status = combine_status(*old_status, new_status))
-        .or_insert(new_status);
-}
-
 async fn handle_taxa_list(
     pool: &SqlitePool,
     reader: &mut csv::Reader<File>,
     print_options: bool,
-) -> anyhow::Result<HashMap<i32, NativeStatus>> {
-    let mut taxa: HashMap<i32, NativeStatus> = HashMap::new();
+    fields: &[&str],
+) -> anyhow::Result<Vec<(i32, csv::StringRecord)>> {
+    let mut taxa: Vec<(i32, csv::StringRecord)> = Vec::new();
     let headers = reader.headers()?.clone();
     debug!("Handling taxa list");
 
     // verify headers are as expected
     let fieldnames: &csv::StringRecord = &headers;
-    if fieldnames.len() != CSV_FIELDS.len() {
+    if fieldnames.len() != fields.len() {
         return Err(anyhow!(
             "Expected {} fields, found {}",
-            CSV_FIELDS.len(),
+            fields.len(),
             fieldnames.len()
         ));
     }
-    for (i, expected_field) in CSV_FIELDS.iter().enumerate() {
+    for (i, expected_field) in fields.iter().enumerate() {
         if let Some(actual_field) = fieldnames.get(i) {
             if *expected_field != actual_field {
                 return Err(anyhow!(
@@ -354,7 +349,6 @@ async fn handle_taxa_list(
         let name2 = get_field(3);
         let ind3 = get_field(4);
         let name3 = get_field(5);
-        let native_status: NativeStatus = get_field(6).parse()?;
 
         if name1.is_empty() && name2.is_empty() {
             warn!("Skipping row with empty genus and species.");
@@ -374,7 +368,7 @@ async fn handle_taxa_list(
         }
 
         if let Some(tsn) = get_taxon(pool, &name1, &name2, &name3, rank).await? {
-            add_taxa(&mut taxa, tsn, native_status);
+            taxa.push((tsn, record));
             continue;
         }
 
@@ -384,7 +378,7 @@ async fn handle_taxa_list(
                 name1, new_genus, new_genus, name2
             );
             if let Some(tsn) = get_taxon(pool, &new_genus, &name2, &name3, rank).await? {
-                add_taxa(&mut taxa, tsn, native_status);
+                taxa.push((tsn, record));
                 continue;
             }
         }
@@ -466,8 +460,22 @@ async fn match_species(
     let csv_file = File::open(specieslist)?;
     let mut csvreader = ReaderBuilder::new().has_headers(true).from_reader(csv_file);
 
-    let taxa_map = handle_taxa_list(&pool, &mut csvreader, show_options).await?;
+    let matched_taxa = handle_taxa_list(&pool, &mut csvreader, show_options, &CSV_FIELDS).await?;
 
+    let taxa_map = matched_taxa
+        .into_iter()
+        .fold(HashMap::new(), |mut acc, val| {
+            if let Some(new_status) = val
+                .1
+                .get(6)
+                .and_then(|val| val.parse::<NativeStatus>().ok())
+            {
+                acc.entry(val.0)
+                    .and_modify(|old_status| *old_status = combine_status(*old_status, new_status))
+                    .or_insert(new_status);
+            }
+            acc
+        });
     if !taxa_map.is_empty() {
         if updatedb {
             println!("Adding {} items to the database...", taxa_map.len());
@@ -489,7 +497,7 @@ async fn match_species(
             println!("Database update complete.");
         } else {
             println!(
-                "Database update not requested. Matched {} taxa. Run with `--updatedb` to insert update the database.",
+                "Database update not requested. Matched {} taxa. Run with `--updatedb` to update the database.",
                 taxa_map.len()
             );
         }
