@@ -59,8 +59,9 @@ endif
 ##################
 INIT_DB ?= $(SEEDWEB_DATABASE_DIR)/seedcollection.sqlite
 INIT_DB_ARGS ?= --download
-prepare-db: ./db/itis/minnesota-itis-input-modified.csv
+prepare-db: ./db/itis/minnesota-native-status.csv ./db/germination/germination-data.csv
 	cargo run -p seedctl -- admin -d $(INIT_DB) database init $(INIT_DB_ARGS)
-	cargo run -p dbutil -- -d $(INIT_DB) match-species --updatedb $<
+	cargo run -p dbutil -- native-status -d $(INIT_DB) --updatedb ./db/itis/minnesota-native-status.csv
+	cargo run -p dbutil -- germination-codes -d $(INIT_DB) --updatedb ./db/germination/germination-data.csv
 
 .PHONY: check-sqlx-env prepare-db container run-container

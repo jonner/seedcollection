@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use csv::ReaderBuilder;
 use indicatif::ProgressIterator;
 use sqlx::{Row, SqlitePool};
@@ -42,7 +42,7 @@ impl Display for NativeStatus {
         write!(f, "{c}")
     }
 }
-const CSV_FIELDS: [&str; 9] = [
+const NATIVE_STATUS_FIELDS: [&str; 9] = [
     "X",
     "genus",
     "X",
@@ -52,6 +52,10 @@ const CSV_FIELDS: [&str; 9] = [
     "native_status",
     "rarity_status",
     "invasive_status",
+];
+
+const GERMINATION_FIELDS: [&str; 7] = [
+    "X", "genus", "X", "species", "subttype", "subtaxa", "germcode",
 ];
 
 // --- Structs for Database Rows (derive sqlx::FromRow) ---
@@ -407,60 +411,148 @@ async fn handle_taxa_list(
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
-struct Args {
-    #[clap(short, long, default_value = "ITIS.sqlite")]
-    db: String,
+struct Options {
     #[command(subcommand)]
     command: Commands,
 }
 
+#[derive(Debug, Args)]
+struct CommonArgs {
+    #[clap(short, long, default_value = "ITIS.sqlite")]
+    db: String,
+    specieslist: String,
+    #[clap(long)]
+    updatedb: bool,
+    #[clap(long)]
+    show_options: bool,
+}
+
 #[derive(Debug, Subcommand)]
 enum Commands {
-    MatchSpecies {
-        specieslist: String,
-        #[clap(long)]
-        updatedb: bool,
-        #[clap(long)]
-        show_options: bool,
+    NativeStatus {
+        #[command(flatten)]
+        args: CommonArgs,
+    },
+    GerminationCodes {
+        #[command(flatten)]
+        args: CommonArgs,
     },
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
-    let args = Args::parse();
+    let options = Options::parse();
 
-    match args.command {
-        Commands::MatchSpecies {
-            specieslist,
-            updatedb,
-            show_options,
-        } => match_species(&args.db, &specieslist, updatedb, show_options).await,
+    match options.command {
+        Commands::NativeStatus { args } => {
+            handle_native_list(
+                &args.db,
+                &args.specieslist,
+                args.updatedb,
+                args.show_options,
+            )
+            .await
+        }
+        Commands::GerminationCodes { args } => {
+            handle_germination_list(
+                &args.db,
+                &args.specieslist,
+                args.updatedb,
+                args.show_options,
+            )
+            .await
+        }
     }
 }
 
-async fn match_species(
+#[derive(Debug, sqlx::FromRow)]
+struct GerminationRow {
+    germid: i64,
+    code: String,
+}
+
+async fn handle_germination_list(
     db: &str,
     specieslist: &str,
     updatedb: bool,
     show_options: bool,
 ) -> anyhow::Result<()> {
-    let db_url = format!("sqlite://{}?mode=rwc", db); // Ensure create if not exists for `updatedb`
-    if !Path::new(db).exists() && !updatedb {
-        // only error if not updating and not exists
-        return Err(anyhow!("Database file not found: {}", db));
+    let (pool, matched_taxa) =
+        common_setup(db, specieslist, updatedb, show_options, &GERMINATION_FIELDS).await?;
+
+    let germination_rows: Vec<GerminationRow> =
+        sqlx::query_as("SELECT germid, code from sc_germination_codes")
+            .fetch_all(&pool)
+            .await?;
+    debug!(?germination_rows);
+    let germination_map: HashMap<String, i64> = germination_rows
+        .into_iter()
+        .map(|row| (row.code, row.germid))
+        .collect();
+    debug!(?germination_map);
+    let germ_codes = matched_taxa
+        .into_iter()
+        .map(|(tsn, csvrecord)| {
+            let code = csvrecord
+                .get(6)
+                .ok_or_else(|| anyhow!("CSV file doesn't have germination code field for {tsn}"))?;
+            let germid = germination_map.get(code).ok_or_else(|| {
+                anyhow!("Failed to find database id for germination code '{code}'")
+            })?;
+            debug!("Found germination id {germid} for taxon {tsn}");
+            Ok((tsn, germid))
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+
+    if !germ_codes.is_empty() {
+        if updatedb {
+            println!("Adding {} items to the database...", germ_codes.len());
+            let mut tx = pool.begin().await?; // Start transaction
+
+            for (tsn, germid) in germ_codes.into_iter().progress() {
+                // it's possible for multiple taxa in the input list to map
+                // to a single taxon in the database, so we may get constraint
+                // violations here if they both map to the same taxon id and
+                // germination id, thus the "OR IGNORE".
+                sqlx::query(
+                    "INSERT OR IGNORE INTO sc_taxon_germination (tsn, germid) VALUES (?1, ?2)",
+                )
+                .bind(tsn)
+                .bind(germid)
+                .execute(&mut *tx) // Use the transaction
+                .await?;
+            }
+            tx.commit().await?; // Commit transaction
+            println!("Database update complete.");
+        } else {
+            println!(
+                "Database update not requested. Matched {} taxa. Run with `--updatedb` to update the database.",
+                germ_codes.len()
+            );
+        }
+    } else {
+        println!("No taxa data to update in the database.");
     }
-    if !Path::new(&specieslist).exists() {
-        return Err(anyhow!("Species list CSV file not found: {}", specieslist));
-    }
 
-    let pool = SqlitePool::connect(&db_url).await?;
-    debug!("Connected to database: {}", db);
+    pool.close().await;
+    Ok(())
+}
 
-    let csv_file = File::open(specieslist)?;
-    let mut csvreader = ReaderBuilder::new().has_headers(true).from_reader(csv_file);
-
-    let matched_taxa = handle_taxa_list(&pool, &mut csvreader, show_options, &CSV_FIELDS).await?;
+async fn handle_native_list(
+    db: &str,
+    specieslist: &str,
+    updatedb: bool,
+    show_options: bool,
+) -> anyhow::Result<()> {
+    let (pool, matched_taxa) = common_setup(
+        db,
+        specieslist,
+        updatedb,
+        show_options,
+        &NATIVE_STATUS_FIELDS,
+    )
+    .await?;
 
     let taxa_map = matched_taxa
         .into_iter()
@@ -507,4 +599,27 @@ async fn match_species(
 
     pool.close().await;
     Ok(())
+}
+
+async fn common_setup(
+    db: &str,
+    specieslist: &str,
+    updatedb: bool,
+    show_options: bool,
+    fields: &[&str],
+) -> Result<(sqlx::Pool<sqlx::Sqlite>, Vec<(i32, csv::StringRecord)>), anyhow::Error> {
+    let db_url = format!("sqlite://{}?mode=rwc", db);
+    if !Path::new(db).exists() && !updatedb {
+        // only error if not updating and not exists
+        return Err(anyhow!("Database file not found: {}", db));
+    }
+    if !Path::new(&specieslist).exists() {
+        return Err(anyhow!("Species list CSV file not found: {}", specieslist));
+    }
+    let pool = SqlitePool::connect(&db_url).await?;
+    debug!("Connected to database: {}", db);
+    let csv_file = File::open(specieslist)?;
+    let mut csvreader = ReaderBuilder::new().has_headers(true).from_reader(csv_file);
+    let matched_taxa = handle_taxa_list(&pool, &mut csvreader, show_options, fields).await?;
+    Ok((pool, matched_taxa))
 }
