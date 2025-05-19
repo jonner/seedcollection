@@ -14,10 +14,12 @@ use std::str::FromStr;
 use strum_macros::{Display, EnumIter, FromRepr};
 use tracing::debug;
 
-pub(crate) const KINGDOM_PLANTAE: i64 = 3;
+pub const KINGDOM_PLANTAE: i64 = 3;
 
 /// The taxonomic rank of a taxon
-#[derive(Debug, Clone, Copy, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq)]
+#[derive(
+    Debug, Clone, Copy, Display, EnumIter, FromRepr, Deserialize, Serialize, PartialEq, Eq, Hash,
+)]
 pub enum Rank {
     Unknown = 0,
     Kingdom = 10,
@@ -60,7 +62,7 @@ impl FromStr for Rank {
 }
 
 /// The native status of a taxon
-#[derive(Debug, Display, FromRepr, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Display, FromRepr, Serialize, Deserialize, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum NativeStatus {
     /// The taxon is native to the area
     #[serde(alias = "N")]
@@ -85,7 +87,7 @@ impl FromStr for NativeStatus {
 }
 
 /// Germination information for the seeds of a particular taxon
-#[derive(FromRow, Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(FromRow, Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Hash)]
 pub struct Germination {
     /// A unique ID that identifies this germination code in the database
     #[sqlx(rename = "germid")]
@@ -300,7 +302,7 @@ pub fn quickfind(taxon: &str) -> Option<DynFilterPart> {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone, Hash, Eq)]
 /// An object representing a particular taxon from the database
 pub struct Taxon {
     /// A unique ID that identifies this taxon in the database

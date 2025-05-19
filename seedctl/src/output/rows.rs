@@ -336,7 +336,7 @@ impl TaxonRow {
             rank: taxon.rank,
             name: taxon.complete_name.clone(),
             common_names: taxon.vernaculars.clone(),
-            mn_status: taxon.native_status.clone(),
+            mn_status: taxon.native_status,
         }
     }
 }
@@ -401,7 +401,7 @@ impl TaxonRowDetails {
             rank: taxon.rank,
             name: taxon.complete_name.clone(),
             common_names: taxon.vernaculars.clone(),
-            mn_status: taxon.native_status.clone(),
+            mn_status: taxon.native_status,
             germination: taxon.germination.clone(),
             samples: samples
                 .iter()

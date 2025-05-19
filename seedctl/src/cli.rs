@@ -449,7 +449,31 @@ pub(crate) enum DatabaseCommands {
         #[arg(long, help = "Download a new database from the ITIS website")]
         download: bool,
     },
+    #[command(about = "Update the native status in the database for a list of species")]
+    UpdateNativeStatus {
+        #[command(flatten)]
+        args: CommonSpeciesListArgs,
+    },
+    #[command(about = "Update the germination information for a list of species in the database")]
+    UpdateGerminationInfo {
+        #[command(flatten)]
+        args: CommonSpeciesListArgs,
+    },
 }
+
+#[derive(Debug, Args)]
+pub(crate) struct CommonSpeciesListArgs {
+    #[clap[help="A list of species information in CSV format"]]
+    pub(crate) specieslist: PathBuf,
+    #[clap(long, help = "Update the database, don't just do a dry run")]
+    pub(crate) updatedb: bool,
+    #[clap(
+        long,
+        help = "Print potential database taxon matches to stdout if an exact match cannot be found (may be very verbose)"
+    )]
+    pub(crate) show_options: bool,
+}
+
 #[derive(Subcommand, Debug)]
 pub(crate) enum GerminationCommands {
     #[command(about = "List all germination codes")]
