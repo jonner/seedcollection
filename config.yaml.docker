@@ -7,6 +7,7 @@ dev:
     http_port: 80
     https_port: 443
   user_registration_enabled: true
+  public_base_url: "https://localhost"
 prod:
   database: /usr/share/seedweb/db/seedcollection.sqlite
   asset_root: "/usr/share/seedweb"
@@ -17,4 +18,5 @@ prod:
       username: "jonathon@quotidian.org"
   listen: *DEFAULT_LISTEN
   user_registration_enabled: false
+  public_base_url: "https://localhost"
 
