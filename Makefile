@@ -53,6 +53,9 @@ ifndef DATABASE_URL
 	$(error Set DATABASE_URL to the location of the database before running)
 endif
 
+generate-completions:
+	cargo run -p seedctl -- generate-completions bash > ~/.local/share/bash-completion/completions/seedctl
+
 
 ##################
 # DATABASE SETUP #

@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use anyhow::{Result, anyhow};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use libseed::{
     Error::DatabaseError,
     core::{
@@ -27,6 +27,12 @@ mod commands;
 mod config;
 mod output;
 mod prompt;
+
+fn generate_completions(shell: clap_complete::Shell) {
+    let mut cli = Cli::command();
+    let name = cli.get_name().to_string();
+    clap_complete::generate(shell, &mut cli, name, &mut std::io::stdout())
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -75,6 +81,12 @@ async fn main() -> Result<()> {
             println!("Logged out");
             return Ok(());
         }
+        Commands::GenerateCompletions { shell } => {
+            return {
+                generate_completions(shell);
+                Ok(())
+            };
+        }
         _ => (),
     };
 
@@ -84,7 +96,10 @@ async fn main() -> Result<()> {
 
     match args.command {
         // already handled above
-        Commands::Login { .. } | Commands::Logout | Commands::Admin { .. } => Ok(()),
+        Commands::Login { .. }
+        | Commands::Logout
+        | Commands::Admin { .. }
+        | Commands::GenerateCompletions { .. } => Ok(()),
         Commands::Status => {
             println!("Using database '{}'", cfg.database.to_string_lossy());
             println!("Logged in as user '{}'", cfg.username);
