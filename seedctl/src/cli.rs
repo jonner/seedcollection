@@ -80,6 +80,12 @@ pub(crate) enum Commands {
         )]
         database: Option<PathBuf>,
     },
+    #[command(
+        about = "Generate shell completions",
+        after_help = "Generate a completion script for the given shell",
+        hide(true)
+    )]
+    GenerateCompletions { shell: clap_complete::Shell },
 }
 
 #[derive(Subcommand, Debug)]
