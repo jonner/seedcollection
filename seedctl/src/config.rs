@@ -122,7 +122,7 @@ impl Config {
     }
 }
 
-pub async fn ensure_config_dir() -> Result<PathBuf, Error> {
+pub(crate) async fn ensure_config_dir() -> Result<PathBuf, Error> {
     let dirs = directories::ProjectDirs::from("org", "quotidian", "seedctl").ok_or_else(|| {
         Error::SystemConfiguration("Failed to get directory for config files".into())
     })?;
@@ -131,7 +131,7 @@ pub async fn ensure_config_dir() -> Result<PathBuf, Error> {
     Ok(config_dir.to_path_buf())
 }
 
-pub async fn config_file() -> Result<PathBuf, Error> {
+pub(crate) async fn config_file() -> Result<PathBuf, Error> {
     let mut dir = ensure_config_dir().await?;
     dir.push("config");
     Ok(dir)
