@@ -1,5 +1,5 @@
 use crate::{
-    cli::GerminationCommands,
+    cli::{GerminationCommands, OutputOptions},
     output::{self, rows::GerminationRow},
 };
 
@@ -86,7 +86,7 @@ async fn modify_germination_code(
 
 async fn list_germination_codes(
     db: &Database,
-    output: crate::OutputOptions,
+    output: OutputOptions,
 ) -> std::result::Result<(), anyhow::Error> {
     let codes = Germination::load_all(db).await?;
     let str = output::format_seq(codes.iter().map(GerminationRow::new), output.format)?;
