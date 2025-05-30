@@ -4,12 +4,6 @@ use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use tracing::debug;
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct Ports {
-    pub(crate) http: u16,
-    pub(crate) https: u16,
-}
-
 #[derive(Debug, Deserialize)]
 pub(crate) struct RemoteSmtpCredentials {
     pub(crate) username: String,
@@ -66,17 +60,11 @@ fn default_http_port() -> u16 {
     80
 }
 
-fn default_https_port() -> u16 {
-    443
-}
-
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 pub(crate) struct ListenConfig {
     pub(crate) host: String,
     #[serde(default = "default_http_port")]
-    pub(crate) http_port: u16,
-    #[serde(default = "default_https_port")]
-    pub(crate) https_port: u16,
+    pub(crate) port: u16,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -134,8 +122,7 @@ mod test {
   mail_transport: !File "/tmp/"
   listen: &LISTEN
     host: "0.0.0.0"
-    http_port: 8080
-    https_port: 8443
+    port: 8080
   public_base_url: "http://dev.server.com"
 test:
   database: prod-database.sqlite
@@ -165,8 +152,7 @@ prod:
                 mail_transport: MailTransport::File("/tmp/".to_string()),
                 listen: ListenConfig {
                     host: "0.0.0.0".to_string(),
-                    http_port: 8080,
-                    https_port: 8443,
+                    port: 8080,
                 },
                 user_registration_enabled: false,
                 public_base_url: "http://dev.server.com".into(),
@@ -179,8 +165,7 @@ prod:
                 mail_transport: MailTransport::LocalSmtp,
                 listen: ListenConfig {
                     host: "0.0.0.0".to_string(),
-                    http_port: 8080,
-                    https_port: 8443,
+                    port: 8080,
                 },
                 user_registration_enabled: false,
                 public_base_url: "http://test.server.com".into(),
@@ -202,8 +187,7 @@ prod:
                 }),
                 listen: ListenConfig {
                     host: "0.0.0.0".to_string(),
-                    http_port: 8080,
-                    https_port: 8443,
+                    port: 8080,
                 },
                 user_registration_enabled: false,
                 public_base_url: "https://prod.server.com".into(),
@@ -222,7 +206,6 @@ prod:
   public_base_url: "http://dev.server.com""#;
         let configs: HashMap<String, EnvConfig> =
             serde_yaml::from_str(yaml).expect("Failed to parse yaml");
-        assert_eq!(configs["dev"].listen.http_port, 80);
-        assert_eq!(configs["dev"].listen.https_port, 443);
+        assert_eq!(configs["dev"].listen.port, 80);
     }
 }
