@@ -8,7 +8,6 @@ endif
 SEEDWEB_DATABASE_DIR ?= ./db/itis
 
 SEEDWEB_HTTP_PORT ?= 8080
-SEEDWEB_HTTPS_PORT ?= 8443
 SEEDWEB_LOG ?= debug
 
 update-container: Containerfile
@@ -23,7 +22,7 @@ RUN_CONTAINER=$(CONTAINERCMD) run --detach \
 	--tty \
 	--secret seedweb-smtp-password,type=env,target=SEEDWEB_SMTP_PASSWORD \
 	--env SEEDWEB_LOG=${SEEDWEB_LOG} \
-	-p ${SEEDWEB_HTTP_PORT}:80 -p ${SEEDWEB_HTTPS_PORT}:443 \
+	-p ${SEEDWEB_HTTP_PORT}:80 \
 	-v ${SEEDWEB_DATABASE_DIR}:/usr/share/seedweb/db:Z \
 	seedweb:latest $(SEEDWEB_CMD)
 

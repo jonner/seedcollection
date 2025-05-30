@@ -2,26 +2,24 @@ use crate::error::Error;
 use anyhow::{Context, Result, anyhow};
 use auth::AuthSession;
 use axum::{
-    BoxError, RequestPartsExt, Router,
+    RequestPartsExt, Router,
     extract::{FromRequestParts, MatchedPath, State, rejection::MatchedPathRejection},
-    handler::HandlerWithoutStateExt,
-    http::{HeaderMap, HeaderValue, Method, Request, StatusCode, Uri, request::Parts},
+    http::{HeaderMap, HeaderValue, Method, Request, request::Parts},
     middleware::{self, Next},
     response::{IntoResponse, Redirect, Response},
     routing::get,
 };
-use axum_extra::extract::Host;
 use axum_login::{
     AuthManagerLayerBuilder,
     tower_sessions::{Expiry, SessionManagerLayer},
 };
-use axum_server::tls_rustls::RustlsConfig;
 use axum_template::engine::Engine;
 use clap::Parser;
 use minijinja::{Environment, context};
 use state::{AppState, SharedState};
-use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use time::Duration;
+use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::{
     ServiceBuilderExt,
@@ -279,51 +277,38 @@ async fn main() -> Result<()> {
     info!(envarg, ?env);
     let listen = env.listen.clone();
 
-    let ports = config::Ports {
-        http: listen.http_port,
-        https: listen.https_port,
-    };
-
     let app = app(Arc::new(SharedState::new(envarg, env, datadir).await?)).await?;
-    let handle = axum_server::Handle::new();
-    #[cfg(unix)]
-    tokio::spawn(shutdown_on_sigterm(handle.clone()));
 
-    if args.nohttps {
-        let addr: SocketAddr = format!("{}:{}", listen.host, ports.http).parse().unwrap();
-        axum_server::bind(addr)
-            .handle(handle)
-            .serve(app.into_make_service())
-            .await?;
-    } else {
-        tokio::spawn(redirect_http_to_https(listen.host.clone(), ports));
-
-        let certdir = configdir.join("certs");
-        let tlsconfig =
-            RustlsConfig::from_pem_file(certdir.join("server.crt"), certdir.join("server.key"))
-                .await
-                .with_context(
-                    || "Unable to load TLS key and certificate. See certs/README for more info",
-                )?;
-
-        let addr: SocketAddr = format!("{}:{}", listen.host, listen.https_port).parse()?;
-        info!("Listening on https://{}", addr);
-        axum_server::bind_rustls(addr, tlsconfig)
-            .handle(handle)
-            .serve(app.into_make_service())
-            .await?;
-    }
+    let listener = TcpListener::bind((listen.host, listen.port)).await?;
+    axum::serve(listener, app.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
     Ok(())
 }
 
-#[cfg(unix)]
-async fn shutdown_on_sigterm(handle: axum_server::Handle) {
-    use tokio::signal::unix::*;
-    signal(SignalKind::terminate())
-        .expect("Failed to install signal handler")
-        .recv()
-        .await;
-    handle.graceful_shutdown(None);
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        use tokio::signal::unix::*;
+        signal(SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
 
 async fn error_mapper(
@@ -370,46 +355,6 @@ async fn error_mapper(
     });
 
     error_response.unwrap_or(response)
-}
-
-async fn redirect_http_to_https(addr: String, ports: config::Ports) {
-    fn make_https(host: String, uri: Uri, ports: config::Ports) -> Result<Uri, BoxError> {
-        let mut parts = uri.into_parts();
-
-        parts.scheme = Some(axum::http::uri::Scheme::HTTPS);
-
-        if parts.path_and_query.is_none() {
-            parts.path_and_query = Some("/".parse().unwrap());
-        }
-
-        let https_host = host.replace(&ports.http.to_string(), &ports.https.to_string());
-        parts.authority = Some(https_host.parse()?);
-
-        Ok(Uri::from_parts(parts)?)
-    }
-
-    let redirect = move |Host(host): Host, uri: Uri| async move {
-        info!("Redirecting {uri:?} to https");
-        match make_https(host, uri, ports) {
-            Ok(uri) => Ok(Redirect::permanent(&uri.to_string())),
-            Err(error) => {
-                warn!(%error, "failed to convert URI to HTTPS");
-                Err(StatusCode::BAD_REQUEST)
-            }
-        }
-    };
-
-    let addr: SocketAddr = format!("{}:{}", addr, ports.http).parse().unwrap();
-    let listener = tokio::net::TcpListener::bind(addr)
-        .await
-        .unwrap_or_else(|_| panic!("Failed to listen on address {addr:?}"));
-    info!(
-        "Redirector listening on http://{}",
-        listener.local_addr().unwrap()
-    );
-    axum::serve(listener, redirect.into_make_service())
-        .await
-        .unwrap();
 }
 
 async fn root() -> impl IntoResponse {

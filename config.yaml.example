@@ -15,11 +15,10 @@ dev:
   asset_root: "/path/to/assets"
   # The address that the application should listen for incoming connections
   listen: &DEFAULT_LISTEN
+    # interface to listen on
     host: "0.0.0.0"
     # port to listen for http connections, defaults to port 80
-    http_port: 8080
-    # port to listen for https connections, defaults to port 443
-    https_port: 8443
+    port: 8080
   # Whether or not this application will allow users to register new accounts
   user_registration_enabled: true
   # Set this to the canonical public url for your web application. This will

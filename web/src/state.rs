@@ -157,8 +157,7 @@ impl SharedState {
             config: EnvConfig {
                 listen: ListenConfig {
                     host: "127.0.0.1".to_string(),
-                    http_port: 8080,
-                    https_port: 8443,
+                    port: 8080,
                 },
                 database: "test-database.sqlite".to_string(),
                 mail_transport: MailTransport::File("/tmp/".to_string()),
