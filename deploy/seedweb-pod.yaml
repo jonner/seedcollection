@@ -1,0 +1,71 @@
+# NOTE: this yaml file should be processed with `envsubst` to provide values for
+# the ${variables} below
+kind: Secret
+apiVersion: v1
+metadata:
+  name: seedweb-smtp-password
+data:
+  seedweb-smtp-password: ${SEEDWEB_SMTP_PASSWORD}
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: seedweb
+  labels:
+    app: seedweb
+spec:
+  containers:
+    - name: app
+      args:
+        - --env
+        - ${SEEDWEB_ENV}
+      env:
+        - name: SEEDWEB_LOG
+          value: ${SEEDWEB_LOG}
+        - name: SEEDWEB_SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: "seedweb-smtp-password"
+              name: "seedweb-smtp-password"
+      envFrom:
+        - name: SEEDWEB_SMTP_PASSWORD
+      image: localhost/seedweb:latest
+      ports:
+        - containerPort: 8081
+      tty: true
+      volumeMounts:
+        - name: seedweb-db-vol
+          mountPath: /usr/share/seedweb/db:Z
+
+    - name: proxy
+      image: docker.io/library/caddy:latest
+      ports:
+        - containerPort: 443
+          hostPort: 8443
+        - containerPort: 80
+          hostPort: 8080
+      volumeMounts:
+        - name: caddyfile-volume
+          mountPath: /etc/caddy/Caddyfile:Z
+          readOnly: true
+        - name: caddy-data-volume
+          mountPath: /data:Z
+        - name: caddy-config-volume
+          mountPath: /config:Z
+  volumes:
+    - name: seedweb-db-vol
+      hostPath:
+        path: ${SEEDWEB_DATABASE_DIR}
+        type: Directory
+    - name: caddyfile-volume
+      hostPath:
+        path: ./deploy/caddy/Caddyfile
+        type: File
+    - name: caddy-data-volume
+      hostPath:
+        path: ./deploy/caddy/local-data
+        type: DirectoryOrCreate
+    - name: caddy-config-volume
+      hostPath:
+        path: ./deploy/caddy/local-config
+        type: DirectoryOrCreate
