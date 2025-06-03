@@ -4,7 +4,7 @@ dev:
   asset_root: "/usr/share/seedweb"
   listen: &DEFAULT_LISTEN
     host: "0.0.0.0"
-    port: 80
+    port: 8081
   user_registration_enabled: true
   public_base_url: "https://localhost"
 prod:

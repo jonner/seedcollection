@@ -1,0 +1,22 @@
+(common_logging) {
+    log {
+        output stdout
+        format console # easy to read in `podman logs`
+        level INFO
+    }
+}
+
+# redirect http requests to https
+http://localhost {
+	import common_logging
+	# Need to redirect to the public port, which is assumed to be 8443
+	redir https://localhost:8443{uri} permanent
+}
+
+https://localhost {
+	import common_logging
+	# generate a self-signed cert for local development
+	tls internal
+	# Reverse proxy to your web application
+	reverse_proxy localhost:8081
+}
