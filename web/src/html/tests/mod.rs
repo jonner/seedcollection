@@ -1,4 +1,4 @@
-use crate::{Result, auth::Credentials, test_app, util::app_url};
+use crate::{Result, test_app, util::app_url};
 use axum::{
     Router,
     body::{Body, Bytes, HttpBody},
@@ -41,11 +41,11 @@ where
 
 /// logs the user into the app and returns a cookie value that can be used in subsequent requests
 async fn login(app: &mut Router) -> Result<String> {
-    let creds = serde_urlencoded::to_string(Credentials {
-        username: "testuser".to_string(),
-        password: "topsecret123".to_string(),
-        next: Some("url".to_string()),
-    })?;
+    let creds = serde_urlencoded::to_string([
+        ("username", "testuser"),
+        ("password", "topsecret123"),
+        ("next", "url"),
+    ])?;
     let request = Request::builder()
         .uri(app_url("/auth/login"))
         .method("POST")

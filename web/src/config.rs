@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
+use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use tracing::debug;
 
@@ -9,21 +10,20 @@ pub(crate) struct Ports {
     pub(crate) https: u16,
 }
 
-#[derive(Deserialize, PartialEq)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct RemoteSmtpCredentials {
     pub(crate) username: String,
     #[serde(default)]
     pub(crate) passwordfile: String,
     #[serde(skip)]
-    pub(crate) password: String,
+    pub(crate) password: SecretString,
 }
 
-impl std::fmt::Debug for RemoteSmtpCredentials {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RemoteSmtpCredentials")
-            .field("username", &self.username)
-            .field("passwordfile", &self.passwordfile)
-            .finish()
+impl PartialEq for RemoteSmtpCredentials {
+    fn eq(&self, other: &Self) -> bool {
+        self.username == other.username
+            && self.passwordfile == other.passwordfile
+            && self.password.expose_secret() == other.password.expose_secret()
     }
 }
 
@@ -41,7 +41,7 @@ impl RemoteSmtpConfig {
         if let Some(ref creds) = self.credentials {
             builder = builder.credentials(Credentials::new(
                 creds.username.clone(),
-                creds.password.clone(),
+                creds.password.expose_secret().to_string(),
             ));
         }
         if let Some(port) = self.port {
@@ -99,19 +99,20 @@ impl EnvConfig {
                         "Looking up SMTP password from file '{}'",
                         creds.passwordfile
                     );
-                    creds.password =
-                        std::fs::read_to_string(&creds.passwordfile).with_context(|| {
+                    creds.password = std::fs::read_to_string(&creds.passwordfile)
+                        .with_context(|| {
                             format!(
                                 "Failed to read smtp password from file '{}'",
                                 creds.passwordfile
                             )
-                        })?;
+                        })?
+                        .into();
                 } else {
                     debug!("Looking up SMTP password from environment variable");
                     // If not found, look it up from environment variable
                     creds.password = std::env::var("SEEDWEB_SMTP_PASSWORD").with_context(
                         || "Failed to get SMTP password from env variable SEEDWEB_SMTP_PASSWORD",
-                    )?;
+                    )?.into();
                 }
             }
         }
@@ -194,7 +195,7 @@ prod:
                     credentials: Some(RemoteSmtpCredentials {
                         username: "user123".into(),
                         passwordfile: "/path/to/passwordfile".into(),
-                        password: String::new()
+                        password: Default::default()
                     }),
                     port: Some(25),
                     timeout: Some(61)

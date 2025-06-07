@@ -20,6 +20,7 @@ use libseed::{
     user::{User, UserStatus, verification::UserVerification},
 };
 use minijinja::context;
+use secrecy::{ExposeSecret, SecretString};
 use serde::Deserialize;
 use tracing::debug;
 
@@ -34,12 +35,12 @@ pub(crate) fn router() -> Router<AppState> {
         .route("/register", get(show_register).post(register_user))
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct RegisterParams {
     pub(crate) username: String,
     pub(crate) email: String,
-    pub(crate) password: String,
-    pub(crate) passwordconfirm: String,
+    pub(crate) password: SecretString,
+    pub(crate) passwordconfirm: SecretString,
 }
 
 #[derive(thiserror::Error, Debug, Default)]
@@ -58,11 +59,11 @@ impl RegisterParams {
         if self.email.is_empty() {
             r.issues.push("Email address is not valid".to_string())
         }
-        if self.password.len() < PASSWORD_MIN_LENGTH as usize {
+        if self.password.expose_secret().len() < PASSWORD_MIN_LENGTH as usize {
             r.issues.push(format!(
                 "Password must be at least {PASSWORD_MIN_LENGTH} characters long"
             ))
-        } else if self.password != self.passwordconfirm {
+        } else if self.password.expose_secret() != self.passwordconfirm.expose_secret() {
             r.issues.push("Passwords don't match".to_string())
         }
         match r.issues.is_empty() {
@@ -80,7 +81,7 @@ async fn register_user(
         return Err(Error::UserRegistrationDisabled);
     }
     params.validate()?;
-    let password_hash = User::hash_password(&params.password)?;
+    let password_hash = User::hash_password(params.password.expose_secret())?;
     let mut user = User::new(
         params.username,
         params.email,

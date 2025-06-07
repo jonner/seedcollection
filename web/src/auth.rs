@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use axum::{extract::FromRequestParts, http::request::Parts};
 use axum_login::{AuthUser, AuthnBackend, UserId};
 use libseed::{core::database::Database, empty_string_as_none, user::User};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use std::ops::{Deref, DerefMut};
 
@@ -51,11 +52,11 @@ impl AuthUser for SqliteUser {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize)]
 /// Form fields that are submitted in order to log into the web application
 pub(crate) struct Credentials {
     pub(crate) username: String,
-    pub(crate) password: String,
+    pub(crate) password: SecretString,
     /// An optional uri to redirect the user to after a successful login.
     #[serde(deserialize_with = "empty_string_as_none")]
     pub(crate) next: Option<String>,
@@ -91,7 +92,7 @@ impl AuthnBackend for SqliteAuthBackend {
         tracing::info!(?user, "Got user");
         match user {
             Some(user) => user
-                .verify_password(&credentials.password)
+                .verify_password(credentials.password.expose_secret())
                 .map(|_| Some(user))
                 .map_err(|e| e.into()),
             None => Ok(None),
