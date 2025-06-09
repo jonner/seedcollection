@@ -11,7 +11,7 @@ use test_log::test;
     )
 ))]
 async fn test_list_projects(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app");
+    let mut app = test_app(pool).await.expect("failed to create test app").0;
     // first log in:
     let cookie = login(&mut app).await.expect("Failed to log in");
 
@@ -37,7 +37,7 @@ async fn test_list_projects(pool: Pool<Sqlite>) {
     )
 ))]
 async fn test_new_project(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app");
+    let mut app = test_app(pool).await.expect("failed to create test app").0;
     // first log in:
     let cookie = login(&mut app).await.expect("Failed to log in");
 

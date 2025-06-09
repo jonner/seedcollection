@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
 use secrecy::{ExposeSecret, SecretString};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use tracing::debug;
 
 #[derive(Debug, Deserialize)]
@@ -59,27 +59,58 @@ pub(crate) enum MailTransport {
     Smtp(RemoteSmtpConfig),
 }
 
-fn default_http_port() -> u16 {
-    80
-}
-
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ListenConfig {
     pub(crate) host: String,
-    #[serde(default = "default_http_port")]
     pub(crate) port: u16,
+}
+
+const DEFAULT_HTTP_PORT: u16 = 80;
+const DEFAULT_HOST: &str = "0.0.0.0";
+fn default_listen() -> ListenConfig {
+    ListenConfig {
+        host: DEFAULT_HOST.to_string(),
+        port: DEFAULT_HTTP_PORT,
+    }
+}
+
+// This handles the case where the `listen` block is PRESENT, but a field may be missing.
+fn deserialize_listen_with_default_port<'de, D>(deserializer: D) -> Result<ListenConfig, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    // Define a helper struct that mirrors ListenConfig but with an optional port or host.
+    #[derive(Deserialize)]
+    struct PartialListenConfig {
+        host: Option<String>,
+        port: Option<u16>,
+    }
+
+    // Deserialize the data into our helper struct.
+    let partial_config = PartialListenConfig::deserialize(deserializer)?;
+
+    // Create the final ListenConfig, supplying the default port if it was missing.
+    Ok(ListenConfig {
+        host: partial_config
+            .host
+            .unwrap_or_else(|| DEFAULT_HOST.to_string()),
+        port: partial_config.port.unwrap_or(DEFAULT_HTTP_PORT),
+    })
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct EnvConfig {
+    #[serde(default = "default_listen")]
+    #[serde(deserialize_with = "deserialize_listen_with_default_port")]
     pub(crate) listen: ListenConfig,
     pub(crate) database: String,
     pub(crate) mail_transport: MailTransport,
     #[serde(default)]
     pub(crate) user_registration_enabled: bool,
     pub(crate) public_base_url: String,
+    pub(crate) metrics: Option<ListenConfig>,
 }
 
 impl EnvConfig {
@@ -158,6 +189,7 @@ prod:
                 },
                 user_registration_enabled: false,
                 public_base_url: "http://dev.server.com".into(),
+                metrics: None,
             }
         );
         assert_eq!(
@@ -171,6 +203,7 @@ prod:
                 },
                 user_registration_enabled: false,
                 public_base_url: "http://test.server.com".into(),
+                metrics: None,
             }
         );
         assert_eq!(
@@ -193,6 +226,7 @@ prod:
                 },
                 user_registration_enabled: false,
                 public_base_url: "https://prod.server.com".into(),
+                metrics: None,
             }
         );
     }

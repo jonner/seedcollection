@@ -67,7 +67,7 @@ async fn login(app: &mut Router) -> Result<String> {
     fixtures(path = "../../../../db/fixtures", scripts("users"))
 ))]
 async fn test_login(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app");
+    let mut app = test_app(pool).await.expect("failed to create test app").0;
     let cookie = login(&mut app).await.expect("Failed to log in");
     assert!(!cookie.is_empty());
 

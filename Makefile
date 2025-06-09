@@ -15,7 +15,7 @@ update-container: Containerfile
 container: Containerfile
 	podman build -t seedweb:latest .
 
-run-pod: container
+run-pod: container deploy/seedweb-pod.yaml
 	export SEEDWEB_SMTP_PASSWORD=$$(cat $(SEEDWEB_SMTP_PASSWORD_FILE)| base64);\
 	cat ./deploy/seedweb-pod.yaml | envsubst | podman kube play --replace -
 
