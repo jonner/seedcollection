@@ -36,6 +36,9 @@ spec:
       volumeMounts:
         - name: seedweb-db-vol
           mountPath: /usr/share/seedweb/db:Z
+        - name: seedweb-config-volume
+          mountPath: /etc/seedweb/config.yaml:Z
+          readOnly: true
 
     - name: proxy
       image: docker.io/library/caddy:latest
@@ -57,6 +60,10 @@ spec:
       hostPath:
         path: ${SEEDWEB_DATABASE_DIR}
         type: Directory
+    - name: seedweb-config-volume
+      hostPath:
+        path: ./deploy/seedweb-config.yaml
+        type: File
     - name: caddyfile-volume
       hostPath:
         path: ./deploy/caddy/Caddyfile
