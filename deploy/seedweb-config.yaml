@@ -4,6 +4,9 @@ dev:
   listen: &DEFAULT_LISTEN
     host: "0.0.0.0"
     port: 8081
+  metrics: &DEFAULT_METRICS
+    host: "localhost"
+    port: 6001
   user_registration_enabled: true
   public_base_url: "https://localhost"
 prod:
@@ -14,6 +17,7 @@ prod:
     credentials:
       username: "jonathon@quotidian.org"
   listen: *DEFAULT_LISTEN
+  metrics: *DEFAULT_METRICS
   user_registration_enabled: false
   public_base_url: "https://localhost"
 

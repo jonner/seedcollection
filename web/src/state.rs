@@ -163,6 +163,7 @@ impl SharedState {
                 mail_transport: MailTransport::File("/tmp/".to_string()),
                 user_registration_enabled: false,
                 public_base_url: "http://test.com".into(),
+                metrics: None,
             },
             datadir: ".".into(),
         }

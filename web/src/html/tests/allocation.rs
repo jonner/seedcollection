@@ -13,7 +13,7 @@ use tower::Service;
     )
 ))]
 async fn test_new_note(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app");
+    let mut app = test_app(pool).await.expect("failed to create test app").0;
 
     let params = serde_urlencoded::to_string([
         ("notetype", "Planting"),

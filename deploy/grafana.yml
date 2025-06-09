@@ -1,0 +1,12 @@
+# grafana_provisioning/datasources/prometheus_ds.yml
+apiVersion: 1
+
+datasources:
+  - name: Prometheus_Seedweb
+    type: prometheus
+    access: proxy # Grafana backend makes requests
+    url: http://localhost:9090 # Prometheus default port (it will be in the same pod)
+    isDefault: true
+    # editable: false # Prevent users from editing it in the UI if desired
+    jsonData:
+      timeInterval: "15s" # How often Grafana queries Prometheus

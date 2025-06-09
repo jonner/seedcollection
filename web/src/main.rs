@@ -13,11 +13,16 @@ use axum_login::{
     AuthManagerLayerBuilder,
     tower_sessions::{Expiry, SessionManagerLayer},
 };
+use axum_prometheus::{PrometheusMetricLayer, metrics_exporter_prometheus::PrometheusHandle};
 use axum_template::engine::Engine;
 use clap::Parser;
 use minijinja::{Environment, context};
 use state::{AppState, SharedState};
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, LazyLock},
+};
 use time::Duration;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
@@ -144,7 +149,10 @@ where
     Engine::from(jinja)
 }
 
-async fn app(shared_state: AppState) -> Result<Router> {
+static PROMETHEUS_PAIR: LazyLock<(PrometheusMetricLayer, PrometheusHandle)> =
+    LazyLock::new(PrometheusMetricLayer::pair);
+
+async fn app(shared_state: AppState) -> Result<(Router, Router)> {
     trace!("Creating session layer");
     let session_store = SqliteStore::new(shared_state.db.pool().clone());
     session_store.migrate().await?;
@@ -162,6 +170,7 @@ async fn app(shared_state: AppState) -> Result<Router> {
         return Err(Error::Environment(format!("The `js` directory does not exist in `{static_path:?}`. You may need to install javascript packages (with e.g. `yarn install`) and copy them to the correct location.")).into());
     }
 
+    let (prometheus_layer, metric_handle) = PROMETHEUS_PAIR.clone();
     let app = Router::new()
         .route("/", get(root))
         .route("/favicon.ico", get(favicon_redirect))
@@ -180,11 +189,15 @@ async fn app(shared_state: AppState) -> Result<Router> {
                 .layer(middleware::from_fn_with_state(
                     shared_state.clone(),
                     error_mapper,
-                )),
+                ))
+                .layer(prometheus_layer),
         )
         .with_state(shared_state);
 
-    Ok(app)
+    let metrics_app =
+        Router::new().route("/metrics", get(|| async move { metric_handle.render() }));
+
+    Ok((app, metrics_app))
 }
 
 fn config_dir() -> Result<PathBuf> {
@@ -276,13 +289,29 @@ async fn main() -> Result<()> {
     env.init()?;
     info!(envarg, ?env);
     let listen = env.listen.clone();
+    let metrics_listen = env.metrics.clone();
 
-    let app = app(Arc::new(SharedState::new(envarg, env, datadir).await?)).await?;
+    let (app, metrics) = app(Arc::new(SharedState::new(envarg, env, datadir).await?)).await?;
 
+    debug!("app listening on port {}", listen.port);
     let listener = TcpListener::bind((listen.host, listen.port)).await?;
-    axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    let app_future =
+        axum::serve(listener, app.into_make_service()).with_graceful_shutdown(shutdown_signal());
+
+    if let Some(metrics_listen) = metrics_listen {
+        debug!("metrics listening on port {}", metrics_listen.port);
+        let metrics_listener =
+            TcpListener::bind((metrics_listen.host.as_str(), metrics_listen.port)).await?;
+
+        let (first, second) = tokio::join!(
+            app_future,
+            axum::serve(metrics_listener, metrics.into_make_service())
+                .with_graceful_shutdown(shutdown_signal())
+        );
+        first.and(second)?;
+    } else {
+        app_future.await?;
+    }
     Ok(())
 }
 
@@ -366,7 +395,7 @@ async fn favicon_redirect() -> impl IntoResponse {
 }
 
 #[cfg(test)]
-async fn test_app(pool: sqlx::Pool<sqlx::Sqlite>) -> Result<Router> {
+async fn test_app(pool: sqlx::Pool<sqlx::Sqlite>) -> Result<(Router, Router)> {
     let state = Arc::new(SharedState::test(pool));
     app(state).await
 }

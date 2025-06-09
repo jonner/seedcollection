@@ -9,7 +9,7 @@ use test_log::test;
     )
 ))]
 async fn test_filter_samples(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app");
+    let mut app = test_app(pool).await.expect("failed to create test app").0;
 
     // first log in:
     let cookie = login(&mut app).await.expect("Failed to log in");

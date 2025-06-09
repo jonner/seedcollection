@@ -55,6 +55,38 @@ spec:
           mountPath: /data:Z
         - name: caddy-config-volume
           mountPath: /config:Z
+
+    - name: prometheus
+      image: docker.io/prom/prometheus:v3.4.0
+      ports:
+        - name: prometheus-ui
+          containerPort: 9090
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumeMounts:
+        - name: prometheus-config-vol
+          mountPath: /etc/prometheus/prometheus.yml:Z
+          readOnly: true
+        - name: prometheus-data-vol
+          mountPath: /prometheus:Z
+
+    - name: grafana
+      image: docker.io/grafana/grafana-oss:12.0.1
+      ports:
+        - name: grafana-http
+          containerPort: 3000
+          hostPort: 3000
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumeMounts:
+        - name: grafana-provisioning-vol
+          mountPath: /etc/grafana/provisioning/datasources/prometheus_ds.yml:Z
+          readOnly: true
+        - name: grafana-data-volume
+          mountPath: /var/lib/grafana:Z
+
   volumes:
     - name: seedweb-db-vol
       hostPath:
@@ -66,13 +98,29 @@ spec:
         type: File
     - name: caddyfile-volume
       hostPath:
-        path: ./deploy/caddy/Caddyfile
+        path: ./deploy/Caddyfile
         type: File
     - name: caddy-data-volume
       hostPath:
-        path: ./deploy/caddy/local-data
+        path: ./deploy/volumes/caddy/local-data
         type: DirectoryOrCreate
     - name: caddy-config-volume
       hostPath:
-        path: ./deploy/caddy/local-config
+        path: ./deploy/volumes/caddy/local-config
         type: DirectoryOrCreate
+    - name: grafana-provisioning-vol
+      hostPath:
+        path: ./deploy/grafana.yml
+        type: File
+    - name: grafana-data-volume
+      hostPath:
+        path: ./deploy/volumes/grafana/local-data
+        type: DirectoryOrCreate
+    - name: prometheus-data-vol
+      hostPath:
+        path: ./deploy/volumes/prometheus/local-data
+        type: DirectoryOrCreate
+    - name: prometheus-config-vol
+      hostPath:
+        path: ./deploy/prometheus.yml
+        type: File
