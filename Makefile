@@ -12,7 +12,7 @@ export SEEDWEB_LOG
 update-container: Containerfile
 	podman pull rust:alpine alpine:latest
 
-container: Containerfile config.yaml.docker
+container: Containerfile
 	podman build -t seedweb:latest .
 
 run-pod: container

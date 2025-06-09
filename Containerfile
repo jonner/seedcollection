@@ -20,7 +20,6 @@ RUN --mount=type=cache,target=/var/cache/apk \
   openssl
 
 FROM runtime-base
-COPY ./config.yaml.docker /etc/seedweb/config.yaml
 COPY ./web/static /usr/share/seedweb/static/
 COPY ./web/vendor-js/node_modules /usr/share/seedweb/static/js/vendor
 COPY ./web/templates /usr/share/seedweb/templates/
