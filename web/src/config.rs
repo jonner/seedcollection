@@ -5,6 +5,7 @@ use serde::Deserialize;
 use tracing::debug;
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct RemoteSmtpCredentials {
     pub(crate) username: String,
     #[serde(default)]
@@ -22,6 +23,7 @@ impl PartialEq for RemoteSmtpCredentials {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct RemoteSmtpConfig {
     pub(crate) url: String,
     pub(crate) credentials: Option<RemoteSmtpCredentials>,
@@ -50,6 +52,7 @@ impl RemoteSmtpConfig {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub(crate) enum MailTransport {
     File(String),
     LocalSmtp,
@@ -61,6 +64,7 @@ fn default_http_port() -> u16 {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Clone)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct ListenConfig {
     pub(crate) host: String,
     #[serde(default = "default_http_port")]
@@ -68,6 +72,7 @@ pub(crate) struct ListenConfig {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct EnvConfig {
     pub(crate) listen: ListenConfig,
     pub(crate) database: String,
@@ -118,7 +123,6 @@ mod test {
     fn test_parse_config() {
         let yaml = r#"dev:
   database: dev-database.sqlite
-  asset_root: "/path/to/assets"
   mail_transport: !File "/tmp/"
   listen: &LISTEN
     host: "0.0.0.0"
@@ -127,7 +131,6 @@ mod test {
 test:
   database: prod-database.sqlite
   mail_transport: !LocalSmtp
-  asset_root: "/path/to/assets2"
   listen: *LISTEN
   public_base_url: "http://test.server.com"
 prod:
@@ -140,7 +143,6 @@ prod:
     port: 25
     timeout: 61
   public_base_url: "https://prod.server.com"
-  asset_root: "/path/to/assets2"
   listen: *LISTEN"#;
         let configs: HashMap<String, EnvConfig> =
             serde_yaml::from_str(yaml).expect("Failed to parse yaml");
@@ -199,7 +201,6 @@ prod:
     fn test_default_ports() {
         let yaml = r#"dev:
   database: dev-database.sqlite
-  asset_root: "/path/to/assets"
   mail_transport: !File "/tmp/"
   listen:
     host: "0.0.0.0"
