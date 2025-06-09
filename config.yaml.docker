@@ -1,7 +1,6 @@
 dev:
   database: /usr/share/seedweb/db/seedcollection.sqlite.dev
   mail_transport: !File "/tmp/"
-  asset_root: "/usr/share/seedweb"
   listen: &DEFAULT_LISTEN
     host: "0.0.0.0"
     port: 8081
@@ -9,7 +8,6 @@ dev:
   public_base_url: "https://localhost"
 prod:
   database: /usr/share/seedweb/db/seedcollection.sqlite
-  asset_root: "/usr/share/seedweb"
   mail_transport: !Smtp
     url: "smtps://smtp.gmail.com"
     port: 465
