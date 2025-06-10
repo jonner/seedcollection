@@ -23,10 +23,11 @@ RUN --mount=type=cache,target=/var/cache/apk \
   openssl
 
 FROM runtime-base
-COPY ./web/static /usr/share/seedweb/static/
-COPY ./web/templates /usr/share/seedweb/templates/
+WORKDIR /usr/share/seedweb
+COPY ./web/static static/
+COPY ./web/templates templates/
 VOLUME /usr/share/seedweb/db
-COPY --from=builder /usr/local/seedcollection/web/vendor-js/node_modules /usr/share/seedweb/static/js/vendor
+COPY --from=builder /usr/local/seedcollection/web/vendor-js/node_modules static/js/vendor
 COPY --from=builder /usr/local/bin/seedweb /usr/local/bin
 EXPOSE 80
 EXPOSE 443
