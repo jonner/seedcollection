@@ -15,7 +15,7 @@ pull-container: Containerfile
 update-nodejs: web/vendor-js/package.json
 	cd web/vendor-js && yarn
 
-container: Containerfile update-nodejs
+container: Containerfile
 	podman build -t seedweb:latest .
 
 run-pod: container deploy/podman-kube.yaml
