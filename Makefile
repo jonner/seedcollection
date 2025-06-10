@@ -18,12 +18,12 @@ update-nodejs: web/vendor-js/package.json
 container: Containerfile update-nodejs
 	podman build -t seedweb:latest .
 
-run-pod: container deploy/seedweb-pod.yaml
+run-pod: container deploy/podman-kube.yaml
 	export SEEDWEB_SMTP_PASSWORD=$$(cat $(SEEDWEB_SMTP_PASSWORD_FILE)| base64);\
-	cat ./deploy/seedweb-pod.yaml | envsubst | podman kube play --replace -
+	cat ./deploy/podman-kube.yaml | envsubst | podman kube play --replace -
 
 stop-pod: 
-	cat ./deploy/seedweb-pod.yaml | envsubst | podman kube down -
+	cat ./deploy/podman-kube.yaml | envsubst | podman kube down -
 
 # run this to update the cached sql queries for offline building. DATABASE_URL
 # must be set to the url of a valid database with the correct schema
