@@ -7,16 +7,18 @@
 }
 
 # redirect http requests to https
-http://localhost {
+:80 {
 	import common_logging
 	# Need to redirect to the public port, which is assumed to be 8443
-	redir https://localhost:8443{uri} permanent
+	redir https://{http.request.host}:8443{uri} permanent
 }
 
-https://localhost {
+:443 {
 	import common_logging
 	# generate a self-signed cert for local development
-	tls internal
+	tls internal {
+		on_demand
+	}
 	# Reverse proxy to your web application
 	reverse_proxy localhost:8081
 }
