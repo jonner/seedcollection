@@ -12,7 +12,10 @@ export SEEDWEB_LOG
 update-container: Containerfile
 	podman pull rust:alpine alpine:latest
 
-container: Containerfile
+update-nodejs: web/vendor-js/package.json
+	cd web/vendor-js && yarn
+
+container: Containerfile update-nodejs
 	podman build -t seedweb:latest .
 
 run-pod: container deploy/seedweb-pod.yaml
