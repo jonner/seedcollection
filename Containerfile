@@ -1,4 +1,4 @@
-FROM rust:alpine as builder
+FROM rust:alpine AS builder
 WORKDIR /usr/local/seedcollection
 RUN --mount=type=cache,target=/var/cache/apk \
   apk add \
@@ -14,7 +14,7 @@ RUN \
   cargo install --path ./web --root /usr/local && \
   cd web/vendor-js && yarn
 
-FROM alpine:latest as runtime-base
+FROM alpine:latest AS runtime-base
 RUN --mount=type=cache,target=/var/cache/apk \
   apk add \
   ca-certificates \
