@@ -11,8 +11,9 @@ ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN \
   --mount=type=cache,target=/usr/local/cargo/registry \
   --mount=type=cache,target=/usr/local/seedcollection/target \
-  cargo install --path ./web --root /usr/local && \
-  cd web/vendor-js && yarn
+  cargo install --path ./web --root /usr/local
+WORKDIR web/vendor-js
+RUN yarn
 
 FROM alpine:latest AS runtime-base
 RUN --mount=type=cache,target=/var/cache/apk \
