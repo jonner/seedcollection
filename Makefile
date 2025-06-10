@@ -9,7 +9,7 @@ export SEEDWEB_ENV
 export SEEDWEB_HTTP_PORT
 export SEEDWEB_LOG
 
-update-container: Containerfile
+pull-container: Containerfile
 	podman pull rust:alpine alpine:latest
 
 update-nodejs: web/vendor-js/package.json
