@@ -94,33 +94,33 @@ spec:
         type: Directory
     - name: seedweb-config-volume
       hostPath:
-        path: ./deploy/seedweb-config.yaml
+        path: ./deploy/podman/seedweb-config.yaml
         type: File
     - name: caddyfile-volume
       hostPath:
-        path: ./deploy/Caddyfile
+        path: ./deploy/podman/Caddyfile
         type: File
     - name: caddy-data-volume
       hostPath:
-        path: ./deploy/volumes/caddy/local-data
+        path: ./deploy/podman/volumes/caddy/local-data
         type: DirectoryOrCreate
     - name: caddy-config-volume
       hostPath:
-        path: ./deploy/volumes/caddy/local-config
+        path: ./deploy/podman/volumes/caddy/local-config
         type: DirectoryOrCreate
     - name: grafana-provisioning-vol
       hostPath:
-        path: ./deploy/grafana.yml
+        path: ./deploy/podman/grafana.yml
         type: File
     - name: grafana-data-volume
       hostPath:
-        path: ./deploy/volumes/grafana/local-data
+        path: ./deploy/podman/volumes/grafana/local-data
         type: DirectoryOrCreate
     - name: prometheus-data-vol
       hostPath:
-        path: ./deploy/volumes/prometheus/local-data
+        path: ./deploy/podman/volumes/prometheus/local-data
         type: DirectoryOrCreate
     - name: prometheus-config-vol
       hostPath:
-        path: ./deploy/prometheus.yml
+        path: ./deploy/podman/prometheus.yml
         type: File
