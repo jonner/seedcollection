@@ -18,9 +18,9 @@ update-nodejs: web/vendor-js/package.json
 container: Containerfile
 	podman build -t seedweb:latest .
 
-run-pod: container deploy/podman-kube.yaml
+run-pod: container deploy/podman/podman-kube.yaml
 	export SEEDWEB_SMTP_PASSWORD=$$(cat $(SEEDWEB_SMTP_PASSWORD_FILE)| base64);\
-	cat ./deploy/podman-kube.yaml | envsubst | podman kube play --replace -
+	cat ./deploy/podman/podman-kube.yaml | envsubst | podman kube play --replace -
 
 stop-pod: 
 	cat ./deploy/podman-kube.yaml | envsubst | podman kube down -
