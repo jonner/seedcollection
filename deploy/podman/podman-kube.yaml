@@ -30,6 +30,7 @@ spec:
       envFrom:
         - name: SEEDWEB_SMTP_PASSWORD
       image: localhost/seedweb:latest
+      imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 8081
       tty: true
@@ -41,7 +42,8 @@ spec:
           readOnly: true
 
     - name: proxy
-      image: docker.io/library/caddy:latest
+      image: caddy:latest
+      imagePullPolicy: IfNotPresent
       ports:
         - containerPort: 443
           hostPort: 8443
@@ -57,7 +59,8 @@ spec:
           mountPath: /config:Z
 
     - name: prometheus
-      image: docker.io/prom/prometheus:v3.4.0
+      image: prom/prometheus:v3.4.0
+      imagePullPolicy: IfNotPresent
       ports:
         - name: prometheus-ui
           containerPort: 9090
@@ -72,7 +75,8 @@ spec:
           mountPath: /prometheus:Z
 
     - name: grafana
-      image: docker.io/grafana/grafana-oss:12.0.1
+      image: grafana/grafana-oss:12.0.1
+      imagePullPolicy: IfNotPresent
       ports:
         - name: grafana-http
           containerPort: 3000
