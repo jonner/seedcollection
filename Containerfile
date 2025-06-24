@@ -6,7 +6,7 @@ RUN --mount=type=cache,target=/var/cache/apk \
   openssl-dev \
   pkgconf \
   yarn
-COPY . .
+COPY --exclude=target --exclude=db/itis . .
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN \
   --mount=type=cache,target=/usr/local/cargo/registry \
