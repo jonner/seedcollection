@@ -14,4 +14,4 @@
 /db/itis/seedcollection.sqlite.stamp
 /db/itis/ReadmeSqlite.txt
 /web/vendor-js/node_modules
-/deploy/volumes/
+/deploy/podman/volumes/
