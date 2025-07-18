@@ -49,9 +49,6 @@ async fn main() -> Result<()> {
             return commands::admin::handle_command(database.or(config_db), command).await;
         }
         Commands::Login { username, database } => {
-            let username = username
-                .or_else(|| inquire::Text::new("Username:").prompt().ok())
-                .ok_or_else(|| anyhow!("No username specified"))?;
             let database = database
                 .or_else(|| {
                     inquire::Text::new("Database path:")
@@ -60,6 +57,9 @@ async fn main() -> Result<()> {
                         .ok()
                 })
                 .ok_or_else(|| anyhow!("No database specified"))?;
+            let username = username
+                .or_else(|| inquire::Text::new("Username:").prompt().ok())
+                .ok_or_else(|| anyhow!("No username specified"))?;
             let pwd = inquire::Password::new("Password:")
                 .with_display_toggle_enabled()
                 .with_display_mode(inquire::PasswordDisplayMode::Masked)
