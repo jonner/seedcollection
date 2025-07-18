@@ -171,7 +171,7 @@ fn test_append_query_param() {
 pub(crate) fn format_id_number(id: i64, prefix: Option<&str>, width: Option<usize>) -> String {
     let width = width.unwrap_or(4);
     let prefix = prefix.unwrap_or("");
-    format!("{}{:0>width$}", prefix, id, width = width)
+    format!("{prefix}{id:0>width$}")
 }
 
 /// A minijinja template filter for formatting a seed quantity in grams into a

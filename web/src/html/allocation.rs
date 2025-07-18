@@ -122,7 +122,7 @@ async fn add_allocation_note(
         params.details.as_ref().cloned(),
     );
     note.insert(&app.db).await?;
-    let url = app_url(&format!("/project/{}/sample/{}", projectid, allocid));
+    let url = app_url(&format!("/project/{projectid}/sample/{allocid}"));
     Ok([("HX-Redirect", url)])
 }
 

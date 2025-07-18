@@ -309,7 +309,7 @@ async fn update_sample(
     sample.update(&app.db).await?;
     Ok((
         [("HX-Redirect", app_url(&format!("/sample/{id}")))],
-        app.render_flash_message(FlashMessage::Success(format!("Updated sample {}", id))),
+        app.render_flash_message(FlashMessage::Success(format!("Updated sample {id}"))),
     ))
 }
 

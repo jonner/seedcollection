@@ -577,16 +577,14 @@ async fn handle_taxa_list(
 
         n_not_found += 1;
         progress.println(format!(
-            "WARNING: Unable to find an exact match for {}. ",
-            dname
+            "WARNING: Unable to find an exact match for {dname}. ",
         ));
         if show_options {
             let rows = find_possibilities(pool, &name1, &name2, &name3, rank).await?;
 
             if !rows.is_empty() {
                 progress.println(format!(
-                    "Unable to find an exact match for '{}'. Possibilities:",
-                    dname
+                    "Unable to find an exact match for '{dname}'. Possibilities:"
                 ));
                 for row in &rows {
                     progress.println(format!("  - {}: {}", row.tsn, row.complete_name));

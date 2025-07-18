@@ -83,7 +83,7 @@ fn path_to_template_key(path: &str, method: &Method) -> String {
         key = "_INDEX".to_string();
     }
     if method != Method::GET {
-        key.push_str(&format!("-{}", method));
+        key.push_str(&format!("-{method}"));
     }
     key.push_str(".html.j2");
     key
