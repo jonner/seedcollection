@@ -20,7 +20,7 @@ tracing = { workspace = true }
 # local dependencies
 argon2 = "0.5.2"
 password-hash = { version = "0.5.0", features = ["std", "getrandom"] }
-rand = "0.8.5"
+rand = "0.9.0"
 sqlparser = "0.57.0"
 
 [dev-dependencies]
