@@ -6,7 +6,7 @@ use crate::{
         rows::{SampleRow, SampleRowDetails, SampleRowFull},
         table::SeedctlTable,
     },
-    prompt::{SourceIdPrompt, TaxonIdPrompt},
+    prompt::{Error, SourceIdPrompt, TaxonIdPrompt, prompt_source},
 };
 use anyhow::{Result, anyhow};
 use libseed::{
@@ -139,7 +139,21 @@ pub(crate) async fn handle_command(
                 && !uncertain
             {
                 let taxon = TaxonIdPrompt::new("Taxon:", db).prompt()?;
-                let source = SourceIdPrompt::new("Source:", userid, db).prompt()?;
+                let source = match SourceIdPrompt::new("Source:", userid, db).prompt() {
+                    Ok(id) => id,
+                    Err(Error::Prompt(inquire::InquireError::OperationCanceled)) => {
+                        if inquire::Confirm::new("Would you like to create a new source?")
+                            .prompt()?
+                        {
+                            let mut source = prompt_source(userid)?;
+                            let newid = source.insert(db).await?;
+                            Ok(*newid)
+                        } else {
+                            Err(anyhow!("No source specified"))
+                        }?
+                    }
+                    e => e?,
+                };
                 let month = month_prompt().prompt_skippable()?;
                 let year = inquire::CustomType::<u32>::new("Year:").prompt_skippable()?;
                 let quantity =

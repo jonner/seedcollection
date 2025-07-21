@@ -1,5 +1,5 @@
 //! Functions related to prompting the user for input data
-use inquire::{CustomUserError, autocompletion::Autocomplete};
+use inquire::{CustomUserError, autocompletion::Autocomplete, validator::Validation};
 use libseed::{
     core::{
         database::Database,
@@ -191,4 +191,36 @@ fn extract_dbid(s: &str) -> Result<i64, Error> {
         .ok_or_else(|| Error::CompletionIdFormatMissingDot(s.to_owned()))
         // flatten from Result<Result<T>> to Result<T>
         .and_then(convert::identity)
+}
+
+pub(crate) fn prompt_source(userid: i64) -> Result<Source, Error> {
+    let name = inquire::Text::new("Source Name:").prompt()?;
+    let description = inquire::Text::new("Source Description:").prompt_skippable()?;
+    let latitude = inquire::CustomType::<f64>::new("Latitude:")
+        .with_validator(|val: &f64| {
+            if *val < -90.0 || *val > 90.0 {
+                return Ok(Validation::Invalid(
+                    "Value must be between -90 and 90".into(),
+                ));
+            }
+            Ok(Validation::Valid)
+        })
+        .prompt_skippable()?;
+    let longitude = inquire::CustomType::<f64>::new("Longitude:")
+        .with_validator(|val: &f64| {
+            if *val < -180.0 || *val > 180.0 {
+                return Ok(Validation::Invalid(
+                    "Value must be betwen -180 and 180".into(),
+                ));
+            }
+            Ok(Validation::Valid)
+        })
+        .prompt_skippable()?;
+    if !inquire::Confirm::new("Save to database?")
+        .with_default(false)
+        .prompt()?
+    {
+        return Err(inquire::InquireError::OperationCanceled.into());
+    }
+    Ok(Source::new(name, description, latitude, longitude, userid))
 }
