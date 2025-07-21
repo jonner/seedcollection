@@ -5,9 +5,9 @@ use crate::{
         self,
         rows::{SourceRow, SourceRowFull},
     },
+    prompt::prompt_source,
 };
 use anyhow::{Result, anyhow};
-use inquire::validator::Validation;
 use libseed::{
     Error::{AuthUserNotFound, DatabaseError},
     core::{
@@ -85,37 +85,7 @@ pub(crate) async fn handle_command(
                 && latitude.is_none()
                 && longitude.is_none()
             {
-                let name = inquire::Text::new("Name:").prompt()?;
-                let description = inquire::Text::new("Description:").prompt_skippable()?;
-                let latitude = inquire::CustomType::<f64>::new("Latitude:")
-                    .with_validator(|val: &f64| {
-                        if *val < -90.0 || *val > 90.0 {
-                            return Ok(Validation::Invalid(
-                                "Value must be between -90 and 90".into(),
-                            ));
-                        }
-                        Ok(Validation::Valid)
-                    })
-                    .prompt_skippable()?;
-                let longitude = inquire::CustomType::<f64>::new("Longitude:")
-                    .with_validator(|val: &f64| {
-                        if *val < -180.0 || *val > 180.0 {
-                            return Ok(Validation::Invalid(
-                                "Value must be betwen -180 and 180".into(),
-                            ));
-                        }
-                        Ok(Validation::Valid)
-                    })
-                    .prompt_skippable()?;
-
-                if !inquire::Confirm::new("Save to database?")
-                    .with_default(false)
-                    .prompt()?
-                {
-                    return Err(anyhow!("Aborted"));
-                }
-
-                Source::new(name, description, latitude, longitude, userid)
+                prompt_source(userid)?
             } else {
                 Source::new(
                     name.ok_or_else(|| anyhow!("No name specified"))?,
