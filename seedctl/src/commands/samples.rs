@@ -154,8 +154,13 @@ pub(crate) async fn handle_command(
                     }
                     e => e?,
                 };
-                let month = month_prompt().prompt_skippable()?;
-                let year = inquire::CustomType::<u32>::new("Year:").prompt_skippable()?;
+                let now = time::OffsetDateTime::now_local()?;
+                let month = month_prompt()
+                    .with_default(now.date().month())
+                    .prompt_skippable()?;
+                let year = inquire::CustomType::<u32>::new("Year:")
+                    .with_default(now.date().year().try_into().unwrap())
+                    .prompt_skippable()?;
                 let quantity =
                     inquire::CustomType::<f64>::new("Quantity (grams):").prompt_skippable()?;
                 let notes = inquire::Text::new("Notes:").prompt_skippable()?;
