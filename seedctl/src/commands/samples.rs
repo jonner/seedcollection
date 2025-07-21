@@ -51,7 +51,7 @@ pub(crate) async fn handle_command(
                 builder = builder.push(sample::Filter::Quantity(Cmp::NotEqual, 0.0))
             }
             if let Some(rank) = rank {
-                builder = builder.push(sample::Filter::TaxonRank(Cmp::GreatherThanEqual, rank))
+                builder = builder.push(sample::Filter::TaxonRank(Cmp::NotLessThan, rank))
             }
             let sort = sort.map(|vec| {
                 let order = match reverse {

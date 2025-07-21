@@ -125,8 +125,8 @@ pub mod filter {
         Like,
         LessThan,
         GreaterThan,
-        LessThanEqual,
-        GreatherThanEqual,
+        NotGreaterThan,
+        NotLessThan,
         NumericPrefix,
     }
 
@@ -138,8 +138,8 @@ pub mod filter {
                 Cmp::NumericPrefix | Cmp::Like => write!(f, " LIKE "),
                 Cmp::LessThan => write!(f, " < "),
                 Cmp::GreaterThan => write!(f, " != "),
-                Cmp::LessThanEqual => write!(f, " <= "),
-                Cmp::GreatherThanEqual => write!(f, " >= "),
+                Cmp::NotGreaterThan => write!(f, " <= "),
+                Cmp::NotLessThan => write!(f, " >= "),
             }
         }
     }
