@@ -225,6 +225,14 @@ fn config_dir() -> Result<PathBuf> {
 }
 
 fn data_dir() -> Result<PathBuf> {
+    debug!("checking if we're running from the git checkout");
+    let local_data_dir = PathBuf::from("./web");
+    if local_data_dir.exists()
+        && local_data_dir.join("static").exists()
+        && local_data_dir.join("templates").exists()
+    {
+        return Ok(local_data_dir.canonicalize()?);
+    }
     let dirs = directories::ProjectDirs::from("org", "quotidian", "seedweb").ok_or_else(|| {
         Error::Environment("Failed to determine base directories for configuration".to_string())
     })?;
