@@ -11,7 +11,7 @@ use tracing::debug;
 use {std::os::unix::fs::PermissionsExt, tokio::fs::set_permissions};
 
 /// A struct containing configuration required to successfully run `seedctl`
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Config {
     pub(crate) username: String,
     pub(crate) password: String,
@@ -135,4 +135,139 @@ pub(crate) async fn config_file() -> Result<PathBuf, Error> {
     let mut dir = ensure_config_dir().await?;
     dir.push("config");
     Ok(dir)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::NamedTempFile;
+
+    fn create_test_config() -> Config {
+        Config::new(
+            "testuser".to_string(),
+            "password123".to_string(),
+            PathBuf::from("/tmp/test.db"),
+        )
+    }
+
+    #[test]
+    fn test_config_new() {
+        let config = create_test_config();
+        assert_eq!(config.username, "testuser");
+        assert_eq!(config.password, "password123");
+        assert_eq!(config.database, PathBuf::from("/tmp/test.db"));
+    }
+
+    #[test]
+    fn test_config_parse_valid() {
+        let json_content = r#"
+        {
+            "username": "admin",
+            "password": "secret",
+            "database": "/path/to/db.sqlite"
+        }
+        "#;
+
+        let config = Config::parse(json_content).expect("Failed to parse config");
+        assert_eq!(config.username, "admin");
+        assert_eq!(config.password, "secret");
+        assert_eq!(config.database, PathBuf::from("/path/to/db.sqlite"));
+    }
+
+    #[test]
+    fn test_config_parse_invalid() {
+        let invalid_json = r#"{ "invalid": "json" }"#;
+        let result = Config::parse(invalid_json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_config_format() {
+        let config = create_test_config();
+        let formatted = config.format().expect("failed to format config");
+
+        assert!(formatted.contains("testuser"));
+        assert!(formatted.contains("password123"));
+        assert!(formatted.contains("/tmp/test.db"));
+
+        // Verify it's valid JSON by parsing it back
+        let parsed: serde_json::Value =
+            serde_json::from_str(&formatted).expect("Failed to parse formatted config");
+        assert_eq!(parsed["username"], "testuser");
+    }
+
+    #[tokio::test]
+    async fn test_config_load_from_file_success() {
+        let config = create_test_config();
+        let formatted = config.format().expect("Failed to format config");
+
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        fs::write(&temp_file, formatted).expect("Failed to write to temp file");
+
+        let loaded_config = Config::load_from_file(temp_file.path())
+            .await
+            .expect("Failed to load config from temp file");
+        assert_eq!(loaded_config.username, config.username);
+        assert_eq!(loaded_config.password, config.password);
+        assert_eq!(loaded_config.database, config.database);
+    }
+
+    #[tokio::test]
+    async fn test_config_load_from_file_not_found() {
+        let result = Config::load_from_file("/nonexistent/path").await;
+        assert!(matches!(result, Err(Error::NotLoggedIn)));
+    }
+
+    #[tokio::test]
+    async fn test_config_load_from_file_invalid_json() {
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        fs::write(&temp_file, "invalid json").expect("Failed to write to temp file");
+
+        let result = Config::load_from_file(temp_file.path()).await;
+        assert!(matches!(result, Err(Error::ConfigParseFailed(_))));
+    }
+
+    #[tokio::test]
+    async fn test_config_save_to_file() {
+        let config = create_test_config();
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        let temp_path = temp_file.path().to_path_buf();
+
+        let result = config.save_to_file(&temp_path).await;
+        if let Err(e) = &result {
+            println!("Save error: {:?}", e);
+        }
+        assert!(result.is_ok());
+
+        // Verify the file was written correctly
+        let content = fs::read_to_string(&temp_path).expect("Failed to read temp file to string");
+        assert!(content.contains("testuser"));
+
+        // Verify it can be loaded back
+        let loaded_config = Config::load_from_file(&temp_path)
+            .await
+            .expect("Failed to load config from temp file");
+        assert_eq!(loaded_config.username, config.username);
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn test_config_save_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let config = create_test_config();
+        let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+
+        config
+            .save_to_file(temp_file.path())
+            .await
+            .expect("Failed to save config to temp file");
+
+        let metadata = fs::metadata(temp_file.path()).expect("Failed to get temp file metadata");
+        let permissions = metadata.permissions();
+
+        // Check that the file has restrictive permissions (0o600)
+        assert_eq!(permissions.mode() & 0o777, 0o600);
+    }
 }
