@@ -26,3 +26,4 @@ sqlparser = "0.57.0"
 [dev-dependencies]
 test-log = "0.2.14"
 tracing-subscriber = { workspace = true }
+tempfile = "3.15.0"
