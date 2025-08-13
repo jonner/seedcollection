@@ -463,9 +463,10 @@ impl Taxon {
 
         builder
             .push(" GROUP BY T.tsn")
+            .push(" ")
             .push(sort.unwrap_or(SortField::TaxonomicSequence.into()).to_sql());
         if let Some(l) = limit {
-            builder.push(l.to_sql());
+            builder.push(" ").push(l.to_sql());
         }
         debug!("generated sql: <<{}>>", builder.sql());
         builder

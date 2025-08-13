@@ -89,9 +89,11 @@ impl UserVerification {
             builder.push(" WHERE ");
             f.add_to_query(&mut builder);
         }
-        builder.push(sort.unwrap_or(SortField::Id.into()).to_sql());
+        builder
+            .push(" ")
+            .push(sort.unwrap_or(SortField::Id.into()).to_sql());
         if let Some(l) = limit {
-            builder.push(l.to_sql());
+            builder.push(" ").push(l.to_sql());
         }
         builder
     }
