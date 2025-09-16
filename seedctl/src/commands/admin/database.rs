@@ -564,15 +564,15 @@ async fn handle_taxa_list(
             continue;
         }
 
-        if let Some(new_genus) = find_genus_synonym(pool, &name1).await? {
-            if let Some((taxon, _)) = get_taxon(pool, &new_genus, &name2, &name3, rank).await? {
-                progress.println(format!(
-                    "Using '{}' as a synonym for '{dname}'",
-                    taxon.complete_name
-                ));
-                taxa.push((taxon, record));
-                continue;
-            }
+        if let Some(new_genus) = find_genus_synonym(pool, &name1).await?
+            && let Some((taxon, _)) = get_taxon(pool, &new_genus, &name2, &name3, rank).await?
+        {
+            progress.println(format!(
+                "Using '{}' as a synonym for '{dname}'",
+                taxon.complete_name
+            ));
+            taxa.push((taxon, record));
+            continue;
         }
 
         n_not_found += 1;
