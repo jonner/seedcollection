@@ -167,13 +167,10 @@ impl From<i32> for LimitSpec {
 
 impl ToSql for LimitSpec {
     fn to_sql(&self) -> String {
-        format!(
-            " LIMIT {} {} ",
-            self.count,
-            self.offset
-                .map(|n| format!("OFFSET {n}"))
-                .unwrap_or_default()
-        )
+        match self.offset {
+            None => format!("LIMIT {}", self.count),
+            Some(offset) => format!("LIMIT {} OFFSET {offset}", self.count),
+        }
     }
 }
 
@@ -242,14 +239,6 @@ impl<T: ToSql> SortSpec<T> {
     }
 }
 
-pub struct Unsortable;
-
-impl ToSql for Unsortable {
-    fn to_sql(&self) -> String {
-        unimplemented!("This object is not sortable")
-    }
-}
-
 /// A type representing an ordered list of multiple sort specifications. The
 /// purpose of this type is merely to facilitate various convienience conversion
 /// functions by implementing [From]
@@ -263,13 +252,13 @@ impl<T: ToSql> From<SortSpec<T>> for SortSpecs<T> {
 
 impl<T: ToSql> ToSql for SortSpecs<T> {
     fn to_sql(&self) -> String {
-        " ORDER BY ".to_string()
+        "ORDER BY ".to_string()
             + &self
                 .0
                 .iter()
                 .map(ToSql::to_sql)
                 .collect::<Vec<String>>()
-                .join(",")
+                .join(", ")
     }
 }
 
@@ -310,5 +299,175 @@ where
 {
     fn from(value: F) -> Self {
         DynFilterPart(Arc::new(value))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::filter::FilterPart;
+    use super::*;
+
+    // Mock ToSql implementation for testing
+    #[derive(Clone, Debug, PartialEq)]
+    struct MockSortField(String);
+
+    impl ToSql for MockSortField {
+        fn to_sql(&self) -> String {
+            self.0.clone()
+        }
+    }
+
+    // Mock FilterPart for testing
+    #[derive(Clone)]
+    struct MockFilter {
+        sql: String,
+    }
+
+    impl filter::FilterPart for MockFilter {
+        fn add_to_query(&self, builder: &mut sqlx::QueryBuilder<sqlx::Sqlite>) {
+            builder.push(&self.sql);
+        }
+    }
+
+    #[test]
+    fn test_limit_spec_to_sql() {
+        let limit = LimitSpec {
+            count: 10,
+            offset: None,
+        };
+        assert_eq!(limit.to_sql(), "LIMIT 10");
+
+        let limit_with_offset = LimitSpec {
+            count: 5,
+            offset: Some(20),
+        };
+        assert_eq!(limit_with_offset.to_sql(), "LIMIT 5 OFFSET 20");
+    }
+
+    #[test]
+    fn test_sort_order_default() {
+        let order = SortOrder::default();
+        assert_eq!(order, SortOrder::Ascending);
+    }
+
+    #[test]
+    fn test_sort_order_from_str() {
+        assert_eq!(SortOrder::from_str("asc").unwrap(), SortOrder::Ascending);
+        assert_eq!(SortOrder::from_str("desc").unwrap(), SortOrder::Descending);
+
+        let invalid_result = SortOrder::from_str("invalid");
+        assert!(invalid_result.is_err());
+    }
+
+    #[test]
+    fn test_sort_order_to_sql() {
+        assert_eq!(SortOrder::Ascending.to_sql(), "ASC");
+        assert_eq!(SortOrder::Descending.to_sql(), "DESC");
+    }
+
+    #[test]
+    fn test_sort_spec_to_sql() {
+        let spec = SortSpec::new(MockSortField("name".to_string()), SortOrder::Ascending);
+        assert_eq!(spec.to_sql(), "name ASC");
+
+        let spec_desc = SortSpec::new(
+            MockSortField("created_at".to_string()),
+            SortOrder::Descending,
+        );
+        assert_eq!(spec_desc.to_sql(), "created_at DESC");
+    }
+
+    #[test]
+    fn test_sort_specs_to_sql() {
+        let specs = SortSpecs(vec![
+            SortSpec::new(MockSortField("name".to_string()), SortOrder::Ascending),
+            SortSpec::new(
+                MockSortField("created_at".to_string()),
+                SortOrder::Descending,
+            ),
+        ]);
+        assert_eq!(specs.to_sql(), "ORDER BY name ASC, created_at DESC");
+    }
+
+    #[test]
+    fn test_compound_filter_builder_build() {
+        let mock_filter = MockFilter {
+            sql: "test = 1".to_string(),
+        };
+        let filter_part = filter::and().push(mock_filter).build();
+
+        // Test that we can add it to a query
+        let mut builder = sqlx::QueryBuilder::new("SELECT * FROM test WHERE");
+        filter_part.add_to_query(&mut builder);
+        let sql = builder.sql();
+        assert_eq!(sql, "SELECT * FROM test WHERE (test = 1)");
+    }
+
+    #[test]
+    fn test_compound_filter_add_to_query_empty() {
+        let filter = filter::CompoundFilter::new(filter::Op::And);
+        let mut builder = sqlx::QueryBuilder::new("SELECT * WHERE");
+        builder.push(" ");
+        filter.add_to_query(&mut builder);
+        let sql = builder.sql();
+        assert_eq!(sql, "SELECT * WHERE TRUE");
+    }
+
+    #[test]
+    fn test_compound_filter_add_to_query_single_condition() {
+        let mut filter = filter::CompoundFilter::new(filter::Op::And);
+        let mock_filter = MockFilter {
+            sql: "name = 'test'".to_string(),
+        };
+        filter.add_filter(mock_filter.into());
+
+        let mut builder = sqlx::QueryBuilder::new("SELECT * WHERE");
+        filter.add_to_query(&mut builder);
+        let sql = builder.sql();
+        assert_eq!(sql, "SELECT * WHERE (name = 'test')");
+    }
+
+    #[test]
+    fn test_compound_filter_add_to_query_multiple_and() {
+        let mut filter = filter::CompoundFilter::new(filter::Op::And);
+        filter.add_filter(
+            MockFilter {
+                sql: "name = 'test'".to_string(),
+            }
+            .into(),
+        );
+        filter.add_filter(
+            MockFilter {
+                sql: "age > 18".to_string(),
+            }
+            .into(),
+        );
+
+        let mut builder = sqlx::QueryBuilder::new("SELECT * WHERE");
+        filter.add_to_query(&mut builder);
+        let sql = builder.sql();
+        assert_eq!(sql, "SELECT * WHERE (name = 'test' AND age > 18)");
+    }
+
+    #[test]
+    fn test_compound_filter_add_to_query_multiple_or() {
+        let mut filter = filter::CompoundFilter::new(filter::Op::Or);
+        filter.add_filter(
+            MockFilter {
+                sql: "name = 'test'".to_string(),
+            }
+            .into(),
+        );
+        filter.add_filter(
+            MockFilter {
+                sql: "name = 'demo'".to_string(),
+            }
+            .into(),
+        );
+
+        let mut builder = sqlx::QueryBuilder::new("SELECT * WHERE");
+        filter.add_to_query(&mut builder);
+        let sql = builder.sql();
+        assert_eq!(sql, "SELECT * WHERE (name = 'test' OR name = 'demo')");
     }
 }

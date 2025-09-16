@@ -403,9 +403,9 @@ impl Sample {
             f.add_to_query(&mut builder);
         }
         let s: SortSpecs<SortField> = sort.unwrap_or(SortField::TaxonSequence.into());
-        builder.push(s.to_sql());
+        builder.push(" ").push(s.to_sql());
         if let Some(l) = limit {
-            builder.push(l.to_sql());
+            builder.push(" ").push(l.to_sql());
         }
         builder
     }

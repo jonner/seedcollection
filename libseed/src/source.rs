@@ -205,9 +205,10 @@ impl Source {
             qb.push(" WHERE ");
             f.add_to_query(&mut qb);
         }
-        qb.push(sort.unwrap_or(SortField::Name.into()).to_sql());
+        qb.push(" ")
+            .push(sort.unwrap_or(SortField::Name.into()).to_sql());
         if let Some(l) = limit {
-            qb.push(l.to_sql());
+            qb.push(" ").push(l.to_sql());
         }
         qb
     }

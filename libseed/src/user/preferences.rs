@@ -163,10 +163,10 @@ impl Preferences {
             f.add_to_query(&mut builder);
         }
         if let Some(sort) = sort {
-            builder.push(sort.to_sql());
+            builder.push(" ").push(sort.to_sql());
         }
         if let Some(l) = limit {
-            builder.push(l.to_sql());
+            builder.push(" ").push(l.to_sql());
         }
         builder
     }

@@ -432,3 +432,138 @@ pub(crate) async fn check_table(conn: &mut sqlx::SqliteConnection, table_name: &
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::{Pool, Sqlite};
+    use tempfile::NamedTempFile;
+    use test_log::test;
+
+    #[test(sqlx::test(migrations = "../db/migrations/"))]
+    async fn test_database_init(pool: Pool<Sqlite>) {
+        let mut db = Database::from(pool);
+
+        let admin_user = "testadmin".to_string();
+        let admin_email = "admin@test.com".to_string();
+        let admin_password = "securepassword123".to_string();
+
+        let user = db
+            .init(
+                admin_user.clone(),
+                admin_email.clone(),
+                admin_password.clone(),
+            )
+            .await;
+        assert!(user.is_ok());
+
+        let created_user = user.unwrap();
+        assert_eq!(created_user.username, admin_user);
+        assert_eq!(created_user.email, admin_email);
+        assert!(created_user.verify_password(&admin_password).is_ok());
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../../db/fixtures", scripts("non-plant-taxa"))
+    ))]
+    async fn test_clean_non_plant_taxa(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM taxonomic_units WHERE kingdom_id != ?")
+                .bind(crate::taxonomy::KINGDOM_PLANTAE)
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        assert!(count > 0);
+        let result = db.clean_non_plant_taxa().await;
+        assert!(result.is_ok());
+
+        // Verify that only plant taxa remain
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM taxonomic_units WHERE kingdom_id != ?")
+                .bind(crate::taxonomy::KINGDOM_PLANTAE)
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(path = "../../../db/fixtures", scripts("hierarchy"))
+    ))]
+    async fn test_ensure_taxonomic_order(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+        // phylo_sort_seq in test data is set to 0
+        let sort_seq: i64 =
+            sqlx::query_scalar("SELECT phylo_sort_seq FROM taxonomic_units WHERE tsn = 40677")
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        assert_eq!(sort_seq, 0);
+
+        let result = db.ensure_taxonomic_order().await;
+        assert!(result.is_ok());
+
+        // Verify that phylo_sort_seq was updated
+        let sort_seq: i64 =
+            sqlx::query_scalar("SELECT phylo_sort_seq FROM taxonomic_units WHERE tsn = 40677")
+                .fetch_one(db.pool())
+                .await
+                .unwrap();
+        assert_eq!(sort_seq, 11);
+    }
+
+    #[test(sqlx::test(migrations = "../db/migrations/"))]
+    async fn test_database_upgrade_schema_mismatch(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+
+        // Create a temporary "new" database file with different schema
+        let temp_file = NamedTempFile::new().unwrap();
+        let temp_path = temp_file.path().to_path_buf();
+
+        // Create a new database with different schema
+        let new_pool = sqlx::SqlitePool::connect(&format!("sqlite:{}", temp_path.display()))
+            .await
+            .unwrap();
+        sqlx::migrate!("../db/migrations")
+            .run(&new_pool)
+            .await
+            .unwrap();
+        sqlx::query("ALTER TABLE taxonomic_units RENAME COLUMN tsn to my_id")
+            .execute(&new_pool)
+            .await
+            .unwrap();
+        drop(new_pool);
+
+        // Test upgrade should fail due to schema mismatch
+        let result = db.upgrade(temp_path, |_| UpgradeAction::Proceed).await;
+        assert!(matches!(result, Err(Error::DatabaseUpgrade(_))));
+    }
+
+    #[test(sqlx::test(migrations = "../db/migrations/"))]
+    async fn test_database_upgrade_user_abort(pool: Pool<Sqlite>) {
+        let db = Database::from(pool);
+
+        // Create a temporary "new" database file with same schema
+        let temp_file = NamedTempFile::new().unwrap();
+        let temp_path = temp_file.path().to_path_buf();
+
+        // Create a new database with the same schema
+        let new_pool = sqlx::SqlitePool::connect(&format!("sqlite:{}", temp_path.display()))
+            .await
+            .unwrap();
+        sqlx::migrate!("../db/migrations")
+            .run(&new_pool)
+            .await
+            .unwrap();
+        drop(new_pool);
+
+        // Test upgrade should be aborted by user
+        let result = db.upgrade(temp_path, |_| UpgradeAction::Abort).await;
+
+        assert!(matches!(result, Err(Error::DatabaseUpgrade(_))));
+    }
+}
