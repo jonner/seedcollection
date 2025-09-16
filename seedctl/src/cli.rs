@@ -120,7 +120,7 @@ pub(crate) enum ProjectCommands {
         #[arg(short, long)]
         description: Option<String>,
     },
-    #[command(about = "Remove a project from the database")]
+    #[command(about = "Remove a project from the database", alias = "rm")]
     Remove { id: i64 },
     #[command(about = "Add a new sample to the project")]
     AddSample {
@@ -174,7 +174,7 @@ pub(crate) enum SourceCommands {
         #[arg(long)]
         userid: Option<i64>,
     },
-    #[command(about = "Remove an existing source from the database")]
+    #[command(about = "Remove an existing source from the database", alias = "rm")]
     Remove { id: i64 },
     #[command(
         about="Modify properties of a source",
@@ -262,7 +262,7 @@ pub(crate) enum SampleCommands {
         #[arg(short, long)]
         userid: Option<i64>,
     },
-    #[command(about = "Remove an existing sample from the database")]
+    #[command(about = "Remove an existing sample from the database", alias = "rm")]
     Remove { id: i64 },
     #[command(about = "Modify properties of a sample")]
     #[clap(alias = "edit")]
@@ -362,7 +362,7 @@ pub(crate) enum UserCommands {
         )]
         passwordfile: Option<PathBuf>,
     },
-    #[command(about = "Remove an existing user from the database")]
+    #[command(about = "Remove an existing user from the database", alias = "rm")]
     Remove {
         #[arg(help = "The user ID of the user to remove from the database")]
         id: i64,
