@@ -74,6 +74,12 @@ impl Config {
             .await
             .map_err(|e| Error::FilePermissions(path.to_owned(), "Creating file", e))?;
         let serialized = self.format()?;
+        debug!(?serialized);
+
+        file.write_all(serialized.as_bytes())
+            .await
+            .map_err(|e| Error::FilePermissions(path.to_owned(), "Writing file", e))?;
+
         #[cfg(unix)]
         {
             let mut perms = file
@@ -86,9 +92,8 @@ impl Config {
                 .await
                 .map_err(|e| Error::FilePermissions(path.to_owned(), "Setting permissions", e))?;
         }
-        file.write_all(serialized.as_bytes())
-            .await
-            .map_err(|e| Error::FilePermissions(path.to_owned(), "Writing file", e))
+
+        Ok(())
     }
 
     /// Create a new [Config] object
