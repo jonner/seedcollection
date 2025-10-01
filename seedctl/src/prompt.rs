@@ -23,11 +23,11 @@ pub(crate) enum Error {
 }
 
 /// An object representing a prompt for a [Taxon] id
-pub(crate) struct TaxonIdPrompt<'a> {
-    text: inquire::Text<'a>,
+pub(crate) struct TaxonIdPrompt<'a, 'b> {
+    text: inquire::Text<'a, 'b>,
 }
 
-impl<'a> TaxonIdPrompt<'a> {
+impl<'a, 'b> TaxonIdPrompt<'a, 'b> {
     /// Create a new [TaxonIdPrompt] object
     pub(crate) fn new(message: &'a str, db: &Database) -> Self {
         Self {
@@ -99,11 +99,11 @@ impl Autocomplete for TaxonCompleter {
 }
 
 /// An object representing a prompt for a [Source] id
-pub(crate) struct SourceIdPrompt<'a> {
-    text: inquire::Text<'a>,
+pub(crate) struct SourceIdPrompt<'a, 'b> {
+    text: inquire::Text<'a, 'b>,
 }
 
-impl<'a> SourceIdPrompt<'a> {
+impl<'a, 'b> SourceIdPrompt<'a, 'b> {
     /// Create a new [SourceIdPrompt] object
     pub(crate) fn new(message: &'a str, userid: i64, db: &Database) -> Self {
         Self {
