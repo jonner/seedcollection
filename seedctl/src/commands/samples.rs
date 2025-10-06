@@ -344,6 +344,11 @@ pub(crate) async fn handle_command(
             if oldsample != sample {
                 sample.update(db).await?;
                 println!("Modified sample...");
+                let str = output::format_one(
+                    SampleRowDetails::new(&mut sample, db).await?,
+                    output::OutputFormat::Table,
+                )?;
+                println!("{str}");
             } else {
                 println!("Sample unchanged.")
             }
