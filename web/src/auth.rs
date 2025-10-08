@@ -1,6 +1,5 @@
 use crate::error::Error;
 use anyhow::anyhow;
-use async_trait::async_trait;
 use axum::{extract::FromRequestParts, http::request::Parts};
 use axum_login::{AuthUser, AuthnBackend, UserId};
 use libseed::{core::database::Database, empty_string_as_none, user::User};
@@ -77,7 +76,6 @@ pub(crate) enum AuthError {
     Database(#[from] sqlx::Error),
 }
 
-#[async_trait]
 impl AuthnBackend for SqliteAuthBackend {
     type User = SqliteUser;
     type Credentials = Credentials;

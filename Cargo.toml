@@ -9,7 +9,6 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 anyhow = "1.0.75"
-async-trait = "0.1.84"
 clap = { version = "4.4.11", features = ["derive"] }
 directories = "6"
 futures = "0.3.30"
