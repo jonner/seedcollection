@@ -1,10 +1,9 @@
 use anyhow::{Context, Result};
-use lettre::{AsyncSmtpTransport, Tokio1Executor, transport::smtp::authentication::Credentials};
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Deserializer};
 use tracing::debug;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RemoteSmtpCredentials {
     pub(crate) username: String,
@@ -22,7 +21,7 @@ impl PartialEq for RemoteSmtpCredentials {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct RemoteSmtpConfig {
     pub(crate) url: String,
@@ -31,27 +30,21 @@ pub(crate) struct RemoteSmtpConfig {
     pub(crate) timeout: Option<u64>,
 }
 
-impl RemoteSmtpConfig {
-    pub(crate) fn build(&self) -> Result<AsyncSmtpTransport<Tokio1Executor>> {
-        let mut builder = AsyncSmtpTransport::<Tokio1Executor>::from_url(&self.url)?;
-        if let Some(ref creds) = self.credentials {
-            builder = builder.credentials(Credentials::new(
-                creds.username.clone(),
-                creds.password.expose_secret().to_string(),
-            ));
-        }
-        if let Some(port) = self.port {
-            builder = builder.port(port);
-        }
-        if let Some(timeout) = self.timeout {
-            builder = builder.timeout(Some(std::time::Duration::new(timeout, 0)));
-        }
-
-        Ok(builder.build())
-    }
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct MailSender {
+    pub(crate) name: String,
+    pub(crate) address: String,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct MailService {
+    pub(crate) transport: MailTransport,
+    pub(crate) sender: MailSender,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub(crate) enum MailTransport {
     File(String),
@@ -106,7 +99,7 @@ pub struct EnvConfig {
     #[serde(deserialize_with = "deserialize_listen_with_default_port")]
     pub(crate) listen: ListenConfig,
     pub(crate) database: String,
-    pub(crate) mail_transport: MailTransport,
+    pub(crate) mail_service: MailService,
     #[serde(default)]
     pub(crate) user_registration_enabled: bool,
     pub(crate) public_base_url: String,
@@ -115,7 +108,7 @@ pub struct EnvConfig {
 
 impl EnvConfig {
     pub(crate) fn init(&mut self) -> Result<()> {
-        if let MailTransport::Smtp(ref mut cfg) = self.mail_transport
+        if let MailTransport::Smtp(ref mut cfg) = self.mail_service.transport
             && let Some(ref mut creds) = cfg.credentials
         {
             // 'passwordfile' entry in environment config takes priority
@@ -156,25 +149,37 @@ mod test {
     fn test_parse_config() {
         let yaml = r#"dev:
   database: dev-database.sqlite
-  mail_transport: !File "/tmp/"
+  mail_service:
+    transport: !File "/tmp/"
+    sender: !MailSender
+      name: "SeedCollection"
+      address: "nobody@example.com"
   listen: &LISTEN
     host: "0.0.0.0"
     port: 8080
   public_base_url: "http://dev.server.com"
 test:
   database: prod-database.sqlite
-  mail_transport: !LocalSmtp
+  mail_service: !MailService
+    transport: !LocalSmtp
+    sender: !MailSender
+      name: "SeedCollection"
+      address: "nobody@example.com"
   listen: *LISTEN
   public_base_url: "http://test.server.com"
 prod:
   database: prod-database.sqlite
-  mail_transport: !Smtp
-    url: "smtp.example.com"
-    credentials:
-      username: "user123"
-      passwordfile: "/path/to/passwordfile"
-    port: 25
-    timeout: 61
+  mail_service: !MailService
+    transport: !Smtp
+      url: "smtp.example.com"
+      credentials:
+        username: "user123"
+        passwordfile: "/path/to/passwordfile"
+      port: 25
+      timeout: 61
+    sender: !MailSender
+        name: "SeedCollection"
+        address: "nobody@example.com"
   public_base_url: "https://prod.server.com"
   listen: *LISTEN"#;
         let configs: HashMap<String, EnvConfig> =
@@ -184,7 +189,13 @@ prod:
             configs["dev"],
             EnvConfig {
                 database: "dev-database.sqlite".to_string(),
-                mail_transport: MailTransport::File("/tmp/".to_string()),
+                mail_service: MailService {
+                    transport: MailTransport::File("/tmp/".to_string()),
+                    sender: MailSender {
+                        name: "SeedCollection".to_string(),
+                        address: "nobody@example.com".to_string(),
+                    }
+                },
                 listen: ListenConfig {
                     host: "0.0.0.0".to_string(),
                     port: 8080,
@@ -198,7 +209,13 @@ prod:
             configs["test"],
             EnvConfig {
                 database: "prod-database.sqlite".to_string(),
-                mail_transport: MailTransport::LocalSmtp,
+                mail_service: MailService {
+                    transport: MailTransport::LocalSmtp,
+                    sender: MailSender {
+                        name: "SeedCollection".to_string(),
+                        address: "nobody@example.com".to_string(),
+                    }
+                },
                 listen: ListenConfig {
                     host: "0.0.0.0".to_string(),
                     port: 8080,
@@ -212,16 +229,22 @@ prod:
             configs["prod"],
             EnvConfig {
                 database: "prod-database.sqlite".to_string(),
-                mail_transport: MailTransport::Smtp(RemoteSmtpConfig {
-                    url: "smtp.example.com".into(),
-                    credentials: Some(RemoteSmtpCredentials {
-                        username: "user123".into(),
-                        passwordfile: "/path/to/passwordfile".into(),
-                        password: Default::default()
+                mail_service: MailService {
+                    transport: MailTransport::Smtp(RemoteSmtpConfig {
+                        url: "smtp.example.com".into(),
+                        credentials: Some(RemoteSmtpCredentials {
+                            username: "user123".into(),
+                            passwordfile: "/path/to/passwordfile".into(),
+                            password: Default::default()
+                        }),
+                        port: Some(25),
+                        timeout: Some(61)
                     }),
-                    port: Some(25),
-                    timeout: Some(61)
-                }),
+                    sender: MailSender {
+                        name: "SeedCollection".to_string(),
+                        address: "nobody@example.com".to_string(),
+                    }
+                },
                 listen: ListenConfig {
                     host: "0.0.0.0".to_string(),
                     port: 8080,
@@ -237,7 +260,11 @@ prod:
     fn test_default_ports() {
         let yaml = r#"dev:
   database: dev-database.sqlite
-  mail_transport: !File "/tmp/"
+  mail_service: !MailService
+    transport: !File "/tmp/"
+    sender: !MailSender
+      name: "SeedCollection"
+      address: "nobody@example.com"
   listen:
     host: "0.0.0.0"
   public_base_url: "http://dev.server.com""#;
