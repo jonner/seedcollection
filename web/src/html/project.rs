@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     state::AppState,
     util::{
-        AccessControlled, FlashMessage, Paginator, app_url,
+        AccessControlled, FlashMessage, Paginator,
         extract::{Form, Query},
     },
 };
@@ -158,6 +158,7 @@ struct ProjectDefinitionParams {
     description: Option<String>,
 }
 
+// #[tracing::instrument]
 async fn insert_project(
     user: SqliteUser,
     State(app): State<AppState>,
@@ -166,15 +167,12 @@ async fn insert_project(
     if params.name.is_empty() {
         return Err(Error::RequiredParameterMissing("name".into()));
     }
-    let mut project = Project::new(
-        params.name.clone(),
-        params.description.as_ref().cloned(),
-        user.id,
-    );
+    let mut project = Project::new(params.name.clone(), params.description.clone(), user.id);
     project.insert(&app.db).await?;
 
     debug!(project.id, "successfully inserted project");
-    let projecturl = app_url(&format!("/project/{}", project.id));
+    let projecturl = app.path(&format!("/project/{}", project.id));
+    debug!(projecturl, "Redirecting to new project");
 
     Ok((
         [("HX-Redirect", projecturl)],
@@ -271,7 +269,7 @@ async fn modify_project(
     })?;
 
     Ok((
-        [("HX-Redirect", app_url(&format!("/project/{id}")))],
+        [("HX-Redirect", app.path(&format!("/project/{id}")))],
         app.render_flash_message(FlashMessage::Success(
             "Successfully updated project".to_string(),
         )),
@@ -286,7 +284,7 @@ async fn delete_project(
     let mut project = Project::load_for_user(id, &user, &app.db).await?;
     project.delete(&app.db).await?;
     Ok((
-        [("HX-Redirect", app_url("/project/list"))],
+        [("HX-Redirect", app.path("/project/list"))],
         app.render_flash_message(FlashMessage::Success(format!("Deleted project '{id}'"))),
     ))
 }

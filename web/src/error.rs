@@ -90,6 +90,7 @@ impl Error {
 
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for Error {
+    #[tracing::instrument]
     fn into_response(self) -> Response {
         warn!("Got error for response: {self:?}");
         // placeholder, will get refined in the response mapper

@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use crate::{
     TemplateKey,
     auth::{AuthSession, Credentials},
     error::Error,
-    state::AppState,
+    state::{AppState, SharedState},
     util::{
-        FlashMessage, app_url,
+        FlashMessage,
         extract::{Form, Query},
     },
 };
@@ -94,7 +96,7 @@ async fn register_user(
     user.insert(&app.db).await?;
     let uv = user.generate_verification_request(&app.db).await?;
     app.send_verification(uv).await?;
-    Ok([("HX-redirect", app_url("/auth/login"))])
+    Ok([("HX-redirect", app.path("/auth/login"))])
 }
 
 async fn show_register(
@@ -122,6 +124,7 @@ async fn show_login(
 }
 
 async fn do_login(
+    State(app): State<AppState>,
     mut auth: AuthSession,
     Form(creds): Form<Credentials>,
 ) -> Result<impl IntoResponse, Error> {
@@ -135,7 +138,7 @@ async fn do_login(
     Ok((
         [(
             "HX-Redirect",
-            creds.next.as_ref().cloned().unwrap_or(app_url("/")),
+            creds.next.as_ref().cloned().unwrap_or(app.path("/")),
         )],
         "",
     ))
@@ -148,9 +151,8 @@ async fn logout(mut auth: AuthSession) -> impl IntoResponse {
     }
 }
 
-fn verification_error_message(err: VerificationError) -> FlashMessage {
-    let profile_url = app_url("/user/me");
-
+fn verification_error_message(err: VerificationError, app: Arc<SharedState>) -> FlashMessage {
+    let profile_url = app.path("/user/me");
     match err {
         VerificationError::Expired => FlashMessage::Error(format!(
             "This verification code has expired. Please visit your <a href='{profile_url}'>user profile</a> to request a new verification code to be emailed to you."
@@ -174,7 +176,7 @@ async fn show_verification(
 ) -> Result<impl IntoResponse, Error> {
     let message = UserVerification::find(userid, &vkey, &app.db)
         .await
-        .map_or_else(verification_error_message, |_uv| {
+        .map_or_else(|err| verification_error_message(err, app.clone()), |_uv| {
             FlashMessage::Warning(
                 "Verification of your email address is required in order to perform some actions on this website. Click below to verify your email address."
                     .into(),
@@ -194,7 +196,7 @@ async fn verify_user(
             Ok(_) => FlashMessage::Success("You have successfully verified your account".into()),
             Err(_e) => FlashMessage::Error("Failed to verify user".into()),
         },
-        Err(e) => verification_error_message(e),
+        Err(e) => verification_error_message(e, app.clone()),
     };
 
     Ok(app.render_template(key, context!(message => message)))

@@ -1,4 +1,4 @@
-use crate::{Result, test_app, util::app_url};
+use crate::{Result, state::AppState, test_app};
 use axum::{
     Router,
     body::{Body, Bytes, HttpBody},
@@ -40,14 +40,14 @@ where
 }
 
 /// logs the user into the app and returns a cookie value that can be used in subsequent requests
-async fn login(app: &mut Router) -> Result<String> {
+async fn login(app: &mut Router, state: AppState) -> Result<String> {
     let creds = serde_urlencoded::to_string([
         ("username", "testuser"),
         ("password", "topsecret123"),
         ("next", "url"),
     ])?;
     let request = Request::builder()
-        .uri(app_url("/auth/login"))
+        .uri(state.path("/auth/login"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .body(creds)?;
@@ -67,13 +67,15 @@ async fn login(app: &mut Router) -> Result<String> {
     fixtures(path = "../../../../db/fixtures", scripts("users"))
 ))]
 async fn test_login(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app").0;
-    let cookie = login(&mut app).await.expect("Failed to log in");
+    let (mut app, state) = test_app(pool).await.expect("failed to create test app").0;
+    let cookie = login(&mut app, state.clone())
+        .await
+        .expect("Failed to log in");
     assert!(!cookie.is_empty());
 
     // now make sure we can't access pages that are protected without the cookie
     let req = Request::builder()
-        .uri(app_url("/project/list"))
+        .uri(state.path("/project/list"))
         .method("GET")
         .body(Body::empty())
         .expect("Failed to build request");
@@ -86,7 +88,7 @@ async fn test_login(pool: Pool<Sqlite>) {
 
     // ...but we can with the cookie
     let req = Request::builder()
-        .uri(app_url("/project/list"))
+        .uri(state.path("/project/list"))
         .method("GET")
         .header("Cookie", cookie.clone())
         .body(Body::empty())

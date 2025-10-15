@@ -4,21 +4,21 @@
 <head>
     {% block head %}
     <title>{% block title %}SeedCollection{% endblock %}</title>
-    <script src="/static/js/vendor/htmx.org/dist/htmx.min.js"></script>
-    <script src="/static/js/vendor/htmx.org/dist/ext/response-targets.js"></script>
-    <script src="/static/js/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <link href="/static/js/vendor/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/base.css">
-    <link rel="stylesheet" href="/static/js/vendor/bootstrap-icons/font/bootstrap-icons.css">
+    <script src="{{ "/static/js/vendor/htmx.org/dist/htmx.min.js" | app_url }}"></script>
+    <script src="{{ "/static/js/vendor/htmx.org/dist/ext/response-targets.js" | app_url }}"></script>
+    <script src="{{ "/static/js/vendor/bootstrap/dist/js/bootstrap.bundle.min.js" | app_url }}"></script>
+    <link href="{{ "/static/js/vendor/bootstrap/dist/css/bootstrap.min.css" | app_url }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ "/static/base.css" | app_url }}">
+    <link rel="stylesheet" href="{{ "/static/js/vendor/bootstrap-icons/font/bootstrap-icons.css" | app_url }}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link rel="stylesheet" href="/static/js/vendor/leaflet/dist/leaflet.css"/>
-    <link rel="stylesheet" href="/static/js/vendor/leaflet-geosearch/dist/geosearch.css"/>
-    <link rel="stylesheet" href="/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.css"/>
+    <link rel="stylesheet" href="{{ "/static/js/vendor/leaflet/dist/leaflet.css" | app_url }}"/>
+    <link rel="stylesheet" href="{{ "/static/js/vendor/leaflet-geosearch/dist/geosearch.css" | app_url }}"/>
+    <link rel="stylesheet" href="{{ "/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.css" | app_url }}"/>
     <!-- Make sure you put this AFTER Leaflet's CSS -->
-    <script src="/static/js/vendor/leaflet/dist/leaflet.js"></script>
-    <script src="/static/js/vendor/leaflet-geosearch/dist/bundle.min.js"></script>
-    <script src="/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.js" charset="utf-8"></script>
+    <script src="{{ "/static/js/vendor/leaflet/dist/leaflet.js" | app_url }}"></script>
+    <script src="{{ "/static/js/vendor/leaflet-geosearch/dist/bundle.min.js" | app_url }}"></script>
+    <script src="{{ "/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.js" | app_url }}" charset="utf-8"></script>
     {% endblock %}
 </head>
 <body hx-ext="response-targets"

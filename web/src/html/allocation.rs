@@ -3,7 +3,7 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, app_url, extract::Form},
+    util::{FlashMessage, extract::Form},
 };
 use anyhow::anyhow;
 use axum::{
@@ -122,7 +122,7 @@ async fn add_allocation_note(
         params.details.as_ref().cloned(),
     );
     note.insert(&app.db).await?;
-    let url = app_url(&format!("/project/{projectid}/sample/{allocid}"));
+    let url = app.path(&format!("/project/{projectid}/sample/{allocid}"));
     Ok([("HX-Redirect", url)])
 }
 
@@ -270,6 +270,6 @@ async fn modify_note(
     note.update(&app.db).await?;
     Ok([(
         "HX-Redirect",
-        app_url(&format!("/project/{projectid}/sample/{allocid}")),
+        app.path(&format!("/project/{projectid}/sample/{allocid}")),
     )])
 }

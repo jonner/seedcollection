@@ -4,7 +4,7 @@ use crate::{
     error::Error,
     state::AppState,
     util::{
-        AccessControlled, FlashMessage, Paginator, app_url,
+        AccessControlled, FlashMessage, Paginator,
         extract::{Form, Query},
     },
 };
@@ -157,7 +157,7 @@ async fn update_source(
     src.update(&app.db).await?;
 
     Ok((
-        [("HX-Redirect", app_url(&format!("/source/{id}")))],
+        [("HX-Redirect", app.path(&format!("/source/{id}")))],
         app.render_flash_message(FlashMessage::Success(
             "Successfully updated source".to_string(),
         )),
@@ -183,7 +183,7 @@ async fn new_source(
     );
     source.insert(&app.db).await?;
 
-    let url = app_url(&format!("/source/{}", source.id));
+    let url = app.path(&format!("/source/{}", source.id));
     if params.modal.is_some() {
         headers.append(
             "HX-Trigger",
@@ -214,6 +214,6 @@ async fn delete_source(
     let mut src = Source::load_for_user(id, &user, &app.db).await?;
     src.delete(&app.db)
         .await
-        .map(|_| [("HX-redirect", app_url("/source/list"))])
+        .map(|_| [("HX-redirect", app.path("/source/list"))])
         .map_err(Into::into)
 }

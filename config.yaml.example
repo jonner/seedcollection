@@ -22,8 +22,9 @@ dev:
   # Set this to the canonical public url for your web application. This will
   # be the url used to construct urls that are sent via email to users (e.g. 'click
   # this link to verify your account'). Make sure that your application is actually
-  # reachable at this URL
-  public_base_url: "https://dev.seedcollection.test.com"
+  # reachable at this URL. If it has a trailing path, the application will use
+  # that path as the root of its router
+  public_address: "https://dev.seedcollection.test.com/foo/"
 prod:
   database: seedcollection.sqlite.prod
   mail_transport: !Smtp
@@ -39,4 +40,4 @@ prod:
       passwordfile: "/path/to/smtpd/password"
   listen: *DEFAULT_LISTEN
   user_registration_enabled: true
-  public_base_url: "https://seedcollection.test.com"
+  public_address: "https://seedcollection.test.com"

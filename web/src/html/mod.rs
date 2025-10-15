@@ -1,10 +1,4 @@
-use crate::{
-    TemplateKey,
-    auth::AuthSession,
-    error::Error,
-    state::AppState,
-    util::{FlashMessage, app_url},
-};
+use crate::{TemplateKey, auth::AuthSession, error::Error, state::AppState, util::FlashMessage};
 use axum::{
     Router,
     extract::{OriginalUri, Request, State},
@@ -51,7 +45,7 @@ async fn login_required(
                 .unwrap_or_default(),
         )])
         .unwrap_or_default();
-        let mut login_url = app_url("/auth/login");
+        let mut login_url = app.path("/auth/login");
         if !next_params.is_empty() {
             login_url.push('?');
             login_url.push_str(&next_params);

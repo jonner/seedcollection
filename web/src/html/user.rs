@@ -5,7 +5,7 @@ use crate::{
     auth::SqliteUser,
     error::Error,
     state::AppState,
-    util::{FlashMessage, app_url, extract::Form},
+    util::{FlashMessage, extract::Form},
 };
 use anyhow::anyhow;
 use axum::{
@@ -106,7 +106,7 @@ async fn update_profile(
             .await?;
     }
 
-    Ok([("HX-Redirect", app_url("/user/me"))])
+    Ok([("HX-Redirect", app.path("/user/me"))])
 }
 
 async fn resend_verification(
@@ -147,5 +147,5 @@ async fn update_prefs(
     let prefs = user.preferences_mut(&app.db).await?;
     prefs.pagesize = params.pagesize;
     prefs.update(&app.db).await?;
-    Ok([("HX-Redirect", app_url("/user/me"))].into_response())
+    Ok([("HX-Redirect", app.path("/user/me"))].into_response())
 }

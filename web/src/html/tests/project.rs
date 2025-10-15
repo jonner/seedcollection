@@ -11,12 +11,14 @@ use test_log::test;
     )
 ))]
 async fn test_list_projects(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app").0;
+    let (mut app, state) = test_app(pool).await.expect("failed to create test app").0;
     // first log in:
-    let cookie = login(&mut app).await.expect("Failed to log in");
+    let cookie = login(&mut app, state.clone())
+        .await
+        .expect("Failed to log in");
 
     let req = Request::builder()
-        .uri(app_url("/project/list"))
+        .uri(state.path("/project/list"))
         .method("GET")
         .header("Cookie", cookie.clone())
         .body(Body::empty())
@@ -37,12 +39,14 @@ async fn test_list_projects(pool: Pool<Sqlite>) {
     )
 ))]
 async fn test_new_project(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app").0;
+    let (mut app, state) = test_app(pool).await.expect("failed to create test app").0;
     // first log in:
-    let cookie = login(&mut app).await.expect("Failed to log in");
+    let cookie = login(&mut app, state.clone())
+        .await
+        .expect("Failed to log in");
 
     let req = Request::builder()
-        .uri(app_url("/project/new"))
+        .uri(state.path("/project/new"))
         .method("GET")
         .header("Cookie", cookie.clone())
         .body(Body::empty())
@@ -56,7 +60,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
 
     // try to post a new project without any form data
     let req = Request::builder()
-        .uri(app_url("/project/new"))
+        .uri(state.path("/project/new"))
         .method("POST")
         .header("Cookie", cookie.clone())
         .body(Body::empty())
@@ -70,7 +74,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
 
     // try to post a new project malformed form data
     let req = Request::builder()
-        .uri(app_url("/project/new"))
+        .uri(state.path("/project/new"))
         .method("POST")
         .header("Cookie", cookie.clone())
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -87,7 +91,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     let missing_name =
         serde_urlencoded::to_string([("foo", "bar")]).expect("failed to serialize form");
     let req = Request::builder()
-        .uri(app_url("/project/new"))
+        .uri(state.path("/project/new"))
         .method("POST")
         .header("Cookie", cookie.clone())
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -104,7 +108,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     let form = serde_urlencoded::to_string([("name", "project name #1")])
         .expect("failed to serialize form");
     let req = Request::builder()
-        .uri(app_url("/project/new"))
+        .uri(state.path("/project/new"))
         .method("POST")
         .header("Cookie", cookie.clone())
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -120,7 +124,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     // empty name
     let form = serde_urlencoded::to_string([("name", "")]).expect("failed to serialize form");
     let req = Request::builder()
-        .uri(app_url("/project/new"))
+        .uri(state.path("/project/new"))
         .method("POST")
         .header("Cookie", cookie.clone())
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -137,7 +141,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     let form = serde_urlencoded::to_string([("name", "project name #2"), ("description", "")])
         .expect("failed to serialize form");
     let req = Request::builder()
-        .uri(app_url("/project/new"))
+        .uri(state.path("/project/new"))
         .method("POST")
         .header("Cookie", cookie.clone())
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -158,7 +162,7 @@ async fn test_new_project(pool: Pool<Sqlite>) {
     ])
     .expect("failed to serialize form");
     let req = Request::builder()
-        .uri(app_url("/project/new"))
+        .uri(state.path("/project/new"))
         .method("POST")
         .header("Cookie", cookie.clone())
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
