@@ -1,9 +1,11 @@
 # This file should consist of a 'dictionary' of runtime environments that can be
 # selected via the --env argument. Environment names are user-defined.
 
+# A development environment definition. The name 'dev' is arbitrary
 dev:
   # path to the database to use for this environment
   database: seedcollection.sqlite
+
   # The mail transport to use for sending out emails. There are three variants
   # and the type of transport must be specified with one of the following a
   # yaml tags:
@@ -11,20 +13,30 @@ dev:
   # - !File: a simple path argument. Useful for testing -- just writes emails to a file at the given path
   # - !Smtp: arguments shown below. Connects to the given remote smtp server to send emails
   mail_transport: !LocalSmtp
+
   # The address that the application should listen for incoming connections
   listen: &DEFAULT_LISTEN
     # interface to listen on
     host: "0.0.0.0"
     # port to listen for http connections, defaults to port 80
     port: 8080
+
+  # Configuration for the prometheus metrics server. Same format as `listen`
+  # above
+  metrics: 
+    host: "localhost"
+    port: 6001
   # Whether or not this application will allow users to register new accounts
   user_registration_enabled: true
+
   # Set this to the canonical public url for your web application. This will
   # be the url used to construct urls that are sent via email to users (e.g. 'click
   # this link to verify your account'). Make sure that your application is actually
   # reachable at this URL. If it has a trailing path, the application will use
   # that path as the root of its router
   public_address: "https://dev.seedcollection.test.com/foo/"
+
+# A production environment
 prod:
   database: seedcollection.sqlite.prod
   mail_transport: !Smtp
