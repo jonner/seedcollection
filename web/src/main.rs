@@ -134,9 +134,9 @@ impl MakeRequestId for MakeRequestUuid {
 }
 
 fn template_engine<'source, T>(
-    envname: &str,
     template_dir: T,
     app_prefix: String,
+    production_env: bool,
 ) -> Engine<minijinja::Environment<'source>>
 where
     T: AsRef<std::path::Path>,
@@ -152,7 +152,7 @@ where
     });
     jinja.add_filter("qtyfmt", util::format_quantity);
 
-    jinja.add_global("environment", envname);
+    jinja.add_global("production_environment", production_env);
     jinja.add_global("app_prefix", app_prefix.trim_end_matches('/'));
     minijinja_contrib::add_to_environment(&mut jinja);
 

@@ -23,7 +23,14 @@ pub(crate) struct SharedState {
 impl SharedState {
     pub(crate) async fn new(envname: &str, env: EnvConfig, datadir: PathBuf) -> Result<Self> {
         let tmpl_path = datadir.join("templates");
-        let template = template_engine(envname, &tmpl_path, env.public_address.path().to_string());
+        let template = template_engine(
+            &tmpl_path,
+            env.public_address.path().to_string(),
+            // FIXME: in the future, perhaps the yaml configuration can contain
+            // a setting to indicate that the environment is a production
+            // environment
+            envname == "prod",
+        );
         trace!("Creating shared app state");
 
         Ok(Self {
@@ -130,9 +137,9 @@ impl SharedState {
             metrics: None,
         };
         let template = template_engine(
-            "test",
             "./templates",
             config.public_address.path().to_string(),
+            false,
         );
         Self {
             db: Database::from(pool),
