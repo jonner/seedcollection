@@ -3,7 +3,7 @@
 {% block content %}
 <h2>{{ self.title() }}</h2>
 <form id="new-germ-form" 
-      hx-post="{{ "/taxonomy/editgerm" |app_url }}"
+      hx-post="{{app_prefix}}/taxonomy/editgerm"
       hx-target="#new-messages"
       hx-swap="afterbegin"
       >
@@ -19,7 +19,7 @@
                          value="{% if request and request.taxon %}{{ request.taxon }}{% elif sample %}{{ sample.taxon.id }}{% endif %}" 
                          list="taxonOptions"
                          autofocus
-                         hx-get="{{ "/taxonomy/datalist" | app_url }}"
+                         hx-get="{{app_prefix}}/taxonomy/datalist"
                          hx-trigger="input changed delay:500ms"
                          hx-target="#taxonOptions">
                   <datalist id="taxonOptions">

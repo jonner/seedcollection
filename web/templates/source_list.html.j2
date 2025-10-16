@@ -4,14 +4,14 @@
 {% extends "root.html.j2" %}
 {% block title %}Seed Sources{% endblock %}
 {% block content %}
-<h2><span class="me-2">{{ icon("geo-alt") }}</span>{{ self.title() }} <a class="ms-2" href="{{ "/source/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
+<h2><span class="me-2">{{ icon("geo-alt") }}</span>{{ self.title() }} <a class="ms-2" href="{{app_prefix}}/source/new">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
     <form method="GET"
-          action="{{ "/source/list" | app_url }}"
+          action="{{app_prefix}}/source/list"
           hx-push-url="true"
           hx-boost="true"
           hx-target="#source-list"
-          hx-get="{{ "/source/list" | app_url }}"
+          hx-get="{{app_prefix}}/source/list"
           hx-trigger="submit, input changed delay:500ms from:input">
         <input type="text"
            class="form-control"

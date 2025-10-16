@@ -3,19 +3,19 @@
 {% block title %}Sample S{{ sample.id | idfmt }}{% endblock %}
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ "/static/js/vendor/leaflet/dist/leaflet.css" | app_url }}"/>
+<link rel="stylesheet" href="{{app_prefix}}/static/js/vendor/leaflet/dist/leaflet.css"/>
      <!-- Make sure you put this AFTER Leaflet's CSS -->
-<script src="{{ "/static/js/vendor/leaflet/dist/leaflet.js" | app_url }}"></script>
+<script src="{{app_prefix}}/static/js/vendor/leaflet/dist/leaflet.js"></script>
 {% endblock %}
 {% block content %}
 {{ breadcrumbs([
-{"name": "Home", "link": ("/" | app_url) },
-{"name": "Samples", "link": ("/sample/list" | app_url) },
+{"name": "Home", "link": (app_prefix ~ "/") },
+{"name": "Samples", "link": (app_prefix ~ "/sample/list") },
 {"name": sample.id | idfmt("S"), "active": true }]) }}
 
 <h2>
-    <a href="{{ ("/taxonomy/" ~ sample.taxon.id) | app_url }}">{{ sample.taxon.complete_name }}</a>
-    <a href="{{ ("/sample/" ~ sample.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a>
+    <a href="{{app_prefix}}/taxonomy/{{sample.taxon.id}}">{{ sample.taxon.complete_name }}</a>
+    <a href="{{app_prefix}}/sample/{{sample.id}}/edit">{{ icon("pencil") }}</a>
 </h2>
 <h5>Common Names</h5>
 <div class="mb-3 px-2">
@@ -69,14 +69,14 @@
 <h5>Project Allocations</h5>
 <ul>
     {% for (project, allocation ) in projects %}
-    <li><a href="{{ ("/project/" ~ project.id ~ "/sample/" ~ allocation.id) | app_url }}">{{ project.name }}</a>
+    <li><a href="{{app_prefix}}/project/{{project.id}}/sample/{{allocation.id}}">{{ project.name }}</a>
     </li>
     {% else %}
     <li class="text-secondary">None</li>
     {% endfor %}
 </ul>
 <h5>Source</h5>
-<div class="mb-3 px-2"><a href="{{ ( "/source/" ~ sample.source.id) | app_url }}">{{ sample.source.name }}</a></div>
+<div class="mb-3 px-2"><a href="{{app_prefix}}/source/{{sample.source.id}}">{{ sample.source.name }}</a></div>
 {% if sample.source.latitude and sample.source.longitude %}
 <div id="sample-location-map" style="height: 320px" class="mb-3 px-2"></div>
 {{ show_map(sample.source.latitude, sample.source.longitude, 13, "sample-location-map") }}

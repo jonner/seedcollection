@@ -4,9 +4,9 @@
 {% block title %}{{ source.name }} Details{% endblock %}
 {% block content %}
 {{ breadcrumbs([
-{"name": "Home", "link": ("/" | app_url) },
-{"name": "Sources", "link": ("/source/list" | app_url) },
-{"name": source.id | idfmt("L"), "link": ("/source/" ~ source.id) | app_url },
+{"name": "Home", "link": (app_prefix ~ "/") },
+{"name": "Sources", "link": (app_prefix ~ "/source/list") },
+{"name": source.id | idfmt("L"), "link": (app_prefix ~ "/source/" ~ source.id) },
 {"name": "Edit", "active": true }
 ]) }}
 <h2>Source Details</h2>

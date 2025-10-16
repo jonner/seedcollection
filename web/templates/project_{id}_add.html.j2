@@ -32,16 +32,16 @@
 {% block title %}Add Samples to Project{% endblock %}
 {% block content %}
 {{ breadcrumbs([
-{"name": "Home", "link": ("/" | app_url) },
-{"name": "Projects", "link": ("/project/list" | app_url) },
-{"name": project.id | idfmt("P"), "link": ("/project/" ~ project.id) | app_url },
+{"name": "Home", "link": (app_prefix ~ "/") },
+{"name": "Projects", "link": (app_prefix ~ "/project/list) },
+{"name": project.id | idfmt("P"), "link": (app_prefix ~ "/project/" ~ project.id) },
 {"name": "Add Samples", "active": true }]) }}
 <h2>{{ self.title() }}</h2>
 <p>Choose samples to add to the project <i>{{ project.name }}</i></p>
-{{ filter_sort_widget(("/project/" ~ project.id ~ "/add") | app_url, "#sample-list", filter_spec)}}
+{{ filter_sort_widget((app_prefix ~ "/project/" ~ project.id ~ "/add"), "#sample-list", filter_spec)}}
 {% if samples %}
 <form id="project-add-form"
-    hx-post="{{ ("/project/" ~ project.id ~ "/add") | app_url }}"
+    hx-post="{{app_prefix}}/project/{{project.id}}/add"
     hx-swap="none">
     <div id="sample-list"
     hx-trigger="reload-samples from:body"
@@ -58,7 +58,7 @@
 </form>
 {% else %}
 <div class="alert alert-warning">No samples available to add. 
-    <a href="{{ "/sample/new" | app_url }}">Add a new sample to the database first</a>.
+    <a href="{{app_prefix}}sample/new">Add a new sample to the database first</a>.
 </div>
 {% endif %}
 {% endblock %}

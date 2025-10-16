@@ -1,9 +1,5 @@
 use crate::{
-    config::EnvConfig,
-    email::EmailService,
-    error::Error,
-    template_engine,
-    util::{FlashMessage, app_url},
+    config::EnvConfig, email::EmailService, error::Error, template_engine, util::FlashMessage,
 };
 use anyhow::{Context, Result};
 use axum::response::IntoResponse;
@@ -27,7 +23,14 @@ pub(crate) struct SharedState {
 impl SharedState {
     pub(crate) async fn new(envname: &str, env: EnvConfig, datadir: PathBuf) -> Result<Self> {
         let tmpl_path = datadir.join("templates");
-        let template = template_engine(envname, &tmpl_path, env.public_address.path().to_string());
+        let template = template_engine(
+            &tmpl_path,
+            env.public_address.path().to_string(),
+            // FIXME: in the future, perhaps the yaml configuration can contain
+            // a setting to indicate that the environment is a production
+            // environment
+            envname == "prod",
+        );
         trace!("Creating shared app state");
 
         Ok(Self {
@@ -47,7 +50,13 @@ impl SharedState {
     }
 
     pub(crate) fn path(&self, path: &str) -> String {
-        app_url(self.config.public_address.path(), path)
+        let prefix = self.config.public_address.path();
+        let mut url = prefix.to_string();
+        if !url.ends_with('/') {
+            url.push('/');
+        }
+        url.push_str(path.trim_start_matches('/'));
+        url
     }
 
     fn public_url(&self, path: &str) -> String {
@@ -128,9 +137,9 @@ impl SharedState {
             metrics: None,
         };
         let template = template_engine(
-            "test",
             "./templates",
             config.public_address.path().to_string(),
+            false,
         );
         Self {
             db: Database::from(pool),

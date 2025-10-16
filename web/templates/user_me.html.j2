@@ -3,7 +3,7 @@
 {% block title %}My Profile{% endblock %}
 {% block content %}
 <h2 class="mb-3 border-bottom">{{ self.title() }}
-    <a href="{{ ("/user/me/edit") | app_url }}">{{ icon("pencil") }}</a>
+    <a href="{{app_prefix}}/user/me/edit">{{ icon("pencil") }}</a>
 </h2>
 <div id="message-box"></div>
 <div class="container row column-gap-4">
@@ -33,7 +33,7 @@
             {% if user.status == "Unverified" %}
             <div class="alert alert-warning p-2">
                 This address is unverified. <a href="#"
-                    hx-post="{{ "/user/me/reverify" | app_url }}"
+                    hx-post="{{app_prefix}}/user/me/reverify"
                     hx-target="#message-box">Resend verification email</a>
             </div>
             {% endif %}
@@ -42,7 +42,7 @@
         <div class="row mb-2">
             <h4>Preferences</h4>
             <div class="vstack row-gap-2 ms-2">
-            <div><a href="{{ "/user/me/prefs" | app_url }}">Edit preferences</a></div>
+            <div><a href="{{app_prefix}}/user/me/prefs">Edit preferences</a></div>
             </div>
         </div>
     </div>
@@ -96,7 +96,7 @@
         points.push(L.latLng({{ source.latitude }}, {{ source.longitude }}));
         L.marker(L.latLng({{ source.latitude }}, {{ source.longitude }}))
             .addTo(map)
-            .bindPopup("<a href=\"{{ ("/source/" ~ source.id) | app_url }}\">L{{ source.id | idfmt }}</a>: {{ source.name }}");
+            .bindPopup("<a href=\"{{app_prefix}}/source/{{source.id}}\">L{{ source.id | idfmt }}</a>: {{ source.name }}");
         {% endfor %}
         console.log(points);
         var bounds = L.latLngBounds(points);

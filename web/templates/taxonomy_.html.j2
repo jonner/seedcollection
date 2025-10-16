@@ -6,7 +6,7 @@
     <p>Find information about any species in the database</p>
     <div class="mb-3">
         <form
-                hx-get="{{ "/taxonomy/search" | app_url }}"
+                hx-get="{{app_prefix}}/taxonomy/search"
                 hx-trigger="submit, input changed delay:500ms from:input, change delay:500ms from:#MinnesotaInput, input changed delay:500ms from:select"
                 hx-target="#searchResults"
                 >

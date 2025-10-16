@@ -5,7 +5,7 @@
   <div style="max-width: 500px">
     <h2>{{ self.title() }}</h2>
     <div id="flash-messages"></div>
-    <form hx-post="{{ "/auth/register" | app_url }}" id="register-user">
+    <form hx-post="{{app_prefix}}/auth/register" id="register-user">
         <div class="row px-3 mb-3">
             <label class="form-label" for="UsernameInput">Username</label>
             <input id="UsernameInput"

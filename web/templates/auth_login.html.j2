@@ -7,7 +7,7 @@
 {% if user %}
 <div class="alert alert-warning">Already logged in as {{ user.username }}</div>
 {% else %}
-<form hx-post="{{ "/auth/login" | app_url }}"
+<form hx-post="{{app_prefix}}/auth/login"
       hx-target-error="#message-box"
       id="login-user">
     <div id="flash-messages">

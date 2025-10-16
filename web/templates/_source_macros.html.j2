@@ -4,9 +4,9 @@
 <div id="flash-messages"></div>
 <form
 {% if source %}
-hx-put="{{ ("/source/" ~ source.id) | app_url }}" id="{{ id }}"
+hx-put="{{app_prefix}}/source/{{source.id}}" id="{{ id }}"
 {% else %}
-hx-post="{{ "/source/new" | app_url }}" id="{{ id }}"
+hx-post="{{app_prefix}}/source/new" id="{{ id }}"
 {% endif %}
 hx-swap="none"
 >
@@ -142,7 +142,7 @@ hx-swap="none"
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                             <button type="button"
                                     class="btn btn-danger px-3"
-                                    hx-delete="{{ ("/source/" ~ source.id) | app_url }}"
+                                    hx-delete="{{app_prefix}}/source/{{source.id}}"
                                     hx-target="closest form"
                                     hx-swap="outerHTML"
                                     data-bs-dismiss="modal">Delete</button>
@@ -166,7 +166,7 @@ hx-swap="none"
     <div class="d-flex rounded align-items-baseline flex-grow-1 flex-row mb-1 sample-item">
         <div class="p-1 m-1 text-end bg-light text-primary flex-shrink-0 rounded">
             <a class="fw-bold font-monospace"
-               href="{{ ("/source/" ~ src.id) | app_url}}">{{ src.id | idfmt("L") }}</a>
+               href="{{app_prefix}}/source/{{src.id}}">{{ src.id | idfmt("L") }}</a>
         </div>
         <div class="d-flex flex-column p-1">
             <div>{{ src.name |truncate(length=100) }}

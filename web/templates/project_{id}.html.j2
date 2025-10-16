@@ -6,15 +6,15 @@
 {% block title %}{{ project.name or "Project Details" }}{% endblock %}
 {% block content %}
     {{ breadcrumbs([
-        {"name": "Home", "link": ("/" | app_url) },
-        {"name": "Projects", "link": ("/project/list" | app_url) },
+        {"name": "Home", "link": (app_prefix ~ "/" ) },
+        {"name": "Projects", "link": (app_prefix ~ "/project/list" ) },
         {"name": project.id | idfmt("P"), "active": true },
         ])
     }}
-    <h2>{{ self.title() }} <a href="{{ ("/project/" ~ project.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
+    <h2>{{ self.title() }} <a href="{{app_prefix}}/project/{{project.id}}/edit">{{ icon("pencil") }}</a></h2>
     {{ project.description | markdown }}
-    <h3>Samples in this project <a class="ms-2" href="{{ ("/project/" ~ project.id) | app_url }}/add">{{ icon("plus-square") }}</a></h3>
-    {{ filter_sort_widget(("/project/" ~ project.id) | app_url, "#project-sample-list", filter_spec) }}
+    <h3>Samples in this project <a class="ms-2" href="{{app_prefix}}/project/{{project.id}}/add">{{ icon("plus-square") }}</a></h3>
+    {{ filter_sort_widget((app_prefix ~ "/project/" ~ project.id), "#project-sample-list", filter_spec) }}
     <div id="flash-messages"></div>
     <div
         hx-trigger="reload-project-allocations from:body"

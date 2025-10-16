@@ -4,71 +4,71 @@
 <head>
     {% block head %}
     <title>{% block title %}SeedCollection{% endblock %}</title>
-    <script src="{{ "/static/js/vendor/htmx.org/dist/htmx.min.js" | app_url }}"></script>
-    <script src="{{ "/static/js/vendor/htmx.org/dist/ext/response-targets.js" | app_url }}"></script>
-    <script src="{{ "/static/js/vendor/bootstrap/dist/js/bootstrap.bundle.min.js" | app_url }}"></script>
-    <link href="{{ "/static/js/vendor/bootstrap/dist/css/bootstrap.min.css" | app_url }}" rel="stylesheet">
-    <link rel="stylesheet" href="{{ "/static/base.css" | app_url }}">
-    <link rel="stylesheet" href="{{ "/static/js/vendor/bootstrap-icons/font/bootstrap-icons.css" | app_url }}">
+    <script src="{{app_prefix}}/static/js/vendor/htmx.org/dist/htmx.min.js"></script>
+    <script src="{{app_prefix}}/static/js/vendor/htmx.org/dist/ext/response-targets.js"></script>
+    <script src="{{app_prefix}}/static/js/vendor/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="{{app_prefix}}/static/js/vendor/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{app_prefix}}/static/base.css">
+    <link rel="stylesheet" href="{{app_prefix}}/static/js/vendor/bootstrap-icons/font/bootstrap-icons.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link rel="stylesheet" href="{{ "/static/js/vendor/leaflet/dist/leaflet.css" | app_url }}"/>
-    <link rel="stylesheet" href="{{ "/static/js/vendor/leaflet-geosearch/dist/geosearch.css" | app_url }}"/>
-    <link rel="stylesheet" href="{{ "/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.css" | app_url }}"/>
+    <link rel="stylesheet" href="{{app_prefix}}/static/js/vendor/leaflet/dist/leaflet.css"/>
+    <link rel="stylesheet" href="{{app_prefix}}/static/js/vendor/leaflet-geosearch/dist/geosearch.css"/>
+    <link rel="stylesheet" href="{{app_prefix}}/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.css"/>
     <!-- Make sure you put this AFTER Leaflet's CSS -->
-    <script src="{{ "/static/js/vendor/leaflet/dist/leaflet.js" | app_url }}"></script>
-    <script src="{{ "/static/js/vendor/leaflet-geosearch/dist/bundle.min.js" | app_url }}"></script>
-    <script src="{{ "/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.js" | app_url }}" charset="utf-8"></script>
+    <script src="{{app_prefix}}/static/js/vendor/leaflet/dist/leaflet.js"></script>
+    <script src="{{app_prefix}}/static/js/vendor/leaflet-geosearch/dist/bundle.min.js"></script>
+    <script src="{{app_prefix}}/static/js/vendor/leaflet.locatecontrol/dist/L.Control.Locate.min.js" charset="utf-8"></script>
     {% endblock %}
 </head>
 <body hx-ext="response-targets"
     hx-select-oob="#flash-messages"
     hx-target-error="#flash-messages"
-    {% if environment != "prod" %}class="dev"{% endif %}>
+    {% if not production_environment %}class="dev"{% endif %}>
     {% block body %}
         {% block header %}
         <nav id="main-navbar" class="navbar navbar-expand-md px-md-3" data-bs-theme="dark" >
             <div class="container-xxl">
-            <a class="navbar-brand" href="{{ "/" | app_url }}">{{ icon("flower2", "body") }} SeedCollection</a>
+            <a class="navbar-brand" href="{{app_prefix}}/">{{ icon("flower2", "body") }} SeedCollection</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ "/taxonomy/" | app_url }}">Taxonomy</a>
+                        <a class="nav-link" href="{{app_prefix}}/taxonomy/">Taxonomy</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ "/source/list" | app_url }}">Sources</a>
+                        <a class="nav-link" href="{{app_prefix}}/source/list">Sources</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ "/sample/list" | app_url }}">Samples</a>
+                        <a class="nav-link" href="{{app_prefix}}/sample/list">Samples</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ "/project/list" | app_url }}">Projects</a>
+                        <a class="nav-link" href="{{app_prefix}}/project/list">Projects</a>
                     </li>
                 </ul>
                 {% if user %}
                 <span class="navbar-text">
-                    Logged in as <a href="{{ "/user/me" | app_url }}">{{ user.username }}</a>
+                    Logged in as <a href="{{app_prefix}}/user/me">{{ user.username }}</a>
                 </span>
                 {% endif %}
                 <ul class="navbar-nav">
                     {% if user %}
                     <li class="nav-item">
                         <form method="POST"
-                              action="{{ "/auth/logout" | app_url }}">
+                              action="{{app_prefix}}/auth/logout">
                             <button type="submit" class="nav-link">Log out</button>
                         </form>
                     </li>
                     {% else %}
                     <!-- disabled for now
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ "/auth/register" | app_url }}">Register</a>
+                        <a class="nav-link" href="{{app_prefix}}/auth/register">Register</a>
                     </li>
                     -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ "/auth/login" | app_url }}">Log in</a>
+                        <a class="nav-link" href="{{app_prefix}}/auth/login">Log in</a>
                     </li>
                     {% endif %}
                 </ul>
