@@ -1,9 +1,5 @@
 use crate::{
-    config::EnvConfig,
-    email::EmailService,
-    error::Error,
-    template_engine,
-    util::{FlashMessage, app_url},
+    config::EnvConfig, email::EmailService, error::Error, template_engine, util::FlashMessage,
 };
 use anyhow::{Context, Result};
 use axum::response::IntoResponse;
@@ -47,7 +43,13 @@ impl SharedState {
     }
 
     pub(crate) fn path(&self, path: &str) -> String {
-        app_url(self.config.public_address.path(), path)
+        let prefix = self.config.public_address.path();
+        let mut url = prefix.to_string();
+        if !url.ends_with('/') {
+            url.push('/');
+        }
+        url.push_str(path.trim_start_matches('/'));
+        url
     }
 
     fn public_url(&self, path: &str) -> String {

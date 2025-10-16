@@ -13,15 +13,6 @@ use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, num::NonZero};
 
-pub(crate) fn app_url(prefix: &str, value: &str) -> String {
-    let mut url = prefix.to_string();
-    if !url.ends_with('/') {
-        url.push('/');
-    }
-    url.push_str(value.trim_start_matches('/'));
-    url
-}
-
 const DEFAULT_PAGE_SIZE: NonZero<u32> = NonZero::new(50).unwrap();
 
 /// A structure that can be used to presents a summary of results in a web page
@@ -234,7 +225,7 @@ impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver<'_> {
                     .and_then(|s| s.parse::<i64>().ok())
                     .map(|id| {
                         (
-                            app_url(self.0, &format!("/{slug}/{id}")).into(),
+                            format!("{}/{slug}/{id}", self.0).into(),
                             format!("{slug} #{id}").into(),
                         )
                     })
@@ -244,16 +235,31 @@ impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver<'_> {
 
 /// A minijinja template filter to parse and format markdown so that templates
 /// can process user-generated markdown for comments, etc.
-pub(crate) fn markdown(value: Option<&str>, base_path: &str) -> minijinja::Value {
+pub(crate) fn markdown(value: Option<&str>, app_prefix: &str) -> minijinja::Value {
     let value = value.unwrap_or("");
     let parser = pulldown_cmark::Parser::new_with_broken_link_callback(
         value,
         pulldown_cmark::Options::empty(),
-        Some(ObjectLinkResolver(base_path)),
+        Some(ObjectLinkResolver(app_prefix.trim_end_matches('/'))),
     );
     let mut output = String::new();
     pulldown_cmark::html::push_html(&mut output, parser);
     minijinja::Value::from_safe_string(output)
+}
+
+#[test]
+fn test_markdown_ids_with_prefix() {
+    let prefix = "/foo/";
+    assert_eq!(
+        markdown(Some("[S0006]"), prefix).as_str(),
+        Some(
+            format!(
+                "<p><a href=\"{}\" title=\"sample #6\">S0006</a></p>\n",
+                "/foo/sample/6"
+            )
+            .as_str()
+        )
+    );
 }
 
 #[test]
@@ -264,7 +270,7 @@ fn test_markdown_ids() {
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"sample #6\">S0006</a></p>\n",
-                app_url(prefix, "/sample/6")
+                "/sample/6"
             )
             .as_str()
         )
@@ -278,9 +284,9 @@ fn test_markdown_ids() {
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"source #6\">L0006</a> and <a href=\"{}\" title=\"sample #123\">S0123</a> and <a href=\"{}\" title=\"project #9999\">P9999</a></p>\n",
-                app_url(prefix, "/source/6"),
-                app_url(prefix, "/sample/123"),
-                app_url(prefix, "/project/9999"),
+                "/source/6",
+                "/sample/123",
+                "/project/9999",
             )
             .as_str()
         )
@@ -290,7 +296,7 @@ fn test_markdown_ids() {
         Some(
             format!(
                 "<p>L0006 and <a href=\"{}\" title=\"sample #123\">S0123</a> and [B9999]</p>\n",
-                app_url(prefix, "/sample/123"),
+                "/sample/123",
             )
             .as_str()
         )
@@ -300,7 +306,7 @@ fn test_markdown_ids() {
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"source #6\">L0006</a></p>\n",
-                app_url(prefix, "/source/6")
+                "/source/6"
             )
             .as_str()
         )
@@ -310,7 +316,7 @@ fn test_markdown_ids() {
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"project #6\">P0006</a></p>\n",
-                app_url(prefix, "/project/6")
+                "/project/6"
             )
             .as_str()
         )
@@ -324,7 +330,7 @@ fn test_markdown_ids() {
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"sample #6\">S006</a></p>\n",
-                app_url(prefix, "/sample/6")
+                "/sample/6"
             )
             .as_str()
         )
