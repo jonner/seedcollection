@@ -12,7 +12,7 @@ dev:
     host: "localhost"
     port: 6001
   user_registration_enabled: true
-  public_base_url: "https://localhost:8443"
+  public_address: "https://localhost:8443"
 prod:
   database: /usr/share/seedweb/db/seedcollection.sqlite
   mail_service: !MailService
@@ -25,5 +25,5 @@ prod:
   listen: *DEFAULT_LISTEN
   metrics: *DEFAULT_METRICS
   user_registration_enabled: false
-  public_base_url: "https://localhost:8443"
+  public_address: "https://localhost:8443"
 

@@ -9,14 +9,16 @@ use test_log::test;
     )
 ))]
 async fn test_filter_samples(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app").0;
+    let (mut app, state) = test_app(pool).await.expect("failed to create test app").0;
 
     // first log in:
-    let cookie = login(&mut app).await.expect("Failed to log in");
+    let cookie = login(&mut app, state.clone())
+        .await
+        .expect("Failed to log in");
 
     // then try to add a note
     let req = Request::builder()
-        .uri(app_url("/sample/list?filter=ely"))
+        .uri(state.path("/sample/list?filter=ely"))
         .method("GET")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("Cookie", cookie.clone())

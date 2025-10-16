@@ -5,7 +5,7 @@ use crate::{
     html::FilterSortOption,
     state::AppState,
     util::{
-        AccessControlled, FlashMessage, Paginator, app_url,
+        AccessControlled, FlashMessage, Paginator,
         extract::{Form, Query},
     },
 };
@@ -267,7 +267,7 @@ async fn insert_sample(
     );
     sample.insert(&app.db).await?;
 
-    let sampleurl = app_url(&format!("/sample/{}", sample.id));
+    let sampleurl = app.path(&format!("/sample/{}", sample.id));
     let taxon_name = &sample.taxon.load(&app.db, false).await?.complete_name;
     Ok((
         [("HX-Redirect", sampleurl)],
@@ -308,7 +308,7 @@ async fn update_sample(
     sample.certainty = certainty;
     sample.update(&app.db).await?;
     Ok((
-        [("HX-Redirect", app_url(&format!("/sample/{id}")))],
+        [("HX-Redirect", app.path(&format!("/sample/{id}")))],
         app.render_flash_message(FlashMessage::Success(format!("Updated sample {id}"))),
     ))
 }
@@ -321,7 +321,7 @@ async fn delete_sample(
     let mut sample = Sample::load_for_user(id, &user, &app.db).await?;
     sample.delete(&app.db).await?;
     Ok((
-        [("HX-Redirect", app_url("/sample/list"))],
+        [("HX-Redirect", app.path("/sample/list"))],
         app.render_flash_message(FlashMessage::Success(format!("Deleted sample {id}"))),
     ))
 }

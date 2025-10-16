@@ -1,4 +1,4 @@
-use crate::{APP_PREFIX, Error};
+use crate::Error;
 use axum::http::Uri;
 use libseed::{
     Database,
@@ -13,8 +13,13 @@ use pulldown_cmark::{BrokenLink, BrokenLinkCallback};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, num::NonZero};
 
-pub(crate) fn app_url(value: &str) -> String {
-    [APP_PREFIX, value.trim_start_matches('/')].join("")
+pub(crate) fn app_url(prefix: &str, value: &str) -> String {
+    let mut url = prefix.to_string();
+    if !url.ends_with('/') {
+        url.push('/');
+    }
+    url.push_str(value.trim_start_matches('/'));
+    url
 }
 
 const DEFAULT_PAGE_SIZE: NonZero<u32> = NonZero::new(50).unwrap();
@@ -204,9 +209,9 @@ pub(crate) fn format_quantity(qty: f64) -> String {
 /// - `[Sxxxx]` -> Samples
 /// - `[Lxxxx]` -> Sources
 /// - `[Pxxxx]` -> Projects
-struct ObjectLinkResolver;
+struct ObjectLinkResolver<'a>(&'a str);
 
-impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver {
+impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver<'_> {
     fn handle_broken_link(
         &mut self,
         link: BrokenLink<'input>,
@@ -229,7 +234,7 @@ impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver {
                     .and_then(|s| s.parse::<i64>().ok())
                     .map(|id| {
                         (
-                            app_url(&format!("/{slug}/{id}")).into(),
+                            app_url(self.0, &format!("/{slug}/{id}")).into(),
                             format!("{slug} #{id}").into(),
                         )
                     })
@@ -239,12 +244,12 @@ impl<'input> BrokenLinkCallback<'input> for ObjectLinkResolver {
 
 /// A minijinja template filter to parse and format markdown so that templates
 /// can process user-generated markdown for comments, etc.
-pub(crate) fn markdown(value: Option<&str>) -> minijinja::Value {
+pub(crate) fn markdown(value: Option<&str>, base_path: &str) -> minijinja::Value {
     let value = value.unwrap_or("");
     let parser = pulldown_cmark::Parser::new_with_broken_link_callback(
         value,
         pulldown_cmark::Options::empty(),
-        Some(ObjectLinkResolver),
+        Some(ObjectLinkResolver(base_path)),
     );
     let mut output = String::new();
     pulldown_cmark::html::push_html(&mut output, parser);
@@ -253,77 +258,84 @@ pub(crate) fn markdown(value: Option<&str>) -> minijinja::Value {
 
 #[test]
 fn test_markdown_ids() {
+    let prefix = "/";
     assert_eq!(
-        markdown(Some("[S0006]")).as_str(),
+        markdown(Some("[S0006]"), prefix).as_str(),
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"sample #6\">S0006</a></p>\n",
-                app_url("/sample/6")
+                app_url(prefix, "/sample/6")
             )
             .as_str()
         )
     );
-    assert_eq!(markdown(Some("S0006")).as_str(), Some("<p>S0006</p>\n"));
     assert_eq!(
-        markdown(Some("[L0006] and [S0123] and [P9999]")).as_str(),
+        markdown(Some("S0006"), prefix).as_str(),
+        Some("<p>S0006</p>\n")
+    );
+    assert_eq!(
+        markdown(Some("[L0006] and [S0123] and [P9999]"), prefix).as_str(),
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"source #6\">L0006</a> and <a href=\"{}\" title=\"sample #123\">S0123</a> and <a href=\"{}\" title=\"project #9999\">P9999</a></p>\n",
-                app_url("/source/6"),
-                app_url("/sample/123"),
-                app_url("/project/9999"),
+                app_url(prefix, "/source/6"),
+                app_url(prefix, "/sample/123"),
+                app_url(prefix, "/project/9999"),
             )
             .as_str()
         )
     );
     assert_eq!(
-        markdown(Some("L0006 and [S0123] and [B9999]")).as_str(),
+        markdown(Some("L0006 and [S0123] and [B9999]"), prefix).as_str(),
         Some(
             format!(
                 "<p>L0006 and <a href=\"{}\" title=\"sample #123\">S0123</a> and [B9999]</p>\n",
-                app_url("/sample/123"),
+                app_url(prefix, "/sample/123"),
             )
             .as_str()
         )
     );
     assert_eq!(
-        markdown(Some("[L0006]")).as_str(),
+        markdown(Some("[L0006]"), prefix).as_str(),
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"source #6\">L0006</a></p>\n",
-                app_url("/source/6")
+                app_url(prefix, "/source/6")
             )
             .as_str()
         )
     );
     assert_eq!(
-        markdown(Some("[P0006]")).as_str(),
+        markdown(Some("[P0006]"), prefix).as_str(),
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"project #6\">P0006</a></p>\n",
-                app_url("/project/6")
+                app_url(prefix, "/project/6")
             )
             .as_str()
         )
     );
-    assert_eq!(markdown(Some("[X0006]")).as_str(), Some("<p>[X0006]</p>\n"));
     assert_eq!(
-        markdown(Some("[S006]")).as_str(),
+        markdown(Some("[X0006]"), prefix).as_str(),
+        Some("<p>[X0006]</p>\n")
+    );
+    assert_eq!(
+        markdown(Some("[S006]"), prefix).as_str(),
         Some(
             format!(
                 "<p><a href=\"{}\" title=\"sample #6\">S006</a></p>\n",
-                app_url("/sample/6")
+                app_url(prefix, "/sample/6")
             )
             .as_str()
         )
     );
     assert_eq!(
-        markdown(Some("This is just some text")).as_str(),
+        markdown(Some("This is just some text"), prefix).as_str(),
         Some("<p>This is just some text</p>\n")
     );
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(tag = "kind", content = "msg")]
 pub(crate) enum FlashMessage {
     Success(String),
@@ -427,7 +439,10 @@ pub(crate) mod extract {
         async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
             match axum::Form::<T>::from_request(req, state).await {
                 Ok(value) => Ok(Self(value.0)),
-                Err(rejection) => Err(crate::Error::FormExtractorRejection(rejection)),
+                Err(rejection) => {
+                    tracing::warn!("got form rejection");
+                    Err(crate::Error::FormExtractorRejection(rejection))
+                }
             }
         }
     }

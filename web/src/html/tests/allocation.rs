@@ -1,5 +1,5 @@
 use super::*;
-use crate::{test_app, util::app_url};
+use crate::test_app;
 use axum::http::{Request, StatusCode, header::CONTENT_TYPE};
 use sqlx::{Pool, Sqlite};
 use test_log::test;
@@ -13,7 +13,7 @@ use tower::Service;
     )
 ))]
 async fn test_new_note(pool: Pool<Sqlite>) {
-    let mut app = test_app(pool).await.expect("failed to create test app").0;
+    let (mut app, state) = test_app(pool).await.expect("failed to create test app").0;
 
     let params = serde_urlencoded::to_string([
         ("notetype", "Planting"),
@@ -24,7 +24,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
     .expect("failed to serialize form");
     // make sure we can't add a note without logging in
     let req = Request::builder()
-        .uri(app_url("/project/1/sample/1/note/new"))
+        .uri(state.path("/project/1/sample/1/note/new"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .body(params.clone())
@@ -37,11 +37,13 @@ async fn test_new_note(pool: Pool<Sqlite>) {
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
     // first log in:
-    let cookie = login(&mut app).await.expect("Failed to log in");
+    let cookie = login(&mut app, state.clone())
+        .await
+        .expect("Failed to log in");
 
     // then try to add a note
     let req = Request::builder()
-        .uri(app_url("/project/1/sample/1/note/new"))
+        .uri(state.path("/project/1/sample/1/note/new"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("Cookie", cookie.clone())
@@ -56,7 +58,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
 
     // try to add a note to a sample that doesn't exist
     let req = Request::builder()
-        .uri(app_url("/project/1/sample/99/note/new"))
+        .uri(state.path("/project/1/sample/99/note/new"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("Cookie", cookie.clone())
@@ -71,7 +73,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
 
     // this url specifies a sample for a different user that is not in this project
     let req = Request::builder()
-        .uri(app_url("/project/1/sample/4/note/new"))
+        .uri(state.path("/project/1/sample/4/note/new"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("Cookie", cookie.clone())
@@ -87,7 +89,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
     // trying to add a note to a sample that is owned by a different user and also in a
     // different project owned by that user
     let req = Request::builder()
-        .uri(app_url("/project/3/sample/4/note/new"))
+        .uri(state.path("/project/3/sample/4/note/new"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("Cookie", cookie.clone())
@@ -110,7 +112,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
     ])
     .expect("failed to serialize form");
     let req = Request::builder()
-        .uri(app_url("/project/1/sample/1/note/new"))
+        .uri(state.path("/project/1/sample/1/note/new"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("Cookie", cookie.clone())
@@ -132,7 +134,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
     ])
     .expect("failed to serialize form");
     let req = Request::builder()
-        .uri(app_url("/project/1/sample/1/note/new"))
+        .uri(state.path("/project/1/sample/1/note/new"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("Cookie", cookie.clone())
@@ -154,7 +156,7 @@ async fn test_new_note(pool: Pool<Sqlite>) {
     ])
     .expect("failed to serialize form");
     let req = Request::builder()
-        .uri(app_url("/project/1/sample/1/note/new"))
+        .uri(state.path("/project/1/sample/1/note/new"))
         .method("POST")
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("Cookie", cookie.clone())

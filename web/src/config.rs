@@ -1,4 +1,5 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
+use axum::http::Uri;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Deserializer};
 use tracing::debug;
@@ -102,7 +103,8 @@ pub struct EnvConfig {
     pub(crate) mail_service: MailService,
     #[serde(default)]
     pub(crate) user_registration_enabled: bool,
-    pub(crate) public_base_url: String,
+    #[serde(with = "http_serde::uri")]
+    pub(crate) public_address: Uri,
     pub(crate) metrics: Option<ListenConfig>,
 }
 
@@ -135,7 +137,32 @@ impl EnvConfig {
                     .into();
             }
         }
+        if self.public_address.scheme().is_none() {
+            return Err(anyhow!("public_address must specify a scheme (e.g. https)"));
+        }
+        if self.public_address.authority().is_none() {
+            return Err(anyhow!("public_address must specify a host name"));
+        }
+        if let Some(query) = self.public_address.query() {
+            return Err(anyhow!("ignoring query string '{query}' in public_address"));
+        }
+        match self.public_address.path() {
+            "" | "/" => (),
+            p if !p.ends_with('/') => {
+                return Err(anyhow!(
+                    "public address path must end with a trailing '/' character"
+                ));
+            }
+            _ => (),
+        }
         Ok(())
+    }
+
+    pub(crate) fn prefix(&self) -> Option<&str> {
+        match self.public_address.path() {
+            "" | "/" => None,
+            p => Some(p),
+        }
     }
 }
 
@@ -157,7 +184,7 @@ mod test {
   listen: &LISTEN
     host: "0.0.0.0"
     port: 8080
-  public_base_url: "http://dev.server.com"
+  public_address: "http://dev.server.com"
 test:
   database: prod-database.sqlite
   mail_service: !MailService
@@ -166,7 +193,7 @@ test:
       name: "SeedCollection"
       address: "nobody@example.com"
   listen: *LISTEN
-  public_base_url: "http://test.server.com"
+  public_address: "http://test.server.com/app"
 prod:
   database: prod-database.sqlite
   mail_service: !MailService
@@ -180,7 +207,7 @@ prod:
     sender: !MailSender
         name: "SeedCollection"
         address: "nobody@example.com"
-  public_base_url: "https://prod.server.com"
+  public_address: "https://prod.server.com"
   listen: *LISTEN"#;
         let configs: HashMap<String, EnvConfig> =
             serde_yaml::from_str(yaml).expect("Failed to parse yaml");
@@ -201,7 +228,7 @@ prod:
                     port: 8080,
                 },
                 user_registration_enabled: false,
-                public_base_url: "http://dev.server.com".into(),
+                public_address: Uri::from_static("http://dev.server.com"),
                 metrics: None,
             }
         );
@@ -221,7 +248,7 @@ prod:
                     port: 8080,
                 },
                 user_registration_enabled: false,
-                public_base_url: "http://test.server.com".into(),
+                public_address: Uri::from_static("http://test.server.com/app"),
                 metrics: None,
             }
         );
@@ -250,7 +277,7 @@ prod:
                     port: 8080,
                 },
                 user_registration_enabled: false,
-                public_base_url: "https://prod.server.com".into(),
+                public_address: Uri::from_static("https://prod.server.com"),
                 metrics: None,
             }
         );
@@ -267,9 +294,68 @@ prod:
       address: "nobody@example.com"
   listen:
     host: "0.0.0.0"
-  public_base_url: "http://dev.server.com""#;
+  public_address: "http://dev.server.com""#;
         let configs: HashMap<String, EnvConfig> =
             serde_yaml::from_str(yaml).expect("Failed to parse yaml");
         assert_eq!(configs["dev"].listen.port, 80);
+    }
+
+    #[test]
+    fn test_public_address() {
+        let parse = |addr: &str| {
+            let yaml = format!(
+                r#"dev:
+  database: dev-database.sqlite
+  mail_service:
+    transport: !File "/tmp/"
+    sender:
+      name: "username"
+      address: "nobody@example.com"
+  listen:
+    host: "0.0.0.0"
+  public_address: "{addr}""#
+            );
+
+            serde_yaml::from_str::<HashMap<String, EnvConfig>>(&yaml)
+        };
+
+        assert!(parse("https:///").is_err());
+        assert!(parse("https://").is_err());
+        assert!(parse("example.com/").is_err());
+        assert!(parse("//example.com/").is_ok());
+        assert!(parse("http://example.com/").is_ok());
+
+        let addr_config = |addr| {
+            let yaml = format!(
+                r#"dev:
+  database: dev-database.sqlite
+  mail_service:
+    transport: !File "/tmp/"
+    sender:
+      name: "username"
+      address: "nobody@example.com"
+  listen:
+    host: "0.0.0.0"
+  public_address: "{addr}""#
+            );
+            let mut configs: HashMap<String, EnvConfig> =
+                serde_yaml::from_str(&yaml).expect("Failed to parse yaml");
+            configs.remove("dev").expect("didn't find 'dev' config")
+        };
+
+        // basic address
+        assert!(addr_config("https://example.com/").init().is_ok());
+        // missing scheme
+        assert!(addr_config("//example.com/").init().is_err());
+        // has path with trailing slash
+        assert!(addr_config("https://example.com/foo/").init().is_ok());
+        // has path without trailing slash
+        assert!(addr_config("https://example.com/foo").init().is_err());
+        // has query string
+        assert!(
+            addr_config("https://example.com/foo/?foo=1")
+                .init()
+                .is_err()
+        );
     }
 }

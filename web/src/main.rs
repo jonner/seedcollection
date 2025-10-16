@@ -1,9 +1,9 @@
-use crate::error::Error;
+use crate::{error::Error, util::app_url};
 use anyhow::{Context, Result, anyhow};
 use auth::AuthSession;
 use axum::{
     RequestPartsExt, Router,
-    extract::{FromRequestParts, MatchedPath, State, rejection::MatchedPathRejection},
+    extract::{FromRef, FromRequestParts, MatchedPath, State, rejection::MatchedPathRejection},
     http::{HeaderMap, HeaderValue, Method, Request, request::Parts},
     middleware::{self, Next},
     response::{IntoResponse, Redirect, Response},
@@ -45,8 +45,6 @@ mod html;
 mod state;
 mod util;
 
-const APP_PREFIX: &str = "/app/";
-
 // Because minijinja loads an entire folder, we need to remove the `/` prefix
 // and add a `.html.j2` suffix. We can implement our own custom key extractor that
 // transform the key
@@ -54,23 +52,28 @@ pub(crate) struct TemplateKey(pub(crate) String);
 
 impl<S> FromRequestParts<S> for TemplateKey
 where
+    AppState: FromRef<S>,
     S: Send + Sync,
 {
     type Rejection = MatchedPathRejection;
 
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let state = AppState::from_ref(state);
         let mp = parts.extract::<MatchedPath>().await?;
+        let prefix = state.config.public_address.path();
+
         Ok(TemplateKey(path_to_template_key(
+            prefix,
             mp.as_str(),
             &parts.method,
         )))
     }
 }
 
-fn path_to_template_key(path: &str, method: &Method) -> String {
+fn path_to_template_key(prefix: &str, path: &str, method: &Method) -> String {
     // Cargo doesn't allow `:` as a file name
     let mut key: String = path
-        .trim_start_matches(APP_PREFIX)
+        .trim_start_matches(prefix)
         .trim_start_matches('/')
         .chars()
         .map(|c| match c {
@@ -133,16 +136,23 @@ impl MakeRequestId for MakeRequestUuid {
 fn template_engine<'source, T>(
     envname: &str,
     template_dir: T,
+    base_path: String,
 ) -> Engine<minijinja::Environment<'source>>
 where
     T: AsRef<std::path::Path>,
 {
     let mut jinja = Environment::new();
     jinja.set_loader(minijinja::path_loader(template_dir));
-    jinja.add_filter("app_url", util::app_url);
+
+    let base_path_clone = base_path.clone();
+    jinja.add_filter("app_url", move |value: &str| -> minijinja::Value {
+        minijinja::Value::from_safe_string(app_url(&base_path, value))
+    });
     jinja.add_filter("append_query_param", util::append_query_param);
     jinja.add_filter("idfmt", util::format_id_number);
-    jinja.add_filter("markdown", util::markdown);
+    jinja.add_filter("markdown", move |value: Option<&str>| -> minijinja::Value {
+        util::markdown(value, &base_path_clone)
+    });
     jinja.add_filter("qtyfmt", util::format_quantity);
     jinja.add_global("environment", envname);
     minijinja_contrib::add_to_environment(&mut jinja);
@@ -172,11 +182,26 @@ async fn app(shared_state: AppState) -> Result<(Router, Router)> {
     }
 
     let (prometheus_layer, metric_handle) = PROMETHEUS_PAIR.clone();
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/favicon.ico", get(favicon_redirect))
-        .nest_service("/static", ServeDir::new(static_path))
-        .nest(APP_PREFIX, html::router(shared_state.clone()))
+    let metrics_app =
+        Router::new().route("/metrics", get(|| async move { metric_handle.render() }));
+
+    let html_router =
+        html::router(shared_state.clone()).nest_service("/static", ServeDir::new(static_path));
+    let html_app = match shared_state.config.prefix() {
+        Some(prefix) => {
+            debug!("mounting html app under prefix '{prefix}'");
+            let prefix_clone = prefix.to_string();
+            async fn root_redirect(p: String) -> impl IntoResponse {
+                Redirect::permanent(&p)
+            }
+
+            Router::new()
+                .route("/", get(|| root_redirect(prefix_clone)))
+                .nest(prefix, html_router)
+        }
+        None => html_router,
+    };
+    let html_app = html_app
         .layer(
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUuid)
@@ -195,10 +220,7 @@ async fn app(shared_state: AppState) -> Result<(Router, Router)> {
         )
         .with_state(shared_state);
 
-    let metrics_app =
-        Router::new().route("/metrics", get(|| async move { metric_handle.render() }));
-
-    Ok((app, metrics_app))
+    Ok((html_app, metrics_app))
 }
 
 fn config_dir() -> Result<PathBuf> {
@@ -395,22 +417,17 @@ async fn error_mapper(
     error_response.unwrap_or(response)
 }
 
-async fn root() -> impl IntoResponse {
-    Redirect::permanent(APP_PREFIX)
-}
-
-async fn favicon_redirect() -> impl IntoResponse {
-    Redirect::permanent("/static/favicon.ico")
-}
-
 #[cfg(test)]
-async fn test_app(pool: sqlx::Pool<sqlx::Sqlite>) -> Result<(Router, Router)> {
+async fn test_app(pool: sqlx::Pool<sqlx::Sqlite>) -> Result<((Router, AppState), Router)> {
     let state = Arc::new(SharedState::test(pool).await);
-    app(state).await
+    app(state.clone())
+        .await
+        .map(|(main, metrics)| ((main, state), metrics))
 }
 
 #[test]
 fn test_template_key() {
+    const PREFIX: &str = "/PREFIX/";
     struct Case {
         path: String,
         method: Method,
@@ -428,44 +445,44 @@ fn test_template_key() {
             expected: "_INDEX.html.j2",
         },
         Case {
-            path: APP_PREFIX.to_owned(),
+            path: PREFIX.to_owned(),
             method: Method::GET,
             expected: "_INDEX.html.j2",
         },
         Case {
-            path: APP_PREFIX.to_owned() + "/foo",
+            path: PREFIX.to_owned() + "/foo",
             method: Method::GET,
             expected: "foo.html.j2",
         },
         Case {
-            path: APP_PREFIX.to_owned() + "foo",
+            path: PREFIX.to_owned() + "foo",
             method: Method::GET,
             expected: "foo.html.j2",
         },
         Case {
-            path: APP_PREFIX.to_owned() + "foo/bar",
+            path: PREFIX.to_owned() + "foo/bar",
             method: Method::GET,
             expected: "foo_bar.html.j2",
         },
         Case {
-            path: APP_PREFIX.to_owned() + "foo/bar",
+            path: PREFIX.to_owned() + "foo/bar",
             method: Method::PUT,
             expected: "foo_bar-PUT.html.j2",
         },
         Case {
-            path: APP_PREFIX.to_owned() + "foo/{bar}",
+            path: PREFIX.to_owned() + "foo/{bar}",
             method: Method::GET,
             expected: "foo_{bar}.html.j2",
         },
         Case {
-            path: APP_PREFIX.to_owned() + "foo/{bar}",
+            path: PREFIX.to_owned() + "foo/{bar}",
             method: Method::PUT,
             expected: "foo_{bar}-PUT.html.j2",
         },
     ];
     for case in cases {
         assert_eq!(
-            path_to_template_key(&case.path, &case.method),
+            path_to_template_key(PREFIX, &case.path, &case.method),
             case.expected
         );
     }

@@ -27,7 +27,7 @@ pub(crate) struct SharedState {
 impl SharedState {
     pub(crate) async fn new(envname: &str, env: EnvConfig, datadir: PathBuf) -> Result<Self> {
         let tmpl_path = datadir.join("templates");
-        let template = template_engine(envname, &tmpl_path);
+        let template = template_engine(envname, &tmpl_path, env.public_address.path().to_string());
         trace!("Creating shared app state");
 
         Ok(Self {
@@ -46,13 +46,16 @@ impl SharedState {
         self.public_url(&path)
     }
 
+    pub(crate) fn path(&self, path: &str) -> String {
+        app_url(self.config.public_address.path(), path)
+    }
+
     fn public_url(&self, path: &str) -> String {
-        let mut public_url = self
-            .config
-            .public_base_url
-            .trim_end_matches('/')
-            .to_string();
-        public_url.push_str(&app_url(path));
+        let mut public_url = self.config.public_address.to_string();
+        if !public_url.ends_with('/') {
+            public_url.push('/');
+        }
+        public_url.push_str(path.trim_start_matches('/'));
         public_url
     }
 
@@ -94,17 +97,18 @@ impl SharedState {
         RenderHtml(template_key, self.tmpl.clone(), data)
     }
 
+    #[tracing::instrument(ret)]
     pub(crate) fn render_flash_message(self: Arc<Self>, msg: FlashMessage) -> impl IntoResponse {
         self.render_template("_flash_messages.html.j2", context!(messages => &[msg]))
     }
 
     #[cfg(test)]
     pub(crate) async fn test(pool: sqlx::Pool<sqlx::Sqlite>) -> Self {
+        use axum::http::Uri;
         use tracing::debug;
 
         use crate::config::{ListenConfig, MailSender, MailService, MailTransport};
 
-        let template = template_engine("test", "./templates");
         debug!("Creating test shared app state");
         let config = EnvConfig {
             listen: ListenConfig {
@@ -120,9 +124,14 @@ impl SharedState {
                 },
             },
             user_registration_enabled: false,
-            public_base_url: "http://test.com".into(),
+            public_address: Uri::from_static("http://test.com/test/"),
             metrics: None,
         };
+        let template = template_engine(
+            "test",
+            "./templates",
+            config.public_address.path().to_string(),
+        );
         Self {
             db: Database::from(pool),
             tmpl: template,
@@ -139,6 +148,8 @@ pub(crate) type AppState = Arc<SharedState>;
 
 #[cfg(test)]
 mod test {
+    use axum::http::Uri;
+
     use super::*;
 
     #[sqlx::test]
@@ -154,7 +165,7 @@ mod test {
             expiration: 24,
             confirmed: false,
         };
-        let expected_path = app_url(&format!("/auth/verify/{USERID}/{VERIFICATION_KEY}"));
+        let expected_path = &format!("/auth/verify/{USERID}/{VERIFICATION_KEY}");
         // make sure that there will be a path separator between the base url
         // and the application path
         assert_eq!(
@@ -165,17 +176,17 @@ mod test {
             '/'
         );
 
-        state.config.public_base_url = "http://test.com".to_string();
+        state.config.public_address = Uri::from_static("http://test.com");
         let url = state.user_verification_url(&uv);
         assert_eq!(url, format!("http://test.com{expected_path}"));
 
         // test with trailing '/' in base url
-        state.config.public_base_url = "http://test.com/".to_string();
+        state.config.public_address = Uri::from_static("https://test.com/");
         let url = state.user_verification_url(&uv);
-        assert_eq!(url, format!("http://test.com{expected_path}"));
+        assert_eq!(url, format!("https://test.com{expected_path}"));
 
-        // test with trailing path in base url
-        state.config.public_base_url = "https://test.com/foo/".to_string();
+        // test with trailing path
+        state.config.public_address = Uri::from_static("https://test.com/foo/");
         let url = state.user_verification_url(&uv);
         assert_eq!(url, format!("https://test.com/foo{expected_path}"));
     }
