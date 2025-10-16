@@ -6,13 +6,19 @@ dev:
   # path to the database to use for this environment
   database: seedcollection.sqlite
 
-  # The mail transport to use for sending out emails. There are three variants
-  # and the type of transport must be specified with one of the following a
-  # yaml tags:
-  # - !LocalSmtp: no arguments, just sends email via a local smtp server like sendmail
-  # - !File: a simple path argument. Useful for testing -- just writes emails to a file at the given path
-  # - !Smtp: arguments shown below. Connects to the given remote smtp server to send emails
-  mail_transport: !LocalSmtp
+  # configure the mail service that the app will use to email users
+  mail_service: !MailService
+    # The mail transport to use for sending out emails. There are three variants
+    # and the type of transport must be specified with one of the following a
+    # yaml tags:
+    # - !LocalSmtp: no arguments, just sends email via a local smtp server like sendmail
+    # - !File: a simple path argument. Useful for testing -- just writes emails to a file at the given path
+    # - !Smtp: arguments shown below. Connects to the given remote smtp server to send emails
+    mail_transport: !LocalSmtp
+    # The name and email address to use when sending mail to users
+    sender: !MailSender
+      name: "Dev username"
+      address: "seedcollection-dev@example.com"
 
   # The address that the application should listen for incoming connections
   listen: &DEFAULT_LISTEN
@@ -39,17 +45,21 @@ dev:
 # A production environment
 prod:
   database: seedcollection.sqlite.prod
-  mail_transport: !Smtp
-    # the URL where the SMTP server can be reached
-    url: "smtps://smtp.domain.com"
-    # the port that the SMTP server is listening on
-    port: 465
-    # credentials for logging into the SMTP server
-    credentials:
-      # SMTP username
-      username: "user@domain.com"
-      # a file containing a password that is used to log into the SMTP server
-      passwordfile: "/path/to/smtpd/password"
+  mail_service:
+    mail_transport: !Smtp
+      # the URL where the SMTP server can be reached
+      url: "smtps://smtp.domain.com"
+      # the port that the SMTP server is listening on
+      port: 465
+      # credentials for logging into the SMTP server
+      credentials:
+        # SMTP username
+        username: "user@domain.com"
+        # a file containing a password that is used to log into the SMTP server
+        passwordfile: "/path/to/smtpd/password"
+    sender:
+      name: "Production username"
+      address: "seedcollection-prod@example.com"
   listen: *DEFAULT_LISTEN
   user_registration_enabled: true
   public_address: "https://seedcollection.test.com"

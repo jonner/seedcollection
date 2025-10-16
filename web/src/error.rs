@@ -6,7 +6,7 @@ use axum::{
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::auth::SqliteAuthBackend;
+use crate::{auth::SqliteAuthBackend, email};
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum Error {
@@ -38,6 +38,8 @@ pub(crate) enum Error {
     UserNotFound(String),
     #[error("User {0} not found")]
     RegistrationValidation(#[from] crate::html::auth::RegistrationValidationError),
+    #[error(transparent)]
+    MailService(#[from] email::Error),
 }
 
 impl Error {
@@ -83,6 +85,10 @@ impl Error {
                         .collect::<Vec<_>>()
                         .join("\n")
                 ),
+            ),
+            Error::MailService(error) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Mail Service error: {error}"),
             ),
         }
     }

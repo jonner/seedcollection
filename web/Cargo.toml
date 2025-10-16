@@ -23,16 +23,20 @@ directories = { workspace = true }
 
 # local dependencies
 # switch from git branch to 0.17 when it is released
+async-trait = "0.1.80"
 axum-extra = { version = "0.10.0", features=["query"]}
 axum-login = "0.18.0"
 axum-prometheus = "0.9.0"
 axum-template = { version = "3.0", features = ["minijinja"] }
 axum = { version = "0.8", features = ["macros"] }
+http-serde = "2.1.1"
 lettre = { version = "0.11.3", features = ["serde", "tracing", "sendmail-transport", "file-transport", "tokio1", "tokio1-native-tls"] }
 minijinja-contrib = { version = "2.6.0", features = ["datetime"] }
 minijinja = { version = "2.6.0", features = ["loader"] }
 pulldown-cmark = "0.13.0"
+secrecy = { version = "0.10.3", features = ["serde"] }
 serde_urlencoded = "0.7.1"
+serde_with = "3.12.0"
 serde_yaml = "0.9.30"
 signal-hook = "0.3.17"
 tower = "0.5"
@@ -40,9 +44,6 @@ tower-http = { version = "0.6", features = ["fs", "trace", "request-id", "util"]
 tower-sessions = "0.14.0"
 tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"]}
 uuid = { version = "1.7.0", features = ["v4"] }
-serde_with = "3.12.0"
-secrecy = { version = "0.10.3", features = ["serde"] }
-http-serde = "2.1.1"
 
 [dev-dependencies]
 http-body-util = "0.1.0"

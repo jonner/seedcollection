@@ -39,6 +39,7 @@ use uuid::Uuid;
 
 mod auth;
 mod config;
+mod email;
 mod error;
 mod html;
 mod state;
@@ -418,7 +419,7 @@ async fn error_mapper(
 
 #[cfg(test)]
 async fn test_app(pool: sqlx::Pool<sqlx::Sqlite>) -> Result<((Router, AppState), Router)> {
-    let state = Arc::new(SharedState::test(pool));
+    let state = Arc::new(SharedState::test(pool).await);
     app(state.clone())
         .await
         .map(|(main, metrics)| ((main, state), metrics))

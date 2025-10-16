@@ -1,5 +1,6 @@
 use crate::{
-    config::{EnvConfig, MailTransport},
+    config::EnvConfig,
+    email::EmailService,
     error::Error,
     template_engine,
     util::{FlashMessage, app_url},
@@ -7,15 +8,12 @@ use crate::{
 use anyhow::{Context, Result};
 use axum::response::IntoResponse;
 use axum_template::{RenderHtml, TemplateEngine, engine::Engine};
-use lettre::{
-    AsyncFileTransport, AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
-    message::{Mailbox, header::ContentType},
-};
+use lettre::message::Mailbox;
 use libseed::{core::database::Database, user::verification::UserVerification};
 use minijinja::context;
 use serde::Serialize;
 use std::{path::PathBuf, sync::Arc};
-use tracing::{debug, trace};
+use tracing::trace;
 
 #[derive(Debug)]
 pub(crate) struct SharedState {
@@ -23,6 +21,7 @@ pub(crate) struct SharedState {
     pub(crate) tmpl: Engine<minijinja::Environment<'static>>,
     pub(crate) config: EnvConfig,
     pub(crate) datadir: PathBuf,
+    pub(crate) email_service: EmailService,
 }
 
 impl SharedState {
@@ -30,63 +29,16 @@ impl SharedState {
         let tmpl_path = datadir.join("templates");
         let template = template_engine(envname, &tmpl_path, env.public_address.path().to_string());
         trace!("Creating shared app state");
-        // do a quick sanity check on the mail transport
-        debug!(?env.mail_transport,
-            "Sanity checking the mail transport",
-        );
-        match env.mail_transport {
-            crate::config::MailTransport::File(_) => Ok(()),
-            crate::config::MailTransport::LocalSmtp => {
-                let t = AsyncSmtpTransport::<Tokio1Executor>::unencrypted_localhost();
-                t.test_connection().await.map(|_| ())
-            }
-            crate::config::MailTransport::Smtp(ref cfg) => {
-                let t = cfg.build()?;
-                t.test_connection().await.map(|_| ())
-            }
-        }
-        .with_context(|| "Sanity check of mail transport failed")?;
+
         Ok(Self {
             db: Database::open(env.database.clone())
                 .await
                 .with_context(|| format!("Unable to open database {}", &env.database))?,
             tmpl: template,
+            email_service: EmailService::new(&env.mail_service).await?,
             config: env,
             datadir,
         })
-    }
-
-    async fn create_verification_email(
-        &self,
-        uv: &mut UserVerification,
-    ) -> Result<lettre::Message, Error> {
-        let verification_url = self.user_verification_url(uv);
-        let user = uv.user.load(&self.db, false).await?;
-        let emailbody = self
-            .tmpl
-            .render(
-                "verification-email",
-                context!(user => user,
-                     verification_url => verification_url),
-            )
-            .with_context(|| "Failed to render email")?;
-        let email = lettre::Message::builder()
-            .from(
-                "NOBODY <jonathon@quotidian.org>"
-                    .parse()
-                    .with_context(|| "failed to parse sender address")?,
-            )
-            .to(Mailbox::new(
-                user.display_name.clone(),
-                user.email
-                    .parse()
-                    .with_context(|| "Failed to parse recipient address")?,
-            ))
-            .subject("Verify your email address")
-            .header(ContentType::TEXT_PLAIN)
-            .body(emailbody)
-            .with_context(|| "Failed to create email message")?;
-        Ok(email)
     }
 
     fn user_verification_url(&self, uv: &UserVerification) -> String {
@@ -108,29 +60,30 @@ impl SharedState {
     }
 
     pub async fn send_verification(&self, mut uv: UserVerification) -> Result<(), Error> {
-        let email = self.create_verification_email(&mut uv).await?;
-        match self.config.mail_transport {
-            MailTransport::File(ref path) => AsyncFileTransport::<Tokio1Executor>::new(path)
-                .send(email)
-                .await
-                .map_err(anyhow::Error::from)
-                .map(|_| ()),
-            MailTransport::LocalSmtp => {
-                AsyncSmtpTransport::<Tokio1Executor>::unencrypted_localhost()
-                    .send(email)
-                    .await
-                    .map_err(anyhow::Error::from)
-                    .map(|_| ())
-            }
-            MailTransport::Smtp(ref cfg) => cfg
-                .build()?
-                .send(email)
-                .await
-                .map_err(anyhow::Error::from)
-                .map(|_| ()),
-        }
-        .with_context(|| "Failed to send verification email")
-        .map_err(|e| e.into())
+        let verification_url = self.user_verification_url(&uv);
+        let user = uv.user.load(&self.db, false).await?;
+        let emailbody = self
+            .tmpl
+            .render(
+                "verification-email",
+                context!(
+                    user => user,
+                    verification_url => verification_url,
+                ),
+            )
+            .with_context(|| "Failed to render email")?;
+
+        let to = Mailbox::new(
+            user.display_name.clone(),
+            user.email
+                .parse()
+                .with_context(|| "Failed to parse recipient address")?,
+        );
+
+        self.email_service
+            .send(to, "Verify your email address".to_string(), emailbody)
+            .await
+            .map_err(Into::into)
     }
 
     pub fn render_template<'a, K, S>(
@@ -146,15 +99,15 @@ impl SharedState {
 
     #[tracing::instrument(ret)]
     pub(crate) fn render_flash_message(self: Arc<Self>, msg: FlashMessage) -> impl IntoResponse {
-        debug!("Rendering flash message");
         self.render_template("_flash_messages.html.j2", context!(messages => &[msg]))
     }
 
     #[cfg(test)]
-    pub(crate) fn test(pool: sqlx::Pool<sqlx::Sqlite>) -> Self {
+    pub(crate) async fn test(pool: sqlx::Pool<sqlx::Sqlite>) -> Self {
         use axum::http::Uri;
+        use tracing::debug;
 
-        use crate::config::ListenConfig;
+        use crate::config::{ListenConfig, MailSender, MailService, MailTransport};
 
         debug!("Creating test shared app state");
         let config = EnvConfig {
@@ -163,12 +116,17 @@ impl SharedState {
                 port: 8080,
             },
             database: "test-database.sqlite".to_string(),
-            mail_transport: MailTransport::File("/tmp/".to_string()),
+            mail_service: MailService {
+                transport: MailTransport::File("/tmp/".to_string()),
+                sender: MailSender {
+                    name: "SeedCollection".to_string(),
+                    address: "nobody@example.com".to_string(),
+                },
+            },
             user_registration_enabled: false,
             public_address: Uri::from_static("http://test.com/test/"),
             metrics: None,
         };
-        debug!("working directory: {:?}", std::env::current_dir());
         let template = template_engine(
             "test",
             "./templates",
@@ -177,6 +135,9 @@ impl SharedState {
         Self {
             db: Database::from(pool),
             tmpl: template,
+            email_service: EmailService::new(&config.mail_service)
+                .await
+                .expect("Failed to create email service"),
             config,
             datadir: ".".into(),
         }
@@ -192,8 +153,8 @@ mod test {
     use super::*;
 
     #[sqlx::test]
-    fn test_verification_url(pool: sqlx::Pool<sqlx::Sqlite>) {
-        let mut state = SharedState::test(pool);
+    async fn test_verification_url(pool: sqlx::Pool<sqlx::Sqlite>) {
+        let mut state = SharedState::test(pool).await;
         const USERID: i64 = 14;
         const VERIFICATION_KEY: &str = "asdf09asnwdflaksdflisudf";
         let uv = UserVerification {

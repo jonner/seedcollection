@@ -1,6 +1,10 @@
 dev:
   database: /usr/share/seedweb/db/seedcollection.sqlite.dev
-  mail_transport: !File "/tmp/"
+  mail_service: !MailService
+    transport: !File "/tmp/"
+    sender: &DEFAULT_SENDER
+      name: "Nobody"
+      address: "nobody@quotidian.org"
   listen: &DEFAULT_LISTEN
     host: "0.0.0.0"
     port: 8081
@@ -11,11 +15,13 @@ dev:
   public_address: "https://localhost:8443"
 prod:
   database: /usr/share/seedweb/db/seedcollection.sqlite
-  mail_transport: !Smtp
-    url: "smtps://smtp.gmail.com"
-    port: 465
-    credentials:
-      username: "jonathon@quotidian.org"
+  mail_service: !MailService
+    transport: !Smtp
+      url: "smtps://smtp.gmail.com"
+      port: 465
+      credentials:
+        username: "jonathon@quotidian.org"
+    sender: *DEFAULT_SENDER
   listen: *DEFAULT_LISTEN
   metrics: *DEFAULT_METRICS
   user_registration_enabled: false
