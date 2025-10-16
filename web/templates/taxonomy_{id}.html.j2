@@ -3,7 +3,7 @@
 {% from "_sample_macros.html.j2" import sample_list %}
 
 {% macro show_taxon(t) -%}
-<a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a>
+<a href="{{app_prefix}}/taxonomy/{{t.id}}">{{ t.complete_name }}</a>
 {% if t.vernaculars %}
 - <span class="vernacular">{{ t.vernaculars[0] }}</span>
 {% endif %}
@@ -60,7 +60,7 @@
     {{ sample_list(samples, "taxon-samples") }}
     <button type="button"
             class="btn btn-primary"
-            hx-get="{{ ("/taxonomy/" ~ taxon.id ~ "/samples") | app_url }}"
+            hx-get="{{app_prefix}}/taxonomy/{{taxon.id}}/samples"
             hx-target="#taxon-samples"
             hx-swap="OuterHTML">
             <div class="htmx-indicator spinner-border spinner-border-sm" role="status">

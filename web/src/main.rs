@@ -1,4 +1,4 @@
-use crate::{error::Error, util::app_url};
+use crate::error::Error;
 use anyhow::{Context, Result, anyhow};
 use auth::AuthSession;
 use axum::{
@@ -144,17 +144,16 @@ where
     let mut jinja = Environment::new();
     jinja.set_loader(minijinja::path_loader(template_dir));
 
-    let base_path_clone = base_path.clone();
-    jinja.add_filter("app_url", move |value: &str| -> minijinja::Value {
-        minijinja::Value::from_safe_string(app_url(&base_path, value))
-    });
     jinja.add_filter("append_query_param", util::append_query_param);
     jinja.add_filter("idfmt", util::format_id_number);
+    let base_path_clone = base_path.clone();
     jinja.add_filter("markdown", move |value: Option<&str>| -> minijinja::Value {
         util::markdown(value, &base_path_clone)
     });
     jinja.add_filter("qtyfmt", util::format_quantity);
+
     jinja.add_global("environment", envname);
+    jinja.add_global("app_prefix", base_path.trim_end_matches('/'));
     minijinja_contrib::add_to_environment(&mut jinja);
 
     Engine::from(jinja)

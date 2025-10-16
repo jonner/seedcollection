@@ -7,9 +7,9 @@
 {% macro option(value, name, selected) -%}
 <option value="{{ value }}" {% if selected == value %}selected{% endif %}>{{ name }}</option>
 {%- endmacro %}
-<h2><span class="me-2">{{ icon("box-seam") }}</span>Samples <a class="ms-2" href="{{ "/sample/new" | app_url }}">{{ icon("plus-square") }}</a></h2>
+<h2><span class="me-2">{{ icon("box-seam") }}</span>Samples <a class="ms-2" href="{{app_prefix}}/sample/new">{{ icon("plus-square") }}</a></h2>
     <div class="mb-3">
-        {{ filter_sort_widget("/sample/list" | app_url, "#sample-plus-pagination", filter_spec)}}
+        {{ filter_sort_widget(app_prefix ~ "/sample/list", "#sample-plus-pagination", filter_spec)}}
     </div>
     <div id="flash-messages"></div>
     <div id="sample-plus-pagination">

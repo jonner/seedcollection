@@ -4,9 +4,9 @@
 {% block content %}
 {% with sample = allocation.sample %}
 {{ breadcrumbs([
-{"name": "Home", "link": ("/" | app_url) },
-{"name": "Projects", "link": ("/project/list" | app_url) },
-{"name": project.id | idfmt("P"), "link": ("/project/" ~ project.id) | app_url },
+{"name": "Home", "link": (app_prefix ~ "/") },
+{"name": "Projects", "link": (app_prefix ~ "/project/list") },
+{"name": project.id | idfmt("P"), "link": (app_prefix ~ "/project/" ~ project.id) },
 {"name": sample.id | idfmt("S"), "active": true },
 ]) }}
 
@@ -20,7 +20,7 @@
     {% endif %}
 </div>
 <h5>Source</h5>
-<div class="mb-3 px-2"><a href="{{ ( "/source/" ~ sample.source.id) | app_url }}">{{ sample.source.name }}</a></div>
+<div class="mb-3 px-2"><a href="{{app_prefix}}/source/{{sample.source.id}}">{{ sample.source.name }}</a></div>
 <h5>Collection Date</h5>
 <div class="mb-3 px-2">{% if sample.month %}{{ sample.month }}/{% endif %}{{ sample.year }}</div>
 <h5>Germination Info</h5>
@@ -31,7 +31,7 @@
     <div>No Data</div>
     {% endif %}
 </div>
-<h5 class="border-bottom">Project Journal <a class="ms-2" href="{{ ("/project/" ~ project.id ~ "/sample/" ~ allocation.id ~ "/note/new") | app_url }}">{{ icon("plus-square") }}</a></h5>
+<h5 class="border-bottom">Project Journal <a class="ms-2" href="{{app_prefix}}/project/{{project.id}}/sample/{{allocation.id}}/note/new">{{ icon("plus-square") }}</a></h5>
 {% for note in allocation.notes %}
 <div class="d-flex column-gap-2 mb-2 allocation-note-row p-2 {{ loop.cycle(" bg-body-tertiary", "") }}">
     <div class="d-flex flex-column flex-grow-1">
@@ -53,12 +53,12 @@
     <div class="dropdown flex-shrink-1 ms-auto">
         <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ icon("three-dots-vertical") }}</button>
         <ul class="dropdown-menu dropdown-menu-end">
-            <li><a href="{{ ("/project/" ~ project.id ~ "/sample/" ~ allocation.id ~ "/note/" ~ note.id ~ "/edit") | app_url }}"
+            <li><a href="{{app_prefix}}/project/{{project.id}}/sample/{{allocation.id}}/note/{{note.id}}/edit"
                    class="dropdown-item">{{ icon("pencil") }} Edit</a>
             </li>
             <li><button type="button"
                     class="dropdown-item btn-danger"
-                    hx-delete="{{ ("/project/" ~ project.id ~ "/sample/" ~ allocation.id ~ "/note/" ~ note.id) | app_url }}"
+                    hx-delete="{{app_prefix}}/project/{{project.id}}/sample/{{allocation.id}}/note/{{note.id}}"
                     hx-target="closest .allocation-note-row"
                     hx-swap="outerHTML"
                     hx-confirm="Are you sure you want to remove this note?">{{ icon("x") }} Remove note</button>

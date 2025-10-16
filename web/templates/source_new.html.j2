@@ -4,8 +4,8 @@
 {% block title %}New Source{% endblock %}
 {% block content %}
 {{ breadcrumbs([
-{"name": "Home", "link": ("/" | app_url) },
-{"name": "Sources", "link": ("/source/list" | app_url) },
+{"name": "Home", "link": (app_prefix ~ "/") },
+{"name": "Sources", "link": (app_prefix ~ "/source/list") },
 {"name": "New Source", "active": true },
 ]) }}
 <h2>{{ self.title() }}</h2>

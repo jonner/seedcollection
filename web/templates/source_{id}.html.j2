@@ -14,11 +14,11 @@
 {% endblock %}
 {% block content %}
 {{ breadcrumbs([
-{"name": "Home", "link": ("/" | app_url) },
-{"name": "Sources", "link": ("/source/list" | app_url) },
+{"name": "Home", "link": (app_prefix ~ "/") },
+{"name": "Sources", "link": (app_prefix ~ "/source/list") },
 {"name": source.id | idfmt("L"), "active": true },
 ]) }}
-<h2>{{ self.title() }} <a href="{{ ("/source/" ~ source.id ~ "/edit") | app_url }}">{{ icon("pencil") }}</a></h2>
+<h2>{{ self.title() }} <a href="{{app_prefix}}/source/{{source.id}}/edit">{{ icon("pencil") }}</a></h2>
 <p>{{ source.description | markdown }}</p>
 {%if source.latitude and source.longitude %}
 <div id="source-location-map" style="height: 320px;"></div>

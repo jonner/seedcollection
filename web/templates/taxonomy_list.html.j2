@@ -6,7 +6,7 @@
     {{ pagenav }}
     <ul>
         {% for t in taxa %}
-        <li><a href="{{ ("/taxonomy/" ~ t.id) | app_url }}">{{ t.complete_name }}</a>
+        <li><a href="{{app_prefix}}/taxonomy/{{t.id}}">{{ t.complete_name }}</a>
             {% if t.vernaculars|count > 0 %}
             - <span class="vernacular">{{ t.vernaculars | join(", ") }}</span>
             {% endif %}

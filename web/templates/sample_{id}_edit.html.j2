@@ -4,9 +4,9 @@
 {% block title %}Edit Sample {{ sample.id | idfmt("S") }}{% endblock %}
 {% block content %}
 {{ breadcrumbs([
-{"name": "Home", "link": ("/" | app_url) },
-{"name": "Samples", "link": ("/sample/list" | app_url) },
-{"name": sample.id | idfmt("S"), "link": ("/sample/" ~ sample.id) | app_url },
+{"name": "Home", "link": (app_prefix ~ "/") },
+{"name": "Samples", "link": (app_prefix ~ "/sample/list") },
+{"name": sample.id | idfmt("S"), "link": (app_prefix ~ "/sample/" ~ sample.id)},
 {"name": "Edit", "active": true }
 ]) }}
 <h2>{{ self.title() }}</h2>

@@ -4,9 +4,9 @@
 {% block title %}Project {{ project.id }}{% endblock %}
 {% block content %}
 {{ breadcrumbs([
-{"name": "Home", "link": ("/" | app_url) },
-{"name": "Projects", "link": ("/project/list" | app_url) },
-{"name": project.id | idfmt("P"), "link": ("/project/" ~ project.id) | app_url },
+{"name": "Home", "link": (app_prefix ~ "/") },
+{"name": "Projects", "link": (app_prefix ~ "/project/list") },
+{"name": project.id | idfmt("P"), "link": (app_prefix ~ "/project/" ~ project.id) },
 {"name": "Edit", "active": true }]) }}
 <h2>Project Details</h2>
 {{ project_form("project-form", project, messages, request) }}
