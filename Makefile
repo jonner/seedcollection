@@ -49,4 +49,4 @@ prepare-db: ./db/itis/minnesota-native-status.csv ./db/germination/germination-d
 	cargo run -p seedctl -- admin -d $(INIT_DB) database update-native-status ./db/itis/minnesota-native-status.csv
 	cargo run -p seedctl -- admin -d $(INIT_DB) database update-germination-info ./db/germination/germination-data.csv
 
-.PHONY: check-sqlx-env prepare-db container run-container
+.PHONY: check-sqlx-env prepare-db container run-pod
