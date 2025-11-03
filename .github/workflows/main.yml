@@ -35,33 +35,22 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - run: rustup component add clippy
       - run: cargo clippy -- -D warnings
-  test-linux:
-    name: Test Suite (Linux)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
-        env:
-          MDEVCTL_LOG: debug
-          RUST_BACKTRACE: full
-  test-windows:
-    name: Test Suite (Windows)
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
-        env:
-          MDEVCTL_LOG: debug
-          RUST_BACKTRACE: full
-  test-macos:
-    name: Test Suite (MacOS)
-    runs-on: macos-latest
+  test:
+    name: Test Suite (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: macos
+            runner: macos-latest
+            arch-suffix: "arm64"
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - platform: windows
+            runner: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
