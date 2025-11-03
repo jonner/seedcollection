@@ -71,3 +71,15 @@ jobs:
         env:
           MDEVCTL_LOG: debug
           RUST_BACKTRACE: full
+  test-arm:
+    name: Test Suite (arm64)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+        env:
+          MDEVCTL_LOG: debug
+          RUST_BACKTRACE: full
