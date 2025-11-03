@@ -1,60 +1,85 @@
-name: Create and publish a Docker image
+name: Build and Push 'latest' Image
 
-# Configures this workflow to run when manually dispatched or when releases are published
+# 1. Trigger only on pushes to the 'main' branch
 on:
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
-  release:
-    types: [published]
 
-# Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
 
-# There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
-  build-and-push-image:
-    runs-on: ubuntu-latest
-    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+  build:
+    name: Build container image for ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            arch-suffix: "amd64"
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+            arch-suffix: "arm64"
+    
+    # Grant permissions to write to GHCR
     permissions:
       contents: read
       packages: write
-      attestations: write
-      id-token: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages. Once published, the packages are scoped to the account defined here.
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      # This step uses [docker/metadata-action](https://github.com/docker/metadata-action#about) to extract tags and labels that will be applied to the specified image. The `id` "meta" allows the output of this step to be referenced in a subsequent step. The `images` value provides the base name for the tags and labels.
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      # This step uses the `docker/build-push-action` action to build the image, based on your repository's `Dockerfile`. If the build succeeds, it pushes the image to GitHub Packages.
-      # It uses the `context` parameter to define the build's context as the set of files located in the specified path. For more information, see [Usage](https://github.com/docker/build-push-action#usage) in the README of the `docker/build-push-action` repository.
-      # It uses the `tags` and `labels` parameters to tag and label the image with the output from the "meta" step.
-      - name: Build and push Docker image
-        id: push
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push platform-specific image
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Containerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-      
-      # This step generates an artifact attestation for the image, which is an unforgeable statement about where and how it was built. It increases supply chain security for people who consume the image. For more information, see [Using artifact attestations to establish provenance for builds](/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds).
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
+          load: true
+          push: false
+          tags: ${{ env.IMAGE_NAME }}:latest-${{ matrix.arch-suffix }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push platform-specific image
+        run: docker push ${{ env.IMAGE_NAME }}:latest-${{ matrix.arch-suffix }}
+
+  # 4. MERGE AND PUBLISH THE FINAL 'latest' MANIFEST
+  publish-manifest:
+    name: Publish 'latest' container image manifest
+    needs: [ build ] # Run after both 'build' jobs succeed
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write # Permission to push the manifest
+
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-      
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push 'latest' manifest
+        run: |
+          # Create the manifest list for "ghcr.io/user/repo:latest"
+          docker manifest create ${{ env.IMAGE_NAME }}:latest \
+            "${{ env.IMAGE_NAME }}:latest-amd64" \
+            "${{ env.IMAGE_NAME }}:latest-arm64"
+            
+          # Push the final manifest list
+          docker manifest push ${{ env.IMAGE_NAME }}:latest

@@ -3,3 +3,4 @@ target
 .git
 Dockerfile
 Makefile
+db/itis
