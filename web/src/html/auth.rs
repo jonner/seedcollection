@@ -190,14 +190,74 @@ async fn verify_user(
     State(app): State<AppState>,
     Path((userid, vkey)): Path<(i64, String)>,
 ) -> Result<impl IntoResponse, Error> {
-    let res = UserVerification::find(userid, &vkey, &app.db).await;
+    let mut user = User::load(userid, &app.db).await?;
+    let res = user.verify(&vkey, &app.db).await;
     let message = match res {
-        Ok(mut uv) => match uv.verify(&app.db).await {
-            Ok(_) => FlashMessage::Success("You have successfully verified your account".into()),
-            Err(_e) => FlashMessage::Error("Failed to verify user".into()),
+        Ok(_) => FlashMessage::Success("You have successfully verified the account".into()),
+        Err(e) => match e {
+            libseed::Error::UserVerification(e) => verification_error_message(e, app.clone()),
+            _e => FlashMessage::Error("Failed to verify user".into()),
         },
-        Err(e) => verification_error_message(e, app.clone()),
     };
 
     Ok(app.render_template(key, context!(message => message)))
+}
+
+#[cfg(test)]
+mod test {
+    use crate::test_app;
+
+    use super::*;
+    use axum::{body::Body, http::Request};
+    use sqlx::{Pool, Sqlite};
+    use test_log::test;
+    use tower::Service;
+
+    // expires in an hour
+    const KEY: &str = "aRbitrarykeyvaluej0asvdo6q134fn2B0Xuw3r42i1o";
+    // user id associated with the valid key
+    const USERID: <User as Loadable>::Id = 1;
+
+    #[test(sqlx::test(
+        migrations = "../db/migrations/",
+        fixtures(
+            path = "../../../db/fixtures",
+            scripts("users", "sources", "taxa", "user-verifications")
+        )
+    ))]
+    async fn test_auth_verify_user(pool: Pool<Sqlite>) {
+        let _ = tracing_subscriber::fmt::try_init();
+        let (mut app, state) = test_app(pool).await.expect("failed to create test app").0;
+        let user = User::load(USERID, &state.db)
+            .await
+            .expect("Failed to find user");
+        assert_eq!(user.status, UserStatus::Unverified);
+        let uv = UserVerification::find(USERID, KEY, &state.db)
+            .await
+            .expect("Failed to find UserVerification object");
+        debug!(?uv);
+        assert!(!uv.confirmed);
+
+        // then try to add a note
+        let req = Request::builder()
+            .uri(state.path(format!("/auth/verify/{USERID}/{KEY}",).as_str()))
+            .method("POST")
+            .body(Body::empty())
+            .expect("Failed to build request");
+        let response = app
+            .as_service()
+            .call(req)
+            .await
+            .expect("Failed to execute request");
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let uv = UserVerification::load(uv.id, &state.db)
+            .await
+            .expect("Failed to find UserVerification object");
+        assert!(uv.confirmed);
+        let user = User::load(USERID, &state.db)
+            .await
+            .expect("Failed to find user verification request");
+        assert_eq!(user.status, UserStatus::Verified);
+    }
 }
