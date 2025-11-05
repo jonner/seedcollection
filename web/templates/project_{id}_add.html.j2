@@ -33,7 +33,7 @@
 {% block content %}
 {{ breadcrumbs([
 {"name": "Home", "link": (app_prefix ~ "/") },
-{"name": "Projects", "link": (app_prefix ~ "/project/list) },
+{"name": "Projects", "link": (app_prefix ~ "/project/list") },
 {"name": project.id | idfmt("P"), "link": (app_prefix ~ "/project/" ~ project.id) },
 {"name": "Add Samples", "active": true }]) }}
 <h2>{{ self.title() }}</h2>
