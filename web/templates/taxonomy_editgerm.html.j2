@@ -21,7 +21,8 @@
                          autofocus
                          hx-get="{{app_prefix}}/taxonomy/datalist"
                          hx-trigger="input changed delay:500ms"
-                         hx-target="#taxonOptions">
+                         hx-target="#taxonOptions"
+                         hx-swap="innerHTML">
                   <datalist id="taxonOptions">
                   </datalist>
               </div>
