@@ -571,7 +571,7 @@ mod tests {
     async fn test_user_verify(pool: Pool<Sqlite>) {
         let db = Database::from(pool);
         // expires in an hour
-        const KEY: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
+        const KEY: &str = "aRbitrarykeyvaluej0asvdo6q134fn2B0Xuw3r42i1o";
         const USERID: <User as Loadable>::Id = 1;
 
         // make sure that the user is unverified before this
@@ -594,7 +594,7 @@ mod tests {
     async fn test_user_verify_wrong_user(pool: Pool<Sqlite>) {
         let db = Database::from(pool);
         // expires in an hour
-        const KEY: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
+        const KEY: &str = "aRbitrarykeyvaluej0asvdo6q134fn2B0Xuw3r42i1o";
         const WRONG_USERID: <User as Loadable>::Id = 2;
 
         // make sure that the user is unverified before this

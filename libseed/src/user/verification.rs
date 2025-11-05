@@ -286,7 +286,7 @@ mod tests {
     // already expired
     const EXPIRED_KEY: &str = "aRbitrarykeyvalue21908fs0fqwaerilkiljanslaoi";
     // expires in an hour
-    const KEY: &str = "aRbitrarykeyvaluej0asvdo-q134f@#$%@~!3r42i1o";
+    const KEY: &str = "aRbitrarykeyvaluej0asvdo6q134fn2B0Xuw3r42i1o";
     // user id associated with the valid key
     const USERID: <User as Loadable>::Id = 1;
 
