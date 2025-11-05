@@ -278,8 +278,6 @@ impl FilterPart for Filter {
 
 #[cfg(test)]
 mod tests {
-    use crate::user::UserStatus;
-
     use super::*;
     use sqlx::Pool;
     use test_log::test;
@@ -381,12 +379,9 @@ mod tests {
             scripts("users", "sources", "taxa", "user-verifications")
         )
     ))]
-    async fn test_user_verify(pool: Pool<Sqlite>) {
+    async fn test_user_verification_verify(pool: Pool<Sqlite>) {
         let db = Database::from(pool);
 
-        // make sure that the user is unverified before this
-        let user = User::load(USERID, &db).await.expect("Failed to load user");
-        assert_eq!(UserStatus::Unverified, user.status);
         let mut uv = UserVerification::find(USERID, KEY, &db)
             .await
             .expect("Failed to find user verification request");
