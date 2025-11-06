@@ -25,6 +25,9 @@ run-pod: container deploy/podman/podman-kube.yaml
 stop-pod: 
 	cat ./deploy/podman-kube.yaml | envsubst | podman kube down -
 
+run-local: update-nodejs
+	cargo run -p seedweb -- --env $(SEEDWEB_ENV)
+
 # run this to update the cached sql queries for offline building. DATABASE_URL
 # must be set to the url of a valid database with the correct schema
 sqlx-prepare: check-sqlx-env
