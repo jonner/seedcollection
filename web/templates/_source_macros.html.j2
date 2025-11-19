@@ -160,7 +160,7 @@ hx-swap="none"
 {%- endmacro %}
 
 
-{% macro source_list(filter=false) -%}
+{% macro source_list(sources, filter=false) -%}
 {% for src in sources %}
 <div class="{{ loop.cycle("bg-body-tertiary", "") }}">
     <div class="d-flex rounded align-items-baseline flex-grow-1 flex-row mb-1 sample-item">

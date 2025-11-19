@@ -22,7 +22,7 @@
     </div>
 <div class="mb-3" id="source-list">
     <div class="text-body-tertiary">{{ summary.total_items }} items found </div>
-    {{ source_list() }}
+    {{ source_list(sources) }}
     {{ pagination(summary.npages, summary.page, request_uri)}}
 </div>
 {% endblock %}
