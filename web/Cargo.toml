@@ -1,7 +1,12 @@
 [package]
 name = "seedweb"
-version = { workspace = true }
-edition = { workspace = true }
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
+description = "A simple tool for managing a wild seed collection: web application"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

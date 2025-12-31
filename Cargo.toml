@@ -6,6 +6,11 @@ resolver = "3"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
+authors = ["Jonathon Jongsma <jonathon@quotidian.org>"]
+description = "A simple tool for managing wild seed collections"
+repository = "https://github.com/jonner/seedcollection"
+license = "MIT OR Apache-2.0"
+keywords = ["seeds", "plants", "web", "collection"]
 
 [workspace.dependencies]
 anyhow = "1.0.75"
