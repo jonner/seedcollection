@@ -12,15 +12,15 @@ description = "A library for managing wild seed collections"
 
 [dependencies]
 # shared workspace dependencies
-anyhow = { workspace = true }
-serde = { workspace = true }
+anyhow.workspace = true
+serde.workspace = true
 sqlx = { workspace = true, features = [ "sqlite", "runtime-tokio", "time" ] }
-strum_macros = { workspace = true }
-strum = { workspace = true }
-thiserror = { workspace = true }
+strum_macros.workspace = true
+strum.workspace = true
+thiserror.workspace = true
 time = { workspace = true, features = ["local-offset", "parsing"] }
-tokio = { workspace = true }
-tracing = { workspace = true }
+tokio.workspace = true
+tracing.workspace = true
 
 # local dependencies
 argon2 = "0.5.2"
