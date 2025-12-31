@@ -12,19 +12,19 @@ description = "A simple tool for managing a wild seed collection: web applicatio
 
 [dependencies]
 # shared workspace deps
-anyhow = { workspace = true }
-clap = { workspace = true }
-futures = { workspace = true }
-libseed = { workspace = true }
-serde = { workspace = true }
-sqlx = { workspace = true }
-strum = { workspace = true }
-thiserror = { workspace = true }
-time = { workspace = true }
-tokio = { workspace = true }
+anyhow.workspace = true
+clap.workspace = true
+futures.workspace = true
+libseed.workspace = true
+serde.workspace = true
+sqlx.workspace = true
+strum.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tokio.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
-tracing = { workspace = true }
-directories = { workspace = true }
+tracing.workspace = true
+directories.workspace = true
 
 # local dependencies
 # switch from git branch to 0.17 when it is released
