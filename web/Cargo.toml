@@ -40,7 +40,7 @@ serde_yaml = "0.9.30"
 signal-hook = "0.3.17"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs", "trace", "request-id", "util"] }
-tower-sessions = "0.14.0"
+tower-sessions = "0.15.0"
 tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"]}
 uuid = { version = "1.7.0", features = ["v4"] }
 
