@@ -30,7 +30,7 @@ directories.workspace = true
 # switch from git branch to 0.17 when it is released
 async-trait = "0.1.80"
 axum-login = "0.18.0"
-axum-prometheus = "0.9.0"
+axum-prometheus = "0.10.0"
 axum-template = { version = "3.0", features = ["minijinja"] }
 axum = { version = "0.8", features = ["macros"] }
 http-serde = "2.1.1"
