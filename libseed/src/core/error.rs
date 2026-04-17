@@ -20,7 +20,7 @@ pub enum VerificationError {
 pub enum Error {
     // authentication-related errors
     #[error("authentication error: password hash error: {0}")]
-    AuthHashFailure(#[from] password_hash::Error),
+    AuthHashFailure(#[from] argon2::password_hash::Error),
 
     #[error("invalid username: too short")]
     AuthInvalidUsernameTooShort,
