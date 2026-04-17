@@ -1,7 +1,7 @@
 use rand::{
-    TryRngCore,
     distr::{Alphanumeric, SampleString},
-    rngs::OsRng,
+    rand_core::UnwrapErr,
+    rngs::SysRng,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, QueryBuilder, Row, Sqlite};
@@ -60,7 +60,7 @@ impl UserVerification {
 
     /// Generate a new code that can be used to verify a user account.
     fn new_key() -> String {
-        Alphanumeric.sample_string(&mut OsRng.unwrap_err(), 24)
+        Alphanumeric.sample_string(&mut UnwrapErr(SysRng), 24)
     }
 
     /// Create a new user verification request for the given user
