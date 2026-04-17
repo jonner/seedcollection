@@ -5,8 +5,10 @@ use crate::core::{
     loadable::{ExternalRef, Loadable},
     query::{DynFilterPart, LimitSpec, SortSpecs, ToSql, filter::FilterPart},
 };
-use argon2::{Argon2, PasswordHasher, PasswordVerifier};
-use password_hash::{PasswordHash, SaltString, rand_core::OsRng};
+use argon2::{
+    Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
+    password_hash::{SaltString, rand_core::OsRng},
+};
 use preferences::Preferences;
 use serde::{Deserialize, Serialize};
 use sqlx::{QueryBuilder, Sqlite, ValueRef, prelude::*, sqlite::SqliteRow};
