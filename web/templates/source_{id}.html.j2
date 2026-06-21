@@ -1,7 +1,7 @@
 {% extends "root.html.j2" %}
 {% from "_macros.html.j2" import icon, breadcrumbs, show_map, pagination %}
 {% from "_sample_macros.html.j2" import sample_list %}
-{% block title %}{{ source.name or "Source Details" }} Details{% endblock %}
+{% block title %}{{ source.name or "Source Details" }}{% endblock %}
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
