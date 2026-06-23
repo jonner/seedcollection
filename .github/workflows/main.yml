@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - run: cargo check
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - run: rustup component add rustfmt
@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - run: rustup component add clippy
@@ -53,7 +53,7 @@ jobs:
             runner: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - run: cargo test
