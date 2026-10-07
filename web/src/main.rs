@@ -297,7 +297,7 @@ async fn main() -> Result<()> {
     let configfile = configdir.join("config.yaml");
     let configyaml = tokio::fs::read_to_string(&configfile)
         .await
-        .with_context(|| format!("Couldn't read configuration file {:?}", &configfile))?;
+        .with_context(|| format!("Couldn't read configuration file {:?}", configfile))?;
     let mut configs: HashMap<String, config::EnvConfig> = serde_yaml::from_str(&configyaml)?;
 
     if args.list_envs {

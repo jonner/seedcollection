@@ -36,7 +36,7 @@ impl SharedState {
         Ok(Self {
             db: Database::open(env.database.clone())
                 .await
-                .with_context(|| format!("Unable to open database {}", &env.database))?,
+                .with_context(|| format!("Unable to open database {}", env.database))?,
             tmpl: template,
             email_service: EmailService::new(&env.mail_service).await?,
             config: env,
