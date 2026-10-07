@@ -22,6 +22,9 @@ pub enum Error {
     #[error("authentication error: password hash error: {0}")]
     AuthHashFailure(#[from] argon2::password_hash::Error),
 
+    #[error("The password hash string was not a valid format")]
+    InvalidPasswordHash,
+
     #[error("invalid username: too short")]
     AuthInvalidUsernameTooShort,
 

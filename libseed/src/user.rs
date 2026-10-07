@@ -5,10 +5,7 @@ use crate::core::{
     loadable::{ExternalRef, Loadable},
     query::{DynFilterPart, LimitSpec, SortSpecs, ToSql, filter::FilterPart},
 };
-use argon2::{
-    Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
-    password_hash::{SaltString, rand_core::OsRng},
-};
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use preferences::Preferences;
 use serde::{Deserialize, Serialize};
 use sqlx::{QueryBuilder, Sqlite, ValueRef, prelude::*, sqlite::SqliteRow};
@@ -290,16 +287,16 @@ impl User {
 
     /// A helper function to hash a password with a randomly generated salt using the Argon2 hasher
     pub fn hash_password(pw: &str) -> Result<String> {
-        let salt = SaltString::generate(&mut OsRng);
         let hasher = Argon2::default();
-        Ok(hasher.hash_password(pw.as_bytes(), &salt)?.to_string())
+        Ok(hasher.hash_password(pw.as_bytes())?.to_string())
     }
 
     /// Use the provided parameters from this user's password hash to hash the supplied password
     /// and compare them to see whether this is the correct password.
     pub fn verify_password(&self, pw: &str) -> Result<()> {
         let hasher = Argon2::default();
-        let expected_hash = PasswordHash::new(&self.pwhash)?;
+        let expected_hash =
+            PasswordHash::new(&self.pwhash).map_err(|_| Error::InvalidPasswordHash)?;
         hasher
             .verify_password(pw.as_bytes(), &expected_hash)
             .map_err(|e| e.into())

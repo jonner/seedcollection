@@ -23,9 +23,9 @@ tokio.workspace = true
 tracing.workspace = true
 
 # local dependencies
-argon2 = { version = "0.5.3", features = ["std"] }
+argon2 = "0.6.0"
 rand = "0.10.0"
-sqlparser = "0.61.0"
+sqlparser = "0.63.0"
 
 [dev-dependencies]
 test-log = "0.2.14"
